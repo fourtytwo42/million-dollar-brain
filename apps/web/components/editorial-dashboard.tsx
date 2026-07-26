@@ -154,6 +154,7 @@ export function EditorialDashboard({
   const [selectedCycleHash, setSelectedCycleHash] = useState<string | null>(
     null,
   );
+  const [showGuide, setShowGuide] = useState(false);
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -166,6 +167,11 @@ export function EditorialDashboard({
     if (query.get("view") === "decisions") setScreen("Decisions");
     if (cycle) setSelectedCycleHash(cycle);
   }, [setScreen]);
+  useEffect(() => {
+    if (!window.localStorage.getItem("mdb-onboarding-seen-v1")) {
+      setShowGuide(true);
+    }
+  }, []);
   const selected =
     data?.pieces.find((piece) => piece.id === selectedId) ?? data?.pieces[0];
   const mine = Boolean(
@@ -259,6 +265,11 @@ export function EditorialDashboard({
     await renderDecisionCard(cycle, spokesperson);
   }
 
+  function closeGuide() {
+    window.localStorage.setItem("mdb-onboarding-seen-v1", "true");
+    setShowGuide(false);
+  }
+
   return (
     <main className={`editorial-app ${dark ? "editorial-dark" : ""}`}>
       <header className="editorial-header">
@@ -280,6 +291,14 @@ export function EditorialDashboard({
               {item}
             </button>
           ))}
+          <button
+            className="nav-help"
+            aria-expanded={showGuide}
+            aria-controls="how-it-works"
+            onClick={() => setShowGuide((current) => !current)}
+          >
+            How it works
+          </button>
         </nav>
         <div className="market-strip">
           <span className="share-price">
@@ -305,8 +324,25 @@ export function EditorialDashboard({
         <div className="editorial-banner">{message}</div>
       )}
 
+      {showGuide && (
+        <HowItWorks
+          onClose={closeGuide}
+          onNavigate={(destination) => {
+            setScreen(destination);
+            closeGuide();
+          }}
+        />
+      )}
+
       {screen === "Brain" && (
         <div className="editorial-page">
+          <section className="screen-purpose" aria-label="About the Brain">
+            <span>YOU ARE HERE: THE STEERING LAYER</span>
+            <p>
+              Brain-piece owners choose preset moods. Every hour, all 42 choices
+              become one constrained brief for the AI.
+            </p>
+          </section>
           <section className="brain-pulse-strip" aria-label="Brain pulse">
             <div className="pulse-headline">
               <p className="section-kicker">⌁ BRAIN PULSE</p>
@@ -367,8 +403,8 @@ export function EditorialDashboard({
                     </p>
                     <h2>{selected.name}</h2>
                     <p>
-                      {selected.affinity} · {selected.weight / 100}% immutable
-                      influence
+                      Steers {selected.affinity} · {selected.weight / 100}% of
+                      the brain&apos;s influence
                     </p>
                     <p className="character-form">
                       {selected.kind} · {selected.visual}
@@ -385,7 +421,7 @@ export function EditorialDashboard({
                 <p className="piece-tagline">{selected.tagline}</p>
                 <p className="piece-lore">“{selected.lore}”</p>
                 <div className="current-mood">
-                  <span>Current mood</span>
+                  <span>Current setting (mood)</span>
                   <strong>{selected.options[selected.preset].label}</strong>
                 </div>
                 <div className="mood-ledger">
@@ -408,9 +444,10 @@ export function EditorialDashboard({
                     </button>
                   ))}
                 </div>
-                <p className="bounded-effect">
-                  {selected.options[selected.preset].instruction}
-                </p>
+                <div className="bounded-effect">
+                  <span>WHAT THIS TELLS THE AI NEXT CYCLE</span>
+                  <p>{selected.options[selected.preset].instruction}</p>
+                </div>
                 <div className="piece-actions">
                   <div>
                     <span>
@@ -422,6 +459,10 @@ export function EditorialDashboard({
                       Next price ${money(selected.price)} · Rewards $
                       {data ? money(data.rewards.pending) : "0"}
                     </span>
+                    <small>
+                      This piece is always for sale. Each completed purchase
+                      raises its next price by 20%.
+                    </small>
                   </div>
                   {mine ? (
                     <button
@@ -453,6 +494,11 @@ export function EditorialDashboard({
             <div>
               <p className="section-kicker">BASKET LEDGER</p>
               <h1>The portfolio, without the mystery.</h1>
+              <p className="page-explainer">
+                MDBS represents your share of the whole basket. Deposit USDG to
+                mint shares; redeem shares to exit according to the reserve and
+                queue rules.
+              </p>
             </div>
             <div className="title-actions">
               <button className="primary-action" onClick={onDeposit}>
@@ -506,6 +552,11 @@ export function EditorialDashboard({
                 {owned} brain pieces · $
                 {data ? money(data.rewards.pending) : "0"} claimable
               </p>
+              <p className="action-explainer">
+                Deposits mint basket shares after the 1% entry fee. Redemptions
+                return USDG immediately when small enough, or enter the visible
+                settlement queue.
+              </p>
               <label>
                 Deposit USDG
                 <input
@@ -547,6 +598,10 @@ export function EditorialDashboard({
             <div>
               <p className="section-kicker">DECISION ARCHIVE</p>
               <h1>Explore every decision and execution.</h1>
+              <p className="page-explainer">
+                Follow the full chain of evidence: what brain owners requested,
+                what the AI proposed, and what the protocol actually executed.
+              </p>
             </div>
             <span className="decision-source">
               {selectedCycle?.source?.toUpperCase() ?? "NO CYCLE"}
@@ -718,11 +773,7 @@ export function EditorialDashboard({
                     </p>
                   )}
                 </DecisionStage>
-                <DecisionStage
-                  number="02"
-                  title="Ornith proposed"
-                  tone="ornith"
-                >
+                <DecisionStage number="02" title="AI proposed" tone="ornith">
                   {Object.entries(selectedAllocation).map(
                     ([symbol, weight]) => (
                       <p key={symbol}>
@@ -738,7 +789,7 @@ export function EditorialDashboard({
                 </DecisionStage>
                 <DecisionStage
                   number="03"
-                  title="Protocol executed"
+                  title="Contracts checked and executed"
                   tone="protocol"
                 >
                   <p>
@@ -894,6 +945,93 @@ async function renderDecisionCard(
   anchor.href = url;
   anchor.download = `milliondollar-brain-${cycle.txHash.slice(2, 10)}.png`;
   anchor.click();
+}
+
+function HowItWorks({
+  onClose,
+  onNavigate,
+}: {
+  onClose: () => void;
+  onNavigate: (destination: "Brain" | "Basket" | "Decisions") => void;
+}) {
+  return (
+    <section
+      className="how-it-works"
+      id="how-it-works"
+      aria-label="How MillionDollar Brain works"
+    >
+      <div className="how-intro">
+        <div>
+          <p className="section-kicker">START HERE</p>
+          <h1>A community-steered basket in four steps.</h1>
+          <p>
+            People own the basket. Brain-piece owners steer its preferences. An
+            AI proposes the next allocation. Smart contracts decide what is
+            allowed and execute the rebalance.
+          </p>
+        </div>
+        <button className="guide-close" onClick={onClose}>
+          Got it
+        </button>
+      </div>
+      <div className="how-steps">
+        <article>
+          <span>01 · OWN</span>
+          <h2>Buy basket shares</h2>
+          <p>
+            Deposit USDG and receive MDBS, your redeemable share of the combined
+            portfolio.
+          </p>
+          <button onClick={() => onNavigate("Basket")}>See the basket</button>
+        </article>
+        <article>
+          <span>02 · STEER</span>
+          <h2>Set the brain&apos;s moods</h2>
+          <p>
+            Each of 42 NFT pieces controls one topic. Its owner chooses one of
+            five safe preset positions.
+          </p>
+          <button onClick={() => onNavigate("Brain")}>Explore the brain</button>
+        </article>
+        <article>
+          <span>03 · PROPOSE</span>
+          <h2>AI reviews every hour</h2>
+          <p>
+            The model sees the complete brain, approved assets, market data, and
+            current basket, then proposes target weights.
+          </p>
+        </article>
+        <article>
+          <span>04 · VERIFY</span>
+          <h2>Contracts enforce the rules</h2>
+          <p>
+            The AI never holds a wallet. Deterministic checks enforce the
+            allowlist, reserve, and limits before trades execute.
+          </p>
+          <button onClick={() => onNavigate("Decisions")}>
+            Audit a decision
+          </button>
+        </article>
+      </div>
+      <div className="plain-glossary">
+        <span>
+          <b>MDBS</b> your basket shares
+        </span>
+        <span>
+          <b>Brain piece</b> a steering NFT
+        </span>
+        <span>
+          <b>Mood</b> its selected preset
+        </span>
+        <span>
+          <b>Influence</b> its fixed share of the AI brief
+        </span>
+        <span>
+          <b>NAV</b> total basket value
+        </span>
+      </div>
+    </section>
+  );
 }
 
 function pulseHeadline(items: CycleInstruction[]) {

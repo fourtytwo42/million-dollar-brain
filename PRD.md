@@ -916,6 +916,7 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
 - Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
+- A first-time visitor receives a dismissible, non-blocking four-step guide explaining basket ownership, brain steering, scheduled AI proposals, and deterministic contract execution. `How it works` permanently reopens the guide, and every primary screen carries a plain-language purpose statement.
 - The application provides matching editorial light and dark modes, follows the operating-system preference initially, and persists a manual `Light / Dark / System` selection.
 - Dark mode uses warm charcoal and espresso surfaces and must not revert to the rejected generic navy, cyan, neon-purple, glow, or glassmorphism treatment.
 - Application services and dependencies are installed directly on the Ubuntu VM and run as native `systemd` services. Docker is not used.

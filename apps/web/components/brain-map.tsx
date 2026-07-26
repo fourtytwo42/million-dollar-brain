@@ -145,6 +145,10 @@ export function BrainMap({
         <div>
           <p className="section-kicker">THE 42</p>
           <strong>Explore the community brain</strong>
+          <p className="brain-map-explainer">
+            Click a character to see what it controls, its current preset, and
+            who can change it.
+          </p>
         </div>
       </div>
 

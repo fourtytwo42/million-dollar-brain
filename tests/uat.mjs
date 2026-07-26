@@ -11,6 +11,44 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await mkdir("var", { recursive: true });
+  const guide = page.getByRole("region", {
+    name: "How MillionDollar Brain works",
+  });
+  await guide.waitFor();
+  assert.equal(
+    await guide.locator(".how-steps article").count(),
+    4,
+    "first-time visitors must receive the complete four-step explanation",
+  );
+  await guide
+    .getByText(
+      "The AI never holds a wallet. Deterministic checks enforce the allowlist, reserve, and limits before trades execute.",
+      { exact: true },
+    )
+    .waitFor();
+  await guide.getByRole("button", { name: "Got it", exact: true }).click();
+  assert.equal(
+    await guide.count(),
+    0,
+    "the first-visit guide must be dismissible",
+  );
+  const helpButton = page.getByRole("button", {
+    name: "How it works",
+    exact: true,
+  });
+  await helpButton.click();
+  assert.equal(
+    await helpButton.getAttribute("aria-expanded"),
+    "true",
+    "the guide must always be reopenable from the header",
+  );
+  await page
+    .getByRole("region", { name: "How MillionDollar Brain works" })
+    .getByRole("button", { name: "Got it", exact: true })
+    .click();
+  await page
+    .getByText("YOU ARE HERE: THE STEERING LAYER", { exact: true })
+    .waitFor();
   assert.equal(
     await page.getByText("BASKET SNAPSHOT", { exact: true }).count(),
     0,
@@ -350,6 +388,12 @@ try {
     .waitFor({ timeout: 30000 });
 
   await page.getByRole("button", { name: "Basket", exact: true }).click();
+  await page
+    .getByText(
+      "MDBS represents your share of the whole basket. Deposit USDG to mint shares; redeem shares to exit according to the reserve and queue rules.",
+      { exact: true },
+    )
+    .waitFor();
   const basketStatusResponse = await page.request.get(`${baseUrl}/api/status`);
   assert.equal(
     basketStatusResponse.ok(),
@@ -440,6 +484,12 @@ try {
       name: "Explore every decision and execution.",
     })
     .waitFor();
+  await page
+    .getByText(
+      "Follow the full chain of evidence: what brain owners requested, what the AI proposed, and what the protocol actually executed.",
+      { exact: true },
+    )
+    .waitFor();
   const historyItems = page.getByTestId("decision-history-item");
   assert.equal(
     await historyItems.count(),
@@ -502,8 +552,15 @@ try {
   );
   await historyMobile.close();
   await page.getByText("Brain requested").waitFor();
-  await page.getByText("Ornith proposed").waitFor();
-  await page.getByText("Protocol executed").waitFor();
+  await page
+    .getByRole("heading", { name: "AI proposed", exact: true })
+    .waitFor();
+  await page
+    .getByRole("heading", {
+      name: "Contracts checked and executed",
+      exact: true,
+    })
+    .waitFor();
   await page.screenshot({ path: "var/uat-decisions.png", fullPage: true });
   await page.screenshot({
     path: "design/mockups/decisions-screen-v2-editorial.png",
@@ -543,12 +600,23 @@ try {
     /^0x[0-9a-f]{64}$/i,
     "hourly cycle must submit a queued-redemption settlement transaction",
   );
-  await page
-    .getByRole("button", { name: /Cancel queued redemption #\d+/ })
-    .click();
-  await page
-    .getByText("Queued redemption cancelled; escrowed shares returned.")
-    .waitFor({ timeout: 45000 });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Basket", exact: true }).click();
+  const remainingRedemption = page.getByRole("button", {
+    name: /Cancel queued redemption #\d+/,
+  });
+  if ((await remainingRedemption.count()) === 1) {
+    await remainingRedemption.click();
+    await page
+      .getByText("Queued redemption cancelled; escrowed shares returned.")
+      .waitFor({ timeout: 45000 });
+  } else {
+    assert.equal(
+      await remainingRedemption.count(),
+      0,
+      "a fully settled redemption must leave no cancellable request",
+    );
+  }
 
   await page.getByRole("button", { name: "Brain", exact: true }).click();
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
@@ -560,7 +628,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

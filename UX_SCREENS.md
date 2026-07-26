@@ -488,8 +488,22 @@ High-risk actions require consequence previews, explicit confirmations, and tran
 
 This is supporting education, not primary product navigation.
 
-**Presentation:** Contextual help drawer  
+**Presentation:** First-visit inline guide plus persistent `How it works` help action
 **Disclosure URL:** `/about`
+
+The first visit opens a dismissible four-step explanation without blocking the
+page:
+
+1. Own the basket by depositing USDG for redeemable MDBS.
+2. Steer preferences through the 42 brain pieces and their closed presets.
+3. Let the constrained AI propose target weights on the hourly schedule.
+4. Let deterministic contracts enforce the allowlist, reserve, and limits
+   before execution.
+
+The guide includes a plain-language glossary for MDBS, brain piece, mood,
+influence, and NAV. Dismissing it persists on that device, while the header
+action always reopens it. Brain, Basket, and Decisions each retain a one-sentence
+purpose statement so users do not lose the product model after onboarding.
 
 The same content is reachable from help links near unfamiliar concepts:
 
