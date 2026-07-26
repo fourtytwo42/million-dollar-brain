@@ -95,6 +95,7 @@ When sources conflict, use this order:
 - 2026-07-26: Verified the anatomical Brain redesign with a clean Next.js production build, Prettier, all 42 region assignments, light/dark/mobile screenshots, the complete Chromium economic flow, and a live autonomous allocation cycle.
 - 2026-07-26: Verified interactive crew filtering in Chromium: Market Mystics highlights exactly 12 pieces, applies an accessible pressed state, mutes the other 30, and clears on a second activation.
 - 2026-07-26: Verified every crew spans more than 250 SVG units horizontally and 190 vertically while retaining member counts of 6, 12, 16, and 8; full economic and autonomous-cycle Chromium UAT still passes.
+- 2026-07-26: Live health check confirmed the hourly timer and on-chain rebalance executor are operating, but the Ornith appliance backend is currently unavailable: model discovery succeeds while `/health` and `/v1/chat/completions` return HTTP 502. Recent cycles therefore use the deterministic fallback. The latest rebalance receipt succeeded and the resulting basket values match the fallback target weights exactly.
 
 ## Decisions
 
