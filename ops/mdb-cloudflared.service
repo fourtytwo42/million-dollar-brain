@@ -1,0 +1,14 @@
+[Unit]
+Description=MillionDollar Brain temporary TryCloudflare demo tunnel
+Wants=network-online.target
+After=network-online.target mdb-web.service
+
+[Service]
+Type=simple
+User=hendo420
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
