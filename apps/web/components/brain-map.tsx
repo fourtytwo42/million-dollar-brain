@@ -258,14 +258,20 @@ export function BrainMap({
                   </clipPath>
                 ))}
               </defs>
+              <path
+                className="brain-backplate"
+                d={brainShape}
+                aria-hidden="true"
+              />
               <image
                 className="brain-illustration"
                 href="/brain-art/brain-base.webp"
-                x="28"
-                y="0"
-                width="704"
-                height="435"
-                preserveAspectRatio="xMidYMid meet"
+                x="-19"
+                y="1"
+                width="795"
+                height="434"
+                preserveAspectRatio="none"
+                clipPath="url(#brain-boundary)"
                 aria-hidden="true"
               />
               <g clipPath="url(#brain-boundary)">

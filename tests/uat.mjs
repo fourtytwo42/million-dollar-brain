@@ -34,6 +34,18 @@ try {
     "the brain must include its generated editorial base artwork",
   );
   assert.equal(
+    await page
+      .locator("svg.brain-map > .brain-illustration")
+      .getAttribute("clip-path"),
+    "url(#brain-boundary)",
+    "the editorial background must use the exact same outer mask as the mosaic",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map > .brain-backplate").count(),
+    1,
+    "the brain must retain a seamless backplate behind transparent artwork",
+  );
+  assert.equal(
     await page.locator("svg.brain-map .piece-portrait").count(),
     42,
     "every brain piece must include its unique generated portrait",
