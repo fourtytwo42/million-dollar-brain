@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Applied a fixed presentation-only permutation so all four character crews are scattered across the brain instead of appearing in catalog-order horizontal layers.
+- Last meaningful change: Corrected Basket Snapshot and Basket Ledger to value token quantities through the approved router before displaying USD amounts, percentages, and bars.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -96,7 +96,7 @@ When sources conflict, use this order:
 - 2026-07-26: Verified interactive crew filtering in Chromium: Market Mystics highlights exactly 12 pieces, applies an accessible pressed state, mutes the other 30, and clears on a second activation.
 - 2026-07-26: Verified every crew spans more than 250 SVG units horizontally and 190 vertically while retaining member counts of 6, 12, 16, and 8; full economic and autonomous-cycle Chromium UAT still passes.
 - 2026-07-26: Verified recovery of the complete AI-directed hourly path after the appliance gateway fixed its Ornith cold-start race. The normal `mdb-cycle.service` path recorded `source: "ai"` at `2026-07-26T17:00:04.608Z`, proposed USDG 20%, NVDA 35%, AAPL 20%, and ETHX 25%, and executed successful Anvil transaction `0x48b6fa8ffc69bf3df4d20b654d0a0a7234aea3d905e629bd4114664cad28df1f` in block 30. Priced holdings match those weights exactly, all VM services and the hourly timer are active, and a fresh cold Ornith request plus GPU45 `/health` returned HTTP 200. Keep the existing MDB AI URL/model configuration; do not add an app-side SSH or startup workaround because the race was fixed at the appliance gateway.
-- 2026-07-26: Diagnosed the Basket Snapshot discrepancy as a UI valuation defect, not pending settlement. The finalized block-30 balances match the AI targets when valued at the router's current prices, but `editorial-dashboard.tsx` divides raw token units by NAV and formats them as USD. This is correct only for USDG and materially understates NVDA, AAPL, and ETHX.
+- 2026-07-26: Fixed the Basket Snapshot valuation defect by returning router-priced `holdingValues` separately from raw token-unit `holdings` and using those values throughout Snapshot and Basket Ledger. Production build and Prettier pass; Chromium UAT verifies priced holdings reconcile exactly to NAV, and final in-app-browser UAT showed current and target weights aligned at USDG 20%, NVDA 40%, AAPL 10%, and ETHX 30%.
 
 ## Decisions
 
@@ -248,7 +248,6 @@ When sources conflict, use this order:
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.
 - Complete independent audit and remediate all critical and high-severity findings before real-value activation.
-- Value every basket holding with its approved router/oracle price before displaying USD amounts, current percentages, and progress bars in both Basket Snapshot and Basket Ledger.
 
 ## Do Not Forget
 

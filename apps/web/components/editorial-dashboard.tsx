@@ -44,6 +44,7 @@ export type EditorialData = {
   supply: string;
   shares: string;
   holdings: Record<string, string>;
+  holdingValues: Record<string, string>;
   pieces: EditorialPiece[];
   rewards: { pending: string };
   redemption: { pendingRequestId: string };
@@ -348,19 +349,22 @@ export function EditorialDashboard({
               </div>
               <div className="snapshot-holdings">
                 {data &&
-                  Object.entries(data.holdings).map(([symbol, value]) => (
-                    <div key={symbol}>
-                      <b>{symbol}</b>
-                      <span>
-                        <i
-                          style={{
-                            width: `${Math.max(3, (Number(value) / Math.max(1, Number(data.nav))) * 100)}%`,
-                          }}
-                        />
-                      </span>
-                      <em>${money(value)}</em>
-                    </div>
-                  ))}
+                  Object.keys(data.holdings).map((symbol) => {
+                    const value = data.holdingValues[symbol] ?? "0";
+                    return (
+                      <div key={symbol}>
+                        <b>{symbol}</b>
+                        <span>
+                          <i
+                            style={{
+                              width: `${Math.max(3, (Number(value) / Math.max(1, Number(data.nav))) * 100)}%`,
+                            }}
+                          />
+                        </span>
+                        <em>${money(value)}</em>
+                      </div>
+                    );
+                  })}
               </div>
               <div className="snapshot-actions">
                 <button
@@ -413,7 +417,8 @@ export function EditorialDashboard({
               <h2>Current holdings and Ornith targets</h2>
               <div className="holding-table">
                 {data &&
-                  Object.entries(data.holdings).map(([symbol, value]) => {
+                  Object.keys(data.holdings).map((symbol) => {
+                    const value = data.holdingValues[symbol] ?? "0";
                     const current =
                       (Number(value) / Math.max(1, Number(data.nav))) * 100;
                     const target = (latestAllocation[symbol] ?? 0) / 100;

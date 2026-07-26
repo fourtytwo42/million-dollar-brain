@@ -51,6 +51,10 @@ export function deployment(): Deployment {
   ) as Deployment;
 }
 
+const routerQuoteAbi = parseAbi([
+  "function quoteUsd(address token, uint256 amount) view returns (uint256)",
+]);
+
 export async function dashboard(address?: Address) {
   const d = deployment();
   const [
@@ -124,6 +128,26 @@ export async function dashboard(address?: Address) {
       address: d.brain,
       abi: brainAbi,
       functionName: "catalogHash",
+    }),
+  ]);
+  const [nvdaValue, aaplValue, ethxValue] = await Promise.all([
+    publicClient.readContract({
+      address: d.router,
+      abi: routerQuoteAbi,
+      functionName: "quoteUsd",
+      args: [d.nvda, nvdaBalance],
+    }),
+    publicClient.readContract({
+      address: d.router,
+      abi: routerQuoteAbi,
+      functionName: "quoteUsd",
+      args: [d.aapl, aaplBalance],
+    }),
+    publicClient.readContract({
+      address: d.router,
+      abi: routerQuoteAbi,
+      functionName: "quoteUsd",
+      args: [d.ethx, ethxBalance],
     }),
   ]);
   const pieces = await Promise.all(
@@ -206,6 +230,12 @@ export async function dashboard(address?: Address) {
       NVDA: nvdaBalance.toString(),
       AAPL: aaplBalance.toString(),
       ETHX: ethxBalance.toString(),
+    },
+    holdingValues: {
+      USDG: usdgBalance.toString(),
+      NVDA: nvdaValue.toString(),
+      AAPL: aaplValue.toString(),
+      ETHX: ethxValue.toString(),
     },
     pieces,
     rewards: { pending: pendingRewards.toString() },

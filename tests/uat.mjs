@@ -300,6 +300,33 @@ try {
     .waitFor({ timeout: 30000 });
 
   await page.getByRole("button", { name: "Basket", exact: true }).click();
+  const basketStatusResponse = await page.request.get(`${baseUrl}/api/status`);
+  assert.equal(
+    basketStatusResponse.ok(),
+    true,
+    "basket status must load for valuation checks",
+  );
+  const basketStatus = await basketStatusResponse.json();
+  assert.ok(
+    basketStatus.holdingValues,
+    "basket status must expose router-priced holding values",
+  );
+  const pricedTotal = Object.values(basketStatus.holdingValues).reduce(
+    (sum, value) => sum + BigInt(value),
+    0n,
+  );
+  assert.equal(
+    pricedTotal,
+    BigInt(basketStatus.nav),
+    "router-priced holding values must reconcile exactly to basket NAV",
+  );
+  for (const symbol of ["USDG", "NVDA", "AAPL", "ETHX"]) {
+    assert.notEqual(
+      basketStatus.holdingValues[symbol],
+      undefined,
+      `${symbol} must have a router-priced USD value`,
+    );
+  }
   const amount = page.getByLabel("Deposit USDG");
   await amount.fill("1000");
   await page.getByRole("button", { name: "Deposit USDG" }).click();

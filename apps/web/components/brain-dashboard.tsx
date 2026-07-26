@@ -62,6 +62,7 @@ type Data = {
   shares: string;
   redemption: { pendingRequestId: string };
   holdings: Record<string, string>;
+  holdingValues: Record<string, string>;
   pieces: Piece[];
   rewards: { pending: string };
   catalog: { version: number; hash: string };
