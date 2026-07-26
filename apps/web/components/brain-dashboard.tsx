@@ -31,6 +31,8 @@ type Piece = {
   tagline: string;
   lore: string;
   crew: string;
+  kind: string;
+  visual: string;
   category: string;
   options: [BrainOption, BrainOption, BrainOption, BrainOption, BrainOption];
   data: string[];

@@ -32,7 +32,7 @@ type BrainMapProps = {
 };
 
 function portraitPath(pieceId: number) {
-  return `/brain-art/v3/piece-${String(pieceId).padStart(2, "0")}.webp`;
+  return `/brain-art/v4/piece-${String(pieceId).padStart(2, "0")}.webp`;
 }
 
 function shortOwner(owner: string) {

@@ -22,6 +22,8 @@ export type EditorialPiece = {
   tagline: string;
   lore: string;
   crew: string;
+  kind: string;
+  visual: string;
   category: string;
   options: [BrainOption, BrainOption, BrainOption, BrainOption, BrainOption];
   data: string[];
@@ -38,6 +40,26 @@ type CycleInstruction = {
   influenceBps: number;
 };
 
+type MemeCastItem = {
+  pieceId: number;
+  role: "spokesperson" | "rival" | "scapegoat" | "support";
+  mood: string;
+  influenceBps: number;
+  line: string;
+};
+
+type MemeRecap = {
+  version: 1;
+  headline: string;
+  spokespersonPieceId: number;
+  rivalPieceId?: number;
+  scapegoatPieceId?: number;
+  cast: MemeCastItem[];
+  shortText: string;
+  longText: string;
+  disclaimer: string;
+};
+
 type CycleRecord = {
   at: string;
   source: string;
@@ -47,6 +69,8 @@ type CycleRecord = {
   redemptionTxHash?: string | null;
   block?: string;
   marketAsOf?: string;
+  characterRosterVersion?: number;
+  memeRecap?: MemeRecap;
   brain?: {
     catalogVersion?: number;
     activePieces: number;
@@ -136,6 +160,12 @@ export function EditorialDashboard({
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
   }, []);
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const cycle = query.get("cycle");
+    if (query.get("view") === "decisions") setScreen("Decisions");
+    if (cycle) setSelectedCycleHash(cycle);
+  }, [setScreen]);
   const selected =
     data?.pieces.find((piece) => piece.id === selectedId) ?? data?.pieces[0];
   const mine = Boolean(
@@ -163,6 +193,71 @@ export function EditorialDashboard({
   const selectedPreferences =
     selectedCycle?.brain?.activeNonNeutralInstructions ?? [];
   const selectedAllocation = selectedCycle?.allocation ?? { USDG: 10000 };
+  const selectedMeme = selectedCycle?.memeRecap;
+  const characterStats = decisionHistory.reduce<
+    Record<
+      number,
+      { appearances: number; spokespersons: number; blame: number }
+    >
+  >((stats, cycle) => {
+    for (const cast of cycle.memeRecap?.cast ?? []) {
+      const current = stats[cast.pieceId] ?? {
+        appearances: 0,
+        spokespersons: 0,
+        blame: 0,
+      };
+      current.appearances += 1;
+      if (cast.role === "spokesperson") current.spokespersons += 1;
+      if (cast.role === "scapegoat") current.blame += 1;
+      stats[cast.pieceId] = current;
+    }
+    return stats;
+  }, {});
+
+  function decisionUrl(cycle: CycleRecord) {
+    const url = new URL(
+      process.env.NEXT_PUBLIC_APP_URL || window.location.origin,
+    );
+    url.searchParams.set("view", "decisions");
+    url.searchParams.set("cycle", cycle.txHash);
+    return url.toString();
+  }
+
+  async function copyRecap(cycle: CycleRecord) {
+    if (!cycle.memeRecap) return;
+    await navigator.clipboard.writeText(
+      `${cycle.memeRecap.longText}\n\n${decisionUrl(cycle)}\n\n${cycle.memeRecap.disclaimer}`,
+    );
+  }
+
+  function openShare(
+    cycle: CycleRecord,
+    network: "x" | "farcaster" | "telegram",
+  ) {
+    if (!cycle.memeRecap) return;
+    const url = decisionUrl(cycle);
+    const text = cycle.memeRecap.shortText.slice(
+      0,
+      network === "x" ? 230 : 300,
+    );
+    const target =
+      network === "x"
+        ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+        : network === "farcaster"
+          ? `https://warpcast.com/~/compose?text=${encodeURIComponent(`${text}\n${url}`)}`
+          : `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    const popup = window.open(target, "_blank", "noopener,noreferrer");
+    if (!popup) void copyRecap(cycle);
+  }
+
+  async function downloadCard(cycle: CycleRecord) {
+    if (!cycle.memeRecap) return;
+    const spokesperson =
+      data?.pieces.find(
+        (piece) => piece.id === cycle.memeRecap?.spokespersonPieceId,
+      ) ?? data?.pieces[0];
+    await renderDecisionCard(cycle, spokesperson);
+  }
 
   return (
     <main className={`editorial-app ${dark ? "editorial-dark" : ""}`}>
@@ -216,9 +311,10 @@ export function EditorialDashboard({
             <div className="pulse-headline">
               <p className="section-kicker">⌁ BRAIN PULSE</p>
               <h1>
-                {latestPreferences.length
-                  ? pulseHeadline(latestPreferences)
-                  : "Balanced, watchful, waiting for a signal"}
+                {data?.latestCycle?.memeRecap?.headline ??
+                  (latestPreferences.length
+                    ? pulseHeadline(latestPreferences)
+                    : "Balanced, watchful, waiting for a signal")}
               </h1>
             </div>
             <PulseRow
@@ -259,7 +355,7 @@ export function EditorialDashboard({
                 <div className="piece-ledger-head">
                   <span className="detail-portrait">
                     <img
-                      src={`/brain-art/v3/piece-${String(selected.id).padStart(2, "0")}.webp`}
+                      src={`/brain-art/v4/piece-${String(selected.id).padStart(2, "0")}.webp`}
                       alt=""
                       aria-hidden="true"
                     />
@@ -273,6 +369,9 @@ export function EditorialDashboard({
                     <p>
                       {selected.affinity} · {selected.weight / 100}% immutable
                       influence
+                    </p>
+                    <p className="character-form">
+                      {selected.kind} · {selected.visual}
                     </p>
                   </div>
                   <span
@@ -529,6 +628,71 @@ export function EditorialDashboard({
               {selectedCycle?.rationale && (
                 <p className="decision-rationale">{selectedCycle.rationale}</p>
               )}
+              {selectedCycle && selectedMeme && (
+                <section className="brain-drama" aria-label="Brain Drama">
+                  <div className="brain-drama-heading">
+                    <div>
+                      <p className="section-kicker">BRAIN DRAMA</p>
+                      <h2>{selectedMeme.headline}</h2>
+                    </div>
+                    <span>
+                      ROSTER v{selectedCycle.characterRosterVersion ?? 4}
+                    </span>
+                  </div>
+                  <div className="brain-drama-cast">
+                    {selectedMeme.cast.map((cast) => {
+                      const piece = data?.pieces.find(
+                        (candidate) => candidate.id === cast.pieceId,
+                      );
+                      const stats = characterStats[cast.pieceId];
+                      return (
+                        <article key={`${cast.role}-${cast.pieceId}`}>
+                          <img
+                            src={`/brain-art/v4/piece-${String(cast.pieceId).padStart(2, "0")}.webp`}
+                            alt=""
+                            aria-hidden="true"
+                          />
+                          <div>
+                            <span>{cast.role.toUpperCase()}</span>
+                            <h3>{piece?.name ?? `Piece ${cast.pieceId}`}</h3>
+                            <blockquote>“{cast.line}”</blockquote>
+                            <small>
+                              {cast.mood} · {cast.influenceBps / 100}% influence
+                              {stats
+                                ? ` · ${stats.appearances} appearances · ${stats.spokespersons} spokesperson · ${stats.blame} blamed`
+                                : ""}
+                            </small>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                  <div className="brain-drama-share">
+                    <p>{selectedMeme.disclaimer}</p>
+                    <div>
+                      <button onClick={() => void downloadCard(selectedCycle)}>
+                        Download card
+                      </button>
+                      <button onClick={() => void copyRecap(selectedCycle)}>
+                        Copy recap
+                      </button>
+                      <button onClick={() => openShare(selectedCycle, "x")}>
+                        Share to X
+                      </button>
+                      <button
+                        onClick={() => openShare(selectedCycle, "farcaster")}
+                      >
+                        Farcaster
+                      </button>
+                      <button
+                        onClick={() => openShare(selectedCycle, "telegram")}
+                      >
+                        Telegram
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
               <section className="decision-flow">
                 <DecisionStage number="01" title="Brain requested" tone="brain">
                   {selectedPreferences.length ? (
@@ -609,7 +773,8 @@ export function EditorialDashboard({
       <footer className="editorial-footer">
         <span>Local Anvil simulation · no real funds</span>
         <span>
-          Decision cadence: 60 minutes · Catalog v{data?.catalog.version ?? "—"}
+          Decision cadence: 60 minutes · Catalog v{data?.catalog.version ?? "—"}{" "}
+          · Character roster v4
         </span>
       </footer>
     </main>
@@ -624,6 +789,111 @@ function allocationSummary(allocation: Record<string, number>) {
   return Object.entries(allocation)
     .map(([symbol, weight]) => `${symbol} ${weight / 100}%`)
     .join(" · ");
+}
+
+async function loadImage(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function wrapCanvasText(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maximumWidth: number,
+  lineHeight: number,
+  maximumLines: number,
+) {
+  const words = text.split(/\s+/);
+  let line = "";
+  let lineNumber = 0;
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (context.measureText(candidate).width > maximumWidth && line) {
+      context.fillText(line, x, y + lineNumber * lineHeight);
+      line = word;
+      lineNumber += 1;
+      if (lineNumber >= maximumLines) return;
+    } else {
+      line = candidate;
+    }
+  }
+  if (lineNumber < maximumLines) {
+    context.fillText(line, x, y + lineNumber * lineHeight);
+  }
+}
+
+async function renderDecisionCard(
+  cycle: CycleRecord,
+  spokesperson: EditorialPiece | undefined,
+) {
+  if (!cycle.memeRecap) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = 1200;
+  canvas.height = 630;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.fillStyle = "#f0eadc";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#211d19";
+  context.fillRect(0, 0, canvas.width, 76);
+  context.fillStyle = "#f0eadc";
+  context.font = "700 26px Georgia";
+  context.fillText("MILLIONDOLLAR BRAIN", 42, 48);
+  context.fillStyle = "#b54455";
+  context.font = "700 18px monospace";
+  context.fillText("LOCAL DEVNET · BRAIN DRAMA", 820, 46);
+
+  if (spokesperson) {
+    const image = await loadImage(
+      `/brain-art/v4/piece-${String(spokesperson.id).padStart(2, "0")}.webp`,
+    );
+    context.fillStyle = "#ddd2bd";
+    context.fillRect(42, 110, 330, 330);
+    context.drawImage(image, 42, 110, 330, 330);
+    context.fillStyle = "#6f1f2e";
+    context.font = "700 19px monospace";
+    context.fillText("SPOKESPERSON", 42, 478);
+    context.fillStyle = "#211d19";
+    context.font = "700 28px Georgia";
+    wrapCanvasText(context, spokesperson.name, 42, 515, 340, 34, 2);
+  }
+
+  context.fillStyle = "#211d19";
+  context.font = "700 46px Georgia";
+  wrapCanvasText(context, cycle.memeRecap.headline, 420, 145, 730, 52, 3);
+  context.font = "italic 23px Georgia";
+  let quoteY = 320;
+  for (const cast of cycle.memeRecap.cast.slice(0, 3)) {
+    wrapCanvasText(context, `“${cast.line}”`, 420, quoteY, 710, 28, 2);
+    quoteY += 72;
+  }
+  context.fillStyle = "#6f1f2e";
+  context.font = "700 20px monospace";
+  context.fillText(allocationSummary(cycle.allocation), 420, 548);
+  context.fillStyle = "#675f55";
+  context.font = "15px monospace";
+  context.fillText(
+    `${cycleTimestamp(cycle.at)} · ${short(cycle.txHash)}`,
+    420,
+    580,
+  );
+  context.font = "13px sans-serif";
+  context.fillText(
+    "SATIRICAL STEERING RECAP · NOT CAUSAL ATTRIBUTION OR FINANCIAL ADVICE",
+    42,
+    611,
+  );
+  const url = canvas.toDataURL("image/png");
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `milliondollar-brain-${cycle.txHash.slice(2, 10)}.png`;
+  anchor.click();
 }
 
 function pulseHeadline(items: CycleInstruction[]) {

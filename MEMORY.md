@@ -4,8 +4,8 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Replaced the repetitive human portrait roster with 33 individually generated, visibly distinct people while retaining nine already-distinct beasts and characters. The cache-safe v3 set preserves the established engraved editorial style.
+- Current task: Keep the verified meme-universe local-devnet release healthy on VM `192.168.50.135`.
+- Last meaningful change: Shipped character roster v4 with 10 diverse humans and 32 individually generated creatures, machines, monsters, sentient objects, or supernatural characters. Added deterministic, immutable per-cycle Brain Drama recaps, historical character statistics, stable decision links, and client-generated sharing cards without changing economic catalog v3.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -14,7 +14,9 @@ Durable project context lives here. Update this file whenever information should
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
-- The current `/brain-art/v3/` portrait roster deliberately varies age, sex and gender presentation, race and ethnicity, face shape, body type, hair, silhouette, expression, and prop; it remains 42 transparent 384-by-384 WebPs totaling about 1.4 MiB.
+- The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
+- Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
+- Every new allocation persists one deterministic `memeRecap` in `cycles.jsonl` using the recorded brain snapshot and actual target allocation. No additional model call is made, and legacy cycles remain readable without invented dialogue.
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
@@ -103,8 +105,18 @@ When sources conflict, use this order:
 - 2026-07-26: Made `Yours (n) · double outline` clickable in every Brain map mode. It uses the same pressed-state, dim-nonmembers, and second-click-to-clear behavior as crew filters; choosing a crew clears `Yours` and choosing `Yours` clears the crew. Production build, full Chromium economic UAT, and live in-app-browser verification pass with exactly two connected-wallet-owned pieces highlighted and no horizontal overflow.
 - 2026-07-26: Removed the Brain's Characters/Ownership/Influence/Mood selector and its unused mode state, presentation type, SVG patterns, semantic fills, and legends. The map is now one character-first view with crew filters and the interactive `Yours` ownership filter; influence and current mood remain visible through accessible labels, tooltips, and the inspector. Production build, full Chromium economic UAT, live visual review, two-piece `Yours` filtering, and no-overflow checks pass.
 - 2026-07-26: Verified the diversified v3 character roster: exactly 42 unique transparent 384-by-384 WebPs with valid alpha corners and a 1.4 MiB total budget. Next.js production build, Prettier, the full economic/autonomous-cycle Chromium UAT, live light/dark visual review, and zero browser console errors pass.
+- 2026-07-26: Verified character roster v4 and the deterministic meme layer. The roster has exactly 42 unique 384-by-384 transparent WebPs, 10 humans, 32 nonhumans, valid rival IDs, five catchphrases per character, transparent corners, and a 1.58 MB total budget. Five recap unit tests, Prettier, five Foundry tests, the Next.js production build, and the full Chromium economic/autonomous-cycle UAT pass. The live hourly endpoint recorded `characterRosterVersion: 4` plus an immutable `memeRecap`, executed the AI allocation on Anvil, and left `mdb-cycle.timer` active. Live in-app-browser UAT verified the hydrated roster, Brain Drama, exact factual moods/influences, direct `?view=decisions&cycle=<tx>` resolution, and zero console errors.
 
 ## Decisions
+
+### 2026-07-26 - Character Roster V4 And Deterministic Brain Drama
+
+- Context: The v3 cast was visually diverse but still too human-heavy and not memorable enough for a token-native meme universe.
+- Decision: Keep economic catalog v3 immutable and version character presentation separately as roster v4. Use 10 diverse humans and 32 distinct nonhumans, deterministic rivalry-driven cycle recaps, entertainment-only fictional blame, client-side share cards, and X, Farcaster, and Telegram composer links. Never make a second model call for meme copy.
+- Files: `apps/web/lib/brain-meme.ts`, `apps/web/lib/brain-catalog.ts`, `apps/web/lib/allocator.ts`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/public/brain-art/v4/`, `tests/meme-recap.test.ts`, `tests/uat.mjs`.
+- Commands/tests: `npm run test:meme`, `npm run format:check`, `npm run test:contracts`, Next.js production build, full Chromium UAT, live hourly cycle, and in-app-browser deep-link and console verification.
+- Result: Every new cycle records an immutable factual cast recap and can produce a 1200-by-630 decision card while contracts, NFT IDs, presets, ownership, pricing, and basket economics remain unchanged.
+- Follow-up: None for local devnet. Keep the satire disclaimer and never describe fictional blame as causal performance attribution.
 
 ### 2026-07-12 - Reset Stale Project Context
 

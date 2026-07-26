@@ -4,6 +4,7 @@ import { basketAbi } from "./abi";
 import { adminClient, dashboard, deployment, publicClient } from "./chain";
 import { marketContext } from "./market-context";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
+import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -181,6 +182,7 @@ export async function runCycle() {
     market,
   };
   const decision = await askAllocator(allocatorContext);
+  const memeRecap = generateMemeRecap(brain, decision.allocation);
   const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
   const weights = allowed.map((symbol) => decision.allocation[symbol]);
   const cycleHash = keccak256(
@@ -196,6 +198,8 @@ export async function runCycle() {
   const record = {
     at: new Date().toISOString(),
     ...decision,
+    characterRosterVersion: CHARACTER_ROSTER_VERSION,
+    memeRecap,
     txHash: hash,
     redemptionTxHash,
     block: receipt.blockNumber.toString(),

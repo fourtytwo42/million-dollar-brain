@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.MDB_UAT_URL ?? "http://127.0.0.1:3000";
@@ -78,7 +78,7 @@ try {
     assert.ok(response.ok(), `generated portrait asset ${href} must load`);
   }
   assert.equal(
-    artHrefs.filter((href) => href?.startsWith("/brain-art/v3/piece-")).length,
+    artHrefs.filter((href) => href?.startsWith("/brain-art/v4/piece-")).length,
     42,
     "all character portraits must use the cache-safe v3 asset path",
   );
@@ -86,7 +86,7 @@ try {
     const paths = Array.from(
       { length: 42 },
       (_, index) =>
-        `/brain-art/v3/piece-${String(index + 1).padStart(2, "0")}.webp`,
+        `/brain-art/v4/piece-${String(index + 1).padStart(2, "0")}.webp`,
     );
     return Promise.all(
       paths.map(
@@ -125,10 +125,10 @@ try {
         width === 384 && height === 384 && maxCornerAlpha <= 2,
     ),
     true,
-    "all v3 portraits must be 384 by 384 with transparent corners",
+    "all v4 portraits must be 384 by 384 with transparent corners",
   );
   await page
-    .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
+    .getByRole("heading", { name: "The Moon-Bull Department", exact: true })
     .waitFor();
   await page.getByText("BRAIN PULSE", { exact: false }).waitFor();
   await page
@@ -217,7 +217,7 @@ try {
     await page
       .locator(".brain-cell[aria-current=true]")
       .getAttribute("aria-label"),
-    /^Data Diet\./,
+    /^Data-Diet Chef\./,
     "End must select the final canonical piece",
   );
   await page.keyboard.press("Home");
@@ -225,7 +225,7 @@ try {
     await page
       .locator(".brain-cell[aria-current=true]")
       .getAttribute("aria-label"),
-    /^The Number-Go-Up Department\./,
+    /^The Moon-Bull Department\./,
     "Home must select the first canonical piece",
   );
   await page.getByRole("button", { name: "Zoom in" }).click();
@@ -454,6 +454,31 @@ try {
   await historyDetail
     .getByText(historyStatus.cycleHistory[1].txHash, { exact: true })
     .waitFor();
+  await historyItems.nth(0).click();
+  await page.getByText("BRAIN DRAMA", { exact: true }).waitFor();
+  for (const label of [
+    "Download card",
+    "Copy recap",
+    "Share to X",
+    "Farcaster",
+    "Telegram",
+  ]) {
+    assert.equal(
+      await page.getByRole("button", { name: label, exact: true }).count(),
+      1,
+      `${label} must be available for roster-v4 cycles`,
+    );
+  }
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Download card", exact: true })
+    .click();
+  const decisionCard = await downloadPromise;
+  const decisionCardPath = await decisionCard.path();
+  const decisionCardBytes = await readFile(decisionCardPath);
+  assert.equal(decisionCardBytes.toString("ascii", 1, 4), "PNG");
+  assert.equal(decisionCardBytes.readUInt32BE(16), 1200);
+  assert.equal(decisionCardBytes.readUInt32BE(20), 630);
   const historyMobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
   });
@@ -535,7 +560,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 diverse v3 portraits, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

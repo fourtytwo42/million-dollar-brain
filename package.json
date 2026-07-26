@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "test:contracts": "forge test --root packages/contracts",
+    "test:meme": "node --experimental-strip-types --test tests/meme-recap.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },
@@ -15,8 +16,6 @@
     "node": ">=24.18.0"
   },
   "devDependencies": {
-    "playwright": "1.62.0",
-    "prettier": "^3.6.2",
-    "prettier-plugin-solidity": "^2.2.0"
+    "playwright": "1.62.0"
   }
 }

@@ -199,6 +199,8 @@ export async function dashboard(address?: Address) {
         tagline: definition.tagline,
         lore: definition.lore,
         crew: definition.crew,
+        kind: definition.kind,
+        visual: definition.visual,
         category: definition.category,
         options: definition.options,
         data: definition.data,

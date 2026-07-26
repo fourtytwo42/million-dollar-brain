@@ -1,4 +1,5 @@
 import { brainPersonality, type BrainPersonality } from "./brain-personalities";
+import { memeCharacter, type MemeCharacter } from "./brain-meme";
 
 export type BrainOption = {
   label: string;
@@ -17,7 +18,8 @@ type BaseBrainPieceDefinition = {
 };
 
 export type BrainPieceDefinition = Omit<BaseBrainPieceDefinition, "options"> &
-  BrainPersonality & {
+  BrainPersonality &
+  MemeCharacter & {
     options: readonly [
       BrainOption,
       BrainOption,
@@ -562,10 +564,12 @@ const BASE_CATALOG: readonly BaseBrainPieceDefinition[] = [
 export const BRAIN_CATALOG: readonly BrainPieceDefinition[] = BASE_CATALOG.map(
   (piece) => {
     const personality = brainPersonality(piece.id);
+    const meme = memeCharacter(piece.id);
     const [negative, neutral, positive] = piece.options;
     return {
       ...piece,
       ...personality,
+      ...meme,
       options: [
         option(personality.modes[0], negative.instruction, -2),
         option(
