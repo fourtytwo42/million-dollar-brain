@@ -11,6 +11,7 @@ import { formatUnits } from "viem";
 import {
   BRAIN_PRESENTATION,
   BRAIN_PRESENTATION_BY_ID,
+  BRAIN_REGION_PATHS,
   type BrainDirection,
   type BrainMapMode,
 } from "../lib/brain-presentation";
@@ -38,9 +39,6 @@ type BrainMapProps = {
   onHover?: (pieceId: number | null) => void;
   onZoomChange?: (zoom: number) => void;
 };
-
-const brainShape =
-  "M47 238C25 202 34 157 64 127C68 82 115 52 166 55C199 20 267 17 316 43C354 14 422 12 474 39C534 25 607 49 641 99C692 110 724 151 715 194C735 231 711 279 669 298C651 335 600 352 555 339C530 367 499 375 470 362C455 388 450 406 449 425H389C391 394 375 372 345 353C312 372 269 371 237 352C185 363 135 340 112 306C72 298 43 272 47 238Z";
 
 const modes: readonly { value: BrainMapMode; label: string }[] = [
   { value: "characters", label: "Characters" },
@@ -234,8 +232,15 @@ export function BrainMap({
             >
               <defs>
                 <clipPath id="brain-boundary">
-                  <path d={brainShape} />
+                  {Object.entries(BRAIN_REGION_PATHS).map(([region, path]) => (
+                    <path d={path} key={region} />
+                  ))}
                 </clipPath>
+                {Object.entries(BRAIN_REGION_PATHS).map(([region, path]) => (
+                  <clipPath id={`brain-region-${region}`} key={region}>
+                    <path d={path} />
+                  </clipPath>
+                ))}
                 <pattern
                   id="ownership-owned"
                   width="8"
@@ -258,22 +263,16 @@ export function BrainMap({
                   </clipPath>
                 ))}
               </defs>
-              <path
-                className="brain-backplate"
-                d={brainShape}
-                aria-hidden="true"
-              />
-              <image
-                className="brain-illustration"
-                href="/brain-art/brain-base.webp"
-                x="-19"
-                y="1"
-                width="795"
-                height="434"
-                preserveAspectRatio="none"
-                clipPath="url(#brain-boundary)"
-                aria-hidden="true"
-              />
+              {(["brainstem", "cerebellum", "cerebrum"] as const).map(
+                (region) => (
+                  <path
+                    className={`brain-backplate region-${region}`}
+                    d={BRAIN_REGION_PATHS[region]}
+                    key={region}
+                    aria-hidden="true"
+                  />
+                ),
+              )}
               <g clipPath="url(#brain-boundary)">
                 {pieces.map((piece) => {
                   const presentation = BRAIN_PRESENTATION_BY_ID.get(piece.id);
@@ -302,6 +301,7 @@ export function BrainMap({
                         } as CSSProperties
                       }
                       key={piece.id}
+                      clipPath={`url(#brain-region-${presentation.region})`}
                       role="button"
                       tabIndex={selectedId === piece.id ? 0 : -1}
                       aria-label={label}
@@ -346,11 +346,16 @@ export function BrainMap({
                   );
                 })}
               </g>
-              <path
-                className="brain-outline"
-                d={brainShape}
-                aria-hidden="true"
-              />
+              {(["brainstem", "cerebellum", "cerebrum"] as const).map(
+                (region) => (
+                  <path
+                    className={`brain-outline region-${region}`}
+                    d={BRAIN_REGION_PATHS[region]}
+                    key={region}
+                    aria-hidden="true"
+                  />
+                ),
+              )}
             </svg>
             {previewPiece &&
               (() => {

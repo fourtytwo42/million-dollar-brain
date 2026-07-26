@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Aligned and clipped the generated brain background to the exact 42-piece mosaic silhouette so its narrower source profile and cerebellum no longer fight the segment map.
+- Last meaningful change: Replaced the blob-like mosaic mask and mismatched raster brain with an authored lateral-anatomy SVG composed of a cerebrum, lower-rear cerebellum, and tapered brainstem.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -13,6 +13,7 @@ Durable project context lives here. Update this file whenever information should
 
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
+- The 42-piece visual brain uses 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
@@ -91,6 +92,7 @@ When sources conflict, use this order:
 - 2026-07-25: Verified current Robinhood Chain documentation lists Alchemy as the recommended production RPC provider and QuickNode as another supported provider; public RPC endpoints are rate-limited and not production-grade.
 - 2026-07-25: Calculated the selected light and dark semantic color-pair contrast baselines recorded in `DESIGN_SYSTEM.md`.
 - 2026-07-25: Audited normative Markdown files for remaining open implementation decisions and replaced the PRD open-decision list with external production gates.
+- 2026-07-26: Verified the anatomical Brain redesign with a clean Next.js production build, Prettier, all 42 region assignments, light/dark/mobile screenshots, the complete Chromium economic flow, and a live autonomous allocation cycle.
 
 ## Decisions
 
@@ -125,6 +127,15 @@ When sources conflict, use this order:
 - Commands/tests: Documentation update only; no code, token, deployment, or transaction.
 - Result: Initial brain-piece sales no longer require ownership snapshots or reward escrow.
 - Follow-up: Define initial piece prices.
+
+### 2026-07-26 - Anatomical Brain Silhouette
+
+- Context: The rounded global mask and stretched raster background made the 42-piece mosaic read as a blob rather than a convincing brain.
+- Decision: Make the SVG presentation manifest the anatomical source of truth. Use separate lateral cerebrum, lower-rear cerebellum, and tapered brainstem regions containing 34, 6, and 2 pieces respectively. Retire the raster brain background.
+- Files: `apps/web/lib/brain-presentation.ts`, `apps/web/components/brain-map.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `DESIGN_SYSTEM.md`, `BUILD_READINESS.md`, `design/brain-art/README.md`.
+- Commands/tests: Prettier, Next.js production build, clean-state Chromium UAT, live Ornith cycle, light/dark/mobile screenshot review.
+- Result: The mosaic has a recognizable lateral brain profile, distinct cerebellum and fissure, and tapered brainstem without changing NFT identities, contracts, APIs, wallet behavior, or economics.
+- Follow-up: None for local release; retain the three-region anatomy if portrait transforms are adjusted later.
 
 ### 2026-07-23 - User-Triggered Portfolio Reviews
 
@@ -205,7 +216,7 @@ When sources conflict, use this order:
 - 2026-07-26: Replaced the settings-like three-option brain with catalog v3. All 42 ERC-721 pieces now have a unique character name, glyph, crew, tagline, lore, and five closed moods mapped to signed -2/-1/0/+1/+2 effects. Added crew filters, full light/dark collectible cards, and cycle explanations naming the character and mood. Foundry, production build, and Chromium UAT pass; live Ornith records include `The Number-Go-Up Department`, `Moon With Seatbelts`, intensity 2, and the resulting on-chain allocation.
 - 2026-07-26: Fixed a visual implementation defect where the live app had replaced the normative brain with a long card grid. Added `brain-map.tsx` with exactly 42 keyboard-operable SVG paths, `editorial-dashboard.tsx` with Brain, Basket, and Decisions views, Brain Pulse, selected-character five-mood ledger, basket snapshot, and explicit Brain requested / Ornith proposed / Protocol executed stages. Chromium UAT counts all 42 SVG segments and completes the full economic flow in both themes; visual screenshots were compared against all three accepted editorial screen directions.
 - 2026-07-26: Rebuilt the Brain screen around 42 individually generated v2 engraved character portraits and a separate presentation manifest. Non-overlapping rounded Voronoi-like segments preserve the recognizable brain silhouette while Characters, Ownership, Influence, and Mood views expose different readings. Added a compact Brain Pulse strip, complete right-rail inspector, tooltip preview, roving directional keys, Home/End, 1x through 2.5x native-scroll zoom, and a searchable mobile List view. Removed the superseded v1 portraits only after v2 references and assets passed UAT. Production build, Prettier, 5 Foundry tests, transparent 384x384 asset checks, economic Chromium UAT, a live Ornith cycle, light/dark screenshots, mobile overflow, and raw-unit price regressions all pass.
-- 2026-07-26: Fixed the generated brain background fit. Its source alpha bounds and anatomical proportions were narrower than the mosaic, and it rendered outside the shared mask. `brain-map.tsx` now maps the source alpha bounds to the mosaic extent, clips the image with `brain-boundary`, and adds a theme-aware backplate. The mosaic geometry and economics are unchanged.
+- 2026-07-26: Temporarily aligned and clipped the generated raster brain to the original mosaic mask. This fit-only approach was superseded the same day by the authored three-region anatomical SVG because the original global mask still read as a blob.
 - 2026-07-12: Reset stale project-specific memory while retaining the durable memory-management logic.
 - 2026-07-23: Produced the initial MillionDollar Brain product brief without building or deploying anything.
 

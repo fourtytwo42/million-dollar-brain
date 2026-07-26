@@ -1,9 +1,11 @@
 export type BrainMapMode = "characters" | "ownership" | "influence" | "mood";
 
 export type BrainDirection = "up" | "down" | "left" | "right";
+export type BrainRegion = "cerebrum" | "cerebellum" | "brainstem";
 
 export type BrainPresentationPiece = {
   id: number;
+  region: BrainRegion;
   path: string;
   center: { x: number; y: number };
   neighbors: Partial<Record<BrainDirection, number>>;
@@ -12,6 +14,7 @@ export type BrainPresentationPiece = {
 
 type Placement = {
   id: number;
+  region: BrainRegion;
   x: number;
   y: number;
   rx: number;
@@ -21,60 +24,137 @@ type Placement = {
   portraitY?: number;
 };
 
+export const BRAIN_REGION_PATHS: Record<BrainRegion, string> = {
+  cerebrum:
+    "M46 225C35 185 50 142 82 115C91 77 137 50 183 50C215 20 274 15 319 36C367 12 431 18 471 43C525 30 590 55 617 92C667 102 704 137 704 180C726 216 710 258 676 279C648 302 610 307 575 292C548 300 525 300 505 294C470 286 440 300 418 315C382 335 340 335 307 320C271 339 238 332 210 316C163 326 115 304 94 272C63 266 43 248 46 225Z",
+  cerebellum:
+    "M512 292C545 276 593 278 625 296C658 292 687 316 688 345C695 374 666 401 632 399C605 418 561 410 544 386C514 383 494 356 502 331C494 315 499 301 512 292Z",
+  brainstem:
+    "M466 305C488 312 509 329 515 348C516 368 505 383 500 408C497 421 488 430 474 430L452 430C458 407 457 388 448 373C439 359 428 351 430 337C432 322 444 311 466 305Z",
+};
+
 const rows: readonly (readonly Placement[])[] = [
   [
-    { id: 1, x: 156, y: 65, rx: 55, ry: 43 },
-    { id: 2, x: 245, y: 51, rx: 54, ry: 40 },
-    { id: 3, x: 336, y: 58, rx: 54, ry: 42 },
-    { id: 4, x: 427, y: 54, rx: 55, ry: 42 },
-    { id: 5, x: 518, y: 65, rx: 54, ry: 43 },
-    { id: 6, x: 604, y: 91, rx: 55, ry: 45 },
+    { id: 1, region: "cerebrum", x: 170, y: 65, rx: 55, ry: 43 },
+    { id: 2, region: "cerebrum", x: 255, y: 52, rx: 54, ry: 40 },
+    { id: 3, region: "cerebrum", x: 340, y: 58, rx: 54, ry: 42 },
+    { id: 4, region: "cerebrum", x: 425, y: 55, rx: 55, ry: 42 },
+    { id: 5, region: "cerebrum", x: 510, y: 66, rx: 54, ry: 43 },
+    { id: 6, region: "cerebrum", x: 585, y: 83, rx: 55, ry: 45 },
   ],
   [
-    { id: 7, x: 93, y: 132, rx: 52, ry: 44 },
-    { id: 8, x: 176, y: 126, rx: 51, ry: 43 },
-    { id: 9, x: 261, y: 120, rx: 51, ry: 43 },
-    { id: 10, x: 347, y: 124, rx: 52, ry: 44 },
-    { id: 11, x: 433, y: 122, rx: 52, ry: 44 },
-    { id: 12, x: 518, y: 132, rx: 51, ry: 43 },
-    { id: 13, x: 601, y: 146, rx: 51, ry: 44 },
-    { id: 14, x: 670, y: 177, rx: 43, ry: 47 },
+    { id: 7, region: "cerebrum", x: 105, y: 127, rx: 52, ry: 44 },
+    { id: 8, region: "cerebrum", x: 185, y: 121, rx: 51, ry: 43 },
+    { id: 9, region: "cerebrum", x: 270, y: 119, rx: 51, ry: 43 },
+    { id: 10, region: "cerebrum", x: 355, y: 121, rx: 52, ry: 44 },
+    { id: 11, region: "cerebrum", x: 440, y: 121, rx: 52, ry: 44 },
+    { id: 12, region: "cerebrum", x: 525, y: 129, rx: 51, ry: 43 },
+    { id: 13, region: "cerebrum", x: 605, y: 140, rx: 51, ry: 44 },
+    { id: 14, region: "cerebrum", x: 660, y: 164, rx: 43, ry: 47 },
   ],
   [
-    { id: 15, x: 73, y: 205, rx: 45, ry: 48 },
-    { id: 16, x: 151, y: 194, rx: 49, ry: 44 },
-    { id: 17, x: 233, y: 191, rx: 49, ry: 43 },
-    { id: 18, x: 316, y: 191, rx: 50, ry: 44 },
-    { id: 19, x: 400, y: 193, rx: 50, ry: 44 },
-    { id: 20, x: 484, y: 198, rx: 50, ry: 45 },
-    { id: 21, x: 566, y: 208, rx: 49, ry: 45 },
-    { id: 22, x: 638, y: 230, rx: 46, ry: 47 },
-    { id: 23, x: 689, y: 248, rx: 36, ry: 46 },
+    { id: 15, region: "cerebrum", x: 75, y: 198, rx: 45, ry: 48 },
+    { id: 16, region: "cerebrum", x: 150, y: 190, rx: 49, ry: 44 },
+    { id: 17, region: "cerebrum", x: 230, y: 188, rx: 49, ry: 43 },
+    { id: 18, region: "cerebrum", x: 310, y: 188, rx: 50, ry: 44 },
+    { id: 19, region: "cerebrum", x: 390, y: 190, rx: 50, ry: 44 },
+    { id: 20, region: "cerebrum", x: 470, y: 194, rx: 50, ry: 45 },
+    { id: 21, region: "cerebrum", x: 550, y: 199, rx: 49, ry: 45 },
+    { id: 22, region: "cerebrum", x: 625, y: 211, rx: 46, ry: 47 },
+    { id: 23, region: "cerebrum", x: 685, y: 225, rx: 36, ry: 46 },
   ],
   [
-    { id: 24, x: 83, y: 272, rx: 46, ry: 46 },
-    { id: 25, x: 163, y: 263, rx: 49, ry: 44 },
-    { id: 26, x: 245, y: 261, rx: 49, ry: 44 },
-    { id: 27, x: 328, y: 260, rx: 50, ry: 44 },
-    { id: 28, x: 412, y: 262, rx: 50, ry: 44 },
-    { id: 29, x: 495, y: 269, rx: 49, ry: 44 },
-    { id: 30, x: 576, y: 279, rx: 49, ry: 45 },
-    { id: 31, x: 642, y: 295, rx: 44, ry: 44 },
-    { id: 32, x: 682, y: 304, rx: 34, ry: 41 },
+    { id: 24, region: "cerebrum", x: 90, y: 255, rx: 46, ry: 46 },
+    { id: 25, region: "cerebrum", x: 180, y: 258, rx: 49, ry: 44 },
+    { id: 26, region: "cerebrum", x: 270, y: 258, rx: 49, ry: 44 },
+    { id: 27, region: "cerebrum", x: 360, y: 258, rx: 50, ry: 44 },
+    { id: 28, region: "cerebrum", x: 450, y: 258, rx: 50, ry: 44 },
+    { id: 29, region: "cerebrum", x: 540, y: 260, rx: 49, ry: 44 },
+    { id: 30, region: "cerebrum", x: 630, y: 263, rx: 49, ry: 45 },
   ],
   [
-    { id: 33, x: 139, y: 328, rx: 54, ry: 44 },
-    { id: 34, x: 224, y: 329, rx: 50, ry: 43 },
-    { id: 35, x: 307, y: 327, rx: 50, ry: 43 },
-    { id: 36, x: 391, y: 327, rx: 50, ry: 43 },
-    { id: 37, x: 475, y: 329, rx: 50, ry: 43 },
-    { id: 38, x: 557, y: 333, rx: 49, ry: 43 },
-    { id: 39, x: 625, y: 341, rx: 43, ry: 41 },
+    { id: 31, region: "cerebrum", x: 220, y: 305, rx: 54, ry: 44 },
+    { id: 32, region: "cerebrum", x: 315, y: 306, rx: 50, ry: 43 },
+    { id: 33, region: "cerebrum", x: 410, y: 304, rx: 50, ry: 43 },
+    { id: 34, region: "cerebrum", x: 485, y: 299, rx: 50, ry: 43 },
   ],
   [
-    { id: 40, x: 303, y: 382, rx: 52, ry: 43 },
-    { id: 41, x: 391, y: 384, rx: 52, ry: 44 },
-    { id: 42, x: 478, y: 380, rx: 51, ry: 43 },
+    {
+      id: 35,
+      region: "cerebellum",
+      x: 530,
+      y: 319,
+      rx: 45,
+      ry: 38,
+      portraitScale: 0.88,
+    },
+    {
+      id: 36,
+      region: "cerebellum",
+      x: 595,
+      y: 316,
+      rx: 45,
+      ry: 38,
+      portraitScale: 0.88,
+    },
+    {
+      id: 37,
+      region: "cerebellum",
+      x: 655,
+      y: 329,
+      rx: 42,
+      ry: 38,
+      portraitScale: 0.82,
+    },
+  ],
+  [
+    {
+      id: 38,
+      region: "cerebellum",
+      x: 535,
+      y: 367,
+      rx: 43,
+      ry: 36,
+      portraitScale: 0.84,
+    },
+    {
+      id: 39,
+      region: "cerebellum",
+      x: 600,
+      y: 379,
+      rx: 43,
+      ry: 36,
+      portraitScale: 0.84,
+    },
+    {
+      id: 40,
+      region: "cerebellum",
+      x: 658,
+      y: 369,
+      rx: 40,
+      ry: 36,
+      portraitScale: 0.78,
+    },
+  ],
+  [
+    {
+      id: 41,
+      region: "brainstem",
+      x: 470,
+      y: 348,
+      rx: 34,
+      ry: 38,
+      portraitScale: 0.72,
+    },
+    {
+      id: 42,
+      region: "brainstem",
+      x: 478,
+      y: 402,
+      rx: 34,
+      ry: 34,
+      portraitScale: 0.68,
+    },
   ],
 ] as const;
 
@@ -118,7 +198,7 @@ function roundedVoronoiPath(source: Placement) {
     { x: 28, y: 425 },
   ];
   for (const target of allPlacements) {
-    if (target.id === source.id) continue;
+    if (target.id === source.id || target.region !== source.region) continue;
     const a = 2 * (target.x - source.x);
     const b = 2 * (target.y - source.y);
     const limit =
@@ -197,6 +277,7 @@ export const BRAIN_PRESENTATION: readonly BrainPresentationPiece[] =
     const height = 112 * scale;
     return {
       id: placement.id,
+      region: placement.region,
       path: roundedVoronoiPath(placement),
       center: { x: placement.x, y: placement.y },
       neighbors: {

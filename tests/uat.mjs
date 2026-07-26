@@ -30,21 +30,27 @@ try {
   );
   assert.equal(
     await page.locator("svg.brain-map > .brain-illustration").count(),
-    1,
-    "the brain must include its generated editorial base artwork",
-  );
-  assert.equal(
-    await page
-      .locator("svg.brain-map > .brain-illustration")
-      .getAttribute("clip-path"),
-    "url(#brain-boundary)",
-    "the editorial background must use the exact same outer mask as the mosaic",
+    0,
+    "the mismatched raster brain must not compete with the shaped mosaic",
   );
   assert.equal(
     await page.locator("svg.brain-map > .brain-backplate").count(),
-    1,
-    "the brain must retain a seamless backplate behind transparent artwork",
+    3,
+    "cerebrum, cerebellum, and brainstem must each have a seamless backplate",
   );
+  for (const [region, expected] of [
+    ["cerebrum", 34],
+    ["cerebellum", 6],
+    ["brainstem", 2],
+  ]) {
+    assert.equal(
+      await page
+        .locator(`.brain-cell[clip-path="url(#brain-region-${region})"]`)
+        .count(),
+      expected,
+      `${region} must contain its locked number of brain pieces`,
+    );
+  }
   assert.equal(
     await page.locator("svg.brain-map .piece-portrait").count(),
     42,
@@ -60,13 +66,13 @@ try {
     .evaluateAll((images) => images.map((image) => image.getAttribute("href")));
   assert.equal(
     new Set(artHrefs).size,
-    43,
-    "the rendered brain must reference 43 unique generated assets",
+    42,
+    "the rendered brain must reference 42 unique generated portraits",
   );
   for (const href of artHrefs) {
-    assert.ok(href, "every generated brain asset must have an href");
+    assert.ok(href, "every generated portrait asset must have an href");
     const response = await page.request.get(new URL(href, baseUrl).toString());
-    assert.ok(response.ok(), `generated brain asset ${href} must load`);
+    assert.ok(response.ok(), `generated portrait asset ${href} must load`);
   }
   assert.equal(
     artHrefs.filter((href) => href?.startsWith("/brain-art/v2/piece-")).length,
