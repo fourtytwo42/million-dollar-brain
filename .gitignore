@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+coverage/
+cache/
+out/
+broadcast/
+deployments/local.json
+.env
+.env.*
+!.env.example
+*.log
