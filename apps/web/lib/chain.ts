@@ -12,11 +12,11 @@ export const chain = { ...localhost, id: 31337, rpcUrls: { default: { http: [rpc
 export const publicClient = createPublicClient({ chain, transport: http(rpcUrl) });
 export const admin = privateKeyToAccount((process.env.MDB_DEV_PRIVATE_KEY ?? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`);
 export const adminClient = createWalletClient({ account: admin, chain, transport: http(rpcUrl) });
-export function deployment(): Deployment { return JSON.parse(readFileSync(deploymentFile, "utf8")) as Deployment; }
+export function deployment(): Deployment { return JSON.parse(readFileSync(/* turbopackIgnore: true */ deploymentFile, "utf8")) as Deployment; }
 
 export async function dashboard(address?: Address) {
   const d = deployment();
-  const [nav, supply, usdgBalance, nvdaBalance, aaplBalance, ethxBalance, shares, catalogVersion, catalogHash] = await Promise.all([
+  const [nav, supply, usdgBalance, nvdaBalance, aaplBalance, ethxBalance, shares, pendingRedemption, catalogVersion, catalogHash] = await Promise.all([
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "nav" }),
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "totalSupply" }),
     publicClient.readContract({ address: d.usdg, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
@@ -24,6 +24,7 @@ export async function dashboard(address?: Address) {
     publicClient.readContract({ address: d.aapl, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
     publicClient.readContract({ address: d.ethx, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
     address ? publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "balanceOf", args: [address] }) : Promise.resolve(0n),
+    address ? publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "pendingRedemptionByAccount", args: [address] }) : Promise.resolve(0n),
     publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "catalogVersion" }),
     publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "catalogHash" }),
   ]);
@@ -57,7 +58,7 @@ export async function dashboard(address?: Address) {
   const pendingRewards = address
     ? await publicClient.readContract({ address: d.rewards, abi: rewardAbi, functionName: "pendingRewards", args: [address, ownedPieceIds] })
     : 0n;
-  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, rewards: { pending: pendingRewards.toString() }, catalog: { version: Number(catalogVersion), hash: catalogHash }, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
+  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), redemption: { pendingRequestId: pendingRedemption.toString() }, holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, rewards: { pending: pendingRewards.toString() }, catalog: { version: Number(catalogVersion), hash: catalogHash }, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
 }
 
 export const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);

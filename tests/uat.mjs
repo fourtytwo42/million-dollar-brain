@@ -39,13 +39,31 @@ try {
   await claim.click();
   await page.getByText("Brain-owner rewards claimed to your development wallet.").waitFor({ timeout: 45000 });
 
+  const cycleResponse = await page.request.post(`${baseUrl}/api/cycle`, {
+    headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
+    timeout: 210000,
+  });
+  assert.equal(cycleResponse.ok(), true, `authorized allocation cycle failed: ${await cycleResponse.text()}`);
+  await page.getByRole("button", { name: "Refresh on-chain state" }).click();
   await page.getByRole("button", { name: "Redeem half of my liquid shares" }).click();
-  await page.getByText("Redemption complete.").waitFor({ timeout: 45000 });
+  await page.getByText("Redemption queued on-chain for the next bounded hourly settlement.").waitFor({ timeout: 45000 });
+  await page.getByText(/Redemption #\d+ is escrowed in the FIFO queue\./).waitFor();
+  const settlementCycle = await page.request.post(`${baseUrl}/api/cycle`, {
+    headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
+    timeout: 210000,
+  });
+  assert.equal(settlementCycle.ok(), true, `queue settlement cycle failed: ${await settlementCycle.text()}`);
+  const settlement = await settlementCycle.json();
+  assert.match(settlement.redemptionTxHash ?? "", /^0x[0-9a-f]{64}$/i, "hourly cycle must submit a queued-redemption settlement transaction");
+  await page.getByRole("button", { name: "Refresh on-chain state" }).click();
+  await page.getByText(/Redemption #\d+ is escrowed in the FIFO queue\./).waitFor();
+  await page.getByRole("button", { name: "Cancel queued redemption" }).click();
+  await page.getByText("Queued redemption cancelled; escrowed shares returned.").waitFor({ timeout: 45000 });
 
   await mkdir("var", { recursive: true });
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
-  console.log("UAT PASS: 42 distinct affinities rendered; wallet funding, deposit, brain purchase, preset update, brain reward claim, and liquid redemption completed in Chromium.");
+  console.log("UAT PASS: 42 distinct affinities rendered; wallet funding, deposit, brain purchase, preset update, reward claim, authorized allocation cycle, partial queued settlement, and cancellation completed in Chromium.");
 } finally {
   await browser.close();
 }

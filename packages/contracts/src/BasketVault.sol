@@ -25,6 +25,14 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     uint256 public constant BRAIN_FEE_SHARE_BPS = 5_000;
     uint256 public constant CREATOR_FEE_SHARE_BPS = 4_000;
     uint256 public constant MIN_USDG_BPS = 2_000;
+    uint256 public constant MAX_QUEUE_SETTLEMENT_BPS = 500;
+
+    struct RedemptionRequest {
+        address account;
+        uint256 shares;
+        uint256 minimumNet;
+        bool pending;
+    }
 
     IERC20 public usdg;
     ILocalRouter public router;
@@ -33,9 +41,16 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     address public automationVault;
     address[] public assets;
     mapping(address => bool) public supportedAsset;
+    uint256 public nextRedemptionRequestId;
+    uint256 public nextRedemptionToProcess;
+    mapping(uint256 => RedemptionRequest) public redemptionRequests;
+    mapping(address => uint256) public pendingRedemptionByAccount;
 
     event Deposited(address indexed account, uint256 gross, uint256 shares, uint256 fee);
     event Redeemed(address indexed account, uint256 shares, uint256 net, uint256 fee);
+    event RedemptionQueued(uint256 indexed requestId, address indexed account, uint256 shares, uint256 minimumNet);
+    event RedemptionCancelled(uint256 indexed requestId, address indexed account, uint256 shares);
+    event QueuedRedemptionSettled(uint256 indexed requestId, address indexed account, uint256 shares, uint256 net, uint256 fee);
     event Rebalanced(bytes32 indexed cycleHash, uint256 navAfter);
 
     function initialize(address admin, address usdg_, address router_, address rewards_, address creatorVault_, address automationVault_, address[] calldata assets_) external initializer {
@@ -50,6 +65,8 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         rewards = IRewardFund(rewards_);
         creatorVault = creatorVault_;
         automationVault = automationVault_;
+        nextRedemptionRequestId = 1;
+        nextRedemptionToProcess = 1;
         for (uint256 i; i < assets_.length; ++i) {
             supportedAsset[assets_[i]] = true;
             assets.push(assets_[i]);
@@ -87,6 +104,85 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         _routeFee(fee);
         require(usdg.transfer(msg.sender, net), "redeem transfer failed");
         emit Redeemed(msg.sender, shares, net, fee);
+    }
+
+    function canRedeemImmediately(address account, uint256 shares) public view returns (bool) {
+        if (shares == 0 || totalSupply() == 0 || shares > balanceOf(account)) return false;
+        uint256 currentNav = nav();
+        uint256 gross = (shares * currentNav) / totalSupply();
+        uint256 balance = usdg.balanceOf(address(this));
+        return gross <= balance && balance - gross >= ((currentNav - gross) * MIN_USDG_BPS) / BPS;
+    }
+
+    function requestRedemption(uint256 shares, uint256 minimumNet) external nonReentrant returns (uint256 requestId) {
+        require(shares > 0, "zero shares");
+        require(pendingRedemptionByAccount[msg.sender] == 0, "request already pending");
+        requestId = nextRedemptionRequestId++;
+        pendingRedemptionByAccount[msg.sender] = requestId;
+        redemptionRequests[requestId] = RedemptionRequest(msg.sender, shares, minimumNet, true);
+        _transfer(msg.sender, address(this), shares);
+        emit RedemptionQueued(requestId, msg.sender, shares, minimumNet);
+    }
+
+    function cancelRedemption(uint256 requestId) external nonReentrant {
+        RedemptionRequest storage request = redemptionRequests[requestId];
+        require(request.pending && request.account == msg.sender, "not pending owner");
+        uint256 shares = request.shares;
+        request.pending = false;
+        pendingRedemptionByAccount[msg.sender] = 0;
+        _transfer(address(this), msg.sender, shares);
+        emit RedemptionCancelled(requestId, msg.sender, shares);
+    }
+
+    function processRedemptions(uint256 maximumRequests) external onlyRole(KEEPER_ROLE) nonReentrant returns (uint256 settled) {
+        require(maximumRequests > 0, "zero maximum");
+        uint256 startingNav = nav();
+        uint256 settlementLimit = (startingNav * MAX_QUEUE_SETTLEMENT_BPS) / BPS;
+        uint256 settledGross;
+        uint256 requestId = nextRedemptionToProcess;
+        while (requestId < nextRedemptionRequestId && settled < maximumRequests) {
+            RedemptionRequest storage request = redemptionRequests[requestId];
+            if (!request.pending) {
+                ++requestId;
+                continue;
+            }
+            uint256 currentNav = nav();
+            uint256 supply = totalSupply();
+            uint256 fullGross = (request.shares * currentNav) / supply;
+            uint256 fullNet = fullGross - ((fullGross * FEE_BPS) / BPS);
+            if (fullNet < request.minimumNet || settledGross >= settlementLimit) break;
+            uint256 remainingCapacity = settlementLimit - settledGross;
+            uint256 shares = request.shares;
+            if (fullGross > remainingCapacity) {
+                shares = (remainingCapacity * supply) / currentNav;
+                if (shares == 0) break;
+            }
+            uint256 gross = (shares * currentNav) / supply;
+            uint256 fee = (gross * FEE_BPS) / BPS;
+            uint256 net = gross - fee;
+            uint256 requiredAfter = ((currentNav - gross) * MIN_USDG_BPS) / BPS;
+            uint256 liquidRequired = gross + requiredAfter;
+            uint256 balance = usdg.balanceOf(address(this));
+            if (balance < liquidRequired) _liquidateToUsdg(liquidRequired - balance);
+            require(usdg.balanceOf(address(this)) >= gross + requiredAfter, "insufficient liquidation");
+
+            address account = request.account;
+            request.shares -= shares;
+            request.minimumNet = request.shares == 0 ? 0 : (request.minimumNet * request.shares) / (request.shares + shares);
+            if (request.shares == 0) {
+                request.pending = false;
+                pendingRedemptionByAccount[account] = 0;
+            }
+            _burn(address(this), shares);
+            _routeFee(fee);
+            require(usdg.transfer(account, net), "queued redeem transfer failed");
+            settledGross += gross;
+            ++settled;
+            emit QueuedRedemptionSettled(requestId, account, shares, net, fee);
+            if (!request.pending) ++requestId;
+            else break;
+        }
+        nextRedemptionToProcess = requestId;
     }
 
     function rebalance(address[] calldata targetAssets, uint16[] calldata weights, bytes32 cycleHash) external onlyRole(KEEPER_ROLE) nonReentrant {
@@ -134,6 +230,24 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         require(usdg.transfer(automationVault, automationShare), "automation fee failed");
         usdg.approve(address(rewards), rewardShare);
         rewards.fund(rewardShare);
+    }
+
+    function _liquidateToUsdg(uint256 valueNeeded) private {
+        uint256 remaining = valueNeeded;
+        for (uint256 i; i < assets.length && remaining > 0; ++i) {
+            address asset = assets[i];
+            uint256 tokenBalance = IERC20(asset).balanceOf(address(this));
+            if (tokenBalance == 0) continue;
+            uint256 assetValue = router.quoteUsd(asset, tokenBalance);
+            uint256 valueToSell = assetValue < remaining ? assetValue : remaining;
+            uint256 unitPrice = router.quoteUsd(asset, 1e18);
+            uint256 tokenAmount = (valueToSell * 1e18 + unitPrice - 1) / unitPrice;
+            if (tokenAmount > tokenBalance) tokenAmount = tokenBalance;
+            IERC20(asset).approve(address(router), tokenAmount);
+            uint256 received = router.sell(asset, tokenAmount, 0);
+            remaining = received >= remaining ? 0 : remaining - received;
+        }
+        require(remaining == 0, "not enough assets");
     }
 
     function _targetWeight(address asset, address[] calldata targetAssets, uint16[] calldata weights) private pure returns (uint256) {

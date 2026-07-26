@@ -58,6 +58,16 @@ async function askAllocator(context: unknown): Promise<{ allocation: Allocation;
 }
 
 export async function runCycle() {
+  const d = deployment();
+  const [nextToProcess, nextRequestId] = await Promise.all([
+    publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "nextRedemptionToProcess" }),
+    publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "nextRedemptionRequestId" }),
+  ]);
+  let redemptionTxHash: `0x${string}` | null = null;
+  if (nextToProcess < nextRequestId) {
+    redemptionTxHash = await adminClient.writeContract({ address: d.basket, abi: basketAbi, functionName: "processRedemptions", args: [10n] });
+    await publicClient.waitForTransactionReceipt({ hash: redemptionTxHash });
+  }
   const state = await dashboard();
   const market = await marketContext(state.holdings);
   const brain = state.pieces.map((piece) => {
@@ -97,7 +107,6 @@ export async function runCycle() {
     market,
   };
   const decision = await askAllocator(allocatorContext);
-  const d = deployment();
   const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
   const weights = allowed.map((symbol) => decision.allocation[symbol]);
   const cycleHash = keccak256(stringToHex(`${Date.now()}:${JSON.stringify(decision.allocation)}`));
@@ -107,6 +116,7 @@ export async function runCycle() {
     at: new Date().toISOString(),
     ...decision,
     txHash: hash,
+    redemptionTxHash,
     block: receipt.blockNumber.toString(),
     brain: {
       catalogVersion: 2,

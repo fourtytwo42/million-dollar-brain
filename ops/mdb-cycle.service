@@ -5,4 +5,4 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 210 -X POST http://127.0.0.1:3000/api/cycle
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 210 -H x-mdb-cycle-token:mdb-local-devnet-keeper-v1 -X POST http://127.0.0.1:3000/api/cycle

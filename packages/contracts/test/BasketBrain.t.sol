@@ -196,4 +196,49 @@ contract BasketBrainTest is Test {
         assertEq(usdg.balanceOf(alice), beforeClaim + pending);
         assertEq(rewards.pendingRewards(alice, pieceIds), 0);
     }
+
+    function testQueuedRedemptionIsEscrowedCancellableAndKeeperSettled() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_900e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        address[] memory targets = new address[](3);
+        uint16[] memory weights = new uint16[](3);
+        targets[0] = address(usdg); weights[0] = 2_000;
+        targets[1] = address(nvda); weights[1] = 4_000;
+        targets[2] = address(aapl); weights[2] = 4_000;
+        vm.prank(admin);
+        basket.rebalance(targets, weights, keccak256("illiquid"));
+
+        uint256 queuedShares = 4_000e18;
+        assertFalse(basket.canRedeemImmediately(alice, queuedShares));
+        vm.prank(alice);
+        uint256 cancelledId = basket.requestRedemption(queuedShares, 1);
+        assertEq(basket.balanceOf(address(basket)), queuedShares);
+        vm.prank(alice);
+        basket.cancelRedemption(cancelledId);
+        assertEq(basket.balanceOf(alice), 9_900e18);
+
+        vm.prank(alice);
+        uint256 requestId = basket.requestRedemption(queuedShares, 1);
+        uint256 beforeSettlement = usdg.balanceOf(alice);
+        vm.prank(admin);
+        uint256 settled = basket.processRedemptions(10);
+        assertEq(settled, 1);
+        assertEq(basket.pendingRedemptionByAccount(alice), requestId);
+        (, uint256 remainingAfterFirstCycle, , bool pending) = basket.redemptionRequests(requestId);
+        assertTrue(pending);
+        assertGt(remainingAfterFirstCycle, 0);
+        assertLt(remainingAfterFirstCycle, queuedShares);
+        assertGt(usdg.balanceOf(alice), beforeSettlement);
+        assertEq(basket.balanceOf(address(basket)), remainingAfterFirstCycle);
+
+        for (uint256 i; i < 20 && basket.pendingRedemptionByAccount(alice) != 0; ++i) {
+            vm.prank(admin);
+            basket.processRedemptions(10);
+        }
+        assertEq(basket.pendingRedemptionByAccount(alice), 0);
+        assertEq(basket.balanceOf(address(basket)), 0);
+    }
 }

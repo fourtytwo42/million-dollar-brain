@@ -9,6 +9,13 @@ export const basketAbi = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "deposit", stateMutability: "nonpayable", inputs: [{ name: "grossAmount", type: "uint256" }, { name: "minimumShares", type: "uint256" }, { name: "deadline", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "redeem", stateMutability: "nonpayable", inputs: [{ name: "shares", type: "uint256" }, { name: "minimumNet", type: "uint256" }, { name: "deadline", type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "canRedeemImmediately", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "shares", type: "uint256" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "pendingRedemptionByAccount", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "nextRedemptionRequestId", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "nextRedemptionToProcess", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "requestRedemption", stateMutability: "nonpayable", inputs: [{ name: "shares", type: "uint256" }, { name: "minimumNet", type: "uint256" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "cancelRedemption", stateMutability: "nonpayable", inputs: [{ name: "requestId", type: "uint256" }], outputs: [] },
+  { type: "function", name: "processRedemptions", stateMutability: "nonpayable", inputs: [{ name: "maximumRequests", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "rebalance", stateMutability: "nonpayable", inputs: [{ name: "targetAssets", type: "address[]" }, { name: "weights", type: "uint16[]" }, { name: "cycleHash", type: "bytes32" }], outputs: [] },
 ] as const;
 

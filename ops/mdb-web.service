@@ -14,6 +14,7 @@ Environment=NEXT_PUBLIC_MDB_RPC_URL=http://192.168.50.135:8545
 Environment=MDB_AI_BASE_URL=http://192.168.50.189:30001/v1
 Environment=MDB_AI_MODEL=ornith-1.0-35b-Q5_K_M-688b8d0a
 Environment=MDB_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var
+Environment=MDB_CYCLE_TOKEN=mdb-local-devnet-keeper-v1
 ExecStart=/home/hendo420/.local/node/bin/npm run start -w @million-dollar-brain/web
 Restart=always
 RestartSec=3
