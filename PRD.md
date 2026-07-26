@@ -593,6 +593,8 @@ The public application must show:
 
 The proposed information architecture, individual screens, transaction modals, admin states, and mobile behavior are defined in `UX_SCREENS.md`.
 
+The locked frontend and native VM deployment selections are defined in `TECH_STACK.md`. The MVP uses Next.js App Router, strict TypeScript, Node.js 24 LTS, npm, Tailwind CSS 4, shadcn/ui, wagmi, viem, TanStack Query, RainbowKit, native SVG brain interaction, Apache ECharts, and Motion for React. It runs directly on the Ubuntu VM under `systemd` behind Caddy without Docker.
+
 ## 15. Security requirements
 
 - Independent audits before real-value mainnet use.
@@ -793,6 +795,7 @@ Safety metrics:
 - Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
 - Application services and dependencies are installed directly on the Ubuntu VM and run as native `systemd` services. Docker is not used.
+- The frontend stack is locked in `TECH_STACK.md`: Next.js App Router, TypeScript, Node.js 24 LTS, npm, Tailwind CSS 4, shadcn/ui, wagmi, viem, TanStack Query, RainbowKit, SVG, ECharts, and Motion for React.
 - The AI returns only constrained target weights for approved assets.
 - OpenRouter and the local appliance are supported behind one provider interface.
 - Ornith 1.0 35B MoE Q5_K_M on GPU45 is the primary portfolio allocator.
