@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Replaced the blob-like mosaic mask and mismatched raster brain with an authored lateral-anatomy SVG composed of a cerebrum, lower-rear cerebellum, and tapered brainstem.
+- Last meaningful change: Replaced the failed three-blob anatomy with one continuous SVG silhouette traced from the anatomically convincing source artwork; all 42 cells now share that mask.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -13,7 +13,7 @@ Durable project context lives here. Update this file whenever information should
 
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
-- The 42-piece visual brain uses 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+- The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
@@ -131,11 +131,11 @@ When sources conflict, use this order:
 ### 2026-07-26 - Anatomical Brain Silhouette
 
 - Context: The rounded global mask and stretched raster background made the 42-piece mosaic read as a blob rather than a convincing brain.
-- Decision: Make the SVG presentation manifest the anatomical source of truth. Use separate lateral cerebrum, lower-rear cerebellum, and tapered brainstem regions containing 34, 6, and 2 pieces respectively. Retire the raster brain background.
+- Decision: Make the SVG presentation manifest the anatomical source of truth. Trace one continuous outer contour from the convincing anatomical source and tessellate all 42 cells inside it. Keep 34 cerebrum, 6 cerebellum, and 2 brainstem labels as placement metadata only, with no separate region outlines. Retire the raster brain background.
 - Files: `apps/web/lib/brain-presentation.ts`, `apps/web/components/brain-map.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `DESIGN_SYSTEM.md`, `BUILD_READINESS.md`, `design/brain-art/README.md`.
 - Commands/tests: Prettier, Next.js production build, clean-state Chromium UAT, live Ornith cycle, light/dark/mobile screenshot review.
-- Result: The mosaic has a recognizable lateral brain profile, distinct cerebellum and fissure, and tapered brainstem without changing NFT identities, contracts, APIs, wallet behavior, or economics.
-- Follow-up: None for local release; retain the three-region anatomy if portrait transforms are adjusted later.
+- Result: The mosaic has a recognizable continuous lateral brain profile without changing NFT identities, contracts, APIs, wallet behavior, or economics.
+- Follow-up: None for local release; retain the single shared outer mask if portrait transforms are adjusted later.
 
 ### 2026-07-23 - User-Triggered Portfolio Reviews
 

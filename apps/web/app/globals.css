@@ -1407,20 +1407,8 @@ footer {
   fill: color-mix(in srgb, var(--surface-subtle) 76%, #c9b88f);
   stroke: none;
 }
-.brain-backplate.region-cerebellum {
-  fill: color-mix(in srgb, var(--surface-subtle) 68%, #a99672);
-}
-.brain-backplate.region-brainstem {
-  fill: color-mix(in srgb, var(--surface-subtle) 62%, #b8845e);
-}
 .editorial-dark .brain-backplate {
   fill: color-mix(in srgb, var(--surface-subtle) 88%, #5b5143);
-}
-.editorial-dark .brain-backplate.region-cerebellum {
-  fill: color-mix(in srgb, var(--surface-subtle) 78%, #665846);
-}
-.editorial-dark .brain-backplate.region-brainstem {
-  fill: color-mix(in srgb, var(--surface-subtle) 70%, #735548);
 }
 .brain-outline {
   fill: none;
@@ -1428,12 +1416,6 @@ footer {
   stroke-width: 2.3;
   stroke-linejoin: round;
   pointer-events: none;
-}
-.brain-outline.region-cerebellum {
-  stroke-width: 2;
-}
-.brain-outline.region-brainstem {
-  stroke-width: 2.5;
 }
 .brain-cell {
   cursor: pointer;

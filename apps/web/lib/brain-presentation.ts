@@ -24,14 +24,8 @@ type Placement = {
   portraitY?: number;
 };
 
-export const BRAIN_REGION_PATHS: Record<BrainRegion, string> = {
-  cerebrum:
-    "M46 225C35 185 50 142 82 115C91 77 137 50 183 50C215 20 274 15 319 36C367 12 431 18 471 43C525 30 590 55 617 92C667 102 704 137 704 180C726 216 710 258 676 279C648 302 610 307 575 292C548 300 525 300 505 294C470 286 440 300 418 315C382 335 340 335 307 320C271 339 238 332 210 316C163 326 115 304 94 272C63 266 43 248 46 225Z",
-  cerebellum:
-    "M512 292C545 276 593 278 625 296C658 292 687 316 688 345C695 374 666 401 632 399C605 418 561 410 544 386C514 383 494 356 502 331C494 315 499 301 512 292Z",
-  brainstem:
-    "M466 305C488 312 509 329 515 348C516 368 505 383 500 408C497 421 488 430 474 430L452 430C458 407 457 388 448 373C439 359 428 351 430 337C432 322 444 311 466 305Z",
-};
+export const BRAIN_SILHOUETTE_PATH =
+  "M451 428L481.8 426.3L494.1 419.3L489.6 398.3L492 380.5L510.9 387L538.2 390.1L569.6 385.6L589.2 379.2L614.7 365.1L627 352.7L636.9 333.3L636.6 314.9L652.1 316.3L665.7 312.6L678 303.9L686.3 292.4L696.3 266.2L695.8 249.9L700 236.8L698.8 221.1L692.4 208.3L689.9 188.1L680.4 166.1L664.6 149.8L658.4 131.5L644.9 118.3L638.2 103.7L626.6 91.7L616.5 85.9L599.9 67.7L588 60.8L566.7 54.4L558.9 46.1L547.1 39.5L534.7 36.6L519.8 28.9L502.6 26.1L485.4 19.4L469.9 18.5L453.3 13.7L436.1 14.1L414.2 8.4L399.3 9L386.3 13L369.7 8L342.4 10.6L329.9 8.9L305.6 11.6L291.4 16.1L271.8 15.2L251.6 23L232.6 24.6L213.6 32.5L204.7 38.7L183.4 45.7L157.3 62.3L145.1 74.3L123.5 86.9L114.8 95.3L109.8 104.7L95.6 116.2L82.1 136.2L77.2 155.6L69.1 172.9L65 204.3L66.1 216.4L72.9 227.9L73.7 238.9L78.6 249.9L87.9 259.3L105.1 269.6L121.7 275.5L138.8 276.7L156.1 282.4L169.7 281.2L198.8 283.9L213.6 280.2L219.6 280.9L221.5 295.5L231.2 311.3L258.7 327.4L279.5 335.1L324 335.8L343.6 328.8L356.6 319.4L371.7 343.3L382.1 352.4L397.9 361.1L416.6 381L428.4 401.6L437.6 424.5Z";
 
 const rows: readonly (readonly Placement[])[] = [
   [
@@ -82,8 +76,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 35,
       region: "cerebellum",
-      x: 530,
-      y: 319,
+      x: 525,
+      y: 326,
       rx: 45,
       ry: 38,
       portraitScale: 0.88,
@@ -91,8 +85,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 36,
       region: "cerebellum",
-      x: 595,
-      y: 316,
+      x: 575,
+      y: 325,
       rx: 45,
       ry: 38,
       portraitScale: 0.88,
@@ -100,8 +94,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 37,
       region: "cerebellum",
-      x: 655,
-      y: 329,
+      x: 620,
+      y: 315,
       rx: 42,
       ry: 38,
       portraitScale: 0.82,
@@ -111,8 +105,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 38,
       region: "cerebellum",
-      x: 535,
-      y: 367,
+      x: 515,
+      y: 365,
       rx: 43,
       ry: 36,
       portraitScale: 0.84,
@@ -120,8 +114,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 39,
       region: "cerebellum",
-      x: 600,
-      y: 379,
+      x: 565,
+      y: 365,
       rx: 43,
       ry: 36,
       portraitScale: 0.84,
@@ -129,8 +123,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 40,
       region: "cerebellum",
-      x: 658,
-      y: 369,
+      x: 610,
+      y: 354,
       rx: 40,
       ry: 36,
       portraitScale: 0.78,
@@ -140,8 +134,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 41,
       region: "brainstem",
-      x: 470,
-      y: 348,
+      x: 430,
+      y: 355,
       rx: 34,
       ry: 38,
       portraitScale: 0.72,
@@ -149,8 +143,8 @@ const rows: readonly (readonly Placement[])[] = [
     {
       id: 42,
       region: "brainstem",
-      x: 478,
-      y: 402,
+      x: 461,
+      y: 408,
       rx: 34,
       ry: 34,
       portraitScale: 0.68,
@@ -198,7 +192,7 @@ function roundedVoronoiPath(source: Placement) {
     { x: 28, y: 425 },
   ];
   for (const target of allPlacements) {
-    if (target.id === source.id || target.region !== source.region) continue;
+    if (target.id === source.id) continue;
     const a = 2 * (target.x - source.x);
     const b = 2 * (target.y - source.y);
     const limit =

@@ -168,7 +168,7 @@ Automated and manual testing still validates rendered contrast after font weight
 - Borders do most of the grouping work; shadows are reserved for overlays.
 - Dense desktop tables become labeled cards below 768 pixels.
 - The 42-piece brain remains an SVG interaction map and never makes raster pixels responsible for hit testing, focus, selection, or ownership state.
-- The visual layer uses an authored lateral-anatomy SVG silhouette plus 42 individually generated, versioned transparent character portraits. The silhouette is composed of cerebrum, cerebellum, and brainstem regions; portraits are tessellated and clipped within their assigned region by the separate presentation manifest.
+- The visual layer uses one continuous anatomically traced lateral-brain SVG silhouette plus 42 individually generated, versioned transparent character portraits. Cerebrum, cerebellum, and brainstem remain semantic placement metadata, but they do not create separate outer outlines or disconnected masks.
 - Characters is the default map mode. Ownership, Influence, and Mood use semantic fills, patterns, textual counts, and accessible names so color never carries meaning alone.
 - Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
 - The inspector permanently owns the desktop right rail. Brain Pulse is a compact full-width summary strip, and Basket Snapshot follows the primary map and inspector.

@@ -11,7 +11,7 @@ import { formatUnits } from "viem";
 import {
   BRAIN_PRESENTATION,
   BRAIN_PRESENTATION_BY_ID,
-  BRAIN_REGION_PATHS,
+  BRAIN_SILHOUETTE_PATH,
   type BrainDirection,
   type BrainMapMode,
 } from "../lib/brain-presentation";
@@ -232,15 +232,8 @@ export function BrainMap({
             >
               <defs>
                 <clipPath id="brain-boundary">
-                  {Object.entries(BRAIN_REGION_PATHS).map(([region, path]) => (
-                    <path d={path} key={region} />
-                  ))}
+                  <path d={BRAIN_SILHOUETTE_PATH} />
                 </clipPath>
-                {Object.entries(BRAIN_REGION_PATHS).map(([region, path]) => (
-                  <clipPath id={`brain-region-${region}`} key={region}>
-                    <path d={path} />
-                  </clipPath>
-                ))}
                 <pattern
                   id="ownership-owned"
                   width="8"
@@ -263,16 +256,11 @@ export function BrainMap({
                   </clipPath>
                 ))}
               </defs>
-              {(["brainstem", "cerebellum", "cerebrum"] as const).map(
-                (region) => (
-                  <path
-                    className={`brain-backplate region-${region}`}
-                    d={BRAIN_REGION_PATHS[region]}
-                    key={region}
-                    aria-hidden="true"
-                  />
-                ),
-              )}
+              <path
+                className="brain-backplate"
+                d={BRAIN_SILHOUETTE_PATH}
+                aria-hidden="true"
+              />
               <g clipPath="url(#brain-boundary)">
                 {pieces.map((piece) => {
                   const presentation = BRAIN_PRESENTATION_BY_ID.get(piece.id);
@@ -301,7 +289,7 @@ export function BrainMap({
                         } as CSSProperties
                       }
                       key={piece.id}
-                      clipPath={`url(#brain-region-${presentation.region})`}
+                      data-region={presentation.region}
                       role="button"
                       tabIndex={selectedId === piece.id ? 0 : -1}
                       aria-label={label}
@@ -346,16 +334,11 @@ export function BrainMap({
                   );
                 })}
               </g>
-              {(["brainstem", "cerebellum", "cerebrum"] as const).map(
-                (region) => (
-                  <path
-                    className={`brain-outline region-${region}`}
-                    d={BRAIN_REGION_PATHS[region]}
-                    key={region}
-                    aria-hidden="true"
-                  />
-                ),
-              )}
+              <path
+                className="brain-outline"
+                d={BRAIN_SILHOUETTE_PATH}
+                aria-hidden="true"
+              />
             </svg>
             {previewPiece &&
               (() => {

@@ -35,8 +35,8 @@ try {
   );
   assert.equal(
     await page.locator("svg.brain-map > .brain-backplate").count(),
-    3,
-    "cerebrum, cerebellum, and brainstem must each have a seamless backplate",
+    1,
+    "the complete mosaic must use one continuous anatomical backplate",
   );
   for (const [region, expected] of [
     ["cerebrum", 34],
@@ -44,9 +44,7 @@ try {
     ["brainstem", 2],
   ]) {
     assert.equal(
-      await page
-        .locator(`.brain-cell[clip-path="url(#brain-region-${region})"]`)
-        .count(),
+      await page.locator(`.brain-cell[data-region="${region}"]`).count(),
       expected,
       `${region} must contain its locked number of brain pieces`,
     );
