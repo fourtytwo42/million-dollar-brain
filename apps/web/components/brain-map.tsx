@@ -91,6 +91,7 @@ export function BrainMap({
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
   const [query, setQuery] = useState("");
   const [highlightedCrew, setHighlightedCrew] = useState<string | null>(null);
+  const [mineHighlighted, setMineHighlighted] = useState(false);
   const segmentRefs = useRef(new Map<number, SVGGElement>());
   const pieceById = useMemo(
     () => new Map(pieces.map((piece) => [piece.id, piece])),
@@ -226,7 +227,7 @@ export function BrainMap({
             data-zoom={zoom.toFixed(2)}
           >
             <svg
-              className={`brain-map mode-${mode}${highlightedCrew ? " has-crew-filter" : ""}`}
+              className={`brain-map mode-${mode}${highlightedCrew || mineHighlighted ? " has-piece-filter" : ""}`}
               viewBox="0 0 760 435"
               role="group"
               aria-label="Interactive 42-piece brain marketplace"
@@ -277,7 +278,10 @@ export function BrainMap({
                     `mood-${moodValue < 0 ? `n${Math.abs(moodValue)}` : `p${moodValue}`}`,
                     selectedId === piece.id ? "selected" : "",
                     hoveredId === piece.id ? "hovered" : "",
-                    highlightedCrew === piece.crew ? "crew-highlight" : "",
+                    highlightedCrew === piece.crew ||
+                    (mineHighlighted && state === "mine")
+                      ? "piece-filter-highlight"
+                      : "",
                   ]
                     .filter(Boolean)
                     .join(" ");
@@ -432,9 +436,15 @@ export function BrainMap({
         pieces={pieces}
         account={account}
         highlightedCrew={highlightedCrew}
-        onCrewHighlight={(crew) =>
-          setHighlightedCrew((current) => (current === crew ? null : crew))
-        }
+        mineHighlighted={mineHighlighted}
+        onCrewHighlight={(crew) => {
+          setMineHighlighted(false);
+          setHighlightedCrew((current) => (current === crew ? null : crew));
+        }}
+        onMineHighlight={() => {
+          setHighlightedCrew(null);
+          setMineHighlighted((current) => !current);
+        }}
       />
     </div>
   );
@@ -445,31 +455,47 @@ function ModeLegend({
   pieces,
   account,
   highlightedCrew,
+  mineHighlighted,
   onCrewHighlight,
+  onMineHighlight,
 }: {
   mode: BrainMapMode;
   pieces: MapPiece[];
   account: string | null;
   highlightedCrew: string | null;
+  mineHighlighted: boolean;
   onCrewHighlight: (crew: string) => void;
+  onMineHighlight: () => void;
 }) {
   const mineCount = pieces.filter(
     (piece) => ownershipState(piece, account) === "mine",
   ).length;
   const ownershipKey = (
-    <span className="ownership-at-glance-key">
+    <button
+      className={`crew-legend-button ownership-at-glance-key${mineHighlighted ? " active" : ""}`}
+      aria-pressed={mineHighlighted}
+      disabled={mineCount === 0 && !mineHighlighted}
+      onClick={onMineHighlight}
+      title={
+        mineCount === 0
+          ? "This wallet does not own any brain pieces yet"
+          : "Highlight the brain pieces owned by this wallet"
+      }
+    >
       <i className="legend-mine-halo" />
       Yours ({mineCount}) · double outline
-    </span>
+    </button>
   );
   if (mode === "characters") {
     const crews = [...new Set(pieces.map((piece) => piece.crew))];
     return (
       <div className="map-legend" aria-label="Character crew legend">
         <p>
-          {highlightedCrew
-            ? `${highlightedCrew} highlighted. Select it again to clear.`
-            : "Select a crew to highlight its members."}
+          {mineHighlighted
+            ? "Your pieces highlighted. Select Yours again to clear."
+            : highlightedCrew
+              ? `${highlightedCrew} highlighted. Select it again to clear.`
+              : "Select a crew or Yours to highlight its members."}
         </p>
         {ownershipKey}
         {crews.map((crew) => (

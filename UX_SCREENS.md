@@ -123,7 +123,7 @@ Use a `See why` action to open the latest decision.
 - Hover or tap shows piece name, current preset, influence, owner status, and price.
 - Selecting a piece opens the Brain Piece drawer.
 - Personally owned pieces retain a double-outline ownership halo in all map modes.
-- A textual `Yours (n) · double outline` key communicates the connected wallet's count without relying on color alone.
+- A textual `Yours (n) · double outline` key communicates the connected wallet's count without relying on color alone. It acts like a crew filter: select it to highlight only the wallet's pieces and select it again to clear.
 
 The brain itself is the NFT marketplace. There is no separate marketplace page.
 

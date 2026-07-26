@@ -182,18 +182,18 @@ try {
     "the selected crew legend must expose its active state",
   );
   assert.equal(
-    await page.locator(".brain-cell.crew-highlight").count(),
+    await page.locator(".brain-cell.piece-filter-highlight").count(),
     12,
     "clicking Market Mystics must highlight exactly its 12 members",
   );
   assert.equal(
-    await page.locator("svg.brain-map.has-crew-filter").count(),
+    await page.locator("svg.brain-map.has-piece-filter").count(),
     1,
     "crew highlighting must visually mute non-members",
   );
   await mysticsCrew.click();
   assert.equal(
-    await page.locator(".brain-cell.crew-highlight").count(),
+    await page.locator(".brain-cell.piece-filter-highlight").count(),
     0,
     "clicking the active crew again must clear the highlight",
   );
@@ -313,7 +313,31 @@ try {
     "1",
     "the personal ownership halo must remain visibly active",
   );
-  await page.getByText(/Yours \(\d+\) · double outline/).waitFor();
+  const yoursFilter = page.getByRole("button", {
+    name: /Yours \(\d+\) · double outline/,
+  });
+  await yoursFilter.click();
+  assert.equal(
+    await yoursFilter.getAttribute("aria-pressed"),
+    "true",
+    "the Yours legend must expose its active state",
+  );
+  assert.equal(
+    await page.locator(".brain-cell.piece-filter-highlight").count(),
+    mineCellCount,
+    "clicking Yours must highlight exactly the connected wallet's pieces",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map.has-piece-filter").count(),
+    1,
+    "the Yours filter must visually mute pieces owned by other wallets",
+  );
+  await yoursFilter.click();
+  assert.equal(
+    await page.locator(".brain-cell.piece-filter-highlight").count(),
+    0,
+    "clicking Yours again must clear the ownership highlight",
+  );
   const selectedMood = page.getByRole("button", {
     name: "+2 Moon With Seatbelts",
     exact: true,
