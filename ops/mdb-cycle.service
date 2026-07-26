@@ -1,0 +1,8 @@
+[Unit]
+Description=MillionDollar Brain constrained AI allocation cycle (local devnet)
+After=network-online.target mdb-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 150 -X POST http://127.0.0.1:3000/api/cycle
