@@ -9,7 +9,6 @@ Product specification and architecture phase. No production contracts have been 
 ## Specifications
 
 - [Product Requirements](PRD.md)
-- [Product Brief](PRODUCT_BRIEF.md)
 - [Screen Map](UX_SCREENS.md)
 - [Brain Schema](BRAIN_SCHEMA.md)
 - [Brain Preset Catalog](BRAIN_PRESET_CATALOG.md)
@@ -17,6 +16,8 @@ Product specification and architecture phase. No production contracts have been 
 - [AI Explainability](AI_EXPLAINABILITY.md)
 - [Keeper Wallet and Gas Policy](KEEPER_GAS_POLICY.md)
 - [Technology Stack](TECH_STACK.md)
+
+The PRD and the seven specifications listed after it form the authoritative requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a superseded historical concept note.
 
 ## Core design
 

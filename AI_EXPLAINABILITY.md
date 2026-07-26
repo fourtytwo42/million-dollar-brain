@@ -1,7 +1,7 @@
 # MillionDollar Brain AI Explainability
 
-**Version:** 0.1 proposal  
-**Status:** Draft for review
+**Version:** 0.2  
+**Status:** Normative MVP specification
 
 ## 1. Explainability principle
 
@@ -375,4 +375,3 @@ A user viewing any cycle should be able to answer:
 6. What did deterministic rules change?
 7. Which trades executed?
 8. What does the basket hold now?
-

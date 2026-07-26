@@ -2,10 +2,26 @@
 
 ## Product Requirements Document
 
-**Version:** 0.1  
-**Status:** Working draft  
-**Date:** 2026-07-23  
-**Implementation status:** Product design only. No contracts, token, application, or deployment exist.
+**Version:** 0.3  
+**Status:** Consolidated MVP requirements; unresolved launch decisions are explicit  
+**Date:** 2026-07-25  
+**Implementation status:** Product and architecture specifications are committed to a private GitHub repository on the application VM. No contracts, token, production application, or blockchain deployment exist.
+
+### Normative PRD set
+
+This PRD is the top-level product authority. The following linked specifications are normative parts of the PRD and contain details that would make this file unnecessarily repetitive:
+
+| Specification | Authority |
+| --- | --- |
+| `BRAIN_PRESET_CATALOG.md` | All 42 pieces, options, defaults, weights, effects, confidence thresholds, and data dependencies |
+| `BRAIN_SCHEMA.md` | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas |
+| `AI_DATA_POLICY.md` | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior |
+| `AI_EXPLAINABILITY.md` | Brain-to-proposal-to-execution attribution and public explanation requirements |
+| `KEEPER_GAS_POLICY.md` | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation |
+| `UX_SCREENS.md` | Screen consolidation, drawers, modals, system states, and mobile behavior |
+| `TECH_STACK.md` | Frontend libraries, SVG brain, testing, and native Ubuntu deployment |
+
+If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
 ## 1. Product summary
 
@@ -173,7 +189,7 @@ NAV must include:
 
 ### 7.3 Deposit
 
-Working economics:
+MVP economics:
 
 ```text
 entry fee = deposit amount × 1%
@@ -191,7 +207,7 @@ Requirements:
 
 ### 7.4 Redemption
 
-Working economics:
+MVP economics:
 
 ```text
 gross redemption = shares burned × current NAV per share
@@ -342,6 +358,10 @@ Automation Reserve USDG is committed operating revenue and is not creator-withdr
 - The initial target schedule is one decision cycle per hour.
 - The final interval must be configurable through an upgradeable or administrative parameter.
 - AI cycles are independent of user deposits, redemptions, brain activity, claims, and governance actions.
+- Each cycle uses an immutable brain, Asset Registry, portfolio, price, and data snapshot identified by versions and hashes.
+- A brain setting changed after the snapshot affects the next cycle.
+- Deposits and redemptions after proposal creation do not change its percentage targets; deterministic execution applies accepted targets to the then-current balances and NAV.
+- A valid proposal expires when its deadline passes or a newer cycle supersedes it.
 
 ### 10.2 Model providers
 
@@ -470,6 +490,17 @@ Failure must not trigger an unapproved provider or model automatically unless th
 - At most one gas reimbursement is paid per eligible cycle.
 - Low gas produces a public warning; insufficient gas produces a missed cycle and no portfolio change.
 - A backup keeper may submit an unexpired valid proposal.
+
+### 10.7 Off-chain deployment
+
+- The application and automation VM is Ubuntu 24.04 LTS at `192.168.50.135`.
+- The repository path is `/home/hendo420/projects/million-dollar-brain`.
+- The private GitHub repository is `fourtytwo42/million-dollar-brain`.
+- The GPU45 model appliance remains separate at `192.168.50.189`.
+- Services install directly on the VM and run under `systemd`; Docker and PM2 are excluded.
+- Caddy terminates HTTPS and proxies only to localhost-bound application services.
+- Keeper and allocator signing keys remain outside the repository, frontend, model process, logs, and normal environment files.
+- Frontend and deployment details are controlled by `TECH_STACK.md`.
 
 ## 11. Portfolio compiler and execution requirements
 
@@ -676,6 +707,41 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 3. Vault transfers the requested available amount.
 4. Withdrawal event and dashboard history update.
 
+### 17.6 Change a brain preset
+
+1. Owner opens one of their brain pieces.
+2. Application compares all three closed options and shows the current aggregate effect.
+3. Owner previews the new aggregate effect and its required data.
+4. Owner signs the on-chain setting change and pays gas.
+5. Registry records the new selection and brain version.
+6. The change applies to the next cycle snapshot and does not trigger an immediate rebalance.
+
+### 17.7 Claim brain-owner rewards
+
+1. Owner opens the Account drawer.
+2. Application shows USDG rewards accrued across all owned and previously owned pieces.
+3. Owner selects Claim All and pays gas.
+4. Reward Distributor checkpoints accounting and transfers the claimable USDG.
+5. Claim event appears in personal history and protocol Activity.
+
+### 17.8 Redeem basket shares
+
+1. User chooses a share amount or percentage.
+2. Application shows gross NAV value, the locked 1% redemption fee, the fee split, expected net value, price freshness, gas, and settlement mode.
+3. User supplies minimum acceptable proceeds and signs the transaction.
+4. Basket shares are burned.
+5. The fee routes 50% to eligible brain owners, 40% to creator-withdrawable revenue, and 10% to the Automation Reserve.
+6. The user receives the supported immediate, queued, in-kind, or hybrid settlement after the final redemption policy is selected.
+7. Redemption status remains visible until settlement completes.
+
+### 17.9 Missed or failed AI cycle
+
+1. System detects an unavailable model, invalid response, stale data, insufficient keeper gas, rejected proposal, or unsafe execution.
+2. No unapproved trade occurs and the current allocation remains in place.
+3. The failure reason, affected source, Keeper Wallet state, and recovery status become public.
+4. A backup keeper may submit an unexpired valid proposal.
+5. Otherwise the cycle is recorded as missed or held and the system waits for the next scheduled cycle.
+
 ## 18. Success metrics
 
 Product metrics:
@@ -738,32 +804,24 @@ Safety metrics:
 - Use strict caps and a narrow asset universe.
 - Validate incident response and operational monitoring.
 
-## 20. Open product decisions
+## 20. Open product and implementation decisions
 
-1. Eligible jurisdictions and users.
-2. Legal entity and compliance path.
-3. Reserved for future brain-version changes; the MVP brain catalog is locked.
-4. Initial brain-piece price formula.
-5. Reserved for future fee-policy changes; MVP entry and redemption rates are locked at 1%.
-6. Reserved for future denomination changes; MVP fees and brain rewards use USDG.
-7. Instant, queued, in-kind, or hybrid redemption.
-8. Exact initial asset contracts, selected from the locked 25-slot universe immediately before deployment.
-9. Restricted-asset redemption behavior.
-10. Migration date for the creator risk-administrator role to a multisig.
-11. Exact hourly or alternative schedule.
-12. Approved fallback model.
-13. Automatic model fallback policy.
-14. Reserved for future gas-policy changes; the MVP reimbursement formula is locked.
-15. Reserved for future automation changes; the MVP missed-cycle policy is locked.
-16. No-trade bands and minimum trade sizes.
-17. Reserved for future reward-policy changes; a sold piece is excluded from its own markup distribution.
-18. Whether brain-piece prices ever decay.
-19. Upgrade pattern.
-20. Upgrade multisig membership.
-21. Upgrade timelock and emergency policy.
-22. Creator DAO Vault withdrawal safeguards beyond owner authorization.
-23. Initial seed capital and initial basket-share price.
-24. Whether future DAO voting uses basket shares, brain pieces, another token, or no token.
+Only genuinely unresolved decisions belong in this section:
+
+1. Eligible jurisdictions, users, legal entity, and compliance path.
+2. Initial brain-piece price formula and whether prices ever decay.
+3. Instant, queued, in-kind, or hybrid redemption and restricted-asset redemption behavior.
+4. Exact initial asset contracts and approved execution venue or router.
+5. No-trade bands and minimum trade sizes.
+6. Approved fallback model and whether automatic provider fallback is allowed.
+7. Upgrade proxy pattern.
+8. Upgrade and risk multisig membership.
+9. Timelock duration, emergency-upgrade policy, and user exit window.
+10. Creator DAO Vault safeguards beyond owner authorization.
+11. Initial seed capital and initial basket-share price.
+12. Whether future governance uses basket shares, brain pieces, another token, or remains absent.
+13. Final brand palette, typography, and light or dark theme behavior.
+14. Backend API framework, database, migrations, chain indexer, scheduler language, metrics, alerts, and backups. These must run natively on the VM without Docker.
 
 ## 21. Current decisions ledger
 
@@ -803,3 +861,8 @@ Safety metrics:
 - Deterministic contracts validate and execute.
 - All protocol smart contracts are upgradeable.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
+- The PRD and its seven linked normative specifications form one authoritative requirements set.
+- The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
+- The private source repository is `fourtytwo42/million-dollar-brain`.
+- The MVP schedule is hourly and configurable; any future interval change is an administrative protocol change.
+- Cycle inputs use immutable versioned snapshots; later user actions do not silently mutate an already signed proposal.

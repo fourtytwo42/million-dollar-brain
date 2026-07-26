@@ -1,7 +1,7 @@
 # MillionDollar Brain Preset and Asset Schema
 
-**Version:** 0.1 proposal  
-**Status:** Draft for review  
+**Version:** 0.2  
+**Status:** Normative MVP specification  
 **Purpose:** Define how the 42 brain pieces steer the AI and how the protocol tells the AI which assets it may hold.
 
 The complete user-facing option meanings, recommended defaults, behavioral effects, and data dependencies are defined in `BRAIN_PRESET_CATALOG.md`.
@@ -46,7 +46,7 @@ Every piece has:
 
 On-chain state stores IDs, weights, ownership, selections, and versions. Each option has protocol-authored metadata and a content hash so the exact meaning supplied to the model is auditable.
 
-## 3. Proposed weight tiers
+## 3. MVP weight tiers
 
 | Tier | Pieces | Weight per piece | Combined influence |
 | --- | ---: | ---: | ---: |
@@ -58,7 +58,7 @@ On-chain state stores IDs, weights, ownership, selections, and versions. Each op
 
 No single piece controls more than 5% of the complete brain.
 
-## 4. Proposed 42-piece brain
+## 4. MVP 42-piece brain
 
 ### 4.1 Core mandate pieces
 

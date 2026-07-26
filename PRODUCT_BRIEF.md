@@ -1,6 +1,10 @@
 # MillionDollar Brain
 
-## Working concept
+## Historical concept note
+
+**Status:** Superseded and non-normative
+
+This file preserves early product reasoning. It is not the current requirements authority and contains language that predates later fee, data, keeper, screen, and stack decisions. `PRD.md` and its linked normative specifications control whenever this file differs.
 
 MillionDollar Brain is a community-influenced portfolio protocol on Robinhood Chain.
 
