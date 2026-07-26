@@ -6,6 +6,8 @@ cache/
 out/
 broadcast/
 deployments/local.json
+packages/contracts/deployments/
+var/
 .env
 .env.*
 !.env.example
