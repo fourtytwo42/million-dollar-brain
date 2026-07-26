@@ -241,7 +241,13 @@ export function EditorialDashboard({
             {selected && (
               <article className="piece-ledger">
                 <div className="piece-ledger-head">
-                  <span className="detail-glyph">{selected.glyph}</span>
+                  <span className="detail-portrait">
+                    <img
+                      src={`/brain-art/piece-${String(selected.id).padStart(2, "0")}.webp`}
+                      alt=""
+                      aria-hidden="true"
+                    />
+                  </span>
                   <div>
                     <p className="section-kicker">
                       PIECE {String(selected.id).padStart(2, "0")} ·{" "}

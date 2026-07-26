@@ -167,7 +167,10 @@ Automated and manual testing still validates rendered contrast after font weight
 - Buttons use 4 or 6 pixels and never become pill-shaped unless the control is a compact status.
 - Borders do most of the grouping work; shadows are reserved for overlays.
 - Dense desktop tables become labeled cards below 768 pixels.
-- The 42-piece brain remains an SVG and never becomes a raster interaction map.
+- The 42-piece brain remains an SVG interaction map and never makes raster pixels responsible for hit testing, focus, selection, or ownership state.
+- The visual layer uses one generated transparent brain illustration plus 42 generated transparent character portraits. Portraits are clipped by their corresponding SVG paths.
+- The map does not overlay piece numbers or generic glyphs on the portraits. Catalog names remain available through accessible labels and the selected-piece ledger.
+- The generated art direction and canonical asset paths are defined in `design/brain-art/README.md`.
 
 ## 9. Motion
 

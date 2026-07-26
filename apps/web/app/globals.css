@@ -754,10 +754,19 @@ footer {
   max-height: 445px;
   flex: 1;
 }
-.brain-silhouette {
-  fill: var(--surface-subtle);
-  stroke: var(--border);
-  stroke-width: 2;
+.brain-illustration {
+  opacity: 0.72;
+  filter: saturate(0.78) contrast(0.96);
+  pointer-events: none;
+}
+.brain-outline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--primary) 78%, var(--text));
+  stroke-width: 3;
+  pointer-events: none;
+}
+.piece-portrait {
+  pointer-events: none;
 }
 .brain-cell {
   cursor: pointer;
@@ -766,22 +775,11 @@ footer {
 .brain-cell path {
   stroke: var(--surface);
   stroke-width: 4;
+  fill-opacity: 0.18;
   transition:
     stroke-width 140ms,
     filter 140ms,
-    opacity 140ms;
-}
-.brain-cell text {
-  pointer-events: none;
-  fill: #20231f;
-  font:
-    600 14px "IBM Plex Mono",
-    "DM Mono",
-    monospace;
-}
-.brain-cell .cell-glyph {
-  font-size: 11px;
-  opacity: 0.62;
+    fill-opacity 140ms;
 }
 .brain-cell.crew-executive-dysfunction path {
   fill: #9cadb7;
@@ -799,10 +797,12 @@ footer {
 .brain-cell:focus path {
   stroke: var(--primary);
   stroke-width: 6;
+  fill-opacity: 0.06;
 }
 .brain-cell.selected path {
   stroke: var(--primary);
   stroke-width: 8;
+  fill-opacity: 0.04;
   filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.16));
 }
 .brain-cell.mine path {
@@ -810,7 +810,14 @@ footer {
   stroke-dasharray: 7 4;
 }
 .brain-cell.unowned {
-  opacity: 0.9;
+  opacity: 0.88;
+}
+.editorial-dark .brain-illustration {
+  opacity: 0.82;
+  filter: saturate(0.72) brightness(0.83);
+}
+.editorial-dark .brain-cell path {
+  stroke: var(--background);
 }
 .map-legend {
   display: flex;
@@ -910,15 +917,21 @@ footer {
   gap: 13px;
   align-items: start;
 }
-.detail-glyph {
-  width: 46px;
-  height: 46px;
+.detail-portrait {
+  width: 52px;
+  height: 52px;
   display: grid;
-  place-items: center;
+  place-items: end center;
+  overflow: hidden;
   border-radius: 50%;
-  background: var(--text);
-  color: var(--surface);
-  font-size: 21px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+}
+.detail-portrait img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
 }
 .piece-ledger h2,
 .basket-snapshot h2,

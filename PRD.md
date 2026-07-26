@@ -659,6 +659,8 @@ The accepted editorial mockups below are normative parts of the PRD. `DESIGN_SYS
 
 ![Brain dark mode](design/mockups/brain-screen-v2-editorial-dark.png)
 
+The implemented Brain map adds a normative generated-art layer to this layout direction. A recognizable editorial brain illustration sits beneath 42 unique catalog-character portraits. Each portrait is clipped by its piece's irregular SVG boundary; the SVG paths remain the authoritative keyboard, pointer, ownership, and selection surface. Numbers and generic glyphs must not cover the map portraits. The final art roster and generation direction are recorded in [`design/brain-art/README.md`](design/brain-art/README.md).
+
 #### Basket
 
 ![Basket light mode](design/mockups/basket-screen-v2-editorial.png)

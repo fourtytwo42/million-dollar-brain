@@ -17,12 +17,38 @@ try {
     "the complete 42-segment SVG brain must render",
   );
   assert.equal(
-    await page
-      .locator("svg.brain-map > path, svg.brain-map g.brain-cell > path")
-      .count(),
-    43,
-    "the brain must include one silhouette and exactly 42 interactive paths",
+    await page.locator("svg.brain-map g.brain-cell > path").count(),
+    42,
+    "every brain piece must have exactly one interactive path",
   );
+  assert.equal(
+    await page.locator("svg.brain-map > .brain-illustration").count(),
+    1,
+    "the brain must include its generated editorial base artwork",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map .piece-portrait").count(),
+    42,
+    "every brain piece must include its unique generated portrait",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map text").count(),
+    0,
+    "numbers and glyph placeholders must not cover the generated portraits",
+  );
+  const artHrefs = await page
+    .locator("svg.brain-map image")
+    .evaluateAll((images) => images.map((image) => image.getAttribute("href")));
+  assert.equal(
+    new Set(artHrefs).size,
+    43,
+    "the rendered brain must reference 43 unique generated assets",
+  );
+  for (const href of artHrefs) {
+    assert.ok(href, "every generated brain asset must have an href");
+    const response = await page.request.get(new URL(href, baseUrl).toString());
+    assert.ok(response.ok(), `generated brain asset ${href} must load`);
+  }
   await page
     .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
     .waitFor();

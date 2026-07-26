@@ -5,7 +5,6 @@ type MapPiece = {
   name: string;
   affinity: string;
   crew: string;
-  glyph: string;
   preset: number;
   owner: string;
   unowned: boolean;
@@ -32,19 +31,27 @@ const centers: Map<number, { x: number; y: number }> = new Map(
   ),
 );
 
+const brainShape =
+  "M47 238C25 202 34 157 64 127C68 82 115 52 166 55C199 20 267 17 316 43C354 14 422 12 474 39C534 25 607 49 641 99C692 110 724 151 715 194C735 231 711 279 669 298C651 335 600 352 555 339C530 367 499 375 470 362C455 388 450 406 449 425H389C391 394 375 372 345 353C312 372 269 371 237 352C185 363 135 340 112 306C72 298 43 272 47 238Z";
+
+function pieceArtPath(pieceId: number) {
+  return `/brain-art/piece-${String(pieceId).padStart(2, "0")}.webp`;
+}
+
 function cellPath(x: number, y: number, id: number) {
-  const rx = id >= 40 ? 42 : 47;
-  const ry = id >= 40 ? 39 : 36;
-  const wobble = (id % 3) * 2;
+  const rx = id >= 40 ? 40 + (id % 2) * 4 : 44 + ((id * 7) % 9);
+  const ry = id >= 40 ? 42 : 33 + ((id * 5) % 8);
+  const lean = ((id * 11) % 9) - 4;
+  const shoulder = ((id * 13) % 7) - 3;
   return [
-    `M ${x - rx + wobble} ${y - 8}`,
-    `L ${x - rx / 2} ${y - ry}`,
-    `L ${x + rx / 2 + wobble} ${y - ry + 2}`,
-    `L ${x + rx} ${y - 7}`,
-    `L ${x + rx - 5} ${y + 23}`,
-    `L ${x + rx / 3} ${y + ry}`,
-    `L ${x - rx / 2} ${y + ry - 2}`,
-    `L ${x - rx} ${y + 14}`,
+    `M ${x - rx + lean} ${y - 9 + shoulder}`,
+    `L ${x - rx * 0.58 + shoulder} ${y - ry}`,
+    `L ${x + rx * 0.45 + lean} ${y - ry + shoulder}`,
+    `L ${x + rx} ${y - 10 - lean}`,
+    `L ${x + rx - 4 + shoulder} ${y + 20}`,
+    `L ${x + rx * 0.38 - lean} ${y + ry}`,
+    `L ${x - rx * 0.5 + shoulder} ${y + ry - 1}`,
+    `L ${x - rx} ${y + 13 + lean}`,
     "Z",
   ].join(" ");
 }
@@ -72,58 +79,80 @@ export function BrainMap({
         role="group"
         aria-label="Interactive 42-piece brain marketplace"
       >
-        <path
-          className="brain-silhouette"
-          d="M51 112C92 26 217 4 350 15c159-15 299 39 348 139 41 84 8 173-81 205-63 23-116 9-155 42-33 28-34 28-63-1-34-35-75-18-133-22C109 367 20 292 34 193c4-29 4-53 17-81Z"
+        <defs>
+          <clipPath id="brain-boundary">
+            <path d={brainShape} />
+          </clipPath>
+          {pieces.map((piece) => {
+            const center = centers.get(piece.id);
+            return center ? (
+              <clipPath id={`piece-boundary-${piece.id}`} key={piece.id}>
+                <path d={cellPath(center.x, center.y, piece.id)} />
+              </clipPath>
+            ) : null;
+          })}
+        </defs>
+        <image
+          className="brain-illustration"
+          href="/brain-art/brain-base.webp"
+          x="28"
+          y="0"
+          width="704"
+          height="435"
+          preserveAspectRatio="xMidYMid meet"
+          aria-hidden="true"
         />
-        {pieces.map((piece) => {
-          const center = centers.get(piece.id);
-          if (!center) return null;
-          const mine = Boolean(
-            account && piece.owner.toLowerCase() === account.toLowerCase(),
-          );
-          const classes = [
-            "brain-cell",
-            `crew-${piece.crew.toLowerCase().replaceAll(" ", "-")}`,
-            selectedId === piece.id ? "selected" : "",
-            mine ? "mine" : "",
-            piece.unowned ? "unowned" : "owned",
-          ]
-            .filter(Boolean)
-            .join(" ");
-          const mood = piece.options[piece.preset]?.label ?? "Unknown";
-          const label = `Piece ${piece.id}, ${piece.name}, ${piece.affinity}, mood ${mood}, ${piece.weight / 100}% influence, ${piece.unowned ? "unowned" : "owned"}`;
-          return (
-            <g
-              className={classes}
-              key={piece.id}
-              role="button"
-              tabIndex={0}
-              aria-label={label}
-              onClick={() => onSelect(piece.id)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onSelect(piece.id);
-                }
-              }}
-            >
-              <path d={cellPath(center.x, center.y, piece.id)} />
-              <text x={center.x} y={center.y - 2} textAnchor="middle">
-                {piece.id}
-              </text>
-              <text
-                className="cell-glyph"
-                x={center.x}
-                y={center.y + 17}
-                textAnchor="middle"
+        <g clipPath="url(#brain-boundary)">
+          {pieces.map((piece) => {
+            const center = centers.get(piece.id);
+            if (!center) return null;
+            const mine = Boolean(
+              account && piece.owner.toLowerCase() === account.toLowerCase(),
+            );
+            const classes = [
+              "brain-cell",
+              `crew-${piece.crew.toLowerCase().replaceAll(" ", "-")}`,
+              selectedId === piece.id ? "selected" : "",
+              mine ? "mine" : "",
+              piece.unowned ? "unowned" : "owned",
+            ]
+              .filter(Boolean)
+              .join(" ");
+            const mood = piece.options[piece.preset]?.label ?? "Unknown";
+            const label = `Piece ${piece.id}, ${piece.name}, ${piece.affinity}, mood ${mood}, ${piece.weight / 100}% influence, ${piece.unowned ? "unowned" : "owned"}`;
+            return (
+              <g
+                className={classes}
+                key={piece.id}
+                role="button"
+                tabIndex={0}
+                aria-label={label}
+                onClick={() => onSelect(piece.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(piece.id);
+                  }
+                }}
               >
-                {piece.glyph}
-              </text>
-              <title>{label}</title>
-            </g>
-          );
-        })}
+                <image
+                  className="piece-portrait"
+                  href={pieceArtPath(piece.id)}
+                  x={center.x - 49}
+                  y={center.y - 43}
+                  width="98"
+                  height="86"
+                  preserveAspectRatio="xMidYMid meet"
+                  clipPath={`url(#piece-boundary-${piece.id})`}
+                  aria-hidden="true"
+                />
+                <path d={cellPath(center.x, center.y, piece.id)} />
+                <title>{label}</title>
+              </g>
+            );
+          })}
+        </g>
+        <path className="brain-outline" d={brainShape} aria-hidden="true" />
       </svg>
       <div className="map-legend">
         <span>
