@@ -1,5 +1,19 @@
 "use client";
 
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  BRAIN_PRESENTATION,
+  BRAIN_PRESENTATION_BY_ID,
+  type BrainDirection,
+  type BrainMapMode,
+} from "../lib/brain-presentation";
+
 type MapPiece = {
   id: number;
   name: string;
@@ -10,168 +24,480 @@ type MapPiece = {
   unowned: boolean;
   price: string;
   weight: number;
-  options: readonly { label: string }[];
+  options: readonly { label: string; value: number }[];
 };
 
-const rows = [
-  { ids: [1, 2, 3, 4, 5, 6], y: 54, start: 138, gap: 92 },
-  { ids: [7, 8, 9, 10, 11, 12, 13, 14], y: 118, start: 72, gap: 86 },
-  { ids: [15, 16, 17, 18, 19, 20, 21, 22, 23], y: 184, start: 38, gap: 83 },
-  { ids: [24, 25, 26, 27, 28, 29, 30, 31, 32], y: 250, start: 48, gap: 82 },
-  { ids: [33, 34, 35, 36, 37, 38, 39], y: 316, start: 112, gap: 88 },
-  { ids: [40, 41, 42], y: 382, start: 292, gap: 78 },
-] as const;
-
-const centers: Map<number, { x: number; y: number }> = new Map(
-  rows.flatMap((row) =>
-    row.ids.map(
-      (id, index) =>
-        [id, { x: row.start + index * row.gap, y: row.y }] as const,
-    ),
-  ),
-);
+type BrainMapProps = {
+  pieces: MapPiece[];
+  selectedId: number;
+  account: string | null;
+  mode: BrainMapMode;
+  onModeChange: (mode: BrainMapMode) => void;
+  onSelect: (pieceId: number) => void;
+  onHover?: (pieceId: number | null) => void;
+  onZoomChange?: (zoom: number) => void;
+};
 
 const brainShape =
   "M47 238C25 202 34 157 64 127C68 82 115 52 166 55C199 20 267 17 316 43C354 14 422 12 474 39C534 25 607 49 641 99C692 110 724 151 715 194C735 231 711 279 669 298C651 335 600 352 555 339C530 367 499 375 470 362C455 388 450 406 449 425H389C391 394 375 372 345 353C312 372 269 371 237 352C185 363 135 340 112 306C72 298 43 272 47 238Z";
 
-function pieceArtPath(pieceId: number) {
-  return `/brain-art/piece-${String(pieceId).padStart(2, "0")}.webp`;
+const modes: readonly { value: BrainMapMode; label: string }[] = [
+  { value: "characters", label: "Characters" },
+  { value: "ownership", label: "Ownership" },
+  { value: "influence", label: "Influence" },
+  { value: "mood", label: "Mood" },
+];
+
+function portraitPath(pieceId: number) {
+  return `/brain-art/v2/piece-${String(pieceId).padStart(2, "0")}.webp`;
 }
 
-function cellPath(x: number, y: number, id: number) {
-  const rx = id >= 40 ? 40 + (id % 2) * 4 : 44 + ((id * 7) % 9);
-  const ry = id >= 40 ? 42 : 33 + ((id * 5) % 8);
-  const lean = ((id * 11) % 9) - 4;
-  const shoulder = ((id * 13) % 7) - 3;
-  return [
-    `M ${x - rx + lean} ${y - 9 + shoulder}`,
-    `L ${x - rx * 0.58 + shoulder} ${y - ry}`,
-    `L ${x + rx * 0.45 + lean} ${y - ry + shoulder}`,
-    `L ${x + rx} ${y - 10 - lean}`,
-    `L ${x + rx - 4 + shoulder} ${y + 20}`,
-    `L ${x + rx * 0.38 - lean} ${y + ry}`,
-    `L ${x - rx * 0.5 + shoulder} ${y + ry - 1}`,
-    `L ${x - rx} ${y + 13 + lean}`,
-    "Z",
-  ].join(" ");
+function shortOwner(owner: string) {
+  return owner && owner !== "0x0000000000000000000000000000000000000000"
+    ? `${owner.slice(0, 6)}…${owner.slice(-4)}`
+    : "Unowned";
+}
+
+function ownershipState(piece: MapPiece, account: string | null) {
+  if (piece.unowned) return "unowned";
+  return account && piece.owner.toLowerCase() === account.toLowerCase()
+    ? "mine"
+    : "owned";
+}
+
+function pieceLabel(piece: MapPiece, account: string | null) {
+  const mood = piece.options[piece.preset]?.label ?? "Unknown";
+  const state = ownershipState(piece, account);
+  return `${piece.name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${piece.price}.`;
 }
 
 export function BrainMap({
   pieces,
   selectedId,
   account,
+  mode,
+  onModeChange,
   onSelect,
-}: {
-  pieces: MapPiece[];
-  selectedId: number;
-  account: string | null;
-  onSelect: (pieceId: number) => void;
-}) {
+  onHover,
+  onZoomChange,
+}: BrainMapProps) {
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [mobileView, setMobileView] = useState<"map" | "list">("map");
+  const [query, setQuery] = useState("");
+  const segmentRefs = useRef(new Map<number, SVGGElement>());
+  const pieceById = useMemo(
+    () => new Map(pieces.map((piece) => [piece.id, piece])),
+    [pieces],
+  );
+  const weights = pieces.map((piece) => piece.weight);
+  const minWeight = Math.min(...weights, 0);
+  const maxWeight = Math.max(...weights, 1);
+  const previewPiece = hoveredId ? pieceById.get(hoveredId) : undefined;
+  const filteredPieces = pieces.filter((piece) => {
+    const mood = piece.options[piece.preset]?.label ?? "";
+    return [piece.name, piece.crew, piece.affinity, mood]
+      .join(" ")
+      .toLowerCase()
+      .includes(query.trim().toLowerCase());
+  });
+
+  const setPreview = (pieceId: number | null) => {
+    setHoveredId(pieceId);
+    onHover?.(pieceId);
+  };
+
+  const changeZoom = (next: number) => {
+    const clamped = Math.min(2.5, Math.max(1, next));
+    setZoom(clamped);
+    onZoomChange?.(clamped);
+  };
+
+  const moveFocus = (pieceId: number, direction: BrainDirection) => {
+    const targetId =
+      BRAIN_PRESENTATION_BY_ID.get(pieceId)?.neighbors[direction];
+    if (!targetId) return;
+    onSelect(targetId);
+    window.requestAnimationFrame(() =>
+      segmentRefs.current.get(targetId)?.focus(),
+    );
+  };
+
+  const handleKeyDown = (
+    event: KeyboardEvent<SVGGElement>,
+    pieceId: number,
+  ) => {
+    const directions: Partial<Record<string, BrainDirection>> = {
+      ArrowUp: "up",
+      ArrowDown: "down",
+      ArrowLeft: "left",
+      ArrowRight: "right",
+    };
+    if (directions[event.key]) {
+      event.preventDefault();
+      moveFocus(pieceId, directions[event.key]!);
+      return;
+    }
+    if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const targetId = event.key === "Home" ? 1 : 42;
+      onSelect(targetId);
+      window.requestAnimationFrame(() =>
+        segmentRefs.current.get(targetId)?.focus(),
+      );
+      return;
+    }
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect(pieceId);
+    }
+  };
+
   return (
     <div className="brain-map-wrap">
-      <div className="map-tools">
-        <span>VIEW · CHARACTER CREWS</span>
-        <span>42 / 42 ON-CHAIN</span>
+      <div className="brain-map-header">
+        <div>
+          <p className="section-kicker">THE 42</p>
+          <strong>Choose how to read the brain</strong>
+        </div>
+        <div className="brain-mode-control" aria-label="Brain map view">
+          {modes.map((item) => (
+            <button
+              key={item.value}
+              className={mode === item.value ? "active" : ""}
+              aria-pressed={mode === item.value}
+              onClick={() => onModeChange(item.value)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
-      <svg
-        className="brain-map"
-        viewBox="0 0 760 435"
-        role="group"
-        aria-label="Interactive 42-piece brain marketplace"
+
+      <div className="mobile-map-switch" aria-label="Mobile brain view">
+        <button
+          className={mobileView === "map" ? "active" : ""}
+          onClick={() => setMobileView("map")}
+        >
+          Map
+        </button>
+        <button
+          className={mobileView === "list" ? "active" : ""}
+          onClick={() => setMobileView("list")}
+        >
+          List
+        </button>
+      </div>
+
+      <div
+        className={`brain-map-panel ${mobileView === "map" ? "active" : ""}`}
       >
-        <defs>
-          <clipPath id="brain-boundary">
-            <path d={brainShape} />
-          </clipPath>
-          {pieces.map((piece) => {
-            const center = centers.get(piece.id);
-            return center ? (
-              <clipPath id={`piece-boundary-${piece.id}`} key={piece.id}>
-                <path d={cellPath(center.x, center.y, piece.id)} />
-              </clipPath>
-            ) : null;
-          })}
-        </defs>
-        <image
-          className="brain-illustration"
-          href="/brain-art/brain-base.webp"
-          x="28"
-          y="0"
-          width="704"
-          height="435"
-          preserveAspectRatio="xMidYMid meet"
-          aria-hidden="true"
-        />
-        <g clipPath="url(#brain-boundary)">
-          {pieces.map((piece) => {
-            const center = centers.get(piece.id);
-            if (!center) return null;
-            const mine = Boolean(
-              account && piece.owner.toLowerCase() === account.toLowerCase(),
-            );
-            const classes = [
-              "brain-cell",
-              `crew-${piece.crew.toLowerCase().replaceAll(" ", "-")}`,
-              selectedId === piece.id ? "selected" : "",
-              mine ? "mine" : "",
-              piece.unowned ? "unowned" : "owned",
-            ]
-              .filter(Boolean)
-              .join(" ");
-            const mood = piece.options[piece.preset]?.label ?? "Unknown";
-            const label = `Piece ${piece.id}, ${piece.name}, ${piece.affinity}, mood ${mood}, ${piece.weight / 100}% influence, ${piece.unowned ? "unowned" : "owned"}`;
-            return (
-              <g
-                className={classes}
-                key={piece.id}
-                role="button"
-                tabIndex={0}
-                aria-label={label}
-                onClick={() => onSelect(piece.id)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onSelect(piece.id);
-                  }
-                }}
-              >
-                <image
-                  className="piece-portrait"
-                  href={pieceArtPath(piece.id)}
-                  x={center.x - 49}
-                  y={center.y - 43}
-                  width="98"
-                  height="86"
-                  preserveAspectRatio="xMidYMid meet"
-                  clipPath={`url(#piece-boundary-${piece.id})`}
-                  aria-hidden="true"
-                />
-                <path d={cellPath(center.x, center.y, piece.id)} />
-                <title>{label}</title>
+        <div className="map-zoom-tools" aria-label="Map zoom controls">
+          <span>42 / 42 ON-CHAIN</span>
+          <div>
+            <button
+              aria-label="Zoom out"
+              disabled={zoom <= 1}
+              onClick={() => changeZoom(zoom - 0.25)}
+            >
+              −
+            </button>
+            <output aria-live="polite">{zoom.toFixed(2)}×</output>
+            <button
+              aria-label="Zoom in"
+              disabled={zoom >= 2.5}
+              onClick={() => changeZoom(zoom + 0.25)}
+            >
+              +
+            </button>
+            <button onClick={() => changeZoom(1)}>Reset</button>
+          </div>
+        </div>
+        <div className="brain-map-viewport">
+          <div
+            className="brain-map-stage"
+            style={{ width: `${zoom * 100}%` }}
+            data-zoom={zoom.toFixed(2)}
+          >
+            <svg
+              className={`brain-map mode-${mode}`}
+              viewBox="0 0 760 435"
+              role="group"
+              aria-label="Interactive 42-piece brain marketplace"
+            >
+              <defs>
+                <clipPath id="brain-boundary">
+                  <path d={brainShape} />
+                </clipPath>
+                <pattern
+                  id="ownership-owned"
+                  width="8"
+                  height="8"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path d="M0 8L8 0" />
+                </pattern>
+                <pattern
+                  id="ownership-mine"
+                  width="7"
+                  height="7"
+                  patternUnits="userSpaceOnUse"
+                >
+                  <path d="M0 3.5H7M3.5 0V7" />
+                </pattern>
+                {BRAIN_PRESENTATION.map((piece) => (
+                  <clipPath id={`piece-boundary-${piece.id}`} key={piece.id}>
+                    <path d={piece.path} />
+                  </clipPath>
+                ))}
+              </defs>
+              <image
+                className="brain-illustration"
+                href="/brain-art/brain-base.webp"
+                x="28"
+                y="0"
+                width="704"
+                height="435"
+                preserveAspectRatio="xMidYMid meet"
+                aria-hidden="true"
+              />
+              <g clipPath="url(#brain-boundary)">
+                {pieces.map((piece) => {
+                  const presentation = BRAIN_PRESENTATION_BY_ID.get(piece.id);
+                  if (!presentation) return null;
+                  const state = ownershipState(piece, account);
+                  const moodValue = piece.options[piece.preset]?.value ?? 0;
+                  const influence =
+                    (piece.weight - minWeight) /
+                    Math.max(1, maxWeight - minWeight);
+                  const classes = [
+                    "brain-cell",
+                    `ownership-${state}`,
+                    `mood-${moodValue < 0 ? `n${Math.abs(moodValue)}` : `p${moodValue}`}`,
+                    selectedId === piece.id ? "selected" : "",
+                    hoveredId === piece.id ? "hovered" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ");
+                  const label = pieceLabel(piece, account);
+                  return (
+                    <g
+                      className={classes}
+                      style={
+                        {
+                          "--influence": influence.toFixed(3),
+                        } as CSSProperties
+                      }
+                      key={piece.id}
+                      role="button"
+                      tabIndex={selectedId === piece.id ? 0 : -1}
+                      aria-label={label}
+                      aria-current={
+                        selectedId === piece.id ? "true" : undefined
+                      }
+                      aria-controls="piece-inspector"
+                      aria-describedby={
+                        hoveredId === piece.id
+                          ? "brain-piece-tooltip"
+                          : undefined
+                      }
+                      ref={(node) => {
+                        if (node) segmentRefs.current.set(piece.id, node);
+                        else segmentRefs.current.delete(piece.id);
+                      }}
+                      onClick={() => onSelect(piece.id)}
+                      onMouseEnter={() => setPreview(piece.id)}
+                      onMouseLeave={() => setPreview(null)}
+                      onFocus={() => setPreview(piece.id)}
+                      onBlur={() => setPreview(null)}
+                      onKeyDown={(event) => handleKeyDown(event, piece.id)}
+                    >
+                      <path className="segment-fill" d={presentation.path} />
+                      <image
+                        className="piece-portrait"
+                        href={portraitPath(piece.id)}
+                        x={presentation.portrait.x}
+                        y={presentation.portrait.y}
+                        width={presentation.portrait.width}
+                        height={presentation.portrait.height}
+                        preserveAspectRatio="xMidYMid meet"
+                        clipPath={`url(#piece-boundary-${piece.id})`}
+                        aria-hidden="true"
+                      />
+                      <path
+                        className="segment-boundary"
+                        d={presentation.path}
+                      />
+                      <title>{label}</title>
+                    </g>
+                  );
+                })}
               </g>
+              <path
+                className="brain-outline"
+                d={brainShape}
+                aria-hidden="true"
+              />
+            </svg>
+            {previewPiece &&
+              (() => {
+                const presentation = BRAIN_PRESENTATION_BY_ID.get(
+                  previewPiece.id,
+                );
+                if (!presentation) return null;
+                const state = ownershipState(previewPiece, account);
+                return (
+                  <div
+                    id="brain-piece-tooltip"
+                    role="tooltip"
+                    className="brain-piece-tooltip"
+                    style={{
+                      left: `${(presentation.center.x / 760) * 100}%`,
+                      top: `${(presentation.center.y / 435) * 100}%`,
+                    }}
+                  >
+                    <b>{previewPiece.name}</b>
+                    <span>
+                      {previewPiece.crew} ·{" "}
+                      {previewPiece.options[previewPiece.preset]?.label}
+                    </span>
+                    <span>
+                      {previewPiece.weight / 100}% influence ·{" "}
+                      {state === "mine"
+                        ? "Yours"
+                        : state === "unowned"
+                          ? "Unowned"
+                          : shortOwner(previewPiece.owner)}
+                    </span>
+                    <strong>${previewPiece.price}</strong>
+                  </div>
+                );
+              })()}
+          </div>
+        </div>
+      </div>
+
+      <div
+        className={`brain-list-panel ${mobileView === "list" ? "active" : ""}`}
+      >
+        <label>
+          <span className="sr-only">Search brain pieces</span>
+          <input
+            type="search"
+            placeholder="Search name, crew, affinity, or mood"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </label>
+        <div className="brain-piece-list">
+          {filteredPieces.map((piece) => {
+            const state = ownershipState(piece, account);
+            return (
+              <button
+                key={piece.id}
+                className={selectedId === piece.id ? "selected" : ""}
+                onClick={() => onSelect(piece.id)}
+              >
+                <img src={portraitPath(piece.id)} alt="" />
+                <span>
+                  <b>{piece.name}</b>
+                  <small>
+                    {piece.options[piece.preset]?.label} · {piece.weight / 100}%
+                  </small>
+                </span>
+                <span>
+                  <small>{state === "mine" ? "Yours" : state}</small>
+                  <strong>${piece.price}</strong>
+                </span>
+              </button>
             );
           })}
-        </g>
-        <path className="brain-outline" d={brainShape} aria-hidden="true" />
-      </svg>
-      <div className="map-legend">
+          {!filteredPieces.length && <p>No brain pieces match that search.</p>}
+        </div>
+      </div>
+
+      <ModeLegend mode={mode} pieces={pieces} account={account} />
+    </div>
+  );
+}
+
+function ModeLegend({
+  mode,
+  pieces,
+  account,
+}: {
+  mode: BrainMapMode;
+  pieces: MapPiece[];
+  account: string | null;
+}) {
+  if (mode === "characters") {
+    const crews = [...new Set(pieces.map((piece) => piece.crew))];
+    return (
+      <div className="map-legend" aria-label="Character crew legend">
+        <p>Portraits stay quiet until focused or selected.</p>
+        {crews.map((crew) => (
+          <span key={crew}>
+            <i className="legend-character" />
+            {crew} ({pieces.filter((piece) => piece.crew === crew).length})
+          </span>
+        ))}
+      </div>
+    );
+  }
+  if (mode === "ownership") {
+    const counts = { unowned: 0, owned: 0, mine: 0 };
+    pieces.forEach((piece) => counts[ownershipState(piece, account)]++);
+    return (
+      <div className="map-legend" aria-label="Ownership legend">
         <span>
-          <i className="legend-executive" />
-          Executive Dysfunction
+          <i className="legend-unowned" />
+          Unowned ({counts.unowned})
         </span>
         <span>
-          <i className="legend-mystics" />
-          Market Mystics
+          <i className="legend-owned" />
+          Other owners ({counts.owned})
         </span>
         <span>
-          <i className="legend-sector" />
-          Sector Weirdos
-        </span>
-        <span>
-          <i className="legend-decision" />
-          Decision Goblins
+          <i className="legend-mine" />
+          Yours ({counts.mine})
         </span>
       </div>
+    );
+  }
+  if (mode === "influence") {
+    return (
+      <div className="map-legend" aria-label="Influence legend">
+        <span>
+          <i className="legend-influence-low" />
+          Light: lower influence
+        </span>
+        <span>
+          <i className="legend-influence-mid" />
+          Medium
+        </span>
+        <span>
+          <i className="legend-influence-high" />
+          Dark: higher influence
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="map-legend" aria-label="Mood legend">
+      {[-2, -1, 0, 1, 2].map((value) => (
+        <span key={value}>
+          <i
+            className={`legend-mood legend-mood-${value < 0 ? `n${Math.abs(value)}` : `p${value}`}`}
+          />
+          {value > 0 ? `+${value}` : value} (
+          {
+            pieces.filter(
+              (piece) => (piece.options[piece.preset]?.value ?? 0) === value,
+            ).length
+          }
+          )
+        </span>
+      ))}
     </div>
   );
 }

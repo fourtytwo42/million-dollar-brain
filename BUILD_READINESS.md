@@ -7,7 +7,7 @@
 
 The native VM release implements the complete catalog-v3 collection: 42 named ERC-721 characters, four crews, protocol-authored lore, five closed moods per character, immutable portfolio affinities, and signed intensity from -2 through +2. It also implements always-for-sale pricing, basket shares, 1% entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault, owner reward claims, 1%-of-NAV immediate redemption, cancellable FIFO queued redemption with partial 5%-of-NAV hourly settlement, structured allocator context, deterministic output validation, keeper authentication, and systemd scheduling.
 
-The frontend now implements the normative screen hierarchy rather than a consolidated card dashboard: an accessible interactive 42-path SVG Brain marketplace with a generated brain background, 42 unique generated character portraits, Brain Pulse and selected-piece ledger, a separate Basket ledger view, and a Decisions explanation view. The raster artwork is presentation only; SVG remains the interaction and clipping layer. Both editorial light and dark modes were visually compared against the accepted PRD mockups.
+The frontend now implements the normative screen hierarchy rather than a consolidated card dashboard: an accessible interactive 42-path SVG Brain marketplace with a generated brain background, 42 individually generated v2 character portraits, four data modes, roving keyboard navigation, map zoom, a searchable mobile list, compact Brain Pulse, and a complete selected-piece right rail. The raster artwork is presentation only; SVG remains the interaction and clipping layer. Both editorial light and dark modes are validated against live normative screenshots.
 
 The Anvil universe intentionally uses four mocks: USDG, NVDA, AAPL, and ETHX. Robinhood Chain asset discovery, canonical live manifests, production oracle/DEX adapters, full ten-position risk limits, multisig/timelock administration, observability, legal review, and independent audits remain release gates rather than unfinished local-product interactions.
 
@@ -278,7 +278,7 @@ No Docker, PM2, or same-host-only monitoring is permitted.
 - Light, Dark, and System modes are required.
 - Source Serif 4, Source Sans 3, and IBM Plex Mono are the locked self-hosted typefaces.
 - Exact semantic colors are locked in `DESIGN_SYSTEM.md`.
-- The 42-piece brain uses accessible SVG paths with 43 optimized generated WebP assets: one transparent brain background and one transparent collectible portrait per piece.
+- The 42-piece brain uses accessible curved SVG paths with a separate presentation manifest and 43 optimized generated WebP assets: one transparent brain background and 42 transparent v2 collectible portraits.
 - Three public routes remain Brain, Basket, and Decisions; Admin is separate.
 - Wallet support uses RainbowKit, wagmi, viem, EIP-6963, EIP-1193, and WalletConnect.
 

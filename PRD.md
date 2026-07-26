@@ -655,11 +655,11 @@ The accepted editorial mockups below are normative parts of the PRD. `DESIGN_SYS
 
 #### Brain
 
-![Brain light mode](design/mockups/brain-screen-v2-editorial.png)
+![Brain light mode](design/mockups/brain-screen-v3-refined.png)
 
-![Brain dark mode](design/mockups/brain-screen-v2-editorial-dark.png)
+![Brain dark mode](design/mockups/brain-screen-v3-refined-dark.png)
 
-The implemented Brain map adds a normative generated-art layer to this layout direction. A recognizable editorial brain illustration sits beneath 42 unique catalog-character portraits. Each portrait is clipped by its piece's irregular SVG boundary; the SVG paths remain the authoritative keyboard, pointer, ownership, and selection surface. Numbers and generic glyphs must not cover the map portraits. The final art roster and generation direction are recorded in [`design/brain-art/README.md`](design/brain-art/README.md).
+The implemented Brain map uses 42 individually generated v2 catalog-character portraits over a recognizable editorial brain. A separate 42-entry presentation manifest owns curved segment geometry, visual centers, directional keyboard neighbors, and portrait transforms without changing the canonical economic catalog. Characters is the quiet default view; Ownership, Influence, and Mood expose distinct semantic layers with textual legends and counts. Hover and focus preview a tooltip without changing selection. Click, tap, Enter, and Space select; arrows use explicit spatial neighbors; Home and End select the canonical first and last pieces. The map supports 1 through 2.5 times zoom in a native scrolling viewport, and mobile adds a searchable List view. The complete inspector permanently occupies the desktop right rail, Brain Pulse is a full-width summary strip, and Basket Snapshot follows the primary area. Numbers and generic glyphs do not cover the portraits. The final art roster and generation direction are recorded in [`design/brain-art/README.md`](design/brain-art/README.md).
 
 #### Basket
 

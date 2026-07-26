@@ -4,10 +4,11 @@ These ImageGen mockups translate the normative screen map into visual directions
 
 ## Primary screens
 
-- `brain-screen-v2-editorial.png`: the normative 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
+- `brain-screen-v3-refined.png`: the current normative live Brain screen with the v2 character map, compact Brain Pulse, and complete inspector.
 - `basket-screen-v2-editorial.png`: the normative NAV, allocation, performance, holdings, target drift, and connected-wallet position.
 - `decisions-screen-v2-editorial.png`: the normative Brain requested, Ornith proposed, and Protocol executed explanation flow.
-- `brain-screen-v2-editorial-dark.png`: dark-mode companion to the Brain screen.
+- `brain-screen-v3-refined-dark.png`: current dark-mode companion to the refined Brain screen.
+- `brain-screen-v3-mobile.png`: current mobile List view and inspector flow.
 - `basket-screen-v2-editorial-dark.png`: dark-mode companion to the Basket screen.
 - `decisions-screen-v2-editorial-dark.png`: dark-mode companion to the Decisions screen.
 

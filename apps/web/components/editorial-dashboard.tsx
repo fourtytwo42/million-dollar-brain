@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { BrainMap } from "./brain-map";
+import type { BrainMapMode } from "../lib/brain-presentation";
 
 type BrainOption = {
   label: string;
@@ -118,6 +119,7 @@ export function EditorialDashboard({
   onCancelRedemption: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
+  const [brainMode, setBrainMode] = useState<BrainMapMode>("characters");
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -191,59 +193,56 @@ export function EditorialDashboard({
 
       {screen === "Brain" && (
         <div className="editorial-page">
-          <section className="brain-first-viewport">
-            <BrainMap
-              pieces={data?.pieces ?? []}
-              selectedId={selectedId}
-              account={account}
-              onSelect={setSelectedId}
-            />
-            <aside className="brain-pulse">
+          <section className="brain-pulse-strip" aria-label="Brain pulse">
+            <div className="pulse-headline">
               <p className="section-kicker">⌁ BRAIN PULSE</p>
               <h1>
                 {latestPreferences.length
                   ? pulseHeadline(latestPreferences)
                   : "Balanced, watchful, waiting for a signal"}
               </h1>
-              <dl>
-                <PulseRow
-                  label="Strongest preferences"
-                  value={
-                    latestPreferences
-                      .slice(0, 3)
-                      .map((item) => item.character ?? item.affinity)
-                      .join(", ") || "Neutral starting brain"
-                  }
-                />
-                <PulseRow
-                  label="Current data focus"
-                  value={`${data?.latestCycle?.brain?.activePieces ?? 0} active · ${data?.latestCycle?.brain?.inactivePieces ?? 0} inactive`}
-                />
-                <PulseRow
-                  label="Brain version"
-                  value={`Catalog v${data?.catalog.version ?? "—"}`}
-                />
-                <PulseRow
-                  label="Latest result"
-                  value={data?.latestCycle ? "REBALANCE" : "AWAITING CYCLE"}
-                  strong
-                />
-                <PulseRow
-                  label="Next-cycle countdown"
-                  value={countdownText}
-                  strong
-                />
-              </dl>
-            </aside>
+            </div>
+            <PulseRow
+              label="Strongest preferences"
+              value={
+                latestPreferences
+                  .slice(0, 3)
+                  .map((item) => item.character ?? item.affinity)
+                  .join(", ") || "Neutral starting brain"
+              }
+            />
+            <PulseRow
+              label="Data"
+              value={`${data?.latestCycle?.brain?.activePieces ?? 0} active · ${data?.latestCycle?.brain?.inactivePieces ?? 0} inactive`}
+            />
+            <PulseRow
+              label="Latest result"
+              value={data?.latestCycle ? "REBALANCE" : "AWAITING CYCLE"}
+              strong
+            />
+            <PulseRow label="Next cycle" value={countdownText} strong />
           </section>
 
-          <section className="brain-lower-grid">
+          <section className="brain-primary-grid">
+            <BrainMap
+              pieces={data?.pieces ?? []}
+              selectedId={selectedId}
+              account={account}
+              mode={brainMode}
+              onModeChange={setBrainMode}
+              onSelect={setSelectedId}
+            />
             {selected && (
-              <article className="piece-ledger">
+              <aside
+                className="piece-ledger piece-inspector"
+                id="piece-inspector"
+                aria-live="polite"
+                aria-label={`Selected brain piece: ${selected.name}`}
+              >
                 <div className="piece-ledger-head">
                   <span className="detail-portrait">
                     <img
-                      src={`/brain-art/piece-${String(selected.id).padStart(2, "0")}.webp`}
+                      src={`/brain-art/v2/piece-${String(selected.id).padStart(2, "0")}.webp`}
                       alt=""
                       aria-hidden="true"
                     />
@@ -269,6 +268,10 @@ export function EditorialDashboard({
                 </div>
                 <p className="piece-tagline">{selected.tagline}</p>
                 <p className="piece-lore">“{selected.lore}”</p>
+                <div className="current-mood">
+                  <span>Current mood</span>
+                  <strong>{selected.options[selected.preset].label}</strong>
+                </div>
                 <div className="mood-ledger">
                   {selected.options.map((choice, index) => (
                     <button
@@ -293,11 +296,17 @@ export function EditorialDashboard({
                   {selected.options[selected.preset].instruction}
                 </p>
                 <div className="piece-actions">
-                  <span>
-                    {selected.unowned
-                      ? "Unowned · initial sale to Creator DAO"
-                      : `Owner ${short(selected.owner)}`}
-                  </span>
+                  <div>
+                    <span>
+                      {selected.unowned
+                        ? "Unowned · initial sale to Creator DAO"
+                        : `Owner ${short(selected.owner)}`}
+                    </span>
+                    <span>
+                      Next price ${money(selected.price)} · Rewards $
+                      {data ? money(data.rewards.pending) : "0"}
+                    </span>
+                  </div>
                   {mine ? (
                     <button
                       className="primary-action"
@@ -316,9 +325,11 @@ export function EditorialDashboard({
                     </button>
                   )}
                 </div>
-              </article>
+              </aside>
             )}
+          </section>
 
+          <section className="brain-basket-row">
             <article className="basket-snapshot">
               <p className="section-kicker">BASKET SNAPSHOT</p>
               <div className="snapshot-metrics">
@@ -548,9 +559,9 @@ function PulseRow({
   strong?: boolean;
 }) {
   return (
-    <div>
-      <dt>{label}</dt>
-      <dd className={strong ? "pulse-strong" : ""}>{value}</dd>
+    <div className="pulse-row">
+      <span>{label}</span>
+      <strong className={strong ? "pulse-strong" : ""}>{value}</strong>
     </div>
   );
 }

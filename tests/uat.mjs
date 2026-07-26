@@ -17,9 +17,16 @@ try {
     "the complete 42-segment SVG brain must render",
   );
   assert.equal(
-    await page.locator("svg.brain-map g.brain-cell > path").count(),
+    await page
+      .locator("svg.brain-map g.brain-cell > .segment-boundary")
+      .count(),
     42,
-    "every brain piece must have exactly one interactive path",
+    "every brain piece must have exactly one interactive boundary",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map g.brain-cell > .segment-fill").count(),
+    42,
+    "every brain piece must have exactly one data fill",
   );
   assert.equal(
     await page.locator("svg.brain-map > .brain-illustration").count(),
@@ -49,11 +56,148 @@ try {
     const response = await page.request.get(new URL(href, baseUrl).toString());
     assert.ok(response.ok(), `generated brain asset ${href} must load`);
   }
+  assert.equal(
+    artHrefs.filter((href) => href?.startsWith("/brain-art/v2/piece-")).length,
+    42,
+    "all character portraits must use the cache-safe v2 asset path",
+  );
+  const imageMetrics = await page.evaluate(async () => {
+    const paths = Array.from(
+      { length: 42 },
+      (_, index) =>
+        `/brain-art/v2/piece-${String(index + 1).padStart(2, "0")}.webp`,
+    );
+    return Promise.all(
+      paths.map(
+        (src) =>
+          new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => {
+              const canvas = document.createElement("canvas");
+              canvas.width = image.naturalWidth;
+              canvas.height = image.naturalHeight;
+              const context = canvas.getContext("2d");
+              context.drawImage(image, 0, 0);
+              const corners = [
+                context.getImageData(0, 0, 1, 1).data[3],
+                context.getImageData(image.width - 1, 0, 1, 1).data[3],
+                context.getImageData(0, image.height - 1, 1, 1).data[3],
+                context.getImageData(image.width - 1, image.height - 1, 1, 1)
+                  .data[3],
+              ];
+              resolve({
+                src,
+                width: image.naturalWidth,
+                height: image.naturalHeight,
+                maxCornerAlpha: Math.max(...corners),
+              });
+            };
+            image.onerror = reject;
+            image.src = src;
+          }),
+      ),
+    );
+  });
+  assert.equal(
+    imageMetrics.every(
+      ({ width, height, maxCornerAlpha }) =>
+        width === 384 && height === 384 && maxCornerAlpha <= 2,
+    ),
+    true,
+    "all v2 portraits must be 384 by 384 with transparent corners",
+  );
   await page
     .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
     .waitFor();
   await page.getByText("BRAIN PULSE", { exact: false }).waitFor();
   await page.getByText("BASKET SNAPSHOT", { exact: false }).waitFor();
+  await page
+    .getByRole("complementary", {
+      name: /Selected brain piece:/,
+    })
+    .waitFor();
+  for (const mode of ["Ownership", "Influence", "Mood", "Characters"]) {
+    await page.getByRole("button", { name: mode, exact: true }).click();
+    await page.locator(`svg.brain-map.mode-${mode.toLowerCase()}`).waitFor();
+  }
+  const selectedSegment = page.locator(".brain-cell[aria-current=true]");
+  await selectedSegment.focus();
+  await page.getByRole("tooltip").waitFor();
+  const startingSelection = await selectedSegment.getAttribute("aria-label");
+  await page.keyboard.press("ArrowRight");
+  const movedSelection = await page
+    .locator(".brain-cell[aria-current=true]")
+    .getAttribute("aria-label");
+  assert.notEqual(
+    movedSelection,
+    startingSelection,
+    "ArrowRight must move roving focus to an explicit spatial neighbor",
+  );
+  await page.keyboard.press("End");
+  assert.match(
+    await page
+      .locator(".brain-cell[aria-current=true]")
+      .getAttribute("aria-label"),
+    /^Data Diet\./,
+    "End must select the final canonical piece",
+  );
+  await page.keyboard.press("Home");
+  assert.match(
+    await page
+      .locator(".brain-cell[aria-current=true]")
+      .getAttribute("aria-label"),
+    /^The Number-Go-Up Department\./,
+    "Home must select the first canonical piece",
+  );
+  await page.getByRole("button", { name: "Zoom in" }).click();
+  assert.equal(
+    await page.locator(".brain-map-stage").getAttribute("data-zoom"),
+    "1.25",
+    "Zoom In must advance by one clamped step",
+  );
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
+  assert.equal(
+    await page.locator(".brain-map-stage").getAttribute("data-zoom"),
+    "1.00",
+    "Reset must restore the 1x scale",
+  );
+  await page.screenshot({
+    path: "design/mockups/brain-screen-v3-refined.png",
+    fullPage: true,
+  });
+
+  const mobile = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+  });
+  await mobile.goto(baseUrl, { waitUntil: "networkidle" });
+  await mobile.getByRole("button", { name: "List", exact: true }).click();
+  const search = mobile.getByPlaceholder(
+    "Search name, crew, affinity, or mood",
+  );
+  await search.fill("Decision Goblins");
+  assert.ok(
+    (await mobile.locator(".brain-piece-list > button").count()) > 0,
+    "mobile list search must find pieces by crew",
+  );
+  await mobile.locator(".brain-piece-list > button").first().click();
+  await mobile
+    .getByRole("complementary", { name: /Selected brain piece:/ })
+    .waitFor();
+  const mobileOverflow = await mobile.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  assert.ok(
+    mobileOverflow <= 1,
+    `mobile and 200%-equivalent layouts must not create page-level horizontal scrolling (${mobileOverflow}px)`,
+  );
+  await mobile.screenshot({
+    path: "design/mockups/brain-screen-v3-mobile.png",
+    fullPage: true,
+  });
+  await mobile.close();
+
   assert.equal(
     await page.getByText("Risk-on", { exact: true }).count(),
     0,
@@ -161,9 +305,13 @@ try {
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
   await page.getByRole("button", { name: "Dark" }).click();
   await page.screenshot({ path: "var/uat-dashboard-dark.png", fullPage: true });
+  await page.screenshot({
+    path: "design/mockups/brain-screen-v3-refined-dark.png",
+    fullPage: true,
+  });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: normative three-screen editorial shell and accessible 42-path SVG brain rendered; funding, brain purchase, mood update, deposit, reward claim, decision explanation, queued settlement, cancellation, and dark mode completed in Chromium.",
+    "UAT PASS: 42 v2 portraits, anatomical segment manifest, four map modes, tooltip, roving keyboard navigation, zoom, mobile list/search, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

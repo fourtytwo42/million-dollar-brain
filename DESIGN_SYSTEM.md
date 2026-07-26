@@ -20,13 +20,13 @@ The implementation is not required to reproduce incidental raster artifacts pixe
 
 ### Light mode
 
-- `design/mockups/brain-screen-v2-editorial.png`
+- `design/mockups/brain-screen-v3-refined.png`
 - `design/mockups/basket-screen-v2-editorial.png`
 - `design/mockups/decisions-screen-v2-editorial.png`
 
 ### Dark mode
 
-- `design/mockups/brain-screen-v2-editorial-dark.png`
+- `design/mockups/brain-screen-v3-refined-dark.png`
 - `design/mockups/basket-screen-v2-editorial-dark.png`
 - `design/mockups/decisions-screen-v2-editorial-dark.png`
 
@@ -168,7 +168,11 @@ Automated and manual testing still validates rendered contrast after font weight
 - Borders do most of the grouping work; shadows are reserved for overlays.
 - Dense desktop tables become labeled cards below 768 pixels.
 - The 42-piece brain remains an SVG interaction map and never makes raster pixels responsible for hit testing, focus, selection, or ownership state.
-- The visual layer uses one generated transparent brain illustration plus 42 generated transparent character portraits. Portraits are clipped by their corresponding SVG paths.
+- The visual layer uses one generated transparent brain illustration plus 42 individually generated, versioned transparent character portraits. Portraits are clipped by curved paths in the separate presentation manifest.
+- Characters is the default map mode. Ownership, Influence, and Mood use semantic fills, patterns, textual counts, and accessible names so color never carries meaning alone.
+- Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
+- The inspector permanently owns the desktop right rail. Brain Pulse is a compact full-width summary strip, and Basket Snapshot follows the primary map and inspector.
+- Mobile provides Map and searchable List views. Zoom is clamped to 1 through 2.5 times inside a native scrolling viewport.
 - The map does not overlay piece numbers or generic glyphs on the portraits. Catalog names remain available through accessible labels and the selected-piece ledger.
 - The generated art direction and canonical asset paths are defined in `design/brain-art/README.md`.
 
