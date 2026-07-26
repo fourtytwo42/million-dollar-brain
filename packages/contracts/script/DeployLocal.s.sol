@@ -65,7 +65,13 @@ contract DeployLocal is Script {
         assets[1] = address(aapl);
         assets[2] = address(ethx);
         BasketVault basketImplementation = new BasketVault();
-        ERC1967Proxy basketProxy = new ERC1967Proxy(address(basketImplementation), abi.encodeCall(BasketVault.initialize, (deployer, address(usdg), address(router), address(rewards), deployer, assets)));
+        ERC1967Proxy basketProxy = new ERC1967Proxy(
+            address(basketImplementation),
+            abi.encodeCall(
+                BasketVault.initialize,
+                (deployer, address(usdg), address(router), address(rewards), deployer, deployer, assets)
+            )
+        );
 
         usdg.mint(deployer, 1_000_000e18);
         vm.serializeAddress("local", "usdg", address(usdg));

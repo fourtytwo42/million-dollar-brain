@@ -22,12 +22,15 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     uint256 public constant BPS = 10_000;
     uint256 public constant FEE_BPS = 100;
+    uint256 public constant BRAIN_FEE_SHARE_BPS = 5_000;
+    uint256 public constant CREATOR_FEE_SHARE_BPS = 4_000;
     uint256 public constant MIN_USDG_BPS = 2_000;
 
     IERC20 public usdg;
     ILocalRouter public router;
     IRewardFund public rewards;
     address public creatorVault;
+    address public automationVault;
     address[] public assets;
     mapping(address => bool) public supportedAsset;
 
@@ -35,7 +38,7 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     event Redeemed(address indexed account, uint256 shares, uint256 net, uint256 fee);
     event Rebalanced(bytes32 indexed cycleHash, uint256 navAfter);
 
-    function initialize(address admin, address usdg_, address router_, address rewards_, address creatorVault_, address[] calldata assets_) external initializer {
+    function initialize(address admin, address usdg_, address router_, address rewards_, address creatorVault_, address automationVault_, address[] calldata assets_) external initializer {
         __ERC20_init("MillionDollar Basket Share", "MDBS");
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -46,6 +49,7 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         router = ILocalRouter(router_);
         rewards = IRewardFund(rewards_);
         creatorVault = creatorVault_;
+        automationVault = automationVault_;
         for (uint256 i; i < assets_.length; ++i) {
             supportedAsset[assets_[i]] = true;
             assets.push(assets_[i]);
@@ -123,9 +127,11 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     }
 
     function _routeFee(uint256 fee) private {
-        uint256 rewardShare = fee / 2;
-        uint256 creatorShare = fee - rewardShare;
+        uint256 rewardShare = (fee * BRAIN_FEE_SHARE_BPS) / BPS;
+        uint256 creatorShare = (fee * CREATOR_FEE_SHARE_BPS) / BPS;
+        uint256 automationShare = fee - rewardShare - creatorShare;
         require(usdg.transfer(creatorVault, creatorShare), "creator fee failed");
+        require(usdg.transfer(automationVault, automationShare), "automation fee failed");
         usdg.approve(address(rewards), rewardShare);
         rewards.fund(rewardShare);
     }

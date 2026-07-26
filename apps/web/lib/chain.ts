@@ -29,11 +29,12 @@ export async function dashboard(address?: Address) {
   ]);
   const pieces = await Promise.all(Array.from({ length: 42 }, async (_, i) => {
     const id = BigInt(i + 1);
-    const [owner, price, preset, weight] = await Promise.all([
+    const [owner, price, preset, weight, unowned] = await Promise.all([
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "ownerOf", args: [id] }),
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "currentPrice", args: [id] }),
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "selectedPreset", args: [id] }),
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "immutableWeight", args: [id] }),
+      publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "isUnowned", args: [id] }),
     ]);
     const definition = brainDefinition(i + 1);
     return {
@@ -42,6 +43,7 @@ export async function dashboard(address?: Address) {
       price: price.toString(),
       preset: Number(preset),
       weight: Number(weight),
+      unowned,
       affinity: definition.affinity,
       category: definition.category,
       options: definition.options,

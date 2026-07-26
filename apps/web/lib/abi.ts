@@ -16,6 +16,7 @@ export const brainAbi = [
   { type: "function", name: "catalogVersion", stateMutability: "view", inputs: [], outputs: [{ type: "uint16" }] },
   { type: "function", name: "catalogHash", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32" }] },
   { type: "function", name: "affinityId", stateMutability: "view", inputs: [{ name: "pieceId", type: "uint256" }], outputs: [{ type: "bytes32" }] },
+  { type: "function", name: "isUnowned", stateMutability: "view", inputs: [{ name: "pieceId", type: "uint256" }], outputs: [{ type: "bool" }] },
   { type: "function", name: "ownerOf", stateMutability: "view", inputs: [{ name: "pieceId", type: "uint256" }], outputs: [{ type: "address" }] },
   { type: "function", name: "currentPrice", stateMutability: "view", inputs: [{ name: "pieceId", type: "uint256" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "selectedPreset", stateMutability: "view", inputs: [{ name: "pieceId", type: "uint256" }], outputs: [{ type: "uint8" }] },

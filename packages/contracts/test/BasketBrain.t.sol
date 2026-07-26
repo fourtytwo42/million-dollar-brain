@@ -13,6 +13,7 @@ contract BasketBrainTest is Test {
     address internal admin = makeAddr("admin");
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
+    address internal automation = makeAddr("automation");
     MockToken internal usdg;
     MockToken internal nvda;
     MockToken internal aapl;
@@ -71,16 +72,20 @@ contract BasketBrainTest is Test {
         assets[0] = address(nvda);
         assets[1] = address(aapl);
         BasketVault basketImpl = new BasketVault();
-        basket = BasketVault(address(new ERC1967Proxy(address(basketImpl), abi.encodeCall(BasketVault.initialize, (admin, address(usdg), address(router), address(rewards), admin, assets)))));
+        basket = BasketVault(address(new ERC1967Proxy(address(basketImpl), abi.encodeCall(BasketVault.initialize, (admin, address(usdg), address(router), address(rewards), admin, automation, assets)))));
         vm.stopPrank();
     }
 
     function testDepositRebalanceAndRedeem() public {
+        uint256 creatorBefore = usdg.balanceOf(admin);
         vm.startPrank(alice);
         usdg.approve(address(basket), 10_000e18);
         uint256 shares = basket.deposit(10_000e18, 9_900e18, block.timestamp + 1 hours);
         vm.stopPrank();
         assertEq(shares, 9_900e18);
+        // With no brain owners, the 50% brain share follows the locked fallback to creator.
+        assertEq(usdg.balanceOf(admin) - creatorBefore, 90e18);
+        assertEq(usdg.balanceOf(automation), 10e18);
         address[] memory targets = new address[](3);
         uint16[] memory weights = new uint16[](3);
         targets[0] = address(usdg); weights[0] = 2_000;
@@ -106,10 +111,17 @@ contract BasketBrainTest is Test {
         assertEq(brain.catalogVersion(), 2);
         assertEq(brain.catalogHash(), keccak256("MDB_BRAIN_CATALOG_V2"));
         assertTrue(brain.affinityId(1) != bytes32(0));
+        assertEq(brain.name(), "MillionDollar Brain Pieces");
+        assertEq(brain.symbol(), "MDBP");
+        assertEq(brain.ownerOf(1), address(brain));
+        assertTrue(brain.isUnowned(1));
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        vm.expectRevert("use marketplace");
+        brain.transferFrom(alice, bob, 1);
         vm.stopPrank();
+        assertFalse(brain.isUnowned(1));
         vm.startPrank(bob);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(2, type(uint256).max, block.timestamp + 1 hours);

@@ -75,7 +75,7 @@ export async function runCycle() {
       tags: piece.tags,
       dataDependencies: piece.data,
       active,
-      owned: piece.owner !== "0x0000000000000000000000000000000000000000",
+      owned: !piece.unowned,
     };
   });
   const nonNeutral = brain.filter((piece) => piece.signedValue !== 0 && piece.active);
