@@ -81,8 +81,8 @@ contract BasketBrainTest is Test {
                             address(creatorVault),
                             brainWeights,
                             42_000e18,
-                            2,
-                            keccak256("MDB_BRAIN_CATALOG_V2")
+                            3,
+                            keccak256("MDB_BRAIN_CATALOG_V3")
                         )
                     )
                 )
@@ -150,8 +150,8 @@ contract BasketBrainTest is Test {
     }
 
     function testBrainSaleExcludesTransferredPieceFromMarkupReward() public {
-        assertEq(brain.catalogVersion(), 2);
-        assertEq(brain.catalogHash(), keccak256("MDB_BRAIN_CATALOG_V2"));
+        assertEq(brain.catalogVersion(), 3);
+        assertEq(brain.catalogHash(), keccak256("MDB_BRAIN_CATALOG_V3"));
         assertTrue(brain.affinityId(1) != bytes32(0));
         assertEq(brain.name(), "MillionDollar Brain Pieces");
         assertEq(brain.symbol(), "MDBP");
@@ -160,6 +160,10 @@ contract BasketBrainTest is Test {
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        brain.setPreset(1, 4);
+        assertEq(brain.selectedPreset(1), 4);
+        vm.expectRevert("invalid preset");
+        brain.setPreset(1, 5);
         vm.expectRevert("use marketplace");
         brain.transferFrom(alice, bob, 1);
         vm.stopPrank();

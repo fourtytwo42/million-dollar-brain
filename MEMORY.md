@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Added claimable brain-owner fees, an upgradeable creator vault, a cancellable FIFO redemption queue with 5%-of-NAV partial hourly fills, economic caps, authenticated keeper cycles, and full Chromium UAT.
+- Last meaningful change: Promoted the brain to catalog v3 with 42 collectible character identities, four crews, five closed moods per piece, signed intensity from -2 through +2, and character/mood attribution in Ornith cycle records.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -201,6 +201,7 @@ When sources conflict, use this order:
 - 2026-07-26: Implemented cancellable FIFO queued redemptions. Large exits escrow MDBS and settle progressively at no more than 5% of NAV per keeper cycle while preserving the 20% USDG reserve; immediate exits are limited to 1% of NAV. Added 10 USDG redemption minimum, request deadlines, 100,000 USDG TVL cap, and 25,000 USDG wallet cap.
 - 2026-07-26: Secured `/api/cycle` with a local-devnet keeper token, verified unauthenticated calls return HTTP 401, and verified authenticated fallback and live Ornith allocations execute on-chain. Browser UAT observes a real queued-redemption settlement transaction before cancellation. Native Anvil, deploy, web, and hourly timer units are enabled and active.
 - 2026-07-26: Rebooted the project VM and verified Anvil, deployment, web, and timer services recovered automatically. Post-boot Chromium UAT passed the complete flow; two live Ornith cycles executed, and the second included a non-null queued-redemption settlement transaction before rebalancing. Foundry has 5 passing tests, the Next.js production build is clean, Prettier passes, Git integrity passes, and GitHub `main` is clean at `1a3b2a1`.
+- 2026-07-26: Replaced the settings-like three-option brain with catalog v3. All 42 ERC-721 pieces now have a unique character name, glyph, crew, tagline, lore, and five closed moods mapped to signed -2/-1/0/+1/+2 effects. Added crew filters, full light/dark collectible cards, and cycle explanations naming the character and mood. Foundry, production build, and Chromium UAT pass; live Ornith records include `The Number-Go-Up Department`, `Moon With Seatbelts`, intensity 2, and the resulting on-chain allocation.
 - 2026-07-12: Reset stale project-specific memory while retaining the durable memory-management logic.
 - 2026-07-23: Produced the initial MillionDollar Brain product brief without building or deploying anything.
 

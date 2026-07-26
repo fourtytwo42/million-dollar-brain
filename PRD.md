@@ -755,7 +755,7 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 ### 17.6 Change a brain preset
 
 1. Owner opens one of their brain pieces.
-2. Application compares all three closed options and shows the current aggregate effect.
+2. Application compares all five closed moods and shows the current aggregate effect, character identity, lore, and underlying affinity.
 3. Owner previews the new aggregate effect and its required data.
 4. Owner signs the on-chain setting change and pays gas.
 5. Registry records the new selection and brain version.

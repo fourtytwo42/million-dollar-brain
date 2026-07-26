@@ -69,8 +69,8 @@ contract DeployLocal is Script {
                     address(creatorVault),
                     brainWeights,
                     42_000e18,
-                    2,
-                    keccak256("MDB_BRAIN_CATALOG_V2")
+                    3,
+                    keccak256("MDB_BRAIN_CATALOG_V3")
                 )
             )
         );

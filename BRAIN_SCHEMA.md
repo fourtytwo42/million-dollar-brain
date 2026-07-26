@@ -36,9 +36,9 @@ Every piece has:
   "piece_id": 1,
   "affinity_id": "capital_objective",
   "weight_bps": 500,
-  "allowed_option_ids": [0, 1, 2],
-  "default_option_id": 1,
-  "selected_option_id": 1,
+  "allowed_option_ids": [0, 1, 2, 3, 4],
+  "default_option_id": 2,
+  "selected_option_id": 2,
   "selection_version": 4,
   "effective_cycle": 1205
 }
@@ -62,7 +62,7 @@ No single piece controls more than 5% of the complete brain.
 
 ### 4.1 Core mandate pieces
 
-|  ID | Affinity                  | Weight | Option 0          | Option 1         | Option 2       |
+|  ID | Affinity                  | Weight | Mood 0 (-2)       | Mood 2 (0)       | Mood 4 (+2)    |
 | --: | ------------------------- | -----: | ----------------- | ---------------- | -------------- |
 |   1 | Capital objective         |    500 | Preserve          | Balanced growth  | Maximum growth |
 |   2 | Equity versus crypto      |    500 | Equity-led        | Balanced mix     | Crypto-led     |
@@ -75,7 +75,7 @@ These options express preferences inside hard protocol limits. For example, "min
 
 ### 4.2 Strategy pieces
 
-|  ID | Affinity                     | Weight | Option 0                 | Option 1             | Option 2                |
+|  ID | Affinity                     | Weight | Mood 0 (-2)              | Mood 2 (0)           | Mood 4 (+2)             |
 | --: | ---------------------------- | -----: | ------------------------ | -------------------- | ----------------------- |
 |   7 | Trend response               |    300 | Fade trends              | Neutral              | Follow trends           |
 |   8 | Valuation style              |    300 | Value                    | Neutral              | Growth                  |
@@ -92,11 +92,13 @@ These options express preferences inside hard protocol limits. For example, "min
 
 ### 4.3 Asset and sector affinity pieces
 
-Every piece in this group uses the same option structure:
+Every piece in this group uses the same five-position mood structure. The table below shows the poles and neutral midpoint; moods 1 and 3 are moderate versions:
 
-- Option 0: Underweight
-- Option 1: Neutral
-- Option 2: Overweight
+- Mood 0: Strongly underweight
+- Mood 1: Underweight
+- Mood 2: Neutral
+- Mood 3: Overweight
+- Mood 4: Strongly overweight
 
 |  ID | Affinity                          | Weight | Registry tag affected    |
 | --: | --------------------------------- | -----: | ------------------------ |
@@ -121,7 +123,7 @@ If no active asset has a selected tag, that affinity contributes no portfolio pr
 
 ### 4.4 Decision-behavior pieces
 
-|  ID | Affinity                 | Weight | Option 0             | Option 1          | Option 2                |
+|  ID | Affinity                 | Weight | Mood 0 (-2)          | Mood 2 (0)        | Mood 4 (+2)             |
 | --: | ------------------------ | -----: | -------------------- | ----------------- | ----------------------- |
 |  35 | Macro sensitivity        |    125 | Ignore macro         | Moderate use      | Strong use              |
 |  36 | Corporate-action posture |    125 | Reduce exposure      | Neutral           | Accept exposure         |

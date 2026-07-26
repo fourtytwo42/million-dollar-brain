@@ -463,3 +463,103 @@ footer {
   background: color-mix(in srgb, var(--paper) 82%, var(--accent));
   font-size: 12px;
 }
+.piece {
+  min-height: 390px;
+  position: relative;
+  overflow: hidden;
+}
+.piece:before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--accent);
+}
+.piece-character {
+  justify-content: flex-start !important;
+  align-items: center;
+  gap: 11px !important;
+  margin-top: 16px;
+}
+.piece-character .glyph {
+  display: grid;
+  place-items: center;
+  flex: 0 0 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  font: 700 19px "DM Mono";
+}
+.piece-character h3 {
+  margin: 0 0 2px;
+}
+.affinity-label {
+  font: 500 9px "DM Mono";
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.piece p.tagline {
+  font: 700 12px/1.4 Manrope;
+  margin: 13px 0 5px;
+  color: var(--ink);
+}
+.piece p.lore {
+  font:
+    italic 11px/1.45 "Playfair Display",
+    serif;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.mood-label {
+  font: 500 8px "DM Mono";
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-top: auto;
+}
+.piece .selection {
+  font-size: 13px;
+  margin: 4px 0 8px;
+}
+.piece p.owner {
+  margin-top: 8px;
+}
+.piece.inactive .piece-character,
+.piece.inactive .tagline,
+.piece.inactive .lore {
+  opacity: 0.72;
+}
+.dark .piece-character .glyph {
+  background: var(--accent);
+  color: #181a1b;
+}
+.brain-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 18px;
+}
+.brain-filters button {
+  font: 600 10px "DM Mono";
+  padding: 8px 11px;
+  border-radius: 20px;
+}
+.brain-filters .active {
+  background: var(--accent);
+  color: #fff;
+}
+.dark {
+  background: var(--paper);
+  color: var(--ink);
+  min-height: 100vh;
+}
+.dark .wallet {
+  background: #183f3d;
+}
+.dark .decision {
+  background: rgba(0, 0, 0, 0.2);
+}
+.dark .metrics {
+  background: rgba(255, 255, 255, 0.02);
+}

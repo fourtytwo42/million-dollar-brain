@@ -3,6 +3,7 @@ import { keccak256, stringToHex } from "viem";
 import { basketAbi } from "./abi";
 import { adminClient, dashboard, deployment, publicClient } from "./chain";
 import { marketContext } from "./market-context";
+import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -136,6 +137,9 @@ export async function runCycle() {
     );
     return {
       id: piece.id,
+      character: piece.name,
+      crew: piece.crew,
+      tagline: piece.tagline,
       affinity: piece.affinity,
       category: piece.category,
       weightBps: piece.weight,
@@ -161,11 +165,14 @@ export async function runCycle() {
         (tagPreferenceBps[tag] ?? 0) + piece.weightedValue;
   }
   const allocatorContext = {
-    brainCatalogVersion: 2,
+    brainCatalogVersion: BRAIN_CATALOG_VERSION,
     fullBrain: brain,
     activeNonNeutralInstructions: nonNeutral.map((piece) => ({
       pieceId: piece.id,
+      character: piece.character,
       affinity: piece.affinity,
+      mood: piece.selectedOption,
+      intensity: piece.signedValue,
       instruction: piece.canonicalInstruction,
       influenceBps: piece.weightBps,
     })),
@@ -193,7 +200,7 @@ export async function runCycle() {
     redemptionTxHash,
     block: receipt.blockNumber.toString(),
     brain: {
-      catalogVersion: 2,
+      catalogVersion: BRAIN_CATALOG_VERSION,
       activePieces: brain.filter((piece) => piece.active).length,
       inactivePieces: brain.filter((piece) => !piece.active).length,
       activeNonNeutralInstructions:

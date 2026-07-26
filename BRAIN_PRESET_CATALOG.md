@@ -1,13 +1,15 @@
 # MillionDollar Brain Preset Catalog
 
-**Version:** 0.2  
-**Status:** AI-facing MVP decisions locked  
+**Version:** 0.3
+**Status:** AI-facing collectible catalog v3
 **Pieces:** 42  
-**Options per piece:** 3
+**Options per piece:** 5
 
 ## 1. How presets work
 
-Every brain piece controls one affinity. Its owner may select one of three closed options.
+Every brain piece is both a collectible character and a bounded portfolio control. It has a unique name, glyph, crew, tagline, lore, immutable affinity, and five closed "moods." Character flavor is shown to people; the selected mood's signed value and canonical instruction are supplied to Ornith.
+
+The complete character identities and mood names are defined in `BRAIN_CHARACTERS.md`. No owner-authored text enters model context.
 
 The selected option creates:
 
@@ -15,11 +17,13 @@ The selected option creates:
 2. One or more machine-readable preference effects.
 3. A weighted contribution based on the piece's immutable influence weight.
 
-Typical option values are:
+Directional mood values are:
 
-- Option 0: `-1`
-- Option 1: `0`
-- Option 2: `+1`
+- Mood 0: `-2`, strongest preference toward the first pole.
+- Mood 1: `-1`, moderate preference toward the first pole.
+- Mood 2: `0`, neutral/default behavior.
+- Mood 3: `+1`, moderate preference toward the second pole.
+- Mood 4: `+2`, strongest preference toward the second pole.
 
 The weighted effect is conceptually:
 
@@ -36,7 +40,7 @@ Presets express preferences. They cannot:
 
 ## 2. Locked MVP starting defaults
 
-The starting brain is intentionally neutral:
+The starting brain uses each character's middle mood and is intentionally neutral:
 
 - Balanced portfolio objective.
 - Balanced equity and crypto mix.
@@ -443,7 +447,7 @@ This preference steers Ornith but does not guarantee a technology purchase.
 ## 9. Locked MVP decisions
 
 1. The defaults in this catalog are the launch defaults.
-2. Directional options use signed values `-1`, `0`, and `+1` before multiplication by the immutable piece weight. Parameter options use explicit values recorded in the versioned preset registry.
+2. Directional moods use signed values `-2`, `-1`, `0`, `+1`, and `+2` before multiplication by the immutable piece weight. Parameter moods use explicit values recorded in the versioned preset registry.
 3. Piece 39 uses minimum cycle-confidence thresholds of 7,500 bps for High confidence, 6,500 bps for Normal confidence, and 5,500 bps for Exploratory. Exploratory allocations are limited to 250 bps per new asset and 500 bps total.
 4. Piece 42 is Data Focus and affects evidence weighting, so every piece affects allocation.
 5. All MVP inputs are free structured sources or deterministic calculations:

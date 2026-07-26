@@ -12,7 +12,11 @@ import {
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 
-type BrainOption = { label: string; instruction: string; value: -1 | 0 | 1 };
+type BrainOption = {
+  label: string;
+  instruction: string;
+  value: -2 | -1 | 0 | 1 | 2;
+};
 type Piece = {
   id: number;
   owner: string;
@@ -21,8 +25,13 @@ type Piece = {
   preset: number;
   weight: number;
   affinity: string;
+  name: string;
+  glyph: string;
+  tagline: string;
+  lore: string;
+  crew: string;
   category: string;
-  options: [BrainOption, BrainOption, BrainOption];
+  options: [BrainOption, BrainOption, BrainOption, BrainOption, BrainOption];
   data: string[];
   tags: string[];
 };
@@ -36,7 +45,10 @@ type Cycle = {
     inactivePieces: number;
     activeNonNeutralInstructions: {
       pieceId: number;
+      character?: string;
       affinity: string;
+      mood?: string;
+      intensity?: number;
       instruction: string;
       influenceBps: number;
     }[];
@@ -75,6 +87,7 @@ export function BrainDashboard() {
   const [message, setMessage] = useState("Connecting to local devnet…");
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
+  const [crewFilter, setCrewFilter] = useState("All minds");
   const account = useMemo(() => (key ? privateKeyToAccount(key) : null), [key]);
 
   async function refresh() {
@@ -419,9 +432,9 @@ export function BrainDashboard() {
             <p className="eyebrow">AI ALLOCATION ENGINE</p>
             <h2>Hourly, bounded, auditable.</h2>
             <p>
-              The LAN model receives all 42 named selections, active data
-              dependencies, approved asset facts, current holdings, and hard
-              limits. The contract rejects any invalid output.
+              The LAN model receives all 42 characters, their selected moods,
+              active data dependencies, approved asset facts, current holdings,
+              and hard limits. The contract rejects any invalid output.
             </p>
             {data?.latestCycle ? (
               <div className="decision">
@@ -442,7 +455,8 @@ export function BrainDashboard() {
                   .slice(0, 3)
                   .map((item) => (
                     <p key={item.pieceId}>
-                      #{item.pieceId} {item.affinity}: {item.instruction}
+                      #{item.pieceId} {item.character ?? item.affinity}
+                      {item.mood ? ` · ${item.mood}` : ""}: {item.instruction}
                     </p>
                   ))}
               </div>
@@ -465,82 +479,118 @@ export function BrainDashboard() {
             <p className="eyebrow">
               THE 42-PIECE BRAIN · CATALOG V{data?.catalog.version ?? "—"}
             </p>
-            <h2>Forty-two distinct decisions.</h2>
+            <h2>Forty-two weird little minds.</h2>
             <p>
-              Every piece is an ERC-721 NFT controlling one named affinity with
-              three closed options. All ownership changes pass through the
-              120%-price marketplace.
+              Every ERC-721 is a collectible character with lore, a real
+              portfolio affinity, and five closed moods. Pick the personality;
+              the protocol translates it into bounded model context.
             </p>
           </div>
           <span>
             {data?.pieces.filter((p) => !p.unowned).length ?? 0}/42 owned
           </span>
         </section>
+        <nav className="brain-filters" aria-label="Brain crew filter">
+          {[
+            "All minds",
+            "Executive Dysfunction",
+            "Market Mystics",
+            "Sector Weirdos",
+            "Decision Goblins",
+          ].map((crew) => (
+            <button
+              key={crew}
+              className={crewFilter === crew ? "active" : "quiet"}
+              onClick={() => setCrewFilter(crew)}
+            >
+              {crew}
+            </button>
+          ))}
+        </nav>
         <section className="brain-grid">
-          {data?.pieces.map((piece) => {
-            const selected = piece.options[piece.preset];
-            const active = piece.data.every(
-              (dependency) => data.dataAvailability[dependency] === true,
-            );
-            const mine = Boolean(
-              account &&
-                piece.owner.toLowerCase() === account.address.toLowerCase(),
-            );
-            return (
-              <article
-                className={`piece ${piece.unowned ? "available" : "owned"} ${active ? "" : "inactive"}`}
-                key={piece.id}
-              >
-                <div>
-                  <span className="piece-id">
-                    {String(piece.id).padStart(2, "0")} · {piece.category}
+          {data?.pieces
+            .filter(
+              (piece) =>
+                crewFilter === "All minds" || piece.crew === crewFilter,
+            )
+            .map((piece) => {
+              const selected = piece.options[piece.preset];
+              const active = piece.data.every(
+                (dependency) => data.dataAvailability[dependency] === true,
+              );
+              const mine = Boolean(
+                account &&
+                  piece.owner.toLowerCase() === account.address.toLowerCase(),
+              );
+              return (
+                <article
+                  className={`piece ${piece.unowned ? "available" : "owned"} ${active ? "" : "inactive"}`}
+                  key={piece.id}
+                >
+                  <div>
+                    <span className="piece-id">
+                      {String(piece.id).padStart(2, "0")} · {piece.crew}
+                    </span>
+                    <span className="weight">
+                      {piece.weight / 100}% influence
+                    </span>
+                  </div>
+                  <div className="piece-character">
+                    <span className="glyph">{piece.glyph}</span>
+                    <div>
+                      <h3>{piece.name}</h3>
+                      <span className="affinity-label">{piece.affinity}</span>
+                    </div>
+                  </div>
+                  <p className="tagline">{piece.tagline}</p>
+                  <p className="lore">“{piece.lore}”</p>
+                  <span className="mood-label">
+                    CURRENT MOOD ·{" "}
+                    {selected.value > 0 ? `+${selected.value}` : selected.value}
                   </span>
-                  <span className="weight">
-                    {piece.weight / 100}% influence
-                  </span>
-                </div>
-                <h3>{piece.affinity}</h3>
-                <strong className="selection">{selected.label}</strong>
-                <p className="effect">
-                  {active
-                    ? selected.instruction
-                    : `Inactive: ${piece.data.filter((dependency) => !data.dataAvailability[dependency]).join(", ")} data unavailable.`}
-                </p>
-                <p className="owner">
-                  {piece.unowned
-                    ? "Unowned · Initial sale to Creator DAO"
-                    : `Owned by ${short(piece.owner)}`}
-                </p>
-                {mine ? (
-                  <select
-                    aria-label={`Preset for ${piece.affinity}`}
-                    value={piece.preset}
-                    onChange={(e) =>
-                      preset(piece, Number(e.target.value)).catch((err) =>
-                        setMessage(err.shortMessage ?? err.message),
-                      )
-                    }
-                  >
-                    {piece.options.map((choice, index) => (
-                      <option key={choice.label} value={index}>
-                        {choice.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <button
-                    onClick={() =>
-                      buy(piece).catch((e) =>
-                        setMessage(e.shortMessage ?? e.message),
-                      )
-                    }
-                  >
-                    {piece.unowned ? "Buy" : "Buy next"} · ${money(piece.price)}
-                  </button>
-                )}
-              </article>
-            );
-          })}
+                  <strong className="selection">{selected.label}</strong>
+                  <p className="effect">
+                    {active
+                      ? selected.instruction
+                      : `Inactive: ${piece.data.filter((dependency) => !data.dataAvailability[dependency]).join(", ")} data unavailable.`}
+                  </p>
+                  <p className="owner">
+                    {piece.unowned
+                      ? "Unowned · Initial sale to Creator DAO"
+                      : `Owned by ${short(piece.owner)}`}
+                  </p>
+                  {mine ? (
+                    <select
+                      aria-label={`Mood for ${piece.name}`}
+                      value={piece.preset}
+                      onChange={(e) =>
+                        preset(piece, Number(e.target.value)).catch((err) =>
+                          setMessage(err.shortMessage ?? err.message),
+                        )
+                      }
+                    >
+                      {piece.options.map((choice, index) => (
+                        <option key={choice.label} value={index}>
+                          {choice.value > 0 ? `+${choice.value}` : choice.value}{" "}
+                          · {choice.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        buy(piece).catch((e) =>
+                          setMessage(e.shortMessage ?? e.message),
+                        )
+                      }
+                    >
+                      {piece.unowned ? "Buy" : "Buy next"} · $
+                      {money(piece.price)}
+                    </button>
+                  )}
+                </article>
+              );
+            })}
         </section>
         <footer>
           Local Anvil simulation only. No real funds, securities, custody, or

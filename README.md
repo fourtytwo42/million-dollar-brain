@@ -22,6 +22,7 @@ This is still a simulation. The allowlist contains mock USDG, NVDA, AAPL, and ET
 - [Screen Map](UX_SCREENS.md)
 - [Brain Schema](BRAIN_SCHEMA.md)
 - [Brain Preset Catalog](BRAIN_PRESET_CATALOG.md)
+- [Brain Characters and Moods](BRAIN_CHARACTERS.md)
 - [AI Data Policy](AI_DATA_POLICY.md)
 - [AI Explainability](AI_EXPLAINABILITY.md)
 - [Keeper Wallet and Gas Policy](KEEPER_GAS_POLICY.md)

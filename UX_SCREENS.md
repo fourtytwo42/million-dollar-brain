@@ -164,7 +164,7 @@ The full holdings experience belongs on Basket.
 
 ### Preset comparison
 
-Show all three options in a simple comparison:
+Show all five closed moods in a simple comparison, pairing memorable character language with the exact bounded portfolio effect:
 
 - What changes.
 - Which data it uses.

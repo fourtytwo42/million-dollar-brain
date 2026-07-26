@@ -1,10 +1,12 @@
+import { brainPersonality, type BrainPersonality } from "./brain-personalities";
+
 export type BrainOption = {
   label: string;
   instruction: string;
-  value: -1 | 0 | 1;
+  value: -2 | -1 | 0 | 1 | 2;
 };
 
-export type BrainPieceDefinition = {
+type BaseBrainPieceDefinition = {
   id: number;
   affinity: string;
   category: "Mandate" | "Strategy" | "Affinity" | "Decision";
@@ -14,10 +16,21 @@ export type BrainPieceDefinition = {
   tags?: readonly string[];
 };
 
+export type BrainPieceDefinition = Omit<BaseBrainPieceDefinition, "options"> &
+  BrainPersonality & {
+    options: readonly [
+      BrainOption,
+      BrainOption,
+      BrainOption,
+      BrainOption,
+      BrainOption,
+    ];
+  };
+
 const option = (
   label: string,
   instruction: string,
-  value: -1 | 0 | 1,
+  value: -2 | -1 | 0 | 1 | 2,
 ): BrainOption => ({ label, instruction, value });
 
 const directional = (
@@ -25,16 +38,16 @@ const directional = (
   neutral: [string, string],
   positive: [string, string],
 ): readonly [BrainOption, BrainOption, BrainOption] => [
-  option(negative[0], negative[1], -1),
+  option(negative[0], negative[1], -2),
   option(neutral[0], neutral[1], 0),
-  option(positive[0], positive[1], 1),
+  option(positive[0], positive[1], 2),
 ];
 
 const affinityPiece = (
   id: number,
   affinity: string,
   tags: string[],
-): BrainPieceDefinition => ({
+): BaseBrainPieceDefinition => ({
   id,
   affinity,
   category: "Affinity",
@@ -54,9 +67,9 @@ const affinityPiece = (
   ),
 });
 
-export const BRAIN_CATALOG_VERSION = 2;
+export const BRAIN_CATALOG_VERSION = 3;
 
-export const BRAIN_CATALOG: readonly BrainPieceDefinition[] = [
+const BASE_CATALOG: readonly BaseBrainPieceDefinition[] = [
   {
     id: 1,
     affinity: "Capital Objective",
@@ -545,6 +558,32 @@ export const BRAIN_CATALOG: readonly BrainPieceDefinition[] = [
     ),
   },
 ] as const;
+
+export const BRAIN_CATALOG: readonly BrainPieceDefinition[] = BASE_CATALOG.map(
+  (piece) => {
+    const personality = brainPersonality(piece.id);
+    const [negative, neutral, positive] = piece.options;
+    return {
+      ...piece,
+      ...personality,
+      options: [
+        option(personality.modes[0], negative.instruction, -2),
+        option(
+          personality.modes[1],
+          `Apply this preference moderately: ${negative.instruction}`,
+          -1,
+        ),
+        option(personality.modes[2], neutral.instruction, 0),
+        option(
+          personality.modes[3],
+          `Apply this preference moderately: ${positive.instruction}`,
+          1,
+        ),
+        option(personality.modes[4], positive.instruction, 2),
+      ],
+    };
+  },
+);
 
 export function brainDefinition(pieceId: number) {
   const definition = BRAIN_CATALOG[pieceId - 1];

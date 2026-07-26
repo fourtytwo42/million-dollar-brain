@@ -59,7 +59,7 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
             immutableWeight[id] = weights[i];
             affinityId[id] = keccak256(abi.encode("MDBP_AFFINITY", id));
             settledPrice[id] = (initialBrainValuation * weights[i]) / BPS;
-            selectedPreset[id] = 1;
+            selectedPreset[id] = 2;
             _mint(address(this), id);
         }
     }
@@ -107,7 +107,7 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
     function setPreset(uint256 pieceId, uint8 preset) external {
         _validPiece(pieceId);
         require(ownerOf(pieceId) == msg.sender, "not owner");
-        require(preset <= 2, "invalid preset");
+        require(preset <= 4, "invalid preset");
         selectedPreset[pieceId] = preset;
         emit PresetChanged(pieceId, preset, msg.sender);
     }
