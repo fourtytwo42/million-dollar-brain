@@ -842,7 +842,7 @@ Only genuinely unresolved decisions belong in this section:
 7. Creator DAO Vault safeguards beyond owner authorization.
 8. Initial seed capital and initial basket-share price.
 9. Whether future governance uses basket shares, brain pieces, another token, or remains absent.
-10. Final brand palette, typography, and light or dark theme behavior.
+10. Exact production color tokens, font-family selection and licensing, and final accessibility validation.
 11. Mainnet RPC provider, fallback provider, monitoring destination, and off-host backup destination.
 
 ## 21. Current decisions ledger
@@ -881,6 +881,8 @@ Only genuinely unresolved decisions belong in this section:
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
 - Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
+- The application provides matching editorial light and dark modes, follows the operating-system preference initially, and persists a manual `Light / Dark / System` selection.
+- Dark mode uses warm charcoal and espresso surfaces and must not revert to the rejected generic navy, cyan, neon-purple, glow, or glassmorphism treatment.
 - Application services and dependencies are installed directly on the Ubuntu VM and run as native `systemd` services. Docker is not used.
 - The frontend stack is locked in `TECH_STACK.md`: Next.js App Router, TypeScript, Node.js 24 LTS, npm, Tailwind CSS 4, shadcn/ui, wagmi, viem, TanStack Query, RainbowKit, SVG, ECharts, and Motion for React.
 - The backend uses TypeScript, Fastify, PostgreSQL, Drizzle, viem, Zod, and native `systemd` services and timers; Redis is excluded initially.

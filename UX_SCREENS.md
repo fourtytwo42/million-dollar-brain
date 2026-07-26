@@ -45,6 +45,8 @@ The authorized creator also sees Admin. How It Works appears as a help action, n
 
 The header must remain useful without a connected wallet.
 
+The global account or display menu includes a `Light / Dark / System` theme control. The first visit follows the operating-system preference, and a user's explicit selection persists on that device.
+
 ### Connected-wallet menu
 
 Opening the wallet menu shows the Account drawer:
@@ -541,6 +543,7 @@ Mobile requirements:
 - Holdings become asset cards.
 - Deposit and Redeem remain accessible with a sticky action bar where appropriate.
 - Admin remains functional but is desktop-optimized.
+- Light and dark modes preserve the same controls, content, and semantic state colors.
 
 ## 15. MVP priority
 

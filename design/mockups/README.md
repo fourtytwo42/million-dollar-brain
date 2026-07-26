@@ -7,6 +7,9 @@ These ImageGen mockups translate the normative screen map into visual directions
 - `brain-screen-v2-editorial.png`: the recommended 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
 - `basket-screen-v2-editorial.png`: the recommended NAV, allocation, performance, holdings, target drift, and connected-wallet position.
 - `decisions-screen-v2-editorial.png`: the recommended Brain requested, Ornith proposed, and Protocol executed explanation flow.
+- `brain-screen-v2-editorial-dark.png`: dark-mode companion to the Brain screen.
+- `basket-screen-v2-editorial-dark.png`: dark-mode companion to the Basket screen.
+- `decisions-screen-v2-editorial-dark.png`: dark-mode companion to the Decisions screen.
 
 The original `v1` dark mockups remain for comparison but are not the recommended direction.
 
@@ -23,7 +26,16 @@ The original `v1` dark mockups remain for comparison but are not the recommended
 - Flat fills, thin rules, restrained corners, and subtle paper texture.
 - No neon, glow, glassmorphism, or generic dark AI-dashboard treatment.
 
-This direction is recommended but remains a design proposal until the final palette, typography, and theme behavior are accepted in the PRD.
+### Dark mode
+
+- Warm charcoal background rather than blue-black or pure black.
+- Espresso and dark-umber surfaces.
+- Bone and parchment-gray typography.
+- Brighter oxblood, sage, ochre, mineral slate, clay, olive, and faded-plum semantic colors.
+- The same typography, hierarchy, borders, spacing, and meaning as light mode.
+- No neon, cyan, glow, glassmorphism, gradients, or cyberpunk treatment.
+
+Both modes are requirements. Exact production color tokens and font files must be tested for contrast, licensing, rendering, and accessibility before implementation is considered final.
 
 ## Implementation guidance
 

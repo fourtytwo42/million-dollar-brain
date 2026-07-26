@@ -36,6 +36,17 @@ Initial application VM:
 
 Dependency versions are pinned in `package-lock.json`. Upgrades occur through reviewed pull requests rather than unbounded production installs.
 
+### Theme implementation
+
+- Light and dark modes are both required.
+- The initial mode follows `prefers-color-scheme`.
+- A manual `Light / Dark / System` preference is available from the global account or display menu.
+- The explicit preference is stored locally and applied before first paint to avoid a theme flash.
+- Semantic design tokens, not component-local hex values, control surfaces, text, borders, actions, charts, status, warnings, and focus states.
+- Light and dark modes preserve the same information hierarchy and status meanings.
+- Both modes must meet the applicable WCAG contrast requirements, including charts, disabled controls, focus rings, and status indicators.
+- Dark mode uses warm charcoal and espresso surfaces rather than the rejected navy, cyan, neon-purple, glow, or glassmorphism treatment.
+
 ## 3. Web3 frontend
 
 | Concern | MVP selection |
