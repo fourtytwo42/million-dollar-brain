@@ -363,14 +363,83 @@ try {
     true,
     `authorized allocation cycle failed: ${await cycleResponse.text()}`,
   );
+  const historyResponse = await page.request.get(`${baseUrl}/api/status`);
+  assert.equal(
+    historyResponse.ok(),
+    true,
+    "decision history status must load after an executed cycle",
+  );
+  const historyStatus = await historyResponse.json();
+  assert.ok(
+    historyStatus.cycleHistory.length >= 2,
+    "decision archive must expose multiple historical cycles",
+  );
+  assert.ok(
+    historyStatus.cycleHistory.length <= 50,
+    "decision archive payload must remain bounded",
+  );
+  assert.equal(
+    historyStatus.latestCycle.txHash,
+    historyStatus.cycleHistory[0].txHash,
+    "latest cycle must match the first historical record",
+  );
+  await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Decisions", exact: true }).click();
   await page
-    .getByRole("heading", { name: "From collective brain to bounded trade." })
+    .getByRole("heading", {
+      name: "Explore every decision and execution.",
+    })
     .waitFor();
+  const historyItems = page.getByTestId("decision-history-item");
+  assert.equal(
+    await historyItems.count(),
+    historyStatus.cycleHistory.length,
+    "every returned historical cycle must be selectable",
+  );
+  const historyDetail = page.getByTestId("decision-history-detail");
+  await historyDetail
+    .getByText(historyStatus.cycleHistory[0].txHash, { exact: true })
+    .waitFor();
+  await historyItems.nth(1).click();
+  await historyDetail
+    .getByText(historyStatus.cycleHistory[1].txHash, { exact: true })
+    .waitFor();
+  const historyMobile = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+  });
+  await historyMobile.goto(baseUrl, { waitUntil: "networkidle" });
+  await historyMobile
+    .getByRole("button", { name: "Decisions", exact: true })
+    .click();
+  assert.equal(
+    await historyMobile.getByTestId("decision-history-item").count(),
+    historyStatus.cycleHistory.length,
+    "mobile decision archive must expose every returned cycle",
+  );
+  const historyMobileOverflow = await historyMobile.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  assert.ok(
+    historyMobileOverflow <= 1,
+    `mobile decision history must not create page-level horizontal scrolling (${historyMobileOverflow}px)`,
+  );
+  await historyMobile.close();
   await page.getByText("Brain requested").waitFor();
   await page.getByText("Ornith proposed").waitFor();
   await page.getByText("Protocol executed").waitFor();
   await page.screenshot({ path: "var/uat-decisions.png", fullPage: true });
+  await page.screenshot({
+    path: "design/mockups/decisions-screen-v2-editorial.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await page.screenshot({
+    path: "design/mockups/decisions-screen-v2-editorial-dark.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Light", exact: true }).click();
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page.screenshot({ path: "var/uat-basket.png", fullPage: true });
   await page
@@ -416,7 +485,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 v2 portraits, anatomical segment manifest, four map modes, tooltip, roving keyboard navigation, zoom, mobile list/search, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: 42 v2 portraits, anatomical segment manifest, four map modes, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

@@ -1182,14 +1182,147 @@ footer {
   border: 1px solid currentColor;
   padding: 8px 11px;
 }
+.decision-history-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.decision-history {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 16px;
+}
+.decision-history-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.decision-history-heading h2 {
+  font-size: 24px;
+  margin: 3px 0 0;
+}
+.decision-history-heading > span {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.decision-history-list {
+  max-height: 690px;
+  overflow-y: auto;
+}
+.decision-history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  padding: 15px 16px 14px 13px;
+}
+.decision-history-item:hover {
+  background: var(--surface-subtle);
+}
+.decision-history-item.selected {
+  border-left-color: var(--primary);
+  background: var(--surface-subtle);
+}
+.decision-history-item > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.decision-history-item b,
+.decision-history-item em,
+.decision-history-item small {
+  font-family: "IBM Plex Mono", "DM Mono", monospace;
+}
+.decision-history-item b {
+  font-size: 11px;
+}
+.decision-history-item em {
+  color: var(--positive);
+  font-size: 10px;
+  font-style: normal;
+}
+.decision-history-item strong {
+  display: block;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 10px 0 7px;
+}
+.decision-history-item small {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.decision-history-empty {
+  color: var(--text-muted);
+  padding: 18px;
+}
+.decision-history-detail {
+  min-width: 0;
+}
+.decision-detail-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  background: var(--surface);
+}
+.decision-detail-heading h2 {
+  font-size: 28px;
+  margin: 4px 0 0;
+}
+.decision-detail-heading > span {
+  color: var(--positive);
+  font:
+    600 11px "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+}
+.decision-rationale {
+  margin: 0;
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.execution-record {
+  border-top: 1px solid var(--border);
+  padding: 15px 0;
+}
+.execution-record b {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 7px;
+}
+.execution-record code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
 .decision-flow {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
+  min-width: 0;
 }
 .decision-stage {
   padding: 23px;
   min-height: 430px;
+  min-width: 0;
   border-top: 4px solid;
 }
 .decision-stage > span {
@@ -1210,6 +1343,7 @@ footer {
 .decision-stage h2 {
   font-size: 31px;
   margin: 12px 0 25px;
+  overflow-wrap: anywhere;
 }
 .decision-stage p {
   display: flex;
@@ -1708,6 +1842,15 @@ footer {
   }
   .decision-flow {
     grid-template-columns: 1fr;
+  }
+  .decision-history-layout {
+    grid-template-columns: 1fr;
+  }
+  .decision-history {
+    position: static;
+  }
+  .decision-history-list {
+    max-height: 320px;
   }
   .decision-stage {
     min-height: auto;

@@ -39,9 +39,14 @@ type Piece = {
 type Cycle = {
   at: string;
   source: string;
+  rationale?: string;
   allocation: Record<string, number>;
   txHash: string;
+  redemptionTxHash?: string | null;
+  block?: string;
+  marketAsOf?: string;
   brain?: {
+    catalogVersion?: number;
     activePieces: number;
     inactivePieces: number;
     activeNonNeutralInstructions: {
@@ -69,6 +74,7 @@ type Data = {
   browserRpcUrl: string;
   dataAvailability: Record<string, boolean>;
   latestCycle: Cycle | null;
+  cycleHistory: Cycle[];
 };
 const localChain = defineChain({
   id: 31337,

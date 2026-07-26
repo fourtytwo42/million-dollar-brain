@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Corrected Basket Snapshot and Basket Ledger to value token quantities through the approved router before displaying USD amounts, percentages, and bars.
+- Last meaningful change: Expanded Decisions into a selectable, newest-first archive of the 50 latest AI and fallback cycles with their brain snapshots, allocations, rationales, blocks, and execution transactions.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -97,6 +97,7 @@ When sources conflict, use this order:
 - 2026-07-26: Verified every crew spans more than 250 SVG units horizontally and 190 vertically while retaining member counts of 6, 12, 16, and 8; full economic and autonomous-cycle Chromium UAT still passes.
 - 2026-07-26: Verified recovery of the complete AI-directed hourly path after the appliance gateway fixed its Ornith cold-start race. The normal `mdb-cycle.service` path recorded `source: "ai"` at `2026-07-26T17:00:04.608Z`, proposed USDG 20%, NVDA 35%, AAPL 20%, and ETHX 25%, and executed successful Anvil transaction `0x48b6fa8ffc69bf3df4d20b654d0a0a7234aea3d905e629bd4114664cad28df1f` in block 30. Priced holdings match those weights exactly, all VM services and the hourly timer are active, and a fresh cold Ornith request plus GPU45 `/health` returned HTTP 200. Keep the existing MDB AI URL/model configuration; do not add an app-side SSH or startup workaround because the race was fixed at the appliance gateway.
 - 2026-07-26: Fixed the Basket Snapshot valuation defect by returning router-priced `holdingValues` separately from raw token-unit `holdings` and using those values throughout Snapshot and Basket Ledger. Production build and Prettier pass; Chromium UAT verifies priced holdings reconcile exactly to NAV, and final in-app-browser UAT showed current and target weights aligned at USDG 20%, NVDA 40%, AAPL 10%, and ETHX 30%.
+- 2026-07-26: Implemented historical decision exploration. `/api/status` returns the newest 50 valid cycle records; Decisions selects the latest by default and lets users inspect older AI or fallback cycles, their brain context, allocation, rationale, block, rebalance hash, and optional redemption-settlement hash. Production build, Prettier, full economic/AI Chromium UAT, historical selection, mobile overflow, and live in-app-browser visual checks pass.
 
 ## Decisions
 

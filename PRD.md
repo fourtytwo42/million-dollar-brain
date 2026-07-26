@@ -673,6 +673,8 @@ The implemented Brain map uses 42 individually generated v2 catalog-character po
 
 ![Decisions dark mode](design/mockups/decisions-screen-v2-editorial-dark.png)
 
+The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, and queued-redemption settlement transaction when present. Historical selection never changes the current basket or brain state.
+
 ## 15. Security requirements
 
 - Independent audits before real-value mainnet use.

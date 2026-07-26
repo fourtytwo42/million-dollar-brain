@@ -39,6 +39,23 @@ type CycleInstruction = {
   influenceBps: number;
 };
 
+type CycleRecord = {
+  at: string;
+  source: string;
+  rationale?: string;
+  allocation: Record<string, number>;
+  txHash: string;
+  redemptionTxHash?: string | null;
+  block?: string;
+  marketAsOf?: string;
+  brain?: {
+    catalogVersion?: number;
+    activePieces: number;
+    inactivePieces: number;
+    activeNonNeutralInstructions: CycleInstruction[];
+  };
+};
+
 export type EditorialData = {
   nav: string;
   supply: string;
@@ -50,17 +67,8 @@ export type EditorialData = {
   redemption: { pendingRequestId: string };
   catalog: { version: number; hash: string };
   dataAvailability: Record<string, boolean>;
-  latestCycle: {
-    at: string;
-    source: string;
-    allocation: Record<string, number>;
-    txHash: string;
-    brain?: {
-      activePieces: number;
-      inactivePieces: number;
-      activeNonNeutralInstructions: CycleInstruction[];
-    };
-  } | null;
+  latestCycle: CycleRecord | null;
+  cycleHistory: CycleRecord[];
 };
 
 const money = (value: string | bigint) =>
@@ -121,6 +129,9 @@ export function EditorialDashboard({
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
   const [brainMode, setBrainMode] = useState<BrainMapMode>("characters");
+  const [selectedCycleHash, setSelectedCycleHash] = useState<string | null>(
+    null,
+  );
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -145,6 +156,15 @@ export function EditorialDashboard({
       (dependency) => data?.dataAvailability[dependency] === true,
     ) ?? false;
   const latestAllocation = data?.latestCycle?.allocation ?? { USDG: 10000 };
+  const decisionHistory =
+    data?.cycleHistory ?? (data?.latestCycle ? [data.latestCycle] : []);
+  const selectedCycle =
+    decisionHistory.find((cycle) => cycle.txHash === selectedCycleHash) ??
+    data?.latestCycle ??
+    null;
+  const selectedPreferences =
+    selectedCycle?.brain?.activeNonNeutralInstructions ?? [];
+  const selectedAllocation = selectedCycle?.allocation ?? { USDG: 10000 };
 
   return (
     <main className={`editorial-app ${dark ? "editorial-dark" : ""}`}>
@@ -481,59 +501,162 @@ export function EditorialDashboard({
         <div className="editorial-page">
           <section className="page-title-row">
             <div>
-              <p className="section-kicker">LATEST DECISION</p>
-              <h1>From collective brain to bounded trade.</h1>
+              <p className="section-kicker">DECISION ARCHIVE</p>
+              <h1>Explore every decision and execution.</h1>
             </div>
             <span className="decision-source">
-              {data?.latestCycle?.source?.toUpperCase() ?? "NO CYCLE"}
+              {selectedCycle?.source?.toUpperCase() ?? "NO CYCLE"}
             </span>
           </section>
-          <section className="decision-flow">
-            <DecisionStage number="01" title="Brain requested" tone="brain">
-              {latestPreferences.length ? (
-                latestPreferences.slice(0, 4).map((item) => (
-                  <p key={item.pieceId}>
-                    <b>{item.character ?? item.affinity}</b>
-                    <span>{item.mood ?? item.instruction}</span>
+          <section className="decision-history-layout">
+            <aside className="decision-history" aria-label="Decision history">
+              <div className="decision-history-heading">
+                <div>
+                  <p className="section-kicker">CYCLE HISTORY</p>
+                  <h2>{decisionHistory.length} recorded</h2>
+                </div>
+                <span>Newest first</span>
+              </div>
+              <div className="decision-history-list" role="list">
+                {decisionHistory.map((cycle, index) => (
+                  <button
+                    key={`${cycle.txHash}-${cycle.at}`}
+                    type="button"
+                    role="listitem"
+                    data-testid="decision-history-item"
+                    className={
+                      selectedCycle?.txHash === cycle.txHash
+                        ? "decision-history-item selected"
+                        : "decision-history-item"
+                    }
+                    aria-current={
+                      selectedCycle?.txHash === cycle.txHash
+                        ? "true"
+                        : undefined
+                    }
+                    onClick={() => setSelectedCycleHash(cycle.txHash)}
+                  >
+                    <span>
+                      <b>
+                        {index === 0
+                          ? "Latest cycle"
+                          : cycleTimestamp(cycle.at)}
+                      </b>
+                      <em>{cycle.source.toUpperCase()}</em>
+                    </span>
+                    <strong>{allocationSummary(cycle.allocation)}</strong>
+                    <small>
+                      Block {cycle.block ?? "—"} · {short(cycle.txHash)}
+                    </small>
+                  </button>
+                ))}
+                {!decisionHistory.length && (
+                  <p className="decision-history-empty">
+                    The first scheduled cycle will appear here.
                   </p>
-                ))
-              ) : (
-                <p>
-                  <b>Neutral brain</b>
-                  <span>No non-neutral moods in the last snapshot.</span>
-                </p>
-              )}
-            </DecisionStage>
-            <DecisionStage number="02" title="Ornith proposed" tone="ornith">
-              {Object.entries(latestAllocation).map(([symbol, weight]) => (
-                <p key={symbol}>
-                  <b>{symbol}</b>
-                  <span>{weight / 100}% target</span>
-                </p>
-              ))}
-            </DecisionStage>
-            <DecisionStage
-              number="03"
-              title="Protocol executed"
-              tone="protocol"
+                )}
+              </div>
+            </aside>
+
+            <div
+              className="decision-history-detail"
+              data-testid="decision-history-detail"
             >
-              <p>
-                <b>Allowlist checked</b>
-                <span>USDG, NVDA, AAPL, ETHX only</span>
-              </p>
-              <p>
-                <b>Reserve enforced</b>
-                <span>USDG target at or above 20%</span>
-              </p>
-              <p>
-                <b>Transaction</b>
-                <span className="mono">
-                  {data?.latestCycle
-                    ? short(data.latestCycle.txHash)
-                    : "Awaiting cycle"}
-                </span>
-              </p>
-            </DecisionStage>
+              <div className="decision-detail-heading">
+                <div>
+                  <p className="section-kicker">
+                    {selectedCycle
+                      ? cycleTimestamp(selectedCycle.at)
+                      : "AWAITING FIRST CYCLE"}
+                  </p>
+                  <h2>
+                    {selectedCycle?.source === "ai"
+                      ? "AI-directed rebalance"
+                      : selectedCycle
+                        ? "Safe fallback rebalance"
+                        : "No decision recorded"}
+                  </h2>
+                </div>
+                {selectedCycle?.block && (
+                  <span>EXECUTED · BLOCK {selectedCycle.block}</span>
+                )}
+              </div>
+              {selectedCycle?.rationale && (
+                <p className="decision-rationale">{selectedCycle.rationale}</p>
+              )}
+              <section className="decision-flow">
+                <DecisionStage number="01" title="Brain requested" tone="brain">
+                  {selectedPreferences.length ? (
+                    selectedPreferences.slice(0, 6).map((item) => (
+                      <p key={item.pieceId}>
+                        <b>{item.character ?? item.affinity}</b>
+                        <span>{item.mood ?? item.instruction}</span>
+                      </p>
+                    ))
+                  ) : (
+                    <p>
+                      <b>Neutral brain</b>
+                      <span>No non-neutral moods in this snapshot.</span>
+                    </p>
+                  )}
+                  {selectedCycle?.brain && (
+                    <p>
+                      <b>Data status</b>
+                      <span>
+                        {selectedCycle.brain.activePieces} active ·{" "}
+                        {selectedCycle.brain.inactivePieces} inactive
+                      </span>
+                    </p>
+                  )}
+                </DecisionStage>
+                <DecisionStage
+                  number="02"
+                  title="Ornith proposed"
+                  tone="ornith"
+                >
+                  {Object.entries(selectedAllocation).map(
+                    ([symbol, weight]) => (
+                      <p key={symbol}>
+                        <b>{symbol}</b>
+                        <span>{weight / 100}% target</span>
+                      </p>
+                    ),
+                  )}
+                  <p>
+                    <b>Decision source</b>
+                    <span>{selectedCycle?.source.toUpperCase() ?? "—"}</span>
+                  </p>
+                </DecisionStage>
+                <DecisionStage
+                  number="03"
+                  title="Protocol executed"
+                  tone="protocol"
+                >
+                  <p>
+                    <b>Allowlist checked</b>
+                    <span>USDG, NVDA, AAPL, ETHX only</span>
+                  </p>
+                  <p>
+                    <b>Reserve enforced</b>
+                    <span>USDG target at or above 20%</span>
+                  </p>
+                  <p>
+                    <b>Execution block</b>
+                    <span>{selectedCycle?.block ?? "Awaiting cycle"}</span>
+                  </p>
+                  <div className="execution-record">
+                    <b>Rebalance transaction</b>
+                    <code>{selectedCycle?.txHash ?? "Awaiting cycle"}</code>
+                  </div>
+                  {selectedCycle?.redemptionTxHash && (
+                    <div className="execution-record">
+                      <b>Redemption settlement</b>
+                      <code>{selectedCycle.redemptionTxHash}</code>
+                    </div>
+                  )}
+                </DecisionStage>
+              </section>
+            </div>
           </section>
         </div>
       )}
@@ -546,6 +669,16 @@ export function EditorialDashboard({
       </footer>
     </main>
   );
+}
+
+function cycleTimestamp(value: string) {
+  return `${value.replace("T", " ").slice(0, 19)} UTC`;
+}
+
+function allocationSummary(allocation: Record<string, number>) {
+  return Object.entries(allocation)
+    .map(([symbol, weight]) => `${symbol} ${weight / 100}%`)
+    .join(" · ");
 }
 
 function pulseHeadline(items: CycleInstruction[]) {

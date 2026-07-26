@@ -32,6 +32,8 @@ The implementation is not required to reproduce incidental raster artifacts pixe
 
 The earlier `v1` navy mockups are historical alternatives and are explicitly non-normative.
 
+The implemented Decisions view extends the accepted editorial direction with a left-hand, newest-first cycle archive and a right-hand selected-cycle trace. History rows use compact mono timestamps, source labels, allocation summaries, block numbers, and shortened transaction identifiers; the detail view exposes complete execution hashes and remains the authoritative readable record.
+
 ## 3. Brand direction
 
 The product uses an editorial brokerage identity:

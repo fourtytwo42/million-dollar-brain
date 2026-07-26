@@ -208,6 +208,8 @@ Requirements:
 
 Each cycle should display five stages.
 
+The public trace must also be historically navigable. The newest cycle is selected by default, and users can select older cycles without mutating protocol state. Each historical record preserves its timestamp, provider source or deterministic fallback status, brain snapshot, approved targets, rationale, execution block and transaction, plus any redemption-settlement transaction processed in that cycle.
+
 ### Stage 1: Brain requested
 
 Show the strongest compiled preferences:
