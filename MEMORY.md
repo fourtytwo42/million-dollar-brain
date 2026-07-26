@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Made the four character-crew legend labels interactive toggles that highlight crew members and mute non-members without changing piece selection.
+- Last meaningful change: Applied a fixed presentation-only permutation so all four character crews are scattered across the brain instead of appearing in catalog-order horizontal layers.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -94,6 +94,7 @@ When sources conflict, use this order:
 - 2026-07-25: Audited normative Markdown files for remaining open implementation decisions and replaced the PRD open-decision list with external production gates.
 - 2026-07-26: Verified the anatomical Brain redesign with a clean Next.js production build, Prettier, all 42 region assignments, light/dark/mobile screenshots, the complete Chromium economic flow, and a live autonomous allocation cycle.
 - 2026-07-26: Verified interactive crew filtering in Chromium: Market Mystics highlights exactly 12 pieces, applies an accessible pressed state, mutes the other 30, and clears on a second activation.
+- 2026-07-26: Verified every crew spans more than 250 SVG units horizontally and 190 vertically while retaining member counts of 6, 12, 16, and 8; full economic and autonomous-cycle Chromium UAT still passes.
 
 ## Decisions
 
@@ -146,6 +147,15 @@ When sources conflict, use this order:
 - Commands/tests: Prettier, Next.js production build, clean-state Chromium UAT, Market Mystics 12-member assertion, toggle-clear assertion.
 - Result: Executive Dysfunction, Market Mystics, Sector Weirdos, and Decision Goblins can each be isolated directly from the legend with accessible pressed-state feedback.
 - Follow-up: None.
+
+### 2026-07-26 - Scattered Crew Placement
+
+- Context: Canonical ID order placed the four character crews into obvious horizontal layers even after the crew legend became interactive.
+- Decision: Separate immutable piece identity from visual slot order with a fixed 42-ID permutation in `brain-presentation.ts`. Scatter every crew across upper, middle, lower, left, and right areas of the shared silhouette.
+- Files: `apps/web/lib/brain-presentation.ts`, `apps/web/components/brain-map.tsx`, `tests/uat.mjs`, `DESIGN_SYSTEM.md`, `PRD.md`.
+- Commands/tests: Next.js production build, screenshot review, clean-state Chromium UAT, canonical crew-count assertions, horizontal and vertical dispersion assertions.
+- Result: All crews are interleaved across the brain while canonical NFT IDs, portraits, affinities, presets, ownership, prices, contracts, APIs, and economics remain unchanged.
+- Follow-up: Preserve `SCATTERED_PIECE_IDS` as presentation-only metadata when future visual slots are adjusted.
 
 ### 2026-07-23 - User-Triggered Portfolio Reviews
 

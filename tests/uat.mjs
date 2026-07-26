@@ -136,6 +136,37 @@ try {
     await page.getByRole("button", { name: mode, exact: true }).click();
     await page.locator(`svg.brain-map.mode-${mode.toLowerCase()}`).waitFor();
   }
+  for (const [crew, expected] of [
+    ["Executive Dysfunction", 6],
+    ["Market Mystics", 12],
+    ["Sector Weirdos", 16],
+    ["Decision Goblins", 8],
+  ]) {
+    const crewCells = page.locator(`.brain-cell[data-crew="${crew}"]`);
+    assert.equal(
+      await crewCells.count(),
+      expected,
+      `${crew} must retain its canonical member count`,
+    );
+    const centers = await crewCells.evaluateAll((cells) =>
+      cells.map((cell) => ({
+        x: Number(cell.getAttribute("data-center-x")),
+        y: Number(cell.getAttribute("data-center-y")),
+      })),
+    );
+    assert.ok(
+      Math.max(...centers.map(({ x }) => x)) -
+        Math.min(...centers.map(({ x }) => x)) >
+        250,
+      `${crew} must be scattered horizontally across the brain`,
+    );
+    assert.ok(
+      Math.max(...centers.map(({ y }) => y)) -
+        Math.min(...centers.map(({ y }) => y)) >
+        190,
+      `${crew} must be scattered vertically across the brain`,
+    );
+  }
   const mysticsCrew = page.getByRole("button", {
     name: "Market Mystics (12)",
     exact: true,

@@ -152,7 +152,18 @@ const rows: readonly (readonly Placement[])[] = [
   ],
 ] as const;
 
-const allPlacements = rows.flat();
+// Catalog identity stays immutable; this fixed permutation assigns those IDs to
+// visual slots so every character crew is distributed across the whole brain.
+const SCATTERED_PIECE_IDS = [
+  1, 7, 19, 35, 8, 20, 36, 2, 21, 9, 22, 37, 10, 23, 11, 24, 3, 38, 25, 12, 26,
+  39, 13, 27, 4, 14, 40, 28, 15, 29, 41, 30, 5, 16, 31, 17, 42, 6, 32, 18, 33,
+  34,
+] as const;
+
+const allPlacements = rows.flat().map((placement, index) => ({
+  ...placement,
+  id: SCATTERED_PIECE_IDS[index],
+}));
 
 type Point = { x: number; y: number };
 

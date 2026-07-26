@@ -293,6 +293,8 @@ export function BrainMap({
                       key={piece.id}
                       data-region={presentation.region}
                       data-crew={piece.crew}
+                      data-center-x={presentation.center.x}
+                      data-center-y={presentation.center.y}
                       role="button"
                       tabIndex={selectedId === piece.id ? 0 : -1}
                       aria-label={label}
