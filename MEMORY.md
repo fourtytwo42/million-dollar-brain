@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Keep the verified meme-universe local-devnet release healthy on VM `192.168.50.135`.
-- Last meaningful change: Refined newcomer onboarding into a compact floating four-step tour that presents one concept at a time and never pushes the Brain or other product content down. The optional glossary stays collapsed until requested.
+- Last meaningful change: Portfolio presentation now omits empty positions. Basket lists only positive on-chain balances, while Decision summaries, details, and share cards list only positive target weights from the selected cycle.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -110,6 +110,7 @@ When sources conflict, use this order:
 - 2026-07-26: Installed `cloudflared` 2026.7.3 on the VM and enabled `mdb-cloudflared.service` for a temporary public demo tunnel. Verified the assigned TryCloudflare origin returns HTTP 200 for the home page, `/api/status`, and a v4 portrait. Quick Tunnels are development-only, have no uptime guarantee, and receive a new random hostname when recreated.
 - 2026-07-26: Added the first-visit comprehension layer. The non-blocking `How it works` guide explains Own, Steer, Propose, and Verify, includes a five-term glossary, persists dismissal, and always reopens from the header. Brain, Basket, and Decisions now state their purpose and explain setting, fee, redemption, and execution consequences in plain language. Prettier, Next.js production build, full economic/autonomous Chromium UAT, desktop/mobile bounds checks, and live in-app-browser console review pass.
 - 2026-07-26: Replaced the large inline onboarding block with a fixed-position quick tour that shows one of four steps at a time, leaves the Brain in its normal above-the-fold position, becomes a 12-pixel-inset mobile bottom sheet, and collapses the glossary by default. Prettier, production build, full Chromium economic/autonomous UAT, an explicit no-layout-shift assertion, mobile bottom-sheet assertion, live visual review, and zero page-level horizontal overflow pass.
+- 2026-07-26: Centralized positive-position presentation rules in `apps/web/lib/portfolio-display.ts`. Basket hides assets whose actual on-chain token balance is zero; Decision history summaries, selected target rows, and share-card allocation summaries hide weights at or below zero. Two focused helper tests, Prettier, production build, full Chromium economic/autonomous UAT, and live Basket/Decision review pass. Live history visibly omits AAPL from cycles where its target was zero.
 
 ## Decisions
 

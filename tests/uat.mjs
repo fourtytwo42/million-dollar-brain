@@ -455,6 +455,20 @@ try {
       `${symbol} must have a router-priced USD value`,
     );
   }
+  const expectedHeldSymbols = Object.entries(basketStatus.holdings)
+    .filter(([, balance]) => BigInt(balance) > 0n)
+    .map(([symbol]) => symbol)
+    .sort();
+  const renderedHeldSymbols = await page
+    .getByTestId("basket-holding-row")
+    .evaluateAll((rows) =>
+      rows.map((row) => row.getAttribute("data-symbol")).sort(),
+    );
+  assert.deepEqual(
+    renderedHeldSymbols,
+    expectedHeldSymbols,
+    "the Basket portfolio must render only assets with positive balances",
+  );
   const amount = page.getByLabel("Deposit USDG");
   await amount.fill("1000");
   await page.getByRole("button", { name: "Deposit USDG" }).click();
@@ -534,10 +548,31 @@ try {
   await historyDetail
     .getByText(historyStatus.cycleHistory[0].txHash, { exact: true })
     .waitFor();
+  const renderedDecisionSymbols = async () =>
+    page
+      .getByTestId("decision-target-row")
+      .evaluateAll((rows) =>
+        rows.map((row) => row.getAttribute("data-symbol")).sort(),
+      );
+  const expectedDecisionSymbols = (cycle) =>
+    Object.entries(cycle.allocation)
+      .filter(([, weight]) => weight > 0)
+      .map(([symbol]) => symbol)
+      .sort();
+  assert.deepEqual(
+    await renderedDecisionSymbols(),
+    expectedDecisionSymbols(historyStatus.cycleHistory[0]),
+    "the latest Decision must omit zero-weight targets",
+  );
   await historyItems.nth(1).click();
   await historyDetail
     .getByText(historyStatus.cycleHistory[1].txHash, { exact: true })
     .waitFor();
+  assert.deepEqual(
+    await renderedDecisionSymbols(),
+    expectedDecisionSymbols(historyStatus.cycleHistory[1]),
+    "historical Decisions must omit zero-weight targets",
+  );
   await historyItems.nth(0).click();
   await page.getByText("BRAIN DRAMA", { exact: true }).waitFor();
   for (const label of [
@@ -666,7 +701,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

@@ -9,6 +9,7 @@
   "scripts": {
     "test:contracts": "forge test --root packages/contracts",
     "test:meme": "node --experimental-strip-types --test tests/meme-recap.test.ts",
+    "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },

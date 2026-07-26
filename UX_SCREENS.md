@@ -215,6 +215,10 @@ This combines the previous Portfolio and My Account screens.
 
 Use a sortable table on desktop and cards on mobile:
 
+The portfolio view lists only assets with a positive on-chain basket balance.
+Configured, approved, or previously held assets with a zero balance are omitted
+from the holdings table rather than shown as 0% positions.
+
 - Asset and verified-contract link.
 - Asset class and important tags.
 - Current and target weights.
@@ -342,6 +346,10 @@ Show:
 - Hard rules that changed or rejected the proposal.
 - Trading cost, turnover, and gas.
 - Resulting basket state.
+
+Allocation summaries and the Ornith-proposed stage list only positive target
+weights for the selected cycle. Zero-weight candidates are omitted from both the
+latest decision and every historical decision.
 
 The first view should be understandable without showing raw JSON.
 

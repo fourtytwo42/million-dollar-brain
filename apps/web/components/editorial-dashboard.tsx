@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
+import {
+  allocationSummary,
+  positiveAllocationEntries,
+  positiveBalanceSymbols,
+} from "../lib/portfolio-display";
 import { BrainMap } from "./brain-map";
 
 type BrainOption = {
@@ -527,13 +532,17 @@ export function EditorialDashboard({
               <h2>Current holdings and Ornith targets</h2>
               <div className="holding-table">
                 {data &&
-                  Object.keys(data.holdings).map((symbol) => {
+                  positiveBalanceSymbols(data.holdings).map((symbol) => {
                     const value = data.holdingValues[symbol] ?? "0";
                     const current =
                       (Number(value) / Math.max(1, Number(data.nav))) * 100;
                     const target = (latestAllocation[symbol] ?? 0) / 100;
                     return (
-                      <div key={symbol}>
+                      <div
+                        key={symbol}
+                        data-testid="basket-holding-row"
+                        data-symbol={symbol}
+                      >
                         <b>{symbol}</b>
                         <span>{current.toFixed(2)}%</span>
                         <i>
@@ -774,9 +783,13 @@ export function EditorialDashboard({
                   )}
                 </DecisionStage>
                 <DecisionStage number="02" title="AI proposed" tone="ornith">
-                  {Object.entries(selectedAllocation).map(
+                  {positiveAllocationEntries(selectedAllocation).map(
                     ([symbol, weight]) => (
-                      <p key={symbol}>
+                      <p
+                        key={symbol}
+                        data-testid="decision-target-row"
+                        data-symbol={symbol}
+                      >
                         <b>{symbol}</b>
                         <span>{weight / 100}% target</span>
                       </p>
@@ -834,12 +847,6 @@ export function EditorialDashboard({
 
 function cycleTimestamp(value: string) {
   return `${value.replace("T", " ").slice(0, 19)} UTC`;
-}
-
-function allocationSummary(allocation: Record<string, number>) {
-  return Object.entries(allocation)
-    .map(([symbol, weight]) => `${symbol} ${weight / 100}%`)
-    .join(" · ");
 }
 
 async function loadImage(src: string) {
