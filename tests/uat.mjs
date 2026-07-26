@@ -179,6 +179,11 @@ try {
     (await mobile.locator(".brain-piece-list > button").count()) > 0,
     "mobile list search must find pieces by crew",
   );
+  assert.equal(
+    await mobile.getByText(/\$525000000000000000000/).count(),
+    0,
+    "mobile prices must be formatted from token units instead of raw wei",
+  );
   await mobile.locator(".brain-piece-list > button").first().click();
   await mobile
     .getByRole("complementary", { name: /Selected brain piece:/ })

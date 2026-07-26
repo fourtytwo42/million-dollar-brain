@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { formatUnits } from "viem";
 import {
   BRAIN_PRESENTATION,
   BRAIN_PRESENTATION_BY_ID,
@@ -58,6 +59,12 @@ function shortOwner(owner: string) {
     : "Unowned";
 }
 
+function displayPrice(price: string) {
+  return Number(formatUnits(BigInt(price), 18)).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
+}
+
 function ownershipState(piece: MapPiece, account: string | null) {
   if (piece.unowned) return "unowned";
   return account && piece.owner.toLowerCase() === account.toLowerCase()
@@ -68,7 +75,7 @@ function ownershipState(piece: MapPiece, account: string | null) {
 function pieceLabel(piece: MapPiece, account: string | null) {
   const mood = piece.options[piece.preset]?.label ?? "Unknown";
   const state = ownershipState(piece, account);
-  return `${piece.name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${piece.price}.`;
+  return `${piece.name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.`;
 }
 
 export function BrainMap({
@@ -369,7 +376,7 @@ export function BrainMap({
                           ? "Unowned"
                           : shortOwner(previewPiece.owner)}
                     </span>
-                    <strong>${previewPiece.price}</strong>
+                    <strong>${displayPrice(previewPiece.price)}</strong>
                   </div>
                 );
               })()}
@@ -407,7 +414,7 @@ export function BrainMap({
                 </span>
                 <span>
                   <small>{state === "mine" ? "Yours" : state}</small>
-                  <strong>${piece.price}</strong>
+                  <strong>${displayPrice(piece.price)}</strong>
                 </span>
               </button>
             );

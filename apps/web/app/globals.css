@@ -34,6 +34,16 @@ button {
   font-weight: 700;
   cursor: pointer;
 }
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
 button:hover {
   opacity: 0.87;
 }
@@ -1432,6 +1442,9 @@ footer {
   transition:
     stroke 130ms,
     stroke-width 130ms;
+}
+.editorial-dark .brain-cell .segment-boundary {
+  stroke: color-mix(in srgb, var(--text) 38%, transparent);
 }
 .brain-cell .piece-portrait {
   opacity: 0.58;

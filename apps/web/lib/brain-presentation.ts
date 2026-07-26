@@ -80,16 +80,88 @@ const rows: readonly (readonly Placement[])[] = [
 
 const allPlacements = rows.flat();
 
-function curvedLobePath({ id, x, y, rx, ry }: Placement) {
-  const wobble = ((id * 7) % 9) - 4;
-  const pinch = ((id * 11) % 7) - 3;
-  return [
-    `M ${x - rx} ${y + wobble}`,
-    `C ${x - rx} ${y - ry * 0.55}, ${x - rx * 0.52} ${y - ry}, ${x + pinch} ${y - ry}`,
-    `C ${x + rx * 0.55} ${y - ry}, ${x + rx} ${y - ry * 0.48}, ${x + rx} ${y + wobble}`,
-    `C ${x + rx} ${y + ry * 0.55}, ${x + rx * 0.48} ${y + ry}, ${x - pinch} ${y + ry}`,
-    `C ${x - rx * 0.56} ${y + ry}, ${x - rx} ${y + ry * 0.5}, ${x - rx} ${y + wobble} Z`,
-  ].join(" ");
+type Point = { x: number; y: number };
+
+function clipPolygon(polygon: Point[], a: number, b: number, limit: number) {
+  const result: Point[] = [];
+  const inside = (point: Point) => a * point.x + b * point.y <= limit + 0.001;
+  const intersection = (start: Point, end: Point) => {
+    const denominator = a * (end.x - start.x) + b * (end.y - start.y);
+    const t =
+      Math.abs(denominator) < 0.0001
+        ? 0
+        : (limit - a * start.x - b * start.y) / denominator;
+    return {
+      x: start.x + (end.x - start.x) * t,
+      y: start.y + (end.y - start.y) * t,
+    };
+  };
+  for (let index = 0; index < polygon.length; index++) {
+    const start = polygon[index];
+    const end = polygon[(index + 1) % polygon.length];
+    const startInside = inside(start);
+    const endInside = inside(end);
+    if (startInside && endInside) result.push(end);
+    else if (startInside && !endInside) result.push(intersection(start, end));
+    else if (!startInside && endInside) {
+      result.push(intersection(start, end), end);
+    }
+  }
+  return result;
+}
+
+function roundedVoronoiPath(source: Placement) {
+  let polygon: Point[] = [
+    { x: 28, y: 0 },
+    { x: 732, y: 0 },
+    { x: 732, y: 425 },
+    { x: 28, y: 425 },
+  ];
+  for (const target of allPlacements) {
+    if (target.id === source.id) continue;
+    const a = 2 * (target.x - source.x);
+    const b = 2 * (target.y - source.y);
+    const limit =
+      target.x * target.x +
+      target.y * target.y -
+      source.x * source.x -
+      source.y * source.y;
+    polygon = clipPolygon(polygon, a, b, limit);
+  }
+  const radius = 5;
+  const before = (point: Point, previous: Point) => {
+    const distance = Math.hypot(point.x - previous.x, point.y - previous.y);
+    const amount = Math.min(radius / Math.max(distance, 1), 0.22);
+    return {
+      x: point.x + (previous.x - point.x) * amount,
+      y: point.y + (previous.y - point.y) * amount,
+    };
+  };
+  const after = (point: Point, next: Point) => {
+    const distance = Math.hypot(point.x - next.x, point.y - next.y);
+    const amount = Math.min(radius / Math.max(distance, 1), 0.22);
+    return {
+      x: point.x + (next.x - point.x) * amount,
+      y: point.y + (next.y - point.y) * amount,
+    };
+  };
+  const format = (value: number) => Number(value.toFixed(2));
+  const first = before(polygon[0], polygon.at(-1)!);
+  const commands = [`M ${format(first.x)} ${format(first.y)}`];
+  for (let index = 0; index < polygon.length; index++) {
+    const point = polygon[index];
+    const next = polygon[(index + 1) % polygon.length];
+    const entering = before(point, polygon.at(index - 1)!);
+    const leaving = after(point, next);
+    if (index > 0) {
+      commands.push(`L ${format(entering.x)} ${format(entering.y)}`);
+    }
+    commands.push(
+      `Q ${format(point.x)} ${format(point.y)} ${format(leaving.x)} ${format(leaving.y)}`,
+    );
+  }
+  commands.push(`L ${format(first.x)} ${format(first.y)} Z`);
+  return commands.join(" ");
 }
 
 function nearestDirectionalNeighbor(
@@ -125,7 +197,7 @@ export const BRAIN_PRESENTATION: readonly BrainPresentationPiece[] =
     const height = 112 * scale;
     return {
       id: placement.id,
-      path: curvedLobePath(placement),
+      path: roundedVoronoiPath(placement),
       center: { x: placement.x, y: placement.y },
       neighbors: {
         up: nearestDirectionalNeighbor(placement, "up"),
