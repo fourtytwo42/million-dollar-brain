@@ -488,11 +488,13 @@ High-risk actions require consequence previews, explicit confirmations, and tran
 
 This is supporting education, not primary product navigation.
 
-**Presentation:** First-visit inline guide plus persistent `How it works` help action
+**Presentation:** First-visit floating quick tour plus persistent `How it works` help action
 **Disclosure URL:** `/about`
 
-The first visit opens a dismissible four-step explanation without blocking the
-page:
+The first visit opens a dismissible floating tour without changing document
+flow or pushing the Brain, Basket, or Decisions content down. The compact
+desktop panel sits beside the product and becomes a mobile bottom sheet. It
+shows one focused concept at a time while exposing all four steps:
 
 1. Own the basket by depositing USDG for redeemable MDBS.
 2. Steer preferences through the 42 brain pieces and their closed presets.
@@ -500,10 +502,11 @@ page:
 4. Let deterministic contracts enforce the allowlist, reserve, and limits
    before execution.
 
-The guide includes a plain-language glossary for MDBS, brain piece, mood,
-influence, and NAV. Dismissing it persists on that device, while the header
-action always reopens it. Brain, Basket, and Decisions each retain a one-sentence
-purpose statement so users do not lose the product model after onboarding.
+The optional collapsed glossary defines MDBS, brain piece, mood, influence, and
+NAV without making the panel taller by default. Dismissing the tour persists on
+that device, while the header action always reopens it. Brain, Basket, and
+Decisions each retain a one-sentence purpose statement so users do not lose the
+product model after onboarding.
 
 The same content is reachable from help links near unfamiliar concepts:
 

@@ -728,61 +728,87 @@ footer {
   color: var(--text-muted);
 }
 .how-it-works {
-  max-width: 1492px;
-  margin: 18px auto 0;
+  position: fixed;
+  z-index: 30;
+  top: 82px;
+  right: 22px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 104px);
+  overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 18px 46px color-mix(in srgb, var(--text) 7%, transparent);
+  box-shadow: 0 24px 70px color-mix(in srgb, var(--text) 18%, transparent);
 }
 .how-intro {
   display: flex;
   justify-content: space-between;
   align-items: start;
-  gap: 28px;
-  padding: 25px 28px 22px;
+  gap: 18px;
+  padding: 19px 20px 16px;
   border-bottom: 1px solid var(--border);
 }
-.how-intro h1 {
-  max-width: 760px;
-  margin: 0 0 9px;
+.how-intro h2 {
+  margin: 2px 0 7px;
   font:
-    600 clamp(28px, 3vw, 42px) / 1.05 "Source Serif 4",
+    600 24px/1.08 "Source Serif 4",
     "Playfair Display",
     serif;
   letter-spacing: -0.025em;
 }
 .how-intro > div > p:last-child {
-  max-width: 900px;
   margin: 0;
   color: var(--text-muted);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .guide-close {
   flex: 0 0 auto;
-  border: 1px solid var(--primary);
+  padding: 7px 9px;
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--primary);
-  color: var(--on-primary);
+  background: transparent;
+  color: var(--text);
+  font-size: 11px;
 }
-.how-steps {
+.tour-step-tabs {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--border);
 }
-.how-steps article {
-  display: flex;
+.tour-step-tabs button {
   min-width: 0;
-  min-height: 218px;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 20px 22px;
+  padding: 10px 6px 9px;
   border-right: 1px solid var(--border);
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: center;
 }
-.how-steps article:last-child {
+.tour-step-tabs button:last-child {
   border-right: 0;
 }
-.how-steps article > span {
+.tour-step-tabs button span {
+  display: block;
+  margin-bottom: 4px;
+  font:
+    600 9px "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+}
+.tour-step-tabs button.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: var(--surface-subtle);
+}
+.tour-step-panel {
+  position: relative;
+  min-height: 205px;
+  padding: 24px 94px 22px 22px;
+}
+.tour-step-panel > span {
   color: var(--primary);
   font:
     600 10px "IBM Plex Mono",
@@ -790,38 +816,102 @@ footer {
     monospace;
   letter-spacing: 0.1em;
 }
-.how-steps h2 {
-  margin: 9px 0 8px;
+.tour-step-panel h3 {
+  margin: 9px 0 10px;
   font:
-    600 21px "Source Serif 4",
+    600 24px/1.12 "Source Serif 4",
     "Playfair Display",
     serif;
 }
-.how-steps p {
-  margin: 0 0 16px;
+.tour-step-panel p {
+  margin: 0;
   color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.6;
 }
-.how-steps button {
-  margin-top: auto;
-  padding: 8px 10px;
+.tour-actor {
+  position: absolute;
+  top: 23px;
+  right: 20px;
+  width: 62px;
+  height: 62px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border: 1px solid var(--primary);
+  border-radius: 50%;
+  color: var(--primary);
+  font:
+    600 9px/1.2 "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+.tour-destination {
+  margin-top: 17px;
+  padding: 0 0 3px;
+  border: 0;
+  border-bottom: 1px solid var(--primary);
+  background: transparent;
+  color: var(--primary);
+  font-size: 11px;
+}
+.tour-controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 20px;
+  border-top: 1px solid var(--border);
+}
+.tour-controls button {
+  justify-self: start;
+  padding: 7px 10px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   font-size: 11px;
 }
+.tour-controls button:disabled {
+  opacity: 0.35;
+}
+.tour-controls span {
+  color: var(--text-muted);
+  font:
+    500 10px "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+}
+.tour-controls .tour-next {
+  justify-self: end;
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
+}
 .plain-glossary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  padding: 13px 22px;
   border-top: 1px solid var(--border);
   background: var(--surface-subtle);
   color: var(--text-muted);
   font-size: 11px;
 }
+.plain-glossary summary {
+  padding: 12px 20px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.plain-glossary > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px 16px;
+  padding: 0 20px 15px;
+}
+.plain-glossary span {
+  display: block;
+}
 .plain-glossary b {
+  display: block;
   color: var(--text);
 }
 .editorial-page {
@@ -2047,19 +2137,8 @@ footer {
     display: none;
   }
   .how-it-works {
-    margin: 14px 16px 0;
-  }
-  .how-steps {
-    grid-template-columns: 1fr 1fr;
-  }
-  .how-steps article {
-    border-bottom: 1px solid var(--border);
-  }
-  .how-steps article:nth-child(2n) {
-    border-right: 0;
-  }
-  .how-steps article:nth-last-child(-n + 2) {
-    border-bottom: 0;
+    top: 74px;
+    right: 16px;
   }
   .brain-first-viewport,
   .brain-lower-grid,
@@ -2126,25 +2205,39 @@ footer {
     padding: 12px;
   }
   .how-it-works {
-    margin: 10px 12px 0;
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: min(72vh, 620px);
   }
   .how-intro {
-    flex-direction: column;
-    gap: 16px;
-    padding: 20px;
+    gap: 12px;
+    padding: 16px;
   }
-  .how-steps {
+  .how-intro h2 {
+    font-size: 21px;
+  }
+  .tour-step-tabs button {
+    padding-inline: 3px;
+    font-size: 8px;
+  }
+  .tour-step-panel {
+    min-height: 188px;
+    padding: 20px 82px 18px 18px;
+  }
+  .tour-step-panel h3 {
+    font-size: 21px;
+  }
+  .tour-actor {
+    top: 19px;
+    right: 16px;
+    width: 54px;
+    height: 54px;
+  }
+  .plain-glossary > div {
     grid-template-columns: 1fr;
-  }
-  .how-steps article,
-  .how-steps article:nth-child(2n),
-  .how-steps article:nth-last-child(-n + 2) {
-    min-height: 0;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .how-steps article:last-child {
-    border-bottom: 0;
   }
   .screen-purpose {
     align-items: flex-start;

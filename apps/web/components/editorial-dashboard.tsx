@@ -954,83 +954,145 @@ function HowItWorks({
   onClose: () => void;
   onNavigate: (destination: "Brain" | "Basket" | "Decisions") => void;
 }) {
+  const [activeStep, setActiveStep] = useState(0);
+  const steps: Array<{
+    eyebrow: string;
+    actor: string;
+    title: string;
+    copy: string;
+    action?: string;
+    destination?: "Brain" | "Basket" | "Decisions";
+  }> = [
+    {
+      eyebrow: "01 · OWN",
+      actor: "You",
+      title: "Own a share of the basket",
+      copy: "Deposit USDG to mint MDBS. Each MDBS represents your redeemable share of the entire portfolio, not one individual asset.",
+      action: "See the basket",
+      destination: "Basket" as const,
+    },
+    {
+      eyebrow: "02 · STEER",
+      actor: "Brain owners",
+      title: "Choose the brain's preferences",
+      copy: "Each of the 42 NFT pieces controls one topic. Its owner picks one of five preset moods that becomes part of the AI's next brief.",
+      action: "Explore the brain",
+      destination: "Brain" as const,
+    },
+    {
+      eyebrow: "03 · PROPOSE",
+      actor: "The AI",
+      title: "Propose the next allocation",
+      copy: "Every hour, the model reviews all 42 moods, approved assets, free market data, and the current basket, then proposes target weights.",
+    },
+    {
+      eyebrow: "04 · VERIFY",
+      actor: "Smart contracts",
+      title: "Check and execute the proposal",
+      copy: "The AI never holds a wallet. Deterministic contracts enforce the asset allowlist, reserve, and risk limits before any rebalance executes.",
+      action: "Audit a decision",
+      destination: "Decisions" as const,
+    },
+  ];
+  const step = steps[activeStep];
+
   return (
-    <section
+    <aside
       className="how-it-works"
       id="how-it-works"
-      aria-label="How MillionDollar Brain works"
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby="how-it-works-title"
     >
       <div className="how-intro">
         <div>
-          <p className="section-kicker">START HERE</p>
-          <h1>A community-steered basket in four steps.</h1>
-          <p>
-            People own the basket. Brain-piece owners steer its preferences. An
-            AI proposes the next allocation. Smart contracts decide what is
-            allowed and execute the rebalance.
-          </p>
+          <p className="section-kicker">QUICK TOUR · ABOUT 30 SECONDS</p>
+          <h2 id="how-it-works-title">How the brain moves the basket</h2>
+          <p>The community steers. The AI proposes. The contracts decide.</p>
         </div>
         <button className="guide-close" onClick={onClose}>
           Got it
         </button>
       </div>
-      <div className="how-steps">
-        <article>
-          <span>01 · OWN</span>
-          <h2>Buy basket shares</h2>
-          <p>
-            Deposit USDG and receive MDBS, your redeemable share of the combined
-            portfolio.
-          </p>
-          <button onClick={() => onNavigate("Basket")}>See the basket</button>
-        </article>
-        <article>
-          <span>02 · STEER</span>
-          <h2>Set the brain&apos;s moods</h2>
-          <p>
-            Each of 42 NFT pieces controls one topic. Its owner chooses one of
-            five safe preset positions.
-          </p>
-          <button onClick={() => onNavigate("Brain")}>Explore the brain</button>
-        </article>
-        <article>
-          <span>03 · PROPOSE</span>
-          <h2>AI reviews every hour</h2>
-          <p>
-            The model sees the complete brain, approved assets, market data, and
-            current basket, then proposes target weights.
-          </p>
-        </article>
-        <article>
-          <span>04 · VERIFY</span>
-          <h2>Contracts enforce the rules</h2>
-          <p>
-            The AI never holds a wallet. Deterministic checks enforce the
-            allowlist, reserve, and limits before trades execute.
-          </p>
-          <button onClick={() => onNavigate("Decisions")}>
-            Audit a decision
+
+      <div className="tour-step-tabs" aria-label="Tour steps">
+        {steps.map((item, index) => (
+          <button
+            key={item.actor}
+            className={activeStep === index ? "active" : ""}
+            aria-current={activeStep === index ? "step" : undefined}
+            onClick={() => setActiveStep(index)}
+          >
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            {item.actor}
           </button>
-        </article>
+        ))}
       </div>
-      <div className="plain-glossary">
+
+      <article className="tour-step-panel" aria-live="polite">
+        <div className="tour-actor">{step.actor}</div>
+        <span>{step.eyebrow}</span>
+        <h3>{step.title}</h3>
+        <p>{step.copy}</p>
+        {step.action && step.destination && (
+          <button
+            className="tour-destination"
+            onClick={() => onNavigate(step.destination!)}
+          >
+            {step.action} →
+          </button>
+        )}
+      </article>
+
+      <div className="tour-controls">
+        <button
+          disabled={activeStep === 0}
+          onClick={() => setActiveStep((current) => Math.max(0, current - 1))}
+        >
+          Back
+        </button>
         <span>
-          <b>MDBS</b> your basket shares
+          {activeStep + 1} of {steps.length}
         </span>
-        <span>
-          <b>Brain piece</b> a steering NFT
-        </span>
-        <span>
-          <b>Mood</b> its selected preset
-        </span>
-        <span>
-          <b>Influence</b> its fixed share of the AI brief
-        </span>
-        <span>
-          <b>NAV</b> total basket value
-        </span>
+        {activeStep < steps.length - 1 ? (
+          <button
+            className="tour-next"
+            onClick={() =>
+              setActiveStep((current) =>
+                Math.min(steps.length - 1, current + 1),
+              )
+            }
+          >
+            Next
+          </button>
+        ) : (
+          <button className="tour-next" onClick={onClose}>
+            Done
+          </button>
+        )}
       </div>
-    </section>
+
+      <details className="plain-glossary">
+        <summary>Plain-language glossary</summary>
+        <div>
+          <span>
+            <b>MDBS</b> your basket shares
+          </span>
+          <span>
+            <b>Brain piece</b> a steering NFT
+          </span>
+          <span>
+            <b>Mood</b> its selected preset
+          </span>
+          <span>
+            <b>Influence</b> its fixed share of the AI brief
+          </span>
+          <span>
+            <b>NAV</b> total basket value
+          </span>
+        </div>
+      </details>
+    </aside>
   );
 }
 

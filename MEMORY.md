@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Keep the verified meme-universe local-devnet release healthy on VM `192.168.50.135`.
-- Last meaningful change: Added a newcomer comprehension layer: a dismissible and permanently reopenable four-step guide, plain-language glossary, per-screen purpose statements, clearer brain-setting consequences, basket fee/redemption explanations, and simplified decision-stage labels.
+- Last meaningful change: Refined newcomer onboarding into a compact floating four-step tour that presents one concept at a time and never pushes the Brain or other product content down. The optional glossary stays collapsed until requested.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -109,13 +109,14 @@ When sources conflict, use this order:
 - 2026-07-26: Verified character roster v4 and the deterministic meme layer. The roster has exactly 42 unique 384-by-384 transparent WebPs, 10 humans, 32 nonhumans, valid rival IDs, five catchphrases per character, transparent corners, and a 1.58 MB total budget. Five recap unit tests, Prettier, five Foundry tests, the Next.js production build, and the full Chromium economic/autonomous-cycle UAT pass. The live hourly endpoint recorded `characterRosterVersion: 4` plus an immutable `memeRecap`, executed the AI allocation on Anvil, and left `mdb-cycle.timer` active. Live in-app-browser UAT verified the hydrated roster, Brain Drama, exact factual moods/influences, direct `?view=decisions&cycle=<tx>` resolution, and zero console errors.
 - 2026-07-26: Installed `cloudflared` 2026.7.3 on the VM and enabled `mdb-cloudflared.service` for a temporary public demo tunnel. Verified the assigned TryCloudflare origin returns HTTP 200 for the home page, `/api/status`, and a v4 portrait. Quick Tunnels are development-only, have no uptime guarantee, and receive a new random hostname when recreated.
 - 2026-07-26: Added the first-visit comprehension layer. The non-blocking `How it works` guide explains Own, Steer, Propose, and Verify, includes a five-term glossary, persists dismissal, and always reopens from the header. Brain, Basket, and Decisions now state their purpose and explain setting, fee, redemption, and execution consequences in plain language. Prettier, Next.js production build, full economic/autonomous Chromium UAT, desktop/mobile bounds checks, and live in-app-browser console review pass.
+- 2026-07-26: Replaced the large inline onboarding block with a fixed-position quick tour that shows one of four steps at a time, leaves the Brain in its normal above-the-fold position, becomes a 12-pixel-inset mobile bottom sheet, and collapses the glossary by default. Prettier, production build, full Chromium economic/autonomous UAT, an explicit no-layout-shift assertion, mobile bottom-sheet assertion, live visual review, and zero page-level horizontal overflow pass.
 
 ## Decisions
 
 ### 2026-07-26 - Newcomer-First Product Explanation
 
 - Context: The complete product was understandable to returning users but required newcomers to infer how basket shares, brain pieces, hourly AI proposals, and contract execution fit together.
-- Decision: Teach one four-step mental model before exposing details: Own, Steer, Propose, Verify. Use a non-blocking first-visit guide, persistent `How it works` action, small glossary, and one-sentence purpose statement on every primary screen.
+- Decision: Teach one four-step mental model before exposing details: Own, Steer, Propose, Verify. Use a compact fixed-position tour that presents one step at a time, never changes page layout, becomes a mobile bottom sheet, keeps its glossary collapsed by default, and remains reopenable from `How it works`. Preserve the one-sentence purpose statement on every primary screen.
 - Files: `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-map.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `UX_SCREENS.md`, `PRD.md`.
 - Commands/tests: Prettier, Next.js production build, full Chromium UAT, live desktop and 390-pixel mobile review, overflow bounds, and console inspection.
 - Result: New visitors can understand ownership, steering, AI authority limits, and execution evidence without removing the advanced data or meme layer.

@@ -11,18 +11,32 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await mkdir("var", { recursive: true });
-  const guide = page.getByRole("region", {
-    name: "How MillionDollar Brain works",
+  const guide = page.getByRole("dialog", {
+    name: "How the brain moves the basket",
   });
   await guide.waitFor();
   assert.equal(
-    await guide.locator(".how-steps article").count(),
+    await guide.locator(".tour-step-tabs button").count(),
     4,
-    "first-time visitors must receive the complete four-step explanation",
+    "the compact tour must expose all four steps",
   );
+  assert.equal(
+    await guide.locator(".tour-step-panel").count(),
+    1,
+    "the tour must show one focused explanation at a time",
+  );
+  assert.equal(
+    await guide.evaluate((element) => getComputedStyle(element).position),
+    "fixed",
+    "the tour must float without pushing the product below it",
+  );
+  const brainTopWithGuide = await page
+    .locator(".brain-primary-grid")
+    .evaluate((element) => element.getBoundingClientRect().top);
+  await guide.locator(".tour-step-tabs button").nth(3).click();
   await guide
     .getByText(
-      "The AI never holds a wallet. Deterministic checks enforce the allowlist, reserve, and limits before trades execute.",
+      "The AI never holds a wallet. Deterministic contracts enforce the asset allowlist, reserve, and risk limits before any rebalance executes.",
       { exact: true },
     )
     .waitFor();
@@ -31,6 +45,14 @@ try {
     await guide.count(),
     0,
     "the first-visit guide must be dismissible",
+  );
+  const brainTopWithoutGuide = await page
+    .locator(".brain-primary-grid")
+    .evaluate((element) => element.getBoundingClientRect().top);
+  assert.equal(
+    brainTopWithGuide,
+    brainTopWithoutGuide,
+    "opening the tour must not shift the brain layout",
   );
   const helpButton = page.getByRole("button", {
     name: "How it works",
@@ -43,7 +65,7 @@ try {
     "the guide must always be reopenable from the header",
   );
   await page
-    .getByRole("region", { name: "How MillionDollar Brain works" })
+    .getByRole("dialog", { name: "How the brain moves the basket" })
     .getByRole("button", { name: "Got it", exact: true })
     .click();
   await page
@@ -287,6 +309,18 @@ try {
     viewport: { width: 390, height: 844 },
   });
   await mobile.goto(baseUrl, { waitUntil: "networkidle" });
+  const mobileGuide = mobile.getByRole("dialog", {
+    name: "How the brain moves the basket",
+  });
+  await mobileGuide.waitFor();
+  assert.equal(
+    await mobileGuide.evaluate((element) => getComputedStyle(element).bottom),
+    "12px",
+    "the compact tour must become a mobile bottom sheet",
+  );
+  await mobileGuide
+    .getByRole("button", { name: "Got it", exact: true })
+    .click();
   await mobile.getByRole("button", { name: "List", exact: true }).click();
   const search = mobile.getByPlaceholder(
     "Search name, crew, affinity, or mood",
@@ -533,6 +567,10 @@ try {
     viewport: { width: 390, height: 844 },
   });
   await historyMobile.goto(baseUrl, { waitUntil: "networkidle" });
+  await historyMobile
+    .getByRole("dialog", { name: "How the brain moves the basket" })
+    .getByRole("button", { name: "Got it", exact: true })
+    .click();
   await historyMobile
     .getByRole("button", { name: "Decisions", exact: true })
     .click();
