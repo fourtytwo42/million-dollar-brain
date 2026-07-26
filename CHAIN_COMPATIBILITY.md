@@ -7,11 +7,11 @@
 
 Development advances through three network stages without changing protocol behavior:
 
-| Stage | Chain ID | RPC | Purpose |
-| --- | ---: | --- | --- |
-| Local Anvil | 31337 | `http://127.0.0.1:8545` | Fast development, deterministic integration tests, and destructive test scenarios |
-| Robinhood Chain testnet | 46630 | `https://rpc.testnet.chain.robinhood.com` | Public integration, wallet, explorer, deployment, and keeper validation |
-| Robinhood Chain mainnet | 4663 | Alchemy primary, QuickNode secondary | Audited real-value deployment |
+| Stage                   | Chain ID | RPC                                       | Purpose                                                                           |
+| ----------------------- | -------: | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| Local Anvil             |    31337 | `http://127.0.0.1:8545`                   | Fast development, deterministic integration tests, and destructive test scenarios |
+| Robinhood Chain testnet |    46630 | `https://rpc.testnet.chain.robinhood.com` | Public integration, wallet, explorer, deployment, and keeper validation           |
+| Robinhood Chain mainnet |     4663 | Alchemy primary, QuickNode secondary      | Audited real-value deployment                                                     |
 
 The public Robinhood Chain testnet RPC is the selected RPC for the public-testnet phase. Mainnet uses dedicated Alchemy RPC and WebSocket endpoints as primary infrastructure and dedicated QuickNode endpoints as secondary infrastructure. The rate-limited public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure.
 
@@ -59,15 +59,15 @@ The local suite covers unit, integration, fuzz, invariant, upgrade, access-contr
 
 ## 3. Contract and deployment stack
 
-| Concern | MVP selection |
-| --- | --- |
-| Contract language | Solidity |
-| Build and test | Foundry: `forge`, `anvil`, and `cast` |
-| Contract library | OpenZeppelin Contracts Upgradeable |
-| Proxy pattern | UUPS behind ERC-1967 proxies |
-| Authorization | OpenZeppelin `AccessControl` with separated roles |
+| Concern            | MVP selection                                            |
+| ------------------ | -------------------------------------------------------- |
+| Contract language  | Solidity                                                 |
+| Build and test     | Foundry: `forge`, `anvil`, and `cast`                    |
+| Contract library   | OpenZeppelin Contracts Upgradeable                       |
+| Proxy pattern      | UUPS behind ERC-1967 proxies                             |
+| Authorization      | OpenZeppelin `AccessControl` with separated roles        |
 | Upgrade validation | OpenZeppelin Foundry Upgrades plus storage-layout checks |
-| Static analysis | Slither |
+| Static analysis    | Slither                                                  |
 
 The basket share is a custom ERC-20-compatible share token backed by a multi-asset vault. It is not described as ERC-4626 because the vault is multi-asset and supports queued USDG redemption.
 

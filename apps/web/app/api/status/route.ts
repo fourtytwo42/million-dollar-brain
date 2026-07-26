@@ -19,11 +19,14 @@ export async function GET(request: NextRequest) {
   try {
     const address = request.nextUrl.searchParams.get("address");
     return NextResponse.json({
-      ...await dashboard(address && isAddress(address) ? address : undefined),
+      ...(await dashboard(address && isAddress(address) ? address : undefined)),
       dataAvailability: DATA_AVAILABILITY,
       latestCycle: latestCycle(),
     });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "status unavailable" }, { status: 503 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "status unavailable" },
+      { status: 503 },
+    );
   }
 }

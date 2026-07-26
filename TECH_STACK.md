@@ -20,19 +20,19 @@ Initial application VM:
 
 ## 2. Frontend
 
-| Concern | MVP selection |
-| --- | --- |
-| Framework | Next.js using the App Router |
-| Language | TypeScript with strict mode |
-| Runtime | Node.js 24 LTS |
-| Package manager | npm with a committed lockfile |
-| Styling | Tailwind CSS 4 |
-| Component system | shadcn/ui using Radix primitives |
-| Icons | Lucide |
-| Forms | React Hook Form |
-| Runtime validation | Zod |
-| Animation | Motion for React |
-| General charts | Apache ECharts |
+| Concern            | MVP selection                    |
+| ------------------ | -------------------------------- |
+| Framework          | Next.js using the App Router     |
+| Language           | TypeScript with strict mode      |
+| Runtime            | Node.js 24 LTS                   |
+| Package manager    | npm with a committed lockfile    |
+| Styling            | Tailwind CSS 4                   |
+| Component system   | shadcn/ui using Radix primitives |
+| Icons              | Lucide                           |
+| Forms              | React Hook Form                  |
+| Runtime validation | Zod                              |
+| Animation          | Motion for React                 |
+| General charts     | Apache ECharts                   |
 
 Dependency versions are pinned in `package-lock.json`. Upgrades occur through reviewed pull requests rather than unbounded production installs.
 
@@ -49,14 +49,14 @@ Dependency versions are pinned in `package-lock.json`. Upgrades occur through re
 
 ## 3. Web3 frontend
 
-| Concern | MVP selection |
-| --- | --- |
-| Low-level EVM client | viem |
-| React blockchain hooks | wagmi |
-| Server and remote-state cache | TanStack Query |
-| Wallet interface | RainbowKit |
-| Wallet standards | EIP-1193 and EIP-6963 |
-| Mobile wallet transport | WalletConnect with a free project ID |
+| Concern                       | MVP selection                        |
+| ----------------------------- | ------------------------------------ |
+| Low-level EVM client          | viem                                 |
+| React blockchain hooks        | wagmi                                |
+| Server and remote-state cache | TanStack Query                       |
+| Wallet interface              | RainbowKit                           |
+| Wallet standards              | EIP-1193 and EIP-6963                |
+| Mobile wallet transport       | WalletConnect with a free project ID |
 
 Robinhood Chain and its testnet are defined explicitly with viem `defineChain` configuration. The application must not depend on a library shipping a built-in chain definition.
 
@@ -144,17 +144,17 @@ Add another state library only after a documented need appears.
 
 ## 7. Testing
 
-| Test level | Tool |
-| --- | --- |
-| Unit and component | Vitest |
-| React interaction | React Testing Library |
-| Automated browser and wallet flows | Playwright |
-| Interactive public and accessibility UAT | Codex in-app Browser |
-| Real extension and wallet UAT | User Chrome |
-| Accessibility checks | axe integrated into browser tests |
-| Type safety | TypeScript compiler |
-| Linting | ESLint |
-| Formatting | Prettier |
+| Test level                               | Tool                              |
+| ---------------------------------------- | --------------------------------- |
+| Unit and component                       | Vitest                            |
+| React interaction                        | React Testing Library             |
+| Automated browser and wallet flows       | Playwright                        |
+| Interactive public and accessibility UAT | Codex in-app Browser              |
+| Real extension and wallet UAT            | User Chrome                       |
+| Accessibility checks                     | axe integrated into browser tests |
+| Type safety                              | TypeScript compiler               |
+| Linting                                  | ESLint                            |
+| Formatting                               | Prettier                          |
 
 Required frontend test coverage includes:
 
@@ -207,34 +207,34 @@ Production requirements:
 
 ## 10. Backend and automation
 
-| Concern | MVP selection |
-| --- | --- |
-| API | Fastify on Node.js 24 LTS and TypeScript |
-| Database | PostgreSQL |
-| Schema and migrations | Drizzle ORM and Drizzle Kit |
-| Chain client and event ingestion | viem with checkpointed RPC log ingestion |
-| Runtime validation | Zod |
-| Scheduler | `systemd` timers invoking the TypeScript keeper |
-| Process management | Native `systemd` services |
-| Structured logs | JSON logs captured by `journald` |
-| Metrics and logs | Prometheus-format service metrics and `journald`, forwarded through native Grafana Alloy |
-| Off-host monitoring | Grafana Cloud metrics, logs, synthetic uptime checks, and email alerts |
-| Backups | Native PostgreSQL `pg_dump`, WAL archive, and restic to Backblaze B2 |
+| Concern                          | MVP selection                                                                            |
+| -------------------------------- | ---------------------------------------------------------------------------------------- |
+| API                              | Fastify on Node.js 24 LTS and TypeScript                                                 |
+| Database                         | PostgreSQL                                                                               |
+| Schema and migrations            | Drizzle ORM and Drizzle Kit                                                              |
+| Chain client and event ingestion | viem with checkpointed RPC log ingestion                                                 |
+| Runtime validation               | Zod                                                                                      |
+| Scheduler                        | `systemd` timers invoking the TypeScript keeper                                          |
+| Process management               | Native `systemd` services                                                                |
+| Structured logs                  | JSON logs captured by `journald`                                                         |
+| Metrics and logs                 | Prometheus-format service metrics and `journald`, forwarded through native Grafana Alloy |
+| Off-host monitoring              | Grafana Cloud metrics, logs, synthetic uptime checks, and email alerts                   |
+| Backups                          | Native PostgreSQL `pg_dump`, WAL archive, and restic to Backblaze B2                     |
 
 Redis, a separate queue system, PM2, and Docker are excluded initially. PostgreSQL owns durable jobs, chain checkpoints, cycle state, idempotency keys, and retry state.
 
 ## 11. Smart contracts and local chain
 
-| Concern | MVP selection |
-| --- | --- |
-| Language | Solidity |
-| Toolchain | Foundry: `forge`, `anvil`, and `cast` |
-| Local chain | Anvil chain ID 31337 on localhost |
-| Contract library | OpenZeppelin Contracts Upgradeable |
-| Proxy | UUPS behind ERC-1967 |
-| Authorization | OpenZeppelin `AccessControl` |
-| Upgrade checks | OpenZeppelin Foundry Upgrades and storage-layout validation |
-| Static analysis | Slither |
+| Concern          | MVP selection                                               |
+| ---------------- | ----------------------------------------------------------- |
+| Language         | Solidity                                                    |
+| Toolchain        | Foundry: `forge`, `anvil`, and `cast`                       |
+| Local chain      | Anvil chain ID 31337 on localhost                           |
+| Contract library | OpenZeppelin Contracts Upgradeable                          |
+| Proxy            | UUPS behind ERC-1967                                        |
+| Authorization    | OpenZeppelin `AccessControl`                                |
+| Upgrade checks   | OpenZeppelin Foundry Upgrades and storage-layout validation |
+| Static analysis  | Slither                                                     |
 
 The repository layout is:
 

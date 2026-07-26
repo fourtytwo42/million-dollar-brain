@@ -4,15 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Finalize the build-ready MillionDollar Brain PRD baseline. No implementation or deployment is authorized yet.
-- Last meaningful change: Promoted `PRD.md` to v1.0, made six editorial light/dark mockups normative, and locked remaining internal product, economic, model, risk, infrastructure, and design decisions in `BUILD_READINESS.md` and `DESIGN_SYSTEM.md`.
-- Next step: Begin implementation only after explicit user authorization, starting with repository scaffolding and the native Anvil environment.
-- Blockers: None for local or public-testnet implementation. Real-value activation remains gated on counsel, funded and credentialed production inputs, live release manifests, and an independent audit.
+- Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
+- Last meaningful change: Added claimable brain-owner fees, an upgradeable creator vault, a cancellable FIFO redemption queue with 5%-of-NAV partial hourly fills, economic caps, authenticated keeper cycles, and full Chromium UAT.
+- Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
+- Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
 
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
-- The workspace contains product documentation and visual mockups only. No contracts, application code, token, or deployment exist.
+- The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
@@ -54,7 +54,7 @@ When sources conflict, use this order:
 
 - Project purpose: Design a community-influenced, AI-proposed portfolio protocol on Robinhood Chain.
 - Main workflow: Deposits and redemptions are available on-chain at any time and users pay their own action gas; separately, the AI produces scheduled target-allocation proposals that deterministic controls approve and a DAO-funded keeper executes.
-- External systems: Robinhood Chain, tokenized asset contracts, DEX liquidity, price oracles, an LLM provider, and an automation keeper. These are design dependencies only and are not configured.
+- External systems: The LAN Ornith model provider and automation keeper are configured for local use. Robinhood Chain, production tokenized assets, DEX liquidity, and price oracles remain testnet/mainnet integrations.
 - Important paths:
   - `AGENTS.md`: repository-local agent workflow and memory rules.
   - `MEMORY.md`: durable context store.
@@ -197,12 +197,14 @@ When sources conflict, use this order:
 - 2026-07-26: Revalidated the systemd-run cycle after increasing the Ornith completion allowance and requesting JSON-object output. The live provider returned a valid allocation and the keeper executed it on Anvil (cycle record source `ai`, block 27). The hourly timer remains enabled.
 - 2026-07-26: Replaced the placeholder `Guardrails / Risk-on / Defensive` brain with the locked 42-piece catalog. A shared registry now supplies every affinity, category, weight, closed option, signed effect, canonical Ornith instruction, tags, and data dependencies to both UI and allocator. BrainMarketplace stores catalog version/hash and immutable affinity IDs. The VM was redeployed on disposable Anvil state, Chromium UAT verified Capital Objective ownership and option changes, and an Ornith-directed cycle recorded the active Maximum growth instruction before executing block 15.
 - 2026-07-26: Converted all 42 brain pieces to ERC-721 `MDBP` tokens. Unsold NFTs are held by the marketplace contract, and public ERC-721 transfers revert so ownership cannot bypass the always-for-sale 120% pricing and reward path. Corrected basket entry/redemption fee routing to 50% brain owners, 40% creator vault, and 10% automation wallet, including the no-owner creator fallback. Foundry and Chromium UAT passed after a fresh local redeployment.
+- 2026-07-26: Added the upgradeable `CreatorVault`, corrected weighted brain-owner reward checkpointing and claims, and exposed claimable USDG in the UI. Foundry verified exact fee arithmetic and Chromium completed deposit, ownership, preset, accrual, and claim.
+- 2026-07-26: Implemented cancellable FIFO queued redemptions. Large exits escrow MDBS and settle progressively at no more than 5% of NAV per keeper cycle while preserving the 20% USDG reserve; immediate exits are limited to 1% of NAV. Added 10 USDG redemption minimum, request deadlines, 100,000 USDG TVL cap, and 25,000 USDG wallet cap.
+- 2026-07-26: Secured `/api/cycle` with a local-devnet keeper token, verified unauthenticated calls return HTTP 401, and verified authenticated fallback and live Ornith allocations execute on-chain. Browser UAT observes a real queued-redemption settlement transaction before cancellation. Native Anvil, deploy, web, and hourly timer units are enabled and active.
 - 2026-07-12: Reset stale project-specific memory while retaining the durable memory-management logic.
 - 2026-07-23: Produced the initial MillionDollar Brain product brief without building or deploying anything.
 
 ## Open Follow-ups
 
-- Obtain explicit user authorization before implementation begins.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.
@@ -213,7 +215,7 @@ When sources conflict, use this order:
 - Read `AGENTS.md` and `MEMORY.md` before making future changes in this workspace.
 - Update `MEMORY.md` after durable discoveries, decisions, fixes, verification results, blocked work, and handoffs.
 - Never store secrets, tokens, passwords, private keys, or sensitive personal data in `MEMORY.md`.
-- Do not implement, deploy, mint, connect wallets, or transact until the user explicitly authorizes a build phase.
+- Local implementation and simulated transactions are authorized; do not deploy publicly or activate real funds without explicit authorization and all release gates.
 - The AI may propose allocations, but deterministic code must constrain and execute them.
 - Never allow the agent to trade arbitrary discovered contracts.
 - All protocol contracts are upgradeable.

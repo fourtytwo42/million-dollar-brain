@@ -11,18 +11,18 @@
 
 This PRD is the top-level product authority. The following linked specifications are normative parts of the PRD and contain details that would make this file unnecessarily repetitive:
 
-| Specification | Authority |
-| --- | --- |
-| `BRAIN_PRESET_CATALOG.md` | All 42 pieces, options, defaults, weights, effects, confidence thresholds, and data dependencies |
-| `BRAIN_SCHEMA.md` | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas |
-| `AI_DATA_POLICY.md` | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior |
-| `AI_EXPLAINABILITY.md` | Brain-to-proposal-to-execution attribution and public explanation requirements |
-| `KEEPER_GAS_POLICY.md` | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation |
-| `UX_SCREENS.md` | Screen consolidation, drawers, modals, system states, and mobile behavior |
-| `TECH_STACK.md` | Frontend libraries, SVG brain, testing, and native Ubuntu deployment |
-| `CHAIN_COMPATIBILITY.md` | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT |
-| `DESIGN_SYSTEM.md` | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility |
-| `BUILD_READINESS.md` | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates |
+| Specification             | Authority                                                                                                 |
+| ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `BRAIN_PRESET_CATALOG.md` | All 42 pieces, options, defaults, weights, effects, confidence thresholds, and data dependencies          |
+| `BRAIN_SCHEMA.md`         | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas             |
+| `AI_DATA_POLICY.md`       | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior   |
+| `AI_EXPLAINABILITY.md`    | Brain-to-proposal-to-execution attribution and public explanation requirements                            |
+| `KEEPER_GAS_POLICY.md`    | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation         |
+| `UX_SCREENS.md`           | Screen consolidation, drawers, modals, system states, and mobile behavior                                 |
+| `TECH_STACK.md`           | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                      |
+| `CHAIN_COMPATIBILITY.md`  | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT      |
+| `DESIGN_SYSTEM.md`        | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility       |
+| `BUILD_READINESS.md`      | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
@@ -382,16 +382,16 @@ Provider changes must not require changes to basket, brain, marketplace, reward,
 
 Primary model:
 
-| Property | Value |
-| --- | --- |
-| Provider | GPU45 local appliance |
-| Base URL | `http://192.168.50.189:30001/v1` |
-| Model | Ornith 1.0 35B MoE Q5_K_M |
-| Live API model ID | `ornith-1.0-35b-Q5_K_M-688b8d0a` |
+| Property           | Value                                  |
+| ------------------ | -------------------------------------- |
+| Provider           | GPU45 local appliance                  |
+| Base URL           | `http://192.168.50.189:30001/v1`       |
+| Model              | Ornith 1.0 35B MoE Q5_K_M              |
+| Live API model ID  | `ornith-1.0-35b-Q5_K_M-688b8d0a`       |
 | Codex/catalog slug | `gpu45-ornith-1-0-35b-q5-k-m-688b8d0a` |
-| Modality | Text only |
-| Context | 262,144 tokens |
-| Role | Primary hourly portfolio allocator |
+| Modality           | Text only                              |
+| Context            | 262,144 tokens                         |
+| Role               | Primary hourly portfolio allocator     |
 
 Text-only operation is sufficient because the model receives structured text and JSON. Images are not part of the allocation input.
 

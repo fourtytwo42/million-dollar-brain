@@ -3,6 +3,12 @@
 **Version:** 1.0
 **Status:** Internal product and architecture decisions locked
 
+## Local-devnet implementation status
+
+The native VM release implements the complete 42-piece catalog, ERC-721 ownership and always-for-sale pricing, basket shares, 1% entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault, owner reward claims, 1%-of-NAV immediate redemption, cancellable FIFO queued redemption with partial 5%-of-NAV hourly settlement, structured allocator context, deterministic output validation, keeper authentication, and systemd scheduling.
+
+The Anvil universe intentionally uses four mocks: USDG, NVDA, AAPL, and ETHX. Robinhood Chain asset discovery, canonical live manifests, production oracle/DEX adapters, full ten-position risk limits, multisig/timelock administration, observability, legal review, and independent audits remain release gates rather than unfinished local-product interactions.
+
 ## 1. Purpose
 
 This document closes the remaining implementation choices required to begin construction. Engineering must implement these defaults without reopening them during normal development.
@@ -18,45 +24,45 @@ External legal findings, audit findings, live contract addresses, signer address
 
 ## 2. Product identity and tokens
 
-| Item | Locked value |
-| --- | --- |
-| Product | MillionDollar Brain |
-| Basket share name | MillionDollar Basket Share |
-| Basket share symbol | `MDBS` |
-| Basket share decimals | 18 |
-| Brain NFT name | MillionDollar Brain Pieces |
-| Brain NFT symbol | `MDBP` |
-| Brain NFT supply | Exactly 42 |
-| Deposit, redemption, fee, and reward asset | USDG |
-| Native gas asset | ETH |
-| Additional fungible governance token | None |
+| Item                                       | Locked value               |
+| ------------------------------------------ | -------------------------- |
+| Product                                    | MillionDollar Brain        |
+| Basket share name                          | MillionDollar Basket Share |
+| Basket share symbol                        | `MDBS`                     |
+| Basket share decimals                      | 18                         |
+| Brain NFT name                             | MillionDollar Brain Pieces |
+| Brain NFT symbol                           | `MDBP`                     |
+| Brain NFT supply                           | Exactly 42                 |
+| Deposit, redemption, fee, and reward asset | USDG                       |
+| Native gas asset                           | ETH                        |
+| Additional fungible governance token       | None                       |
 
 `MDBS` is a custom ERC-20-compatible share in a multi-asset vault. It is not marketed or implemented as an ERC-4626 vault.
 
 ## 3. Launch economics
 
-| Parameter | Locked MVP value |
-| --- | ---: |
-| Initial MDBS NAV | 1.000000 USDG |
-| Creator seed deposit | 10,000 USDG |
-| Minimum deposit | 10 USDG |
-| Minimum redemption request | 10 USDG of estimated NAV |
-| Entry fee | 100 bps |
-| Redemption fee | 100 bps |
-| Audited-pilot TVL cap | 100,000 USDG |
-| Audited-pilot per-wallet deposit cap | 25,000 USDG |
-| Initial total brain valuation | 42,000 USDG |
-| Secondary brain purchase multiplier | 120% of previous settled price |
-| Brain price decay | None |
+| Parameter                            |               Locked MVP value |
+| ------------------------------------ | -----------------------------: |
+| Initial MDBS NAV                     |                  1.000000 USDG |
+| Creator seed deposit                 |                    10,000 USDG |
+| Minimum deposit                      |                        10 USDG |
+| Minimum redemption request           |       10 USDG of estimated NAV |
+| Entry fee                            |                        100 bps |
+| Redemption fee                       |                        100 bps |
+| Audited-pilot TVL cap                |                   100,000 USDG |
+| Audited-pilot per-wallet deposit cap |                    25,000 USDG |
+| Initial total brain valuation        |                    42,000 USDG |
+| Secondary brain purchase multiplier  | 120% of previous settled price |
+| Brain price decay                    |                           None |
 
 Initial brain prices are:
 
-| Tier | Weight | Pieces | Initial price each |
-| --- | ---: | ---: | ---: |
-| Core mandate | 500 bps | 6 | 2,100 USDG |
-| Strategy | 300 bps | 12 | 1,260 USDG |
-| Asset and sector affinity | 150 bps | 16 | 630 USDG |
-| Decision behavior | 125 bps | 8 | 525 USDG |
+| Tier                      |  Weight | Pieces | Initial price each |
+| ------------------------- | ------: | -----: | -----------------: |
+| Core mandate              | 500 bps |      6 |         2,100 USDG |
+| Strategy                  | 300 bps |     12 |         1,260 USDG |
+| Asset and sector affinity | 150 bps |     16 |           630 USDG |
+| Decision behavior         | 125 bps |      8 |           525 USDG |
 
 The initial 42,000 USDG brain valuation is separate from basket seed capital.
 
@@ -103,23 +109,23 @@ Rewards never expire. Ownership changes checkpoint rewards before settlement. Se
 
 ## 6. Portfolio and execution limits
 
-| Limit | Locked value |
-| --- | ---: |
-| Maximum total positions including USDG | 10 |
-| Maximum active risk assets visible to Ornith | 24 |
-| Maximum one-asset allocation | 20% |
-| Minimum USDG allocation | 20% |
-| Maximum combined high-volatility allocation | 30% |
-| Maximum scheduled-cycle turnover | 10% of NAV |
-| Maximum rolling 24-hour turnover | 35% of NAV |
-| No-trade drift band | 50 bps of portfolio weight |
-| Minimum trade | Greater of 100 USDG or 5 bps of NAV |
-| Maximum individual trade | Lesser of 5% of NAV or 2% of executable venue depth |
-| Normal slippage limit | 50 bps |
-| Absolute slippage ceiling | 100 bps |
-| Maximum quote-to-oracle deviation | 100 bps |
-| Trade quote lifetime | 120 seconds |
-| L2 sequencer recovery grace period | 3,600 seconds |
+| Limit                                        |                                        Locked value |
+| -------------------------------------------- | --------------------------------------------------: |
+| Maximum total positions including USDG       |                                                  10 |
+| Maximum active risk assets visible to Ornith |                                                  24 |
+| Maximum one-asset allocation                 |                                                 20% |
+| Minimum USDG allocation                      |                                                 20% |
+| Maximum combined high-volatility allocation  |                                                 30% |
+| Maximum scheduled-cycle turnover             |                                          10% of NAV |
+| Maximum rolling 24-hour turnover             |                                          35% of NAV |
+| No-trade drift band                          |                          50 bps of portfolio weight |
+| Minimum trade                                |                 Greater of 100 USDG or 5 bps of NAV |
+| Maximum individual trade                     | Lesser of 5% of NAV or 2% of executable venue depth |
+| Normal slippage limit                        |                                              50 bps |
+| Absolute slippage ceiling                    |                                             100 bps |
+| Maximum quote-to-oracle deviation            |                                             100 bps |
+| Trade quote lifetime                         |                                         120 seconds |
+| L2 sequencer recovery grace period           |                                       3,600 seconds |
 
 No leverage, borrowing, lending, shorting, derivatives, or unbounded approvals are permitted.
 
@@ -127,20 +133,20 @@ The executor processes an accepted cycle atomically. Any planned trade failure r
 
 ## 7. Schedule and model
 
-| Item | Locked value |
-| --- | --- |
-| Decision cadence | Every hour at minute 00 UTC |
-| Snapshot window | Minute 00 through minute 05 |
-| Inference deadline | Minute 12 |
-| Proposal expiration | Minute 20 |
-| Primary model | Ornith 1.0 35B MoE Q5_K_M |
-| Live model ID | `ornith-1.0-35b-Q5_K_M-688b8d0a` |
-| Provider | GPU45 local appliance |
-| Temperature | 0.2 |
-| Top-p | 0.9 |
-| Maximum output tokens | 8,192 |
-| Transport attempts | Initial request plus one retry using identical input |
-| Automatic provider fallback | Disabled |
+| Item                        | Locked value                                         |
+| --------------------------- | ---------------------------------------------------- |
+| Decision cadence            | Every hour at minute 00 UTC                          |
+| Snapshot window             | Minute 00 through minute 05                          |
+| Inference deadline          | Minute 12                                            |
+| Proposal expiration         | Minute 20                                            |
+| Primary model               | Ornith 1.0 35B MoE Q5_K_M                            |
+| Live model ID               | `ornith-1.0-35b-Q5_K_M-688b8d0a`                     |
+| Provider                    | GPU45 local appliance                                |
+| Temperature                 | 0.2                                                  |
+| Top-p                       | 0.9                                                  |
+| Maximum output tokens       | 8,192                                                |
+| Transport attempts          | Initial request plus one retry using identical input |
+| Automatic provider fallback | Disabled                                             |
 
 A transport retry is allowed only before the inference deadline and uses the same immutable input package. The first schema-valid final output wins.
 
@@ -170,13 +176,13 @@ An asset is ineligible unless it has:
 
 Eligible assets are ranked daily:
 
-| Factor | Weight |
-| --- | ---: |
-| Executable on-chain or signed-quote liquidity | 35% |
-| Underlying trading volume | 25% |
-| Oracle availability and freshness | 15% |
-| Structured-data completeness | 15% |
-| Diversification contribution | 10% |
+| Factor                                        | Weight |
+| --------------------------------------------- | -----: |
+| Executable on-chain or signed-quote liquidity |    35% |
+| Underlying trading volume                     |    25% |
+| Oracle availability and freshness             |    15% |
+| Structured-data completeness                  |    15% |
+| Diversification contribution                  |    10% |
 
 The top 24 passing assets become candidates, subject to the category and risk caps. Activation requires a versioned manifest committed to the repository, on-chain registration, and timelocked risk-administrator execution. Contract addresses are resolved from live canonical sources and are never selected by symbol.
 
@@ -227,11 +233,11 @@ Future governance is outside the MVP and requires a new PRD revision rather than
 
 ## 13. Network and RPC
 
-| Environment | Primary | Secondary |
-| --- | --- | --- |
-| Local | Anvil at `127.0.0.1:8545` | None |
-| Public testnet | Robinhood public testnet RPC | None |
-| Mainnet | Alchemy dedicated Robinhood Chain RPC and WebSocket | QuickNode dedicated Robinhood Chain RPC and WebSocket |
+| Environment    | Primary                                             | Secondary                                             |
+| -------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| Local          | Anvil at `127.0.0.1:8545`                           | None                                                  |
+| Public testnet | Robinhood public testnet RPC                        | None                                                  |
+| Mainnet        | Alchemy dedicated Robinhood Chain RPC and WebSocket | QuickNode dedicated Robinhood Chain RPC and WebSocket |
 
 The Robinhood public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure. It is not used as the sole production dependency.
 
@@ -239,19 +245,19 @@ Reads use health-scored failover. A signed transaction may be broadcast to both 
 
 ## 14. Application, monitoring, and backups
 
-| Concern | Locked selection |
-| --- | --- |
-| Web | Next.js App Router |
-| API | Fastify |
-| Database | PostgreSQL |
-| Schema and migrations | Drizzle |
-| Scheduler | TypeScript under `systemd` timers |
-| Local process manager | `systemd` |
-| Reverse proxy | Caddy |
-| Metrics and off-host alerting | Grafana Cloud through native Grafana Alloy |
-| Public uptime checks | Grafana Cloud synthetic monitoring |
-| Database backup | Native `pg_dump`, WAL archive, and `restic` |
-| Off-host backup | Backblaze B2 |
+| Concern                       | Locked selection                            |
+| ----------------------------- | ------------------------------------------- |
+| Web                           | Next.js App Router                          |
+| API                           | Fastify                                     |
+| Database                      | PostgreSQL                                  |
+| Schema and migrations         | Drizzle                                     |
+| Scheduler                     | TypeScript under `systemd` timers           |
+| Local process manager         | `systemd`                                   |
+| Reverse proxy                 | Caddy                                       |
+| Metrics and off-host alerting | Grafana Cloud through native Grafana Alloy  |
+| Public uptime checks          | Grafana Cloud synthetic monitoring          |
+| Database backup               | Native `pg_dump`, WAL archive, and `restic` |
+| Off-host backup               | Backblaze B2                                |
 
 Operational targets:
 

@@ -38,15 +38,15 @@ The exact launch contracts are selected immediately before deployment from the t
 
 ## 3. Free MVP sources
 
-| Purpose | Free structured source |
-| --- | --- |
-| Canonical Stock Token identity and status | Robinhood Stock Token `https://api.robinhood.com/rhj/assets` and official chain contracts |
-| Quote, trading halt, and underlying volume | Robinhood Stock Token `https://api.robinhood.com/rhj/prices/{symbol}` |
-| Corporate actions and token multipliers | Robinhood Stock Token `https://api.robinhood.com/rhj/corporate-actions` |
-| Execution and NAV price | Chainlink feed on Robinhood Chain when supported |
-| Token balances, transfers, and pool state | Robinhood Chain RPC and indexed chain events |
-| Issuer filings and structured fundamentals | SEC EDGAR Submissions and Company Facts APIs |
-| Macro observations | FRED Series Observations API |
+| Purpose                                    | Free structured source                                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Canonical Stock Token identity and status  | Robinhood Stock Token `https://api.robinhood.com/rhj/assets` and official chain contracts |
+| Quote, trading halt, and underlying volume | Robinhood Stock Token `https://api.robinhood.com/rhj/prices/{symbol}`                     |
+| Corporate actions and token multipliers    | Robinhood Stock Token `https://api.robinhood.com/rhj/corporate-actions`                   |
+| Execution and NAV price                    | Chainlink feed on Robinhood Chain when supported                                          |
+| Token balances, transfers, and pool state  | Robinhood Chain RPC and indexed chain events                                              |
+| Issuer filings and structured fundamentals | SEC EDGAR Submissions and Company Facts APIs                                              |
+| Macro observations                         | FRED Series Observations API                                                              |
 
 No paid market-data provider, news API, search engine, social feed, or AI research service is required by the MVP.
 
@@ -142,11 +142,11 @@ News, social sentiment, user-supplied URLs, and prose research are excluded from
 
 Brain Piece 42 selects data-group weighting:
 
-| Preset | Market and technical | Issuer fundamentals | Macro and corporate actions |
-| --- | ---: | ---: | ---: |
-| Market and technical | 70% | 20% | 10% |
-| Balanced data | 50% | 35% | 15% |
-| Fundamentals and macro | 30% | 50% | 20% |
+| Preset                 | Market and technical | Issuer fundamentals | Macro and corporate actions |
+| ---------------------- | -------------------: | ------------------: | --------------------------: |
+| Market and technical   |                  70% |                 20% |                         10% |
+| Balanced data          |                  50% |                 35% |                         15% |
+| Fundamentals and macro |                  30% |                 50% |                         20% |
 
 Other pieces narrow the focus further:
 

@@ -48,13 +48,13 @@ On-chain state stores IDs, weights, ownership, selections, and versions. Each op
 
 ## 3. MVP weight tiers
 
-| Tier | Pieces | Weight per piece | Combined influence |
-| --- | ---: | ---: | ---: |
-| Core mandate | 6 | 500 bps | 3,000 bps |
-| Strategy | 12 | 300 bps | 3,600 bps |
-| Asset and sector affinity | 16 | 150 bps | 2,400 bps |
-| Decision behavior | 8 | 125 bps | 1,000 bps |
-| **Total** | **42** | | **10,000 bps** |
+| Tier                      | Pieces | Weight per piece | Combined influence |
+| ------------------------- | -----: | ---------------: | -----------------: |
+| Core mandate              |      6 |          500 bps |          3,000 bps |
+| Strategy                  |     12 |          300 bps |          3,600 bps |
+| Asset and sector affinity |     16 |          150 bps |          2,400 bps |
+| Decision behavior         |      8 |          125 bps |          1,000 bps |
+| **Total**                 | **42** |                  |     **10,000 bps** |
 
 No single piece controls more than 5% of the complete brain.
 
@@ -62,33 +62,33 @@ No single piece controls more than 5% of the complete brain.
 
 ### 4.1 Core mandate pieces
 
-| ID | Affinity | Weight | Option 0 | Option 1 | Option 2 |
-| ---: | --- | ---: | --- | --- | --- |
-| 1 | Capital objective | 500 | Preserve | Balanced growth | Maximum growth |
-| 2 | Equity versus crypto | 500 | Equity-led | Balanced mix | Crypto-led |
-| 3 | Diversification | 500 | Broad | Balanced | Focused |
-| 4 | Holding horizon | 500 | Tactical | Multi-day | Patient |
-| 5 | Stable reserve preference | 500 | Minimum permitted | Balanced reserve | High reserve |
-| 6 | Rebalance responsiveness | 500 | Patient | Normal | Responsive |
+|  ID | Affinity                  | Weight | Option 0          | Option 1         | Option 2       |
+| --: | ------------------------- | -----: | ----------------- | ---------------- | -------------- |
+|   1 | Capital objective         |    500 | Preserve          | Balanced growth  | Maximum growth |
+|   2 | Equity versus crypto      |    500 | Equity-led        | Balanced mix     | Crypto-led     |
+|   3 | Diversification           |    500 | Broad             | Balanced         | Focused        |
+|   4 | Holding horizon           |    500 | Tactical          | Multi-day        | Patient        |
+|   5 | Stable reserve preference |    500 | Minimum permitted | Balanced reserve | High reserve   |
+|   6 | Rebalance responsiveness  |    500 | Patient           | Normal           | Responsive     |
 
 These options express preferences inside hard protocol limits. For example, "minimum permitted" cannot reduce the stable reserve below the hard minimum.
 
 ### 4.2 Strategy pieces
 
-| ID | Affinity | Weight | Option 0 | Option 1 | Option 2 |
-| ---: | --- | ---: | --- | --- | --- |
-| 7 | Trend response | 300 | Fade trends | Neutral | Follow trends |
-| 8 | Valuation style | 300 | Value | Neutral | Growth |
-| 9 | Fundamental quality | 300 | Quality-first | Balanced | Speculative |
-| 10 | Volatility preference | 300 | Low volatility | Neutral | High beta |
-| 11 | Company-size preference | 300 | Mega-cap | Large-cap mix | Smaller assets |
-| 12 | Return style | 300 | Income and stability | Balanced | Capital appreciation |
-| 13 | Mean-reversion preference | 300 | Avoid | Moderate | Strong |
-| 14 | Breakout preference | 300 | Ignore | Require confirmation | Seek breakouts |
-| 15 | Relative-strength preference | 300 | Accumulate laggards | Neutral | Prefer leaders |
-| 16 | Drawdown reaction | 300 | Accumulate weakness | Hold course | Reduce exposure |
-| 17 | Winner management | 300 | Trim winners | Hold winners | Add to winners |
-| 18 | Correlation preference | 300 | Maximize diversification | Neutral | Allow thematic clusters |
+|  ID | Affinity                     | Weight | Option 0                 | Option 1             | Option 2                |
+| --: | ---------------------------- | -----: | ------------------------ | -------------------- | ----------------------- |
+|   7 | Trend response               |    300 | Fade trends              | Neutral              | Follow trends           |
+|   8 | Valuation style              |    300 | Value                    | Neutral              | Growth                  |
+|   9 | Fundamental quality          |    300 | Quality-first            | Balanced             | Speculative             |
+|  10 | Volatility preference        |    300 | Low volatility           | Neutral              | High beta               |
+|  11 | Company-size preference      |    300 | Mega-cap                 | Large-cap mix        | Smaller assets          |
+|  12 | Return style                 |    300 | Income and stability     | Balanced             | Capital appreciation    |
+|  13 | Mean-reversion preference    |    300 | Avoid                    | Moderate             | Strong                  |
+|  14 | Breakout preference          |    300 | Ignore                   | Require confirmation | Seek breakouts          |
+|  15 | Relative-strength preference |    300 | Accumulate laggards      | Neutral              | Prefer leaders          |
+|  16 | Drawdown reaction            |    300 | Accumulate weakness      | Hold course          | Reduce exposure         |
+|  17 | Winner management            |    300 | Trim winners             | Hold winners         | Add to winners          |
+|  18 | Correlation preference       |    300 | Maximize diversification | Neutral              | Allow thematic clusters |
 
 ### 4.3 Asset and sector affinity pieces
 
@@ -98,39 +98,39 @@ Every piece in this group uses the same option structure:
 - Option 1: Neutral
 - Option 2: Overweight
 
-| ID | Affinity | Weight | Registry tag affected |
-| ---: | --- | ---: | --- |
-| 19 | Broad-market funds | 150 | `broad_market` |
-| 20 | Technology | 150 | `technology` |
-| 21 | AI and semiconductors | 150 | `ai_semiconductor` |
-| 22 | Financials | 150 | `financials` |
-| 23 | Healthcare | 150 | `healthcare` |
-| 24 | Consumer discretionary | 150 | `consumer_discretionary` |
-| 25 | Consumer staples | 150 | `consumer_staples` |
-| 26 | Industrials | 150 | `industrials` |
-| 27 | Energy | 150 | `energy` |
-| 28 | Utilities | 150 | `utilities` |
-| 29 | Communications and media | 150 | `communications` |
-| 30 | Real estate and real-world assets | 150 | `real_estate_rwa` |
-| 31 | Major crypto assets | 150 | `crypto_major` |
-| 32 | DeFi and native protocols | 150 | `defi_native` |
-| 33 | Tokenized commodities | 150 | `tokenized_commodity` |
-| 34 | Meme and speculative assets | 150 | `meme_speculative` |
+|  ID | Affinity                          | Weight | Registry tag affected    |
+| --: | --------------------------------- | -----: | ------------------------ |
+|  19 | Broad-market funds                |    150 | `broad_market`           |
+|  20 | Technology                        |    150 | `technology`             |
+|  21 | AI and semiconductors             |    150 | `ai_semiconductor`       |
+|  22 | Financials                        |    150 | `financials`             |
+|  23 | Healthcare                        |    150 | `healthcare`             |
+|  24 | Consumer discretionary            |    150 | `consumer_discretionary` |
+|  25 | Consumer staples                  |    150 | `consumer_staples`       |
+|  26 | Industrials                       |    150 | `industrials`            |
+|  27 | Energy                            |    150 | `energy`                 |
+|  28 | Utilities                         |    150 | `utilities`              |
+|  29 | Communications and media          |    150 | `communications`         |
+|  30 | Real estate and real-world assets |    150 | `real_estate_rwa`        |
+|  31 | Major crypto assets               |    150 | `crypto_major`           |
+|  32 | DeFi and native protocols         |    150 | `defi_native`            |
+|  33 | Tokenized commodities             |    150 | `tokenized_commodity`    |
+|  34 | Meme and speculative assets       |    150 | `meme_speculative`       |
 
 If no active asset has a selected tag, that affinity contributes no portfolio preference for the cycle.
 
 ### 4.4 Decision-behavior pieces
 
-| ID | Affinity | Weight | Option 0 | Option 1 | Option 2 |
-| ---: | --- | ---: | --- | --- | --- |
-| 35 | Macro sensitivity | 125 | Ignore macro | Moderate use | Strong use |
-| 36 | Corporate-action posture | 125 | Reduce exposure | Neutral | Accept exposure |
-| 37 | Liquidity preference | 125 | Deep liquidity only | Balanced | Allow thinner liquidity |
-| 38 | Trading-cost sensitivity | 125 | Minimize turnover | Balanced | Prioritize signal |
-| 39 | Confidence requirement | 125 | High confidence | Normal confidence | Exploratory |
-| 40 | Profit-taking style | 125 | Take profits early | Balanced | Let winners run |
-| 41 | New-position threshold | 125 | Very selective | Normal | Explore more names |
-| 42 | Data focus | 125 | Market and technical | Balanced data | Fundamentals and macro |
+|  ID | Affinity                 | Weight | Option 0             | Option 1          | Option 2                |
+| --: | ------------------------ | -----: | -------------------- | ----------------- | ----------------------- |
+|  35 | Macro sensitivity        |    125 | Ignore macro         | Moderate use      | Strong use              |
+|  36 | Corporate-action posture |    125 | Reduce exposure      | Neutral           | Accept exposure         |
+|  37 | Liquidity preference     |    125 | Deep liquidity only  | Balanced          | Allow thinner liquidity |
+|  38 | Trading-cost sensitivity |    125 | Minimize turnover    | Balanced          | Prioritize signal       |
+|  39 | Confidence requirement   |    125 | High confidence      | Normal confidence | Exploratory             |
+|  40 | Profit-taking style      |    125 | Take profits early   | Balanced          | Let winners run         |
+|  41 | New-position threshold   |    125 | Very selective       | Normal            | Explore more names      |
+|  42 | Data focus               |    125 | Market and technical | Balanced data     | Fundamentals and macro  |
 
 Piece 42 changes the relative weighting of approved structured-data groups. It does not authorize browsing or add assets to the registry.
 
@@ -338,11 +338,11 @@ The AI returns the desired basket for the next hour:
   "input_hash": "0x...",
   "decision": "rebalance",
   "targets_bps": [
-    {"asset_id": 0, "weight_bps": 2500},
-    {"asset_id": 2, "weight_bps": 2000},
-    {"asset_id": 7, "weight_bps": 1500},
-    {"asset_id": 11, "weight_bps": 1500},
-    {"asset_id": 14, "weight_bps": 2500}
+    { "asset_id": 0, "weight_bps": 2500 },
+    { "asset_id": 2, "weight_bps": 2000 },
+    { "asset_id": 7, "weight_bps": 1500 },
+    { "asset_id": 11, "weight_bps": 1500 },
+    { "asset_id": 14, "weight_bps": 2500 }
   ],
   "confidence_bps": 7100,
   "reason_codes": [
@@ -383,13 +383,13 @@ The compiler then applies:
 
 Example:
 
-| Asset | Current | AI target | Raw action | Deterministic result |
-| --- | ---: | ---: | --- | --- |
-| USDG | 30% | 25% | Deploy 5% | Deploy 4%; preserve reserve |
-| Technology asset | 15% | 22% | Buy 7% | Buy 5%; hit asset cap |
-| Broad-market asset | 25% | 25% | Hold | No trade |
-| Crypto major | 20% | 18% | Sell 2% | No trade; inside band |
-| Speculative asset | 10% | 10% | Hold | No trade |
+| Asset              | Current | AI target | Raw action | Deterministic result        |
+| ------------------ | ------: | --------: | ---------- | --------------------------- |
+| USDG               |     30% |       25% | Deploy 5%  | Deploy 4%; preserve reserve |
+| Technology asset   |     15% |       22% | Buy 7%     | Buy 5%; hit asset cap       |
+| Broad-market asset |     25% |       25% | Hold       | No trade                    |
+| Crypto major       |     20% |       18% | Sell 2%    | No trade; inside band       |
+| Speculative asset  |     10% |       10% | Hold       | No trade                    |
 
 ## 11. Asset-listing workflow
 

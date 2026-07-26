@@ -22,11 +22,11 @@ The MVP basket entry and redemption fee is 1%.
 
 Each collected fee is allocated:
 
-| Destination | Share of collected fee | Effective rate on deposit or redemption |
-| --- | ---: | ---: |
-| Brain Reward Distributor | 50% | 0.50% |
-| Creator-withdrawable DAO revenue | 40% | 0.40% |
-| Automation Reserve | 10% | 0.10% |
+| Destination                      | Share of collected fee | Effective rate on deposit or redemption |
+| -------------------------------- | ---------------------: | --------------------------------------: |
+| Brain Reward Distributor         |                    50% |                                   0.50% |
+| Creator-withdrawable DAO revenue |                    40% |                                   0.40% |
+| Automation Reserve               |                    10% |                                   0.10% |
 
 The Automation Reserve is part of the Creator DAO Vault's original 50% share. This preserves the agreed 50/50 split between brain owners and the creator side.
 

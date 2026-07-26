@@ -168,8 +168,8 @@ In addition to target weights, Ornith should return structured decision attribut
   "input_hash": "0x...",
   "decision": "rebalance",
   "targets_bps": [
-    {"asset_id": 0, "weight_bps": 2500},
-    {"asset_id": 7, "weight_bps": 2000}
+    { "asset_id": 0, "weight_bps": 2500 },
+    { "asset_id": 7, "weight_bps": 2000 }
   ],
   "confidence_bps": 7100,
   "cited_brain_factors": [

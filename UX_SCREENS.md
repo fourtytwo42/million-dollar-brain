@@ -336,8 +336,8 @@ Default to Latest. Preserve the selected tab in the URL query.
 
 The primary explanation uses three stages:
 
-| Brain requested | Ornith proposed | Protocol executed |
-| --- | --- | --- |
+| Brain requested                     | Ornith proposed                   | Protocol executed                   |
+| ----------------------------------- | --------------------------------- | ----------------------------------- |
 | Strongest preferences and conflicts | Target allocations and confidence | Validated targets and actual trades |
 
 Show:

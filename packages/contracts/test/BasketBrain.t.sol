@@ -145,7 +145,7 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("liquidate"));
         vm.prank(alice);
-        basket.redeem(shares / 2, 1, block.timestamp + 1 hours);
+        basket.redeem(50e18, 1, block.timestamp + 1 hours);
         assertGt(usdg.balanceOf(alice), 90_000e18);
     }
 
@@ -214,20 +214,20 @@ contract BasketBrainTest is Test {
         uint256 queuedShares = 4_000e18;
         assertFalse(basket.canRedeemImmediately(alice, queuedShares));
         vm.prank(alice);
-        uint256 cancelledId = basket.requestRedemption(queuedShares, 1);
+        uint256 cancelledId = basket.requestRedemption(queuedShares, 1, block.timestamp + 1 hours);
         assertEq(basket.balanceOf(address(basket)), queuedShares);
         vm.prank(alice);
         basket.cancelRedemption(cancelledId);
         assertEq(basket.balanceOf(alice), 9_900e18);
 
         vm.prank(alice);
-        uint256 requestId = basket.requestRedemption(queuedShares, 1);
+        uint256 requestId = basket.requestRedemption(queuedShares, 1, block.timestamp + 1 hours);
         uint256 beforeSettlement = usdg.balanceOf(alice);
         vm.prank(admin);
         uint256 settled = basket.processRedemptions(10);
         assertEq(settled, 1);
         assertEq(basket.pendingRedemptionByAccount(alice), requestId);
-        (, uint256 remainingAfterFirstCycle, , bool pending) = basket.redemptionRequests(requestId);
+        (, uint256 remainingAfterFirstCycle, , , bool pending) = basket.redemptionRequests(requestId);
         assertTrue(pending);
         assertGt(remainingAfterFirstCycle, 0);
         assertLt(remainingAfterFirstCycle, queuedShares);
@@ -240,5 +240,20 @@ contract BasketBrainTest is Test {
         }
         assertEq(basket.pendingRedemptionByAccount(alice), 0);
         assertEq(basket.balanceOf(address(basket)), 0);
+    }
+
+    function testDepositAndRedemptionCapsAreEnforced() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        vm.expectRevert("wallet cap");
+        basket.deposit(26_000e18, 1, block.timestamp + 1 hours);
+        basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
+        vm.expectRevert("minimum redemption");
+        basket.redeem(5e18, 1, block.timestamp + 1 hours);
+        vm.expectRevert("minimum redemption");
+        basket.requestRedemption(5e18, 1, block.timestamp + 1 hours);
+        vm.expectRevert("expired");
+        basket.requestRedemption(100e18, 1, block.timestamp - 1);
+        vm.stopPrank();
     }
 }

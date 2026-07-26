@@ -26,11 +26,16 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     uint256 public constant CREATOR_FEE_SHARE_BPS = 4_000;
     uint256 public constant MIN_USDG_BPS = 2_000;
     uint256 public constant MAX_QUEUE_SETTLEMENT_BPS = 500;
+    uint256 public constant MAX_IMMEDIATE_REDEMPTION_BPS = 100;
+    uint256 public constant MIN_REDEMPTION_VALUE = 10e18;
+    uint256 public constant TVL_CAP = 100_000e18;
+    uint256 public constant WALLET_VALUE_CAP = 25_000e18;
 
     struct RedemptionRequest {
         address account;
         uint256 shares;
         uint256 minimumNet;
+        uint256 deadline;
         bool pending;
     }
 
@@ -84,6 +89,9 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         uint256 beforeNav = nav();
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
+        require(beforeNav + grossAmount <= TVL_CAP, "TVL cap");
+        uint256 walletValue = totalSupply() == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / totalSupply();
+        require(walletValue + net <= WALLET_VALUE_CAP, "wallet cap");
         shares = totalSupply() == 0 ? net : (net * totalSupply()) / beforeNav;
         require(shares >= minimumShares, "shares below minimum");
         require(usdg.transferFrom(msg.sender, address(this), grossAmount), "deposit transfer failed");
@@ -95,6 +103,8 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
     function redeem(uint256 shares, uint256 minimumNet, uint256 deadline) external nonReentrant returns (uint256 net) {
         require(block.timestamp <= deadline, "expired");
         uint256 gross = (shares * nav()) / totalSupply();
+        require(gross >= MIN_REDEMPTION_VALUE, "minimum redemption");
+        require(gross <= (nav() * MAX_IMMEDIATE_REDEMPTION_BPS) / BPS, "queue required");
         uint256 fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
         require(net >= minimumNet, "proceeds below minimum");
@@ -111,15 +121,22 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
         uint256 currentNav = nav();
         uint256 gross = (shares * currentNav) / totalSupply();
         uint256 balance = usdg.balanceOf(address(this));
-        return gross <= balance && balance - gross >= ((currentNav - gross) * MIN_USDG_BPS) / BPS;
+        return gross >= MIN_REDEMPTION_VALUE && gross <= (currentNav * MAX_IMMEDIATE_REDEMPTION_BPS) / BPS && gross <= balance
+            && balance - gross >= ((currentNav - gross) * MIN_USDG_BPS) / BPS;
     }
 
-    function requestRedemption(uint256 shares, uint256 minimumNet) external nonReentrant returns (uint256 requestId) {
+    function requestRedemption(uint256 shares, uint256 minimumNet, uint256 deadline)
+        external
+        nonReentrant
+        returns (uint256 requestId)
+    {
         require(shares > 0, "zero shares");
+        require(block.timestamp <= deadline, "expired");
+        require(totalSupply() > 0 && (shares * nav()) / totalSupply() >= MIN_REDEMPTION_VALUE, "minimum redemption");
         require(pendingRedemptionByAccount[msg.sender] == 0, "request already pending");
         requestId = nextRedemptionRequestId++;
         pendingRedemptionByAccount[msg.sender] = requestId;
-        redemptionRequests[requestId] = RedemptionRequest(msg.sender, shares, minimumNet, true);
+        redemptionRequests[requestId] = RedemptionRequest(msg.sender, shares, minimumNet, deadline, true);
         _transfer(msg.sender, address(this), shares);
         emit RedemptionQueued(requestId, msg.sender, shares, minimumNet);
     }
@@ -146,6 +163,7 @@ contract BasketVault is Initializable, UUPSUpgradeable, ERC20Upgradeable, Access
                 ++requestId;
                 continue;
             }
+            if (block.timestamp > request.deadline) break;
             uint256 currentNav = nav();
             uint256 supply = totalSupply();
             uint256 fullGross = (request.shares * currentNav) / supply;

@@ -158,10 +158,10 @@ The model must return structured data matching a fixed schema. A conceptual outp
   "cycle_id": 1204,
   "decision": "rebalance",
   "targets_bps": [
-    {"asset_id": 0, "weight_bps": 2500},
-    {"asset_id": 3, "weight_bps": 2000},
-    {"asset_id": 7, "weight_bps": 1500},
-    {"asset_id": 9, "weight_bps": 4000}
+    { "asset_id": 0, "weight_bps": 2500 },
+    { "asset_id": 3, "weight_bps": 2000 },
+    { "asset_id": 7, "weight_bps": 1500 },
+    { "asset_id": 9, "weight_bps": 4000 }
   ],
   "confidence_bps": 6800,
   "reason_codes": ["BRAIN_BALANCED", "VOLATILITY_ELEVATED"],
@@ -307,15 +307,15 @@ Each option maps to a canonical, protocol-authored meaning used by the AI compil
 
 ### Suggested piece groups
 
-| Group | Pieces | What owners can influence |
-| --- | ---: | --- |
-| Mandate and time horizon | 6 | Growth vs preservation, holding horizon, rebalance patience |
-| Market worldview | 8 | Macro regimes, momentum vs value, sector theses |
-| Asset preferences | 10 | Relative preferences among already approved assets and sectors |
-| Soft risk posture | 6 | Where within the hard risk bands the agent should operate |
-| Research method | 6 | Evidence weighting, contrarianism, confidence requirements |
-| Voice and public behavior | 6 | Tone, explanation style, debate behavior, personality |
-| **Total** | **42** | |
+| Group                     | Pieces | What owners can influence                                      |
+| ------------------------- | -----: | -------------------------------------------------------------- |
+| Mandate and time horizon  |      6 | Growth vs preservation, holding horizon, rebalance patience    |
+| Market worldview          |      8 | Macro regimes, momentum vs value, sector theses                |
+| Asset preferences         |     10 | Relative preferences among already approved assets and sectors |
+| Soft risk posture         |      6 | Where within the hard risk bands the agent should operate      |
+| Research method           |      6 | Evidence weighting, contrarianism, confidence requirements     |
+| Voice and public behavior |      6 | Tone, explanation style, debate behavior, personality          |
+| **Total**                 | **42** |                                                                |
 
 The affinity and option list define the full scope of a piece's control. A portfolio-oriented affinity affects target preferences inside the risk envelope. A personality-oriented affinity affects only the agent's public voice. Neither type can expand its own authority.
 

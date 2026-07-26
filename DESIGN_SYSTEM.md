@@ -58,11 +58,11 @@ The following are prohibited in the primary product interface:
 
 All fonts are self-hosted as WOFF2 files and licensed under the SIL Open Font License.
 
-| Role | Font | Use |
-| --- | --- | --- |
+| Role              | Font           | Use                                                                              |
+| ----------------- | -------------- | -------------------------------------------------------------------------------- |
 | Editorial display | Source Serif 4 | Product wordmark, page titles, major insight statements, large financial figures |
-| Interface | Source Sans 3 | Navigation, controls, body text, tables, labels, tooltips |
-| Technical | IBM Plex Mono | Wallet addresses, hashes, contract addresses, cycle IDs, schema values |
+| Interface         | Source Sans 3  | Navigation, controls, body text, tables, labels, tooltips                        |
+| Technical         | IBM Plex Mono  | Wallet addresses, hashes, contract addresses, cycle IDs, schema values           |
 
 Rules:
 
@@ -79,42 +79,42 @@ Component code consumes semantic CSS variables. Raw palette values must not be s
 
 ### 5.1 Light mode
 
-| Token | Value | Meaning |
-| --- | --- | --- |
-| `--background` | `#F3EFE4` | Main warm-bone canvas |
-| `--surface` | `#FFFDF7` | Primary content surface |
-| `--surface-subtle` | `#E8E0D0` | Parchment grouping surface |
-| `--surface-raised` | `#FAF6EC` | Menus, dialogs, and raised controls |
-| `--text` | `#20231F` | Primary charcoal ink |
-| `--text-muted` | `#5B5E56` | Secondary readable text |
-| `--border` | `#B8AC98` | Rules and component boundaries |
-| `--primary` | `#7A2634` | Oxblood action and brain influence |
-| `--on-primary` | `#FFF8EC` | Text on primary |
-| `--positive` | `#315B49` | Healthy, validated, and positive |
-| `--warning` | `#8A5A12` | Caution and deterministic adjustment |
-| `--negative` | `#8B2E2E` | Failure, sell-only, and destructive |
-| `--info` | `#4F6777` | Ornith proposal and neutral information |
-| `--focus` | `#7A2634` | Keyboard focus ring |
+| Token              | Value     | Meaning                                 |
+| ------------------ | --------- | --------------------------------------- |
+| `--background`     | `#F3EFE4` | Main warm-bone canvas                   |
+| `--surface`        | `#FFFDF7` | Primary content surface                 |
+| `--surface-subtle` | `#E8E0D0` | Parchment grouping surface              |
+| `--surface-raised` | `#FAF6EC` | Menus, dialogs, and raised controls     |
+| `--text`           | `#20231F` | Primary charcoal ink                    |
+| `--text-muted`     | `#5B5E56` | Secondary readable text                 |
+| `--border`         | `#B8AC98` | Rules and component boundaries          |
+| `--primary`        | `#7A2634` | Oxblood action and brain influence      |
+| `--on-primary`     | `#FFF8EC` | Text on primary                         |
+| `--positive`       | `#315B49` | Healthy, validated, and positive        |
+| `--warning`        | `#8A5A12` | Caution and deterministic adjustment    |
+| `--negative`       | `#8B2E2E` | Failure, sell-only, and destructive     |
+| `--info`           | `#4F6777` | Ornith proposal and neutral information |
+| `--focus`          | `#7A2634` | Keyboard focus ring                     |
 
 ### 5.2 Dark mode
 
-| Token | Value | Meaning |
-| --- | --- | --- |
-| `--background` | `#191916` | Warm charcoal canvas |
-| `--surface` | `#24211C` | Espresso primary surface |
-| `--surface-subtle` | `#302B24` | Dark-umber grouping surface |
-| `--surface-raised` | `#393228` | Menus, dialogs, and raised controls |
-| `--text` | `#E9E1D2` | Bone primary text |
-| `--text-muted` | `#BFB5A4` | Parchment-gray secondary text |
-| `--border` | `#746755` | Accessible warm boundary |
-| `--primary` | `#D16670` | Brighter oxblood action and influence |
-| `--primary-fill` | `#B94F59` | Filled primary control |
-| `--on-primary` | `#FFF8EC` | Text on primary fill |
-| `--positive` | `#8FB09A` | Healthy, validated, and positive |
-| `--warning` | `#D1A35A` | Caution and deterministic adjustment |
-| `--negative` | `#E07A7A` | Failure, sell-only, and destructive |
-| `--info` | `#9AAEBC` | Ornith proposal and neutral information |
-| `--focus` | `#D16670` | Keyboard focus ring |
+| Token              | Value     | Meaning                                 |
+| ------------------ | --------- | --------------------------------------- |
+| `--background`     | `#191916` | Warm charcoal canvas                    |
+| `--surface`        | `#24211C` | Espresso primary surface                |
+| `--surface-subtle` | `#302B24` | Dark-umber grouping surface             |
+| `--surface-raised` | `#393228` | Menus, dialogs, and raised controls     |
+| `--text`           | `#E9E1D2` | Bone primary text                       |
+| `--text-muted`     | `#BFB5A4` | Parchment-gray secondary text           |
+| `--border`         | `#746755` | Accessible warm boundary                |
+| `--primary`        | `#D16670` | Brighter oxblood action and influence   |
+| `--primary-fill`   | `#B94F59` | Filled primary control                  |
+| `--on-primary`     | `#FFF8EC` | Text on primary fill                    |
+| `--positive`       | `#8FB09A` | Healthy, validated, and positive        |
+| `--warning`        | `#D1A35A` | Caution and deterministic adjustment    |
+| `--negative`       | `#E07A7A` | Failure, sell-only, and destructive     |
+| `--info`           | `#9AAEBC` | Ornith proposal and neutral information |
+| `--focus`          | `#D16670` | Keyboard focus ring                     |
 
 ### 5.3 Data-series colors
 
@@ -133,17 +133,17 @@ Color never carries meaning alone. Charts also use labels, patterns, shapes, dir
 
 The selected primary combinations were calculated before implementation:
 
-| Pair | Contrast |
-| --- | ---: |
-| Light text on light background | 13.83:1 |
-| Light muted text on light background | 5.75:1 |
-| Light primary on light background | 8.48:1 |
-| Light on-primary text on primary | 9.23:1 |
-| Dark text on dark background | 13.56:1 |
-| Dark muted text on dark background | 8.69:1 |
-| Dark primary text on dark background | 4.90:1 |
-| Dark on-primary text on primary fill | 4.60:1 |
-| Dark border on dark background | 3.20:1 |
+| Pair                                 | Contrast |
+| ------------------------------------ | -------: |
+| Light text on light background       |  13.83:1 |
+| Light muted text on light background |   5.75:1 |
+| Light primary on light background    |   8.48:1 |
+| Light on-primary text on primary     |   9.23:1 |
+| Dark text on dark background         |  13.56:1 |
+| Dark muted text on dark background   |   8.69:1 |
+| Dark primary text on dark background |   4.90:1 |
+| Dark on-primary text on primary fill |   4.60:1 |
+| Dark border on dark background       |   3.20:1 |
 
 Automated and manual testing still validates rendered contrast after font weight, opacity, browser rendering, chart layering, and disabled states are applied.
 
