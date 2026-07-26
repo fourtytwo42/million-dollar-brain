@@ -1,0 +1,15 @@
+[Unit]
+Description=Deploy MillionDollar Brain contracts to local Anvil devnet
+After=mdb-anvil.service
+Requires=mdb-anvil.service
+Before=mdb-web.service
+
+[Service]
+Type=oneshot
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain/packages/contracts
+Environment=PATH=/home/hendo420/.foundry/bin:/home/hendo420/.local/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=DEPLOYER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ExecStartPre=/usr/bin/mkdir -p /home/hendo420/projects/million-dollar-brain/packages/contracts/deployments
+ExecStart=/home/hendo420/.foundry/bin/forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast
+RemainAfterExit=yes

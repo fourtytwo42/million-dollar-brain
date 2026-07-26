@@ -1,0 +1,22 @@
+[Unit]
+Description=MillionDollar Brain local-devnet web application
+After=network-online.target mdb-deploy.service
+Wants=network-online.target
+Requires=mdb-deploy.service
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+Environment=PATH=/home/hendo420/.local/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+Environment=MDB_RPC_URL=http://127.0.0.1:8545
+Environment=NEXT_PUBLIC_MDB_RPC_URL=http://192.168.50.135:8545
+Environment=MDB_AI_BASE_URL=http://192.168.50.189:30001/v1
+Environment=MDB_AI_MODEL=ornith-1.0-35b-Q5_K_M-688b8d0a
+Environment=MDB_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var
+ExecStart=/home/hendo420/.local/node/bin/npm run start -w @million-dollar-brain/web
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

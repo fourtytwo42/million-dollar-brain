@@ -18,10 +18,10 @@ export async function dashboard(address?: Address) {
   const [nav, supply, usdgBalance, nvdaBalance, aaplBalance, ethxBalance, shares] = await Promise.all([
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "nav" }),
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "totalSupply" }),
-    publicClient.readContract({ address: d.basket, abi: erc20Abi, functionName: "balanceOf", args: [d.usdg] }),
-    publicClient.readContract({ address: d.basket, abi: erc20Abi, functionName: "balanceOf", args: [d.nvda] }),
-    publicClient.readContract({ address: d.basket, abi: erc20Abi, functionName: "balanceOf", args: [d.aapl] }),
-    publicClient.readContract({ address: d.basket, abi: erc20Abi, functionName: "balanceOf", args: [d.ethx] }),
+    publicClient.readContract({ address: d.usdg, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
+    publicClient.readContract({ address: d.nvda, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
+    publicClient.readContract({ address: d.aapl, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
+    publicClient.readContract({ address: d.ethx, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
     address ? publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "balanceOf", args: [address] }) : Promise.resolve(0n),
   ]);
   const pieces = await Promise.all(Array.from({ length: 42 }, async (_, i) => {

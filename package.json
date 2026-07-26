@@ -8,9 +8,13 @@
   ],
   "scripts": {
     "test:contracts": "forge test --root packages/contracts",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:uat": "node tests/uat.mjs"
   },
   "engines": {
     "node": ">=24.18.0"
+  },
+  "devDependencies": {
+    "playwright": "1.62.0"
   }
 }
