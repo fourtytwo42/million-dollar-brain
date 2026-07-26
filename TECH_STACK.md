@@ -217,9 +217,9 @@ Production requirements:
 | Scheduler | `systemd` timers invoking the TypeScript keeper |
 | Process management | Native `systemd` services |
 | Structured logs | JSON logs captured by `journald` |
-| Metrics | Prometheus-format service metrics |
-| Alerts | Health checks and configurable webhook or email adapter |
-| Backups | Native PostgreSQL `pg_dump` with encrypted off-host retention |
+| Metrics and logs | Prometheus-format service metrics and `journald`, forwarded through native Grafana Alloy |
+| Off-host monitoring | Grafana Cloud metrics, logs, synthetic uptime checks, and email alerts |
+| Backups | Native PostgreSQL `pg_dump`, WAL archive, and restic to Backblaze B2 |
 
 Redis, a separate queue system, PM2, and Docker are excluded initially. PostgreSQL owns durable jobs, chain checkpoints, cycle state, idempotency keys, and retry state.
 

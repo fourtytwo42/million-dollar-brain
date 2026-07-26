@@ -11,9 +11,9 @@ Development advances through three network stages without changing protocol beha
 | --- | ---: | --- | --- |
 | Local Anvil | 31337 | `http://127.0.0.1:8545` | Fast development, deterministic integration tests, and destructive test scenarios |
 | Robinhood Chain testnet | 46630 | `https://rpc.testnet.chain.robinhood.com` | Public integration, wallet, explorer, deployment, and keeper validation |
-| Robinhood Chain mainnet | 4663 | Production provider selected before launch | Audited real-value deployment |
+| Robinhood Chain mainnet | 4663 | Alchemy primary, QuickNode secondary | Audited real-value deployment |
 
-The public Robinhood Chain testnet RPC is the selected RPC for the public-testnet phase. It is rate-limited and has no production availability guarantee, so it must not become the sole mainnet dependency.
+The public Robinhood Chain testnet RPC is the selected RPC for the public-testnet phase. Mainnet uses dedicated Alchemy RPC and WebSocket endpoints as primary infrastructure and dedicated QuickNode endpoints as secondary infrastructure. The rate-limited public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure.
 
 Robinhood Chain is an EVM-compatible Arbitrum L2. Contracts are written and tested as standard EVM contracts. ETH is the native gas asset.
 

@@ -2,8 +2,8 @@
 
 ## Product Requirements Document
 
-**Version:** 0.4
-**Status:** Consolidated MVP requirements; unresolved launch decisions are explicit  
+**Version:** 1.0
+**Status:** Build-ready MVP baseline; internal product and architecture decisions locked
 **Date:** 2026-07-25  
 **Implementation status:** Product and architecture specifications are committed to a private GitHub repository on the application VM. No contracts, token, production application, or blockchain deployment exist.
 
@@ -21,6 +21,8 @@ This PRD is the top-level product authority. The following linked specifications
 | `UX_SCREENS.md` | Screen consolidation, drawers, modals, system states, and mobile behavior |
 | `TECH_STACK.md` | Frontend libraries, SVG brain, testing, and native Ubuntu deployment |
 | `CHAIN_COMPATIBILITY.md` | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT |
+| `DESIGN_SYSTEM.md` | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility |
+| `BUILD_READINESS.md` | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
@@ -170,6 +172,7 @@ The MVP consists of the following upgradeable components:
 ### 7.1 Basket shares
 
 - The basket share must be a standard transferable ERC-20-compatible share.
+- The token name is `MillionDollar Basket Share`, symbol `MDBS`, with 18 decimals.
 - Supply expands when deposits mint shares.
 - Supply contracts when redemptions burn shares.
 - Raw share transfers have no protocol transfer tax.
@@ -273,7 +276,7 @@ A change made after the current AI snapshot affects the next scheduled cycle.
 - No initial-sale proceeds go to brain-owner rewards.
 - Ownership transfer and payment routing are atomic.
 - The initial piece price equals the deployment's initial total brain valuation multiplied by the piece's immutable weight and divided by 10,000.
-- The initial total brain valuation is one deployment parameter applying uniformly through that formula.
+- The MVP initial total brain valuation is fixed at 42,000 USDG and applies uniformly through that formula.
 - Prices do not decay, and the administrator cannot selectively reprice an individual piece in the MVP.
 
 ### 8.4 Always-for-sale secondary purchase
@@ -554,7 +557,7 @@ Initial hard limits for simulation:
 - Maximum 35% turnover per day.
 - No leverage or derivatives.
 
-Proposal submission and execution should be atomic when practical so observers cannot trade ahead of a published target allocation.
+Proposal validation and execution are atomic and all-or-nothing in the MVP so observers cannot act on a published target that is only partly executed. Any planned trade failure reverts the complete rebalance.
 
 ## 12. Creator DAO Vault requirements
 
@@ -645,6 +648,28 @@ The public application must show:
 The proposed information architecture, individual screens, transaction modals, admin states, and mobile behavior are defined in `UX_SCREENS.md`.
 
 The locked frontend and native VM deployment selections are defined in `TECH_STACK.md`. The MVP uses Next.js App Router, strict TypeScript, Node.js 24 LTS, npm, Tailwind CSS 4, shadcn/ui, wagmi, viem, TanStack Query, RainbowKit, native SVG brain interaction, Apache ECharts, and Motion for React. It runs directly on the Ubuntu VM under `systemd` behind Caddy without Docker.
+
+### 14.1 Normative visual references
+
+The accepted editorial mockups below are normative parts of the PRD. `DESIGN_SYSTEM.md` defines their authority, exact tokens, typography, light and dark behavior, and implementation limits. Layout hierarchy and visual direction are authoritative; sample values, dates, addresses, logos, and generated wording are illustrative.
+
+#### Brain
+
+![Brain light mode](design/mockups/brain-screen-v2-editorial.png)
+
+![Brain dark mode](design/mockups/brain-screen-v2-editorial-dark.png)
+
+#### Basket
+
+![Basket light mode](design/mockups/basket-screen-v2-editorial.png)
+
+![Basket dark mode](design/mockups/basket-screen-v2-editorial-dark.png)
+
+#### Decisions
+
+![Decisions light mode](design/mockups/decisions-screen-v2-editorial.png)
+
+![Decisions dark mode](design/mockups/decisions-screen-v2-editorial-dark.png)
 
 ## 15. Security requirements
 
@@ -829,31 +854,34 @@ Safety metrics:
 - Use strict caps and a narrow asset universe.
 - Validate incident response and operational monitoring.
 
-## 20. Open product and implementation decisions
+## 20. Build-readiness and external production gates
 
-Only genuinely unresolved decisions belong in this section:
+There are no open internal MVP product or implementation decisions.
 
-1. Eligible jurisdictions, users, legal entity, and compliance path.
-2. Exact initial total brain valuation used by the accepted weight-based initial-price formula.
-3. Exact initial asset contracts and first approved execution venue adapters.
-4. No-trade bands and minimum trade sizes.
-5. Approved fallback model and whether automatic provider fallback is allowed.
-6. Upgrade and risk multisig members.
-7. Creator DAO Vault safeguards beyond owner authorization.
-8. Initial seed capital and initial basket-share price.
-9. Whether future governance uses basket shares, brain pieces, another token, or remains absent.
-10. Exact production color tokens, font-family selection and licensing, and final accessibility validation.
-11. Mainnet RPC provider, fallback provider, monitoring destination, and off-host backup destination.
+`BUILD_READINESS.md` locks the remaining economics, limits, model configuration, asset-selection method, venue adapters, authorization structure, infrastructure providers, monitoring, backups, design system, and release thresholds.
+
+The following are supplied production inputs or external approvals rather than design decisions:
+
+1. Counsel-approved jurisdiction, eligibility, transfer, disclosure, and entity policy.
+2. Final checksum addresses for multisig signers, keeper, allocator signer, treasury destination, and backup keeper.
+3. Funded creator seed capital, keeper ETH, and third-party service accounts.
+4. Provider, domain, notification, and backup credentials.
+5. Release-candidate canonical asset, oracle, venue, and contract manifests generated from current live registries.
+6. Independent audit results and remediation acceptance.
+
+These gates do not block local Anvil or public-testnet implementation. Mainnet value-entry functions remain disabled until the applicable evidence is attached to the release checklist.
 
 ## 21. Current decisions ledger
 
 - Robinhood Chain is the target network.
 - Local development uses native Foundry and Anvil on chain ID 31337.
 - Public integration uses Robinhood Chain testnet chain ID 46630 and its public RPC.
-- Production targets Robinhood Chain mainnet chain ID 4663 with a production-grade RPC selected before launch.
+- Production targets Robinhood Chain mainnet chain ID 4663 with Alchemy primary and QuickNode secondary RPC and WebSocket endpoints.
 - Robinhood Chain uses ETH for gas and standard EVM JSON-RPC compatibility.
 - Basket shares use entry and redemption fees rather than a transfer tax.
 - MVP fees are 1% entry and 1% redemption.
+- The share token is `MillionDollar Basket Share` (`MDBS`) with 18 decimals; the 42-piece NFT is `MillionDollar Brain Pieces` (`MDBP`).
+- Initial MDBS NAV is 1 USDG, creator seed capital is 10,000 USDG, audited-pilot TVL is capped at 100,000 USDG, and the per-wallet deposit cap is 25,000 USDG.
 - Basket fees split equally between the Creator DAO Vault and brain owners.
 - Within the creator half of basket fees, 40% of the total fee is creator-withdrawable and 10% of the total fee funds the Automation Reserve.
 - Basket-share transfers, internal rebalances, managed NAV, investment gains, preset changes, and reward claims have no additional protocol fee.
@@ -861,6 +889,7 @@ Only genuinely unresolved decisions belong in this section:
 - The brain contains exactly 42 differently sized pieces.
 - Brain pieces have fixed affinities and closed options with no user text.
 - Brain pieces are always for sale at 120% of their previous settled price.
+- Initial total brain valuation is 42,000 USDG, producing tier prices of 2,100, 1,260, 630, and 525 USDG per piece.
 - Full initial brain-piece purchase revenue goes to the Creator DAO Vault.
 - The seller receives the previous settled price on a secondary purchase.
 - The secondary 20% markup splits equally between the Creator DAO Vault and brain owners.
@@ -868,6 +897,7 @@ Only genuinely unresolved decisions belong in this section:
 - If a fee event has no eligible owned brain piece, its brain-owner portion goes to the Creator DAO Vault and is not claimable by future owners.
 - User actions remain available on-chain at any time and users pay their own gas.
 - AI allocation runs on a separate schedule, initially hourly.
+- The hourly snapshot begins at minute 00 UTC, inference is due by minute 12, and proposals expire at minute 20.
 - The automation server uses a registered native-ETH Keeper Wallet to submit scheduled decisions.
 - The Keeper Wallet is refueled and reimbursed from the isolated Automation Reserve and has no custody or administrative authority.
 - The AI receives the complete brain, approved assets, current basket, statistics, limits, and prior result.
@@ -876,6 +906,7 @@ Only genuinely unresolved decisions belong in this section:
 - The discoverable universe includes canonical Robinhood Stock Tokens and supported standard ERC-20s; discovery never grants trading approval.
 - Stock Token integration supports ERC-8056 multipliers and keeps raw balances, UI-scaled amounts, underlying quotes, and multiplier-adjusted Chainlink feeds distinct.
 - Venue adapters support safe expansion across validated AMM, RFQ or aggregator, propAMM, and order-book routes.
+- The MVP implements signed RFQ, Uniswap-compatible, and deterministic mock venue adapters; Rialto and Lighter are post-MVP adapters.
 - All agent information comes from free structured feeds or deterministic protocol calculations.
 - Ornith has no browsing, news, social, arbitrary HTTP, or AI-curated research access during allocation.
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
@@ -893,13 +924,18 @@ Only genuinely unresolved decisions belong in this section:
 - OpenRouter and the local appliance are supported behind one provider interface.
 - Ornith 1.0 35B MoE Q5_K_M on GPU45 is the primary portfolio allocator.
 - The exact live API model ID is `ornith-1.0-35b-Q5_K_M-688b8d0a`.
+- Ornith uses temperature 0.2, top-p 0.9, and an 8,192-token output ceiling; automatic provider fallback is disabled and failure produces Hold.
 - Deterministic contracts validate and execute.
 - All protocol smart contracts are upgradeable.
 - Before real value, normal upgrades use a 2-of-3 multisig, 48-hour timelock, published upgrade details, and a user exit window; emergency pause cannot install code.
 - Initial brain-piece price equals initial total brain valuation multiplied by piece weight divided by 10,000; there is no price decay or selective per-piece repricing in the MVP.
 - Redemptions use a hybrid USDG model: small immediate redemptions when reserves permit and queued USDG redemption with bounded asset sales for larger exits; no in-kind Stock Token redemption in the MVP.
+- Immediate redemption is limited to 1% of NAV while preserving the 20% USDG reserve; other redemptions use the cancellable FIFO USDG queue, which liquidates at most 5% of NAV per hourly cycle.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
-- The PRD and its eight linked normative specifications form one authoritative requirements set.
+- MDBS and MDBP have no governance rights; the MVP contains no voting, proposals, delegation, or quorum.
+- Mainnet uses Alchemy as primary RPC and WebSocket provider, QuickNode as secondary, and the public RPC only for tertiary read-only diagnostics.
+- Production monitoring uses Grafana Cloud with native Grafana Alloy; encrypted PostgreSQL backups use native tools and restic to Backblaze B2.
+- The PRD and its ten linked normative specifications form one authoritative requirements set.
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
 - The private source repository is `fourtytwo42/million-dollar-brain`.
 - The MVP schedule is hourly and configurable; any future interval change is an administrative protocol change.

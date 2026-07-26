@@ -62,7 +62,7 @@ Gas funding is managed in estimated cycle coverage rather than a fixed ETH amoun
 - **Critical balance:** estimated gas for fewer than 6 cycles.
 - **Refill trigger:** below the 24-cycle threshold.
 
-Estimates use a bounded rolling gas-price and gas-used calculation. Governance sets absolute maximum ETH balance, gas price, refill size, and reimbursement values.
+Estimates use a bounded rolling gas-price and gas-used calculation. The timelocked risk-administrator role sets absolute maximum ETH balance, gas price, refill size, and reimbursement values.
 
 The initial Keeper Wallet and Automation Reserve require a manual ETH bootstrap before the first scheduled cycle.
 

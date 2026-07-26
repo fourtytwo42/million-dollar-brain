@@ -4,16 +4,16 @@ These ImageGen mockups translate the normative screen map into visual directions
 
 ## Primary screens
 
-- `brain-screen-v2-editorial.png`: the recommended 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
-- `basket-screen-v2-editorial.png`: the recommended NAV, allocation, performance, holdings, target drift, and connected-wallet position.
-- `decisions-screen-v2-editorial.png`: the recommended Brain requested, Ornith proposed, and Protocol executed explanation flow.
+- `brain-screen-v2-editorial.png`: the normative 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
+- `basket-screen-v2-editorial.png`: the normative NAV, allocation, performance, holdings, target drift, and connected-wallet position.
+- `decisions-screen-v2-editorial.png`: the normative Brain requested, Ornith proposed, and Protocol executed explanation flow.
 - `brain-screen-v2-editorial-dark.png`: dark-mode companion to the Brain screen.
 - `basket-screen-v2-editorial-dark.png`: dark-mode companion to the Basket screen.
 - `decisions-screen-v2-editorial-dark.png`: dark-mode companion to the Decisions screen.
 
-The original `v1` dark mockups remain for comparison but are not the recommended direction.
+The original `v1` dark mockups remain for comparison but are non-normative.
 
-## Recommended editorial direction
+## Normative editorial direction
 
 - Warm bone application background.
 - Pale parchment panels.

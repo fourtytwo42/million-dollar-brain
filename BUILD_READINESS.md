@@ -1,0 +1,335 @@
+# MillionDollar Brain Build-Readiness Baseline
+
+**Version:** 1.0
+**Status:** Internal product and architecture decisions locked
+
+## 1. Purpose
+
+This document closes the remaining implementation choices required to begin construction. Engineering must implement these defaults without reopening them during normal development.
+
+Changes require:
+
+1. A written architecture decision record.
+2. An explanation of why the locked baseline cannot meet the requirement.
+3. Updated tests and affected PRD specifications.
+4. Explicit product-owner approval.
+
+External legal findings, audit findings, live contract addresses, signer addresses, account credentials, and funded balances are supplied inputs or release gates. They are not unresolved product-design decisions.
+
+## 2. Product identity and tokens
+
+| Item | Locked value |
+| --- | --- |
+| Product | MillionDollar Brain |
+| Basket share name | MillionDollar Basket Share |
+| Basket share symbol | `MDBS` |
+| Basket share decimals | 18 |
+| Brain NFT name | MillionDollar Brain Pieces |
+| Brain NFT symbol | `MDBP` |
+| Brain NFT supply | Exactly 42 |
+| Deposit, redemption, fee, and reward asset | USDG |
+| Native gas asset | ETH |
+| Additional fungible governance token | None |
+
+`MDBS` is a custom ERC-20-compatible share in a multi-asset vault. It is not marketed or implemented as an ERC-4626 vault.
+
+## 3. Launch economics
+
+| Parameter | Locked MVP value |
+| --- | ---: |
+| Initial MDBS NAV | 1.000000 USDG |
+| Creator seed deposit | 10,000 USDG |
+| Minimum deposit | 10 USDG |
+| Minimum redemption request | 10 USDG of estimated NAV |
+| Entry fee | 100 bps |
+| Redemption fee | 100 bps |
+| Audited-pilot TVL cap | 100,000 USDG |
+| Audited-pilot per-wallet deposit cap | 25,000 USDG |
+| Initial total brain valuation | 42,000 USDG |
+| Secondary brain purchase multiplier | 120% of previous settled price |
+| Brain price decay | None |
+
+Initial brain prices are:
+
+| Tier | Weight | Pieces | Initial price each |
+| --- | ---: | ---: | ---: |
+| Core mandate | 500 bps | 6 | 2,100 USDG |
+| Strategy | 300 bps | 12 | 1,260 USDG |
+| Asset and sector affinity | 150 bps | 16 | 630 USDG |
+| Decision behavior | 125 bps | 8 | 525 USDG |
+
+The initial 42,000 USDG brain valuation is separate from basket seed capital.
+
+## 4. Fee routing
+
+For each 1% entry or redemption fee:
+
+- 50% of the collected fee accrues to eligible brain-piece owners.
+- 40% is creator-withdrawable revenue.
+- 10% funds the Automation Reserve.
+
+For a secondary brain sale:
+
+- The seller receives the previous settled price.
+- The buyer pays 120% of that price.
+- Half of the 20% markup goes to the Creator DAO Vault.
+- Half of the 20% markup goes to eligible brain owners.
+- The transferred piece is excluded from its own sale distribution.
+
+Initial brain-piece revenue goes 100% to the Creator DAO Vault.
+
+Rewards never expire. Ownership changes checkpoint rewards before settlement. Self-purchase is prohibited.
+
+## 5. Deposit and redemption
+
+### Deposit
+
+- User actions are available at any time unless the required price, sequencer, compliance, or protocol state is invalid.
+- Shares mint from net contribution at current validated NAV.
+- Deposits require a user-provided minimum share amount and deadline.
+- Deposits above the active TVL or wallet cap revert.
+
+### Redemption
+
+- A redemption request escrows MDBS; shares burn only when settlement completes.
+- Immediate USDG settlement is allowed when the request is no more than 1% of NAV and the post-settlement USDG reserve remains at or above 20% of NAV.
+- Every other request enters a FIFO USDG queue.
+- Queue settlement value is calculated from validated NAV at execution, not request time.
+- The user supplies minimum proceeds and a deadline.
+- An unprocessed request may be cancelled at any time; escrowed shares return to the user.
+- An expired request cannot execute and remains cancelable.
+- The queue may liquidate at most 5% of NAV per hourly cycle.
+- Stock Tokens are not distributed in kind.
+
+## 6. Portfolio and execution limits
+
+| Limit | Locked value |
+| --- | ---: |
+| Maximum total positions including USDG | 10 |
+| Maximum active risk assets visible to Ornith | 24 |
+| Maximum one-asset allocation | 20% |
+| Minimum USDG allocation | 20% |
+| Maximum combined high-volatility allocation | 30% |
+| Maximum scheduled-cycle turnover | 10% of NAV |
+| Maximum rolling 24-hour turnover | 35% of NAV |
+| No-trade drift band | 50 bps of portfolio weight |
+| Minimum trade | Greater of 100 USDG or 5 bps of NAV |
+| Maximum individual trade | Lesser of 5% of NAV or 2% of executable venue depth |
+| Normal slippage limit | 50 bps |
+| Absolute slippage ceiling | 100 bps |
+| Maximum quote-to-oracle deviation | 100 bps |
+| Trade quote lifetime | 120 seconds |
+| L2 sequencer recovery grace period | 3,600 seconds |
+
+No leverage, borrowing, lending, shorting, derivatives, or unbounded approvals are permitted.
+
+The executor processes an accepted cycle atomically. Any planned trade failure reverts the complete rebalance. The current basket remains unchanged and the cycle is published as failed.
+
+## 7. Schedule and model
+
+| Item | Locked value |
+| --- | --- |
+| Decision cadence | Every hour at minute 00 UTC |
+| Snapshot window | Minute 00 through minute 05 |
+| Inference deadline | Minute 12 |
+| Proposal expiration | Minute 20 |
+| Primary model | Ornith 1.0 35B MoE Q5_K_M |
+| Live model ID | `ornith-1.0-35b-Q5_K_M-688b8d0a` |
+| Provider | GPU45 local appliance |
+| Temperature | 0.2 |
+| Top-p | 0.9 |
+| Maximum output tokens | 8,192 |
+| Transport attempts | Initial request plus one retry using identical input |
+| Automatic provider fallback | Disabled |
+
+A transport retry is allowed only before the inference deadline and uses the same immutable input package. The first schema-valid final output wins.
+
+OpenRouter remains an implemented provider adapter but has no active automatic fallback. If Ornith fails, the cycle holds. Enabling another model requires shadow testing, a published configuration change, and the normal 48-hour timelock.
+
+## 8. Asset discovery and activation
+
+### Discoverable universe
+
+The synchronizer records all canonical Robinhood Stock Tokens and ETFs plus supported standard ERC-20 contracts.
+
+### Mandatory eligibility
+
+An asset is ineligible unless it has:
+
+- Canonical chain ID and contract identity.
+- Active official status.
+- Valid adapter and transfer-behavior tests.
+- Valid Chainlink or approved equivalent feed.
+- Passing heartbeat, positive-price, sequencer, and pause checks.
+- Buy and sell executable liquidity.
+- Complete required data.
+- No unresolved corporate-action transition.
+- Explicit legal eligibility for the configured launch policy.
+
+### Deterministic ranking
+
+Eligible assets are ranked daily:
+
+| Factor | Weight |
+| --- | ---: |
+| Executable on-chain or signed-quote liquidity | 35% |
+| Underlying trading volume | 25% |
+| Oracle availability and freshness | 15% |
+| Structured-data completeness | 15% |
+| Diversification contribution | 10% |
+
+The top 24 passing assets become candidates, subject to the category and risk caps. Activation requires a versioned manifest committed to the repository, on-chain registration, and timelocked risk-administrator execution. Contract addresses are resolved from live canonical sources and are never selected by symbol.
+
+## 9. Venue adapters
+
+The MVP implements:
+
+1. `SignedRFQAdapter` for bounded signed quotes, including 0x-style RFQ settlement.
+2. `UniswapAdapter` for allowlisted Uniswap-compatible pools and routers.
+3. `MockVenueAdapter` for deterministic Anvil and test scenarios.
+
+Rialto and Lighter remain future adapters behind the same interface and are not required for the MVP launch.
+
+An asset may activate only when at least one implemented production adapter passes buy, sell, slippage, expiry, allowance, and revert tests for that exact asset.
+
+## 10. Contracts and authorization
+
+- Solidity and Foundry are mandatory.
+- Every protocol contract uses a UUPS implementation behind an ERC-1967 proxy.
+- OpenZeppelin upgradeable contracts and storage-layout validation are mandatory.
+- Roles are separate: upgrade, pause, risk, asset registry, oracle, keeper configuration, treasury withdrawal, and allocator signer.
+- The allocator signer and Keeper Wallet are different keys.
+- The keeper has no custody, upgrade, treasury, registry, oracle, or pause authority.
+
+Local Anvil and early testnet may use development EOAs. Before real value:
+
+- Upgrade, risk, treasury, and high-impact administration move to a 2-of-3 EIP-1271-compatible multisig.
+- Normal upgrades use a 48-hour `TimelockController`.
+- Emergency pause is immediate.
+- Emergency upgrade does not exist.
+- Multisig signer addresses are supplied deployment inputs and include two separately stored hardware-wallet signers plus one independent recovery signer.
+
+## 11. Creator DAO Vault safeguards
+
+- The vault can withdraw only creator-withdrawable revenue.
+- Basket principal, queued-redemption assets, brain rewards, and Automation Reserve funds are separate liabilities and unreachable through normal withdrawal.
+- Withdrawal goes only to a registered destination.
+- Destination changes use two-step acceptance and a 48-hour delay.
+- Before real value, withdrawal authorization is the 2-of-3 multisig.
+- There is no artificial withdrawal cap on available creator revenue.
+- Every receipt, allocation, destination change, withdrawal, refill, and reimbursement emits an event.
+
+## 12. Governance
+
+There is no token voting, proposal system, delegation, quorum, or protocol governance in the MVP. Neither MDBS nor MDBP is a governance token.
+
+Future governance is outside the MVP and requires a new PRD revision rather than a latent implementation hook beyond normal upgradeability.
+
+## 13. Network and RPC
+
+| Environment | Primary | Secondary |
+| --- | --- | --- |
+| Local | Anvil at `127.0.0.1:8545` | None |
+| Public testnet | Robinhood public testnet RPC | None |
+| Mainnet | Alchemy dedicated Robinhood Chain RPC and WebSocket | QuickNode dedicated Robinhood Chain RPC and WebSocket |
+
+The Robinhood public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure. It is not used as the sole production dependency.
+
+Reads use health-scored failover. A signed transaction may be broadcast to both dedicated providers using the same raw transaction and nonce; duplicate acceptance is harmless because the transaction hash is identical.
+
+## 14. Application, monitoring, and backups
+
+| Concern | Locked selection |
+| --- | --- |
+| Web | Next.js App Router |
+| API | Fastify |
+| Database | PostgreSQL |
+| Schema and migrations | Drizzle |
+| Scheduler | TypeScript under `systemd` timers |
+| Local process manager | `systemd` |
+| Reverse proxy | Caddy |
+| Metrics and off-host alerting | Grafana Cloud through native Grafana Alloy |
+| Public uptime checks | Grafana Cloud synthetic monitoring |
+| Database backup | Native `pg_dump`, WAL archive, and `restic` |
+| Off-host backup | Backblaze B2 |
+
+Operational targets:
+
+- 15-minute database recovery-point objective using WAL archival.
+- Four-hour recovery-time objective for the application VM.
+- Daily encrypted database snapshots.
+- 30 daily, 12 monthly, and 3 yearly backup retention.
+- Quarterly restore rehearsal.
+- Alerts go to the creator operations email and one backup contact.
+
+No Docker, PM2, or same-host-only monitoring is permitted.
+
+## 15. Frontend and design
+
+- The six editorial light and dark mockups in `DESIGN_SYSTEM.md` are normative visual references.
+- Light, Dark, and System modes are required.
+- Source Serif 4, Source Sans 3, and IBM Plex Mono are the locked self-hosted typefaces.
+- Exact semantic colors are locked in `DESIGN_SYSTEM.md`.
+- The 42-piece brain uses accessible SVG paths.
+- Three public routes remain Brain, Basket, and Decisions; Admin is separate.
+- Wallet support uses RainbowKit, wagmi, viem, EIP-6963, EIP-1193, and WalletConnect.
+
+## 16. Repository and delivery
+
+The monorepo layout is locked:
+
+```text
+apps/web
+services/api
+services/allocator
+services/keeper
+packages/contracts
+packages/shared
+packages/config
+```
+
+- `main` is protected.
+- Pull requests require passing lint, typecheck, unit, contract, integration, and build checks.
+- GitHub Actions performs CI.
+- Production deployment is a reviewed, manually approved release executed on the VM.
+- Deployment artifacts include contract addresses, implementation hashes, storage layouts, ABIs, asset manifest, model configuration, database migration version, and source commit.
+
+## 17. Verification thresholds
+
+Before public testnet:
+
+- Contract unit, fuzz, invariant, upgrade, and access-control suites pass.
+- Critical contract branches reach 100% coverage.
+- Overall contract line coverage reaches at least 90%.
+- CI fuzzing uses at least 1,000 runs per property.
+- Release fuzzing uses at least 50,000 runs per property.
+- Accounting invariants run at least 100,000 calls per release candidate.
+- Frontend critical user journeys pass Playwright and axe.
+
+Before real value:
+
+- Independent smart-contract audit completes.
+- No unresolved critical or high-severity audit findings remain.
+- Economic simulation covers fee, brain-price, redemption-run, liquidity, stale-oracle, multiplier, and MEV scenarios.
+- Public testnet exit criteria in `CHAIN_COMPATIBILITY.md` pass.
+- In-app Browser and Chrome wallet UAT pass.
+- Incident, pause, upgrade, key-rotation, restore, and rollback rehearsals pass.
+
+## 18. External production gates
+
+The following values cannot truthfully be invented during product design. They do not block local or public-testnet implementation:
+
+1. Written counsel-approved jurisdiction, eligibility, transfer, disclosure, and entity policy.
+2. Final checksum addresses for multisig signers, keeper, allocator signer, treasury destination, and backup keeper.
+3. Funded creator seed capital, keeper ETH, and provider accounts.
+4. Alchemy, QuickNode, WalletConnect, Grafana Cloud, Backblaze B2, domain, and notification credentials.
+5. Release-candidate canonical asset, oracle, venue, and contract manifests generated from then-current live registries.
+6. Independent audit report and remediation acceptance.
+
+Mainnet deposit, brain purchase, and public distribution functions deploy disabled and remain disabled until every applicable gate is evidenced in the release checklist.
+
+## 19. Build-ready conclusion
+
+No internal MVP product, economic, protocol, model, UI, stack, environment, wallet, monitoring, or deployment-pattern decision remains open.
+
+Engineering may begin from this baseline. External gates control whether the completed system may accept real value; they do not require engineering to redesign the MVP.

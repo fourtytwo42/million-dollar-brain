@@ -34,9 +34,9 @@ Presets express preferences. They cannot:
 - Override liquidity, oracle, turnover, or slippage limits.
 - Directly execute a trade.
 
-## 2. Recommended starting defaults
+## 2. Locked MVP starting defaults
 
-The starting brain should be intentionally neutral:
+The starting brain is intentionally neutral:
 
 - Balanced portfolio objective.
 - Balanced equity and crypto mix.

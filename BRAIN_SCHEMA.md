@@ -4,7 +4,7 @@
 **Status:** Normative MVP specification  
 **Purpose:** Define how the 42 brain pieces steer the AI and how the protocol tells the AI which assets it may hold.
 
-The complete user-facing option meanings, recommended defaults, behavioral effects, and data dependencies are defined in `BRAIN_PRESET_CATALOG.md`.
+The complete user-facing option meanings, locked MVP defaults, behavioral effects, and data dependencies are defined in `BRAIN_PRESET_CATALOG.md`.
 
 ## 1. Core design rule
 
