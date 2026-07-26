@@ -96,6 +96,7 @@ When sources conflict, use this order:
 - 2026-07-26: Verified interactive crew filtering in Chromium: Market Mystics highlights exactly 12 pieces, applies an accessible pressed state, mutes the other 30, and clears on a second activation.
 - 2026-07-26: Verified every crew spans more than 250 SVG units horizontally and 190 vertically while retaining member counts of 6, 12, 16, and 8; full economic and autonomous-cycle Chromium UAT still passes.
 - 2026-07-26: Verified recovery of the complete AI-directed hourly path after the appliance gateway fixed its Ornith cold-start race. The normal `mdb-cycle.service` path recorded `source: "ai"` at `2026-07-26T17:00:04.608Z`, proposed USDG 20%, NVDA 35%, AAPL 20%, and ETHX 25%, and executed successful Anvil transaction `0x48b6fa8ffc69bf3df4d20b654d0a0a7234aea3d905e629bd4114664cad28df1f` in block 30. Priced holdings match those weights exactly, all VM services and the hourly timer are active, and a fresh cold Ornith request plus GPU45 `/health` returned HTTP 200. Keep the existing MDB AI URL/model configuration; do not add an app-side SSH or startup workaround because the race was fixed at the appliance gateway.
+- 2026-07-26: Diagnosed the Basket Snapshot discrepancy as a UI valuation defect, not pending settlement. The finalized block-30 balances match the AI targets when valued at the router's current prices, but `editorial-dashboard.tsx` divides raw token units by NAV and formats them as USD. This is correct only for USDG and materially understates NVDA, AAPL, and ETHX.
 
 ## Decisions
 
@@ -247,6 +248,7 @@ When sources conflict, use this order:
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.
 - Complete independent audit and remediate all critical and high-severity findings before real-value activation.
+- Value every basket holding with its approved router/oracle price before displaying USD amounts, current percentages, and progress bars in both Basket Snapshot and Basket Ledger.
 
 ## Do Not Forget
 
