@@ -1,24 +1,29 @@
 # MillionDollar Brain Visual Mockups
 
-These ImageGen mockups translate the normative screen map into a coherent visual direction. They are implementation references, not pixel-perfect specifications.
+These ImageGen mockups translate the normative screen map into visual directions. They are implementation references, not pixel-perfect specifications.
 
 ## Primary screens
 
-- `brain-screen-v1.png`: the 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
-- `basket-screen-v1.png`: NAV, allocation, performance, holdings, target drift, and connected-wallet position.
-- `decisions-screen-v1.png`: the Brain requested, Ornith proposed, and Protocol executed explanation flow.
+- `brain-screen-v2-editorial.png`: the recommended 42-piece brain marketplace, Brain Pulse, basket snapshot, and primary actions.
+- `basket-screen-v2-editorial.png`: the recommended NAV, allocation, performance, holdings, target drift, and connected-wallet position.
+- `decisions-screen-v2-editorial.png`: the recommended Brain requested, Ornith proposed, and Protocol executed explanation flow.
 
-## Exploratory visual direction
+The original `v1` dark mockups remain for comparison but are not the recommended direction.
 
-- Midnight navy application background.
-- Graphite data panels.
-- Electric cyan for live AI state and primary actions.
-- Violet for brain-owner influence.
-- Teal for validated or positive system state.
-- Warm gold for ownership, value, warnings, and deterministic adjustments.
-- Off-white primary text and muted slate secondary text.
+## Recommended editorial direction
 
-This palette is intentionally marked exploratory because final brand palette, typography, and theme behavior remain an open product decision in the PRD.
+- Warm bone application background.
+- Pale parchment panels.
+- Charcoal ink navigation, borders, and primary text.
+- Oxblood primary actions and brain influence.
+- Forest green validated and healthy states.
+- Ochre warnings, value accents, and deterministic adjustments.
+- Muted slate blue, clay, dusty olive, and faded plum data series.
+- Editorial serif headings paired with a compact sans-serif for controls and data.
+- Flat fills, thin rules, restrained corners, and subtle paper texture.
+- No neon, glow, glassmorphism, or generic dark AI-dashboard treatment.
+
+This direction is recommended but remains a design proposal until the final palette, typography, and theme behavior are accepted in the PRD.
 
 ## Implementation guidance
 
