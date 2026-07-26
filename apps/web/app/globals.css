@@ -1373,8 +1373,7 @@ footer {
 
 /* Brain map v2 */
 .brain-pulse-strip,
-.brain-primary-grid,
-.brain-basket-row {
+.brain-primary-grid {
   min-width: 0;
 }
 .brain-pulse-strip {
@@ -1436,9 +1435,6 @@ footer {
   grid-template-columns: minmax(0, 1fr) minmax(390px, 470px);
   align-items: start;
   gap: 14px;
-}
-.brain-basket-row {
-  margin-top: 14px;
 }
 .brain-map-wrap {
   min-width: 0;
@@ -1568,6 +1564,22 @@ footer {
   transition:
     stroke 130ms,
     stroke-width 130ms;
+}
+.brain-cell .ownership-halo {
+  fill: none;
+  opacity: 0;
+  stroke: var(--positive);
+  stroke-linejoin: round;
+  stroke-width: 5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+.brain-cell.ownership-mine .ownership-halo {
+  opacity: 1;
+}
+.brain-cell.selected .ownership-halo {
+  stroke: var(--primary);
+  stroke-width: 6;
 }
 .editorial-dark .brain-cell .segment-boundary {
   stroke: color-mix(in srgb, var(--text) 38%, transparent);
@@ -1750,6 +1762,16 @@ footer {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
   color: var(--primary);
 }
+.map-legend .ownership-at-glance-key {
+  color: var(--positive);
+  font-weight: 700;
+}
+.legend-mine-halo {
+  background: var(--surface);
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--positive);
+}
 .legend-character {
   background: #b3a88f;
 }
@@ -1814,10 +1836,6 @@ footer {
   flex-direction: column;
   gap: 5px;
 }
-.brain-basket-row .basket-snapshot {
-  width: 100%;
-}
-
 @media (max-width: 1150px) {
   .editorial-header {
     grid-template-columns: 1fr auto;

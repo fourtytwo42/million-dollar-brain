@@ -349,57 +349,6 @@ export function EditorialDashboard({
               </aside>
             )}
           </section>
-
-          <section className="brain-basket-row">
-            <article className="basket-snapshot">
-              <p className="section-kicker">BASKET SNAPSHOT</p>
-              <div className="snapshot-metrics">
-                <Metric
-                  label="NAV"
-                  value={`$${data ? money(data.nav) : "—"}`}
-                />
-                <Metric
-                  label="Shares"
-                  value={data ? money(data.supply) : "—"}
-                />
-                <Metric
-                  label="Stable reserve"
-                  value={`$${data ? money(data.holdings.USDG) : "—"}`}
-                />
-              </div>
-              <div className="snapshot-holdings">
-                {data &&
-                  Object.keys(data.holdings).map((symbol) => {
-                    const value = data.holdingValues[symbol] ?? "0";
-                    return (
-                      <div key={symbol}>
-                        <b>{symbol}</b>
-                        <span>
-                          <i
-                            style={{
-                              width: `${Math.max(3, (Number(value) / Math.max(1, Number(data.nav))) * 100)}%`,
-                            }}
-                          />
-                        </span>
-                        <em>${money(value)}</em>
-                      </div>
-                    );
-                  })}
-              </div>
-              <div className="snapshot-actions">
-                <button
-                  className="primary-action"
-                  onClick={() => setScreen("Basket")}
-                >
-                  Deposit
-                </button>
-                <button onClick={() => setScreen("Basket")}>Redeem</button>
-                <button onClick={() => setScreen("Decisions")}>
-                  View latest decision →
-                </button>
-              </div>
-            </article>
-          </section>
         </div>
       )}
 

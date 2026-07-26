@@ -331,6 +331,11 @@ export function BrainMap({
                         aria-hidden="true"
                       />
                       <path
+                        className="ownership-halo"
+                        d={presentation.path}
+                        aria-hidden="true"
+                      />
+                      <path
                         className="segment-boundary"
                         d={presentation.path}
                       />
@@ -448,6 +453,15 @@ function ModeLegend({
   highlightedCrew: string | null;
   onCrewHighlight: (crew: string) => void;
 }) {
+  const mineCount = pieces.filter(
+    (piece) => ownershipState(piece, account) === "mine",
+  ).length;
+  const ownershipKey = (
+    <span className="ownership-at-glance-key">
+      <i className="legend-mine-halo" />
+      Yours ({mineCount}) · double outline
+    </span>
+  );
   if (mode === "characters") {
     const crews = [...new Set(pieces.map((piece) => piece.crew))];
     return (
@@ -457,6 +471,7 @@ function ModeLegend({
             ? `${highlightedCrew} highlighted. Select it again to clear.`
             : "Select a crew to highlight its members."}
         </p>
+        {ownershipKey}
         {crews.map((crew) => (
           <button
             className={`crew-legend-button${highlightedCrew === crew ? " active" : ""}`}
@@ -485,8 +500,8 @@ function ModeLegend({
           Other owners ({counts.owned})
         </span>
         <span>
-          <i className="legend-mine" />
-          Yours ({counts.mine})
+          <i className="legend-mine-halo" />
+          Yours ({counts.mine}) · double outline
         </span>
       </div>
     );
@@ -494,6 +509,7 @@ function ModeLegend({
   if (mode === "influence") {
     return (
       <div className="map-legend" aria-label="Influence legend">
+        {ownershipKey}
         <span>
           <i className="legend-influence-low" />
           Light: lower influence
@@ -511,6 +527,7 @@ function ModeLegend({
   }
   return (
     <div className="map-legend" aria-label="Mood legend">
+      {ownershipKey}
       {[-2, -1, 0, 1, 2].map((value) => (
         <span key={value}>
           <i

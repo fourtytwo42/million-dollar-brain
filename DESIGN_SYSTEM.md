@@ -175,7 +175,8 @@ Automated and manual testing still validates rendered contrast after font weight
 - The four crew labels below Characters mode are toggle buttons. Activating one brings that crew to full color, strengthens its boundaries, mutes non-members, exposes `aria-pressed`, and clears when activated again.
 - Crew identity must never form horizontal catalog-order bands. The presentation manifest uses a fixed visual-slot permutation that scatters every crew across the width and height of the brain while preserving canonical piece IDs.
 - Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
-- The inspector permanently owns the desktop right rail. Brain Pulse is a compact full-width summary strip, and Basket Snapshot follows the primary map and inspector.
+- The inspector permanently owns the desktop right rail and Brain Pulse is a compact full-width summary strip. The Brain screen ends after the primary map and inspector; basket information belongs on the dedicated Basket screen.
+- A connected wallet's pieces retain a positive-color double-outline halo in every map mode. A textual `Yours (n) · double outline` key makes the treatment discoverable and ensures color is not the only ownership signal.
 - Mobile provides Map and searchable List views. Zoom is clamped to 1 through 2.5 times inside a native scrolling viewport.
 - The map does not overlay piece numbers or generic glyphs on the portraits. Catalog names remain available through accessible labels and the selected-piece ledger.
 - The generated art direction and canonical asset paths are defined in `design/brain-art/README.md`.

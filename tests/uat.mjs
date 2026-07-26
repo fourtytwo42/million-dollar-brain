@@ -12,6 +12,11 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await mkdir("var", { recursive: true });
   assert.equal(
+    await page.getByText("BASKET SNAPSHOT", { exact: true }).count(),
+    0,
+    "the Brain screen must not duplicate the dedicated Basket page",
+  );
+  assert.equal(
     await page.locator(".brain-cell").count(),
     42,
     "the complete 42-segment SVG brain must render",
@@ -126,7 +131,6 @@ try {
     .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
     .waitFor();
   await page.getByText("BRAIN PULSE", { exact: false }).waitFor();
-  await page.getByText("BASKET SNAPSHOT", { exact: false }).waitFor();
   await page
     .getByRole("complementary", {
       name: /Selected brain piece:/,
@@ -290,6 +294,26 @@ try {
   await page
     .getByText(/Brain piece \d+ is now yours\./)
     .waitFor({ timeout: 45000 });
+  const mineCells = page.locator(".brain-cell.ownership-mine");
+  const mineCellCount = await mineCells.count();
+  assert.ok(
+    mineCellCount >= 1,
+    "buying a brain piece must mark it as owned by the connected wallet",
+  );
+  assert.equal(
+    await page.locator(".brain-cell.ownership-mine .ownership-halo").count(),
+    mineCellCount,
+    "every personally owned piece must render an ownership halo",
+  );
+  assert.equal(
+    await mineCells
+      .first()
+      .locator(".ownership-halo")
+      .evaluate((halo) => getComputedStyle(halo).opacity),
+    "1",
+    "the personal ownership halo must remain visibly active",
+  );
+  await page.getByText(/Yours \(\d+\) · double outline/).waitFor();
   const selectedMood = page.getByRole("button", {
     name: "+2 Moon With Seatbelts",
     exact: true,

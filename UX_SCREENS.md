@@ -83,24 +83,23 @@ This is the visual identity, marketplace, and plain-language overview.
 
 ### First viewport
 
-The first viewport must answer four questions immediately:
+The first viewport must answer three questions immediately:
 
 1. What does the brain currently prefer?
-2. What does the basket currently hold?
+2. Which pieces do I own and control?
 3. What did Ornith decide most recently?
-4. What can I do?
 
 Desktop layout:
 
+- Brain Pulse summary strip across the top.
 - Interactive 42-piece brain occupying the main visual area.
-- Brain Pulse card beside it.
-- Basket snapshot and primary actions below or beside the pulse.
+- Complete selected-piece inspector in the right rail.
 
 Mobile layout:
 
 - Brain Pulse summary first.
 - Zoomable brain second.
-- Sticky Deposit, Redeem, and My Pieces action bar.
+- Selected-piece inspector after the map or list.
 
 ### Brain Pulse card
 
@@ -123,27 +122,19 @@ Use a `See why` action to open the latest decision.
 - Selected overlay may show ownership, weight, preset, price, or recent change.
 - Hover or tap shows piece name, current preset, influence, owner status, and price.
 - Selecting a piece opens the Brain Piece drawer.
-- A `My Pieces` filter highlights the connected wallet's pieces.
+- Personally owned pieces retain a double-outline ownership halo in all map modes.
+- A textual `Yours (n) · double outline` key communicates the connected wallet's count without relying on color alone.
 
 The brain itself is the NFT marketplace. There is no separate marketplace page.
 
-### Basket snapshot
-
-Show only the information needed for orientation:
-
-- NAV.
-- Share price.
-- 24-hour basket change.
-- Stable reserve.
-- Top holdings.
-- Current versus target allocation summary.
-
-The full holdings experience belongs on Basket.
-
 ### Primary actions
 
-- Deposit.
-- Redeem.
+- Buy the selected brain piece.
+- Change the selected mood when owned.
+- Claim brain-owner rewards.
+
+Deposits, redemptions, holdings, and allocation detail belong on Basket and are not duplicated on Brain.
+
 - Inspect or purchase a brain piece.
 - View latest decision.
 
