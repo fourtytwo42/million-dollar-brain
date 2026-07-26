@@ -6,6 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {MockToken} from "../src/MockToken.sol";
 import {MockRouter} from "../src/MockRouter.sol";
 import {RewardDistributor} from "../src/RewardDistributor.sol";
+import {CreatorVault} from "../src/CreatorVault.sol";
 import {BrainMarketplace} from "../src/BrainMarketplace.sol";
 import {BasketVault} from "../src/BasketVault.sol";
 
@@ -19,6 +20,7 @@ contract BasketBrainTest is Test {
     MockToken internal aapl;
     MockRouter internal router;
     RewardDistributor internal rewards;
+    CreatorVault internal creatorVault;
     BrainMarketplace internal brain;
     BasketVault internal basket;
 
@@ -44,8 +46,27 @@ contract BasketBrainTest is Test {
         for (uint256 i = 18; i < 34; ++i) brainWeights[i] = 150;
         for (uint256 i = 34; i < 42; ++i) brainWeights[i] = 125;
         for (uint256 i; i < 42; ++i) rewardWeights[i] = brainWeights[i];
+        CreatorVault creatorVaultImpl = new CreatorVault();
+        creatorVault = CreatorVault(
+            address(
+                new ERC1967Proxy(
+                    address(creatorVaultImpl),
+                    abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
+                )
+            )
+        );
         RewardDistributor rewardImpl = new RewardDistributor();
-        rewards = RewardDistributor(address(new ERC1967Proxy(address(rewardImpl), abi.encodeCall(RewardDistributor.initialize, (admin, address(usdg), rewardWeights)))));
+        rewards = RewardDistributor(
+            address(
+                new ERC1967Proxy(
+                    address(rewardImpl),
+                    abi.encodeCall(
+                        RewardDistributor.initialize,
+                        (admin, address(usdg), rewardWeights, address(creatorVault))
+                    )
+                )
+            )
+        );
         BrainMarketplace brainImpl = new BrainMarketplace();
         brain = BrainMarketplace(
             address(
@@ -57,7 +78,7 @@ contract BasketBrainTest is Test {
                             admin,
                             address(usdg),
                             address(rewards),
-                            admin,
+                            address(creatorVault),
                             brainWeights,
                             42_000e18,
                             2,
@@ -72,20 +93,41 @@ contract BasketBrainTest is Test {
         assets[0] = address(nvda);
         assets[1] = address(aapl);
         BasketVault basketImpl = new BasketVault();
-        basket = BasketVault(address(new ERC1967Proxy(address(basketImpl), abi.encodeCall(BasketVault.initialize, (admin, address(usdg), address(router), address(rewards), admin, automation, assets)))));
+        basket = BasketVault(
+            address(
+                new ERC1967Proxy(
+                    address(basketImpl),
+                    abi.encodeCall(
+                        BasketVault.initialize,
+                        (
+                            admin,
+                            address(usdg),
+                            address(router),
+                            address(rewards),
+                            address(creatorVault),
+                            automation,
+                            assets
+                        )
+                    )
+                )
+            )
+        );
         vm.stopPrank();
     }
 
     function testDepositRebalanceAndRedeem() public {
-        uint256 creatorBefore = usdg.balanceOf(admin);
+        uint256 creatorBefore = usdg.balanceOf(address(creatorVault));
         vm.startPrank(alice);
         usdg.approve(address(basket), 10_000e18);
         uint256 shares = basket.deposit(10_000e18, 9_900e18, block.timestamp + 1 hours);
         vm.stopPrank();
         assertEq(shares, 9_900e18);
         // With no brain owners, the 50% brain share follows the locked fallback to creator.
-        assertEq(usdg.balanceOf(admin) - creatorBefore, 90e18);
+        assertEq(usdg.balanceOf(address(creatorVault)) - creatorBefore, 90e18);
         assertEq(usdg.balanceOf(automation), 10e18);
+        vm.prank(admin);
+        creatorVault.withdraw(admin, 10e18);
+        assertEq(usdg.balanceOf(address(creatorVault)) - creatorBefore, 80e18);
         address[] memory targets = new address[](3);
         uint16[] memory weights = new uint16[](3);
         targets[0] = address(usdg); weights[0] = 2_000;
@@ -132,5 +174,26 @@ contract BasketBrainTest is Test {
         vm.stopPrank();
         assertGt(usdg.balanceOf(alice), aliceBefore);
         assertEq(brain.ownerOf(1), bob);
+    }
+
+    function testCurrentBrainOwnerCanClaimBasketFees() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        usdg.approve(address(basket), 1_000e18);
+        basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        uint256[] memory pieceIds = new uint256[](1);
+        pieceIds[0] = 1;
+        uint256 pending = rewards.pendingRewards(alice, pieceIds);
+        assertEq(pending, 5e18);
+
+        uint256 beforeClaim = usdg.balanceOf(alice);
+        vm.prank(alice);
+        uint256 claimed = rewards.claim(pieceIds);
+        assertEq(claimed, pending);
+        assertEq(usdg.balanceOf(alice), beforeClaim + pending);
+        assertEq(rewards.pendingRewards(alice, pieceIds), 0);
     }
 }

@@ -30,10 +30,22 @@ try {
   await ownedSelect.selectOption("2");
   await page.getByText(/now sets .+ to .+\./).waitFor({ timeout: 30000 });
 
+  await amount.fill("100");
+  await page.getByRole("button", { name: "Deposit USDG" }).click();
+  await page.getByText("Deposit complete. The 1% entry fee was routed on-chain.").waitFor({ timeout: 45000 });
+  const claim = page.getByRole("button", { name: "Claim brain rewards" });
+  await claim.waitFor({ state: "visible" });
+  assert.equal(await claim.isEnabled(), true, "an NFT owner must accrue claimable entry-fee rewards");
+  await claim.click();
+  await page.getByText("Brain-owner rewards claimed to your development wallet.").waitFor({ timeout: 45000 });
+
+  await page.getByRole("button", { name: "Redeem half of my liquid shares" }).click();
+  await page.getByText("Redemption complete.").waitFor({ timeout: 45000 });
+
   await mkdir("var", { recursive: true });
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
-  console.log("UAT PASS: 42 distinct affinities rendered; wallet funding, deposit, brain purchase, and affinity-specific preset update completed in Chromium.");
+  console.log("UAT PASS: 42 distinct affinities rendered; wallet funding, deposit, brain purchase, preset update, brain reward claim, and liquid redemption completed in Chromium.");
 } finally {
   await browser.close();
 }

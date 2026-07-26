@@ -23,12 +23,13 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
     event Funded(uint256 amount, uint256 accRewardPerWeight);
     event Claimed(address indexed account, uint256 amount);
 
-    function initialize(address admin, address usdg_, uint256[] calldata weights) external initializer {
+    function initialize(address admin, address usdg_, uint256[] calldata weights, address fallbackRecipient_) external initializer {
+        require(fallbackRecipient_ != address(0), "fallback");
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         usdg = IERC20(usdg_);
-        fallbackRecipient = admin;
+        fallbackRecipient = fallbackRecipient_;
         for (uint256 i; i < weights.length; ++i) weightByPiece[i + 1] = weights[i];
     }
 
@@ -54,7 +55,23 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
         emit OwnerUpdated(pieceId, oldOwner, newOwner);
     }
 
-    function claim() external returns (uint256 amount) {
+    function pendingRewards(address account, uint256[] calldata pieceIds) external view returns (uint256 amount) {
+        amount = claimable[account];
+        for (uint256 i; i < pieceIds.length; ++i) {
+            uint256 pieceId = pieceIds[i];
+            if (ownerByPiece[pieceId] != account) continue;
+            uint256 accrued = (weightByPiece[pieceId] * accRewardPerWeight) / ACC_SCALE;
+            uint256 debt = rewardDebt[pieceId];
+            if (accrued > debt) amount += accrued - debt;
+        }
+    }
+
+    function claim(uint256[] calldata pieceIds) external returns (uint256 amount) {
+        for (uint256 i; i < pieceIds.length; ++i) {
+            uint256 pieceId = pieceIds[i];
+            require(ownerByPiece[pieceId] == msg.sender, "not piece owner");
+            _checkpoint(pieceId, msg.sender);
+        }
         amount = claimable[msg.sender];
         require(amount > 0, "nothing claimable");
         claimable[msg.sender] = 0;
@@ -67,6 +84,7 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
         uint256 accrued = (weightByPiece[pieceId] * accRewardPerWeight) / ACC_SCALE;
         uint256 debt = rewardDebt[pieceId];
         if (accrued > debt) claimable[owner] += accrued - debt;
+        rewardDebt[pieceId] = accrued;
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}

@@ -24,3 +24,8 @@ export const brainAbi = [
   { type: "function", name: "buy", stateMutability: "nonpayable", inputs: [{ name: "pieceId", type: "uint256" }, { name: "maximumPrice", type: "uint256" }, { name: "deadline", type: "uint256" }], outputs: [] },
   { type: "function", name: "setPreset", stateMutability: "nonpayable", inputs: [{ name: "pieceId", type: "uint256" }, { name: "preset", type: "uint8" }], outputs: [] },
 ] as const;
+
+export const rewardAbi = [
+  { type: "function", name: "pendingRewards", stateMutability: "view", inputs: [{ name: "account", type: "address" }, { name: "pieceIds", type: "uint256[]" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "claim", stateMutability: "nonpayable", inputs: [{ name: "pieceIds", type: "uint256[]" }], outputs: [{ type: "uint256" }] },
+] as const;

@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPublicClient, createWalletClient, defineChain, formatUnits, http, parseUnits } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { basketAbi, brainAbi, erc20Abi } from "@/lib/abi";
+import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 
 type BrainOption = { label: string; instruction: string; value: -1 | 0 | 1 };
 type Piece = { id: number; owner: string; unowned: boolean; price: string; preset: number; weight: number; affinity: string; category: string; options: [BrainOption, BrainOption, BrainOption]; data: string[]; tags: string[] };
 type Cycle = { at: string; source: string; allocation: Record<string, number>; txHash: string; brain?: { activePieces: number; inactivePieces: number; activeNonNeutralInstructions: { pieceId: number; affinity: string; instruction: string; influenceBps: number }[] } };
-type Data = { deployment: Record<string, `0x${string}`>; nav: string; supply: string; shares: string; holdings: Record<string, string>; pieces: Piece[]; catalog: { version: number; hash: string }; browserRpcUrl: string; dataAvailability: Record<string, boolean>; latestCycle: Cycle | null };
+type Data = { deployment: Record<string, `0x${string}`>; nav: string; supply: string; shares: string; holdings: Record<string, string>; pieces: Piece[]; rewards: { pending: string }; catalog: { version: number; hash: string }; browserRpcUrl: string; dataAvailability: Record<string, boolean>; latestCycle: Cycle | null };
 const localChain = defineChain({ id: 31337, name: "MillionDollar Brain Devnet", nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } } });
 const short = (value: string) => value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "";
 const money = (value: string | bigint) => Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -64,12 +64,23 @@ export function BrainDashboard() {
     if (!data || BigInt(data.shares) === 0n) return; const { wallet, publicClient } = clients(); const shares = BigInt(data.shares) / 2n; if (!shares) return; setMessage("Requesting a liquid redemption…");
     const tx = await wallet.writeContract({ address: data.deployment.basket, abi: basketAbi, functionName: "redeem", args: [shares, 1n, BigInt(Math.floor(Date.now() / 1000) + 3600)] }); await publicClient.waitForTransactionReceipt({ hash: tx }); await refresh(); setMessage("Redemption complete.");
   }
+  async function claimRewards() {
+    if (!data || !account) return;
+    const pieceIds = data.pieces.filter(piece => piece.owner.toLowerCase() === account.address.toLowerCase()).map(piece => BigInt(piece.id));
+    if (pieceIds.length === 0 || BigInt(data.rewards.pending) === 0n) return;
+    const { wallet, publicClient } = clients();
+    setMessage("Claiming accrued brain-owner rewards…");
+    const tx = await wallet.writeContract({ address: data.deployment.rewards, abi: rewardAbi, functionName: "claim", args: [pieceIds] });
+    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await refresh();
+    setMessage("Brain-owner rewards claimed to your development wallet.");
+  }
   const owned = data?.pieces.filter((piece) => account && piece.owner.toLowerCase() === account.address.toLowerCase()).length ?? 0;
   return <main className={dark ? "dark" : ""}>
     <section className="shell">
       <header><div className="brand"><span className="mark">42</span><span>MILLIONDOLLAR<br/><b>BRAIN</b></span></div><div className="header-actions"><span className="pill">LOCAL DEVNET</span><button className="quiet" onClick={() => setDark(!dark)}>{dark ? "Light" : "Dark"}</button><button onClick={() => faucet().catch(e => setMessage(e.message))}>Fund dev wallet</button></div></header>
       <div className="notice"><span className="dot"/> {message}</div>
-      <section className="hero"><div><p className="eyebrow">CONSTRAINED AUTONOMOUS BASKET</p><h1>Own a thought.<br/>Steer the allocation.</h1><p className="lede">Forty-two on-chain brain pieces become bounded AI context. The agent can only rebalance this local test basket once per hourly cycle.</p></div><div className="wallet"><span>YOUR BUILT-IN DEV WALLET</span><strong>{account ? short(account.address) : "Creating…"}</strong><small>No extension required. Key remains in this browser’s local storage.</small><div><b>{owned}</b> brain pieces · <b>{data ? money(data.shares) : "0"}</b> MDBS</div></div></section>
+      <section className="hero"><div><p className="eyebrow">CONSTRAINED AUTONOMOUS BASKET</p><h1>Own a thought.<br/>Steer the allocation.</h1><p className="lede">Forty-two on-chain brain pieces become bounded AI context. The agent can only rebalance this local test basket once per hourly cycle.</p></div><div className="wallet"><span>YOUR BUILT-IN DEV WALLET</span><strong>{account ? short(account.address) : "Creating…"}</strong><small>No extension required. Key remains in this browser’s local storage.</small><div><b>{owned}</b> brain pieces · <b>{data ? money(data.shares) : "0"}</b> MDBS<br/><b>{data ? money(data.rewards.pending) : "0"}</b> USDG brain rewards</div><button className="wallet-claim" disabled={!data || BigInt(data.rewards.pending) === 0n} onClick={() => claimRewards().catch(e => setMessage(e.shortMessage ?? e.message))}>Claim brain rewards</button></div></section>
       <section className="metrics"><Metric label="Basket NAV" value={data ? `$${money(data.nav)}` : "—"}/><Metric label="Shares outstanding" value={data ? money(data.supply) : "—"}/><Metric label="USDG reserve" value={data ? `$${money(data.holdings.USDG)}` : "—"}/><Metric label="Assets allowed" value="NVDA · AAPL · ETHX"/></section>
       <section className="grid"><article className="card allocation"><div className="card-title"><div><p className="eyebrow">BASKET</p><h2>Join the basket</h2></div><span className="live">1% entry / exit</span></div><div className="bars">{data && Object.entries(data.holdings).map(([symbol, value]) => <div key={symbol}><span>{symbol}</span><i style={{ width: `${Math.max(5, Number(value) / Math.max(1, Number(data.nav)) * 100)}%` }}/><b>${money(value)}</b></div>)}</div><div className="buy-row"><input aria-label="Deposit USDG" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal"/><button onClick={() => deposit().catch(e => setMessage(e.shortMessage ?? e.message))}>Deposit USDG</button></div><button className="quiet full" onClick={() => redeem().catch(e => setMessage(e.shortMessage ?? e.message))}>Redeem half of my liquid shares</button></article>
         <article className="card agent"><p className="eyebrow">AI ALLOCATION ENGINE</p><h2>Hourly, bounded, auditable.</h2><p>The LAN model receives all 42 named selections, active data dependencies, approved asset facts, current holdings, and hard limits. The contract rejects any invalid output.</p>{data?.latestCycle ? <div className="decision"><span>LATEST CYCLE · {data.latestCycle.source.toUpperCase()}</span><strong>{Object.entries(data.latestCycle.allocation).map(([symbol, weight]) => `${symbol} ${weight / 100}%`).join(" · ")}</strong><small>{data.latestCycle.brain ? `${data.latestCycle.brain.activePieces} active pieces · ${data.latestCycle.brain.inactivePieces} inactive` : "Legacy cycle record"}</small>{data.latestCycle.brain?.activeNonNeutralInstructions.slice(0, 3).map(item => <p key={item.pieceId}>#{item.pieceId} {item.affinity}: {item.instruction}</p>)}</div> : null}<ul><li>Allowed: USDG, NVDA, AAPL, ETHX</li><li>Minimum USDG reserve: 20%</li><li>Long-only, 100% allocated, no arbitrary contracts</li></ul><button className="quiet full" onClick={() => refresh().catch(e => setMessage(e.message))}>Refresh on-chain state</button></article></section>

@@ -2,10 +2,10 @@ import { readFileSync } from "node:fs";
 import { createPublicClient, createWalletClient, http, parseAbi, type Address } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { localhost } from "viem/chains";
-import { basketAbi, brainAbi, erc20Abi } from "./abi";
+import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "./abi";
 import { brainDefinition } from "./brain-catalog";
 
-export type Deployment = Record<"usdg" | "nvda" | "aapl" | "ethx" | "router" | "rewards" | "brain" | "basket", Address>;
+export type Deployment = Record<"usdg" | "nvda" | "aapl" | "ethx" | "router" | "rewards" | "creatorVault" | "brain" | "basket", Address>;
 const rpcUrl = process.env.MDB_RPC_URL ?? "http://127.0.0.1:8545";
 const deploymentFile = process.env.MDB_DEPLOYMENT_FILE ?? "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/local.json";
 export const chain = { ...localhost, id: 31337, rpcUrls: { default: { http: [rpcUrl] } } };
@@ -51,7 +51,13 @@ export async function dashboard(address?: Address) {
       tags: definition.tags ?? [],
     };
   }));
-  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, catalog: { version: Number(catalogVersion), hash: catalogHash }, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
+  const ownedPieceIds = address
+    ? pieces.filter((piece) => piece.owner.toLowerCase() === address.toLowerCase()).map((piece) => BigInt(piece.id))
+    : [];
+  const pendingRewards = address
+    ? await publicClient.readContract({ address: d.rewards, abi: rewardAbi, functionName: "pendingRewards", args: [address, ownedPieceIds] })
+    : 0n;
+  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, rewards: { pending: pendingRewards.toString() }, catalog: { version: Number(catalogVersion), hash: catalogHash }, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
 }
 
 export const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);

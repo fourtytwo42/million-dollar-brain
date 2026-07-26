@@ -6,6 +6,7 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {MockToken} from "../src/MockToken.sol";
 import {MockRouter} from "../src/MockRouter.sol";
 import {RewardDistributor} from "../src/RewardDistributor.sol";
+import {CreatorVault} from "../src/CreatorVault.sol";
 import {BrainMarketplace} from "../src/BrainMarketplace.sol";
 import {BasketVault} from "../src/BasketVault.sol";
 
@@ -36,8 +37,24 @@ contract DeployLocal is Script {
         for (uint256 i = 34; i < 42; ++i) brainWeights[i] = 125;
         for (uint256 i; i < 42; ++i) weights[i] = brainWeights[i];
 
+        CreatorVault creatorVaultImplementation = new CreatorVault();
+        CreatorVault creatorVault = CreatorVault(
+            address(
+                new ERC1967Proxy(
+                    address(creatorVaultImplementation),
+                    abi.encodeCall(CreatorVault.initialize, (deployer, address(usdg)))
+                )
+            )
+        );
+
         RewardDistributor rewardImplementation = new RewardDistributor();
-        ERC1967Proxy rewardProxy = new ERC1967Proxy(address(rewardImplementation), abi.encodeCall(RewardDistributor.initialize, (deployer, address(usdg), weights)));
+        ERC1967Proxy rewardProxy = new ERC1967Proxy(
+            address(rewardImplementation),
+            abi.encodeCall(
+                RewardDistributor.initialize,
+                (deployer, address(usdg), weights, address(creatorVault))
+            )
+        );
         RewardDistributor rewards = RewardDistributor(address(rewardProxy));
 
         BrainMarketplace brainImplementation = new BrainMarketplace();
@@ -49,7 +66,7 @@ contract DeployLocal is Script {
                     deployer,
                     address(usdg),
                     address(rewards),
-                    deployer,
+                    address(creatorVault),
                     brainWeights,
                     42_000e18,
                     2,
@@ -69,7 +86,15 @@ contract DeployLocal is Script {
             address(basketImplementation),
             abi.encodeCall(
                 BasketVault.initialize,
-                (deployer, address(usdg), address(router), address(rewards), deployer, deployer, assets)
+                (
+                    deployer,
+                    address(usdg),
+                    address(router),
+                    address(rewards),
+                    address(creatorVault),
+                    deployer,
+                    assets
+                )
             )
         );
 
@@ -80,6 +105,7 @@ contract DeployLocal is Script {
         vm.serializeAddress("local", "ethx", address(ethx));
         vm.serializeAddress("local", "router", address(router));
         vm.serializeAddress("local", "rewards", address(rewards));
+        vm.serializeAddress("local", "creatorVault", address(creatorVault));
         vm.serializeAddress("local", "brain", address(brain));
         string memory output = vm.serializeAddress("local", "basket", address(basketProxy));
         vm.writeJson(output, "./deployments/local.json");
