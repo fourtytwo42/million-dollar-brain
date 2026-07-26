@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Removed the Characters/Ownership/Influence/Mood map selector and made the Brain one stable character-first view; ownership remains visible through halos and `Yours`, while influence and mood remain in labels, tooltips, and the inspector.
+- Last meaningful change: Replaced the repetitive human portrait roster with 33 individually generated, visibly distinct people while retaining nine already-distinct beasts and characters. The cache-safe v3 set preserves the established engraved editorial style.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -14,6 +14,7 @@ Durable project context lives here. Update this file whenever information should
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+- The current `/brain-art/v3/` portrait roster deliberately varies age, sex and gender presentation, race and ethnicity, face shape, body type, hair, silhouette, expression, and prop; it remains 42 transparent 384-by-384 WebPs totaling about 1.4 MiB.
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
@@ -101,6 +102,7 @@ When sources conflict, use this order:
 - 2026-07-26: Removed the duplicate Basket Snapshot from Brain and kept basket composition and funding actions on the dedicated Basket screen. Added a persistent double-outline halo for pieces owned by the connected wallet in Characters, Ownership, Influence, and Mood modes, with a textual `Yours (n)` legend. Next production build, Prettier, full Chromium UAT, live no-overflow check, and in-app-browser visual review pass.
 - 2026-07-26: Made `Yours (n) · double outline` clickable in every Brain map mode. It uses the same pressed-state, dim-nonmembers, and second-click-to-clear behavior as crew filters; choosing a crew clears `Yours` and choosing `Yours` clears the crew. Production build, full Chromium economic UAT, and live in-app-browser verification pass with exactly two connected-wallet-owned pieces highlighted and no horizontal overflow.
 - 2026-07-26: Removed the Brain's Characters/Ownership/Influence/Mood selector and its unused mode state, presentation type, SVG patterns, semantic fills, and legends. The map is now one character-first view with crew filters and the interactive `Yours` ownership filter; influence and current mood remain visible through accessible labels, tooltips, and the inspector. Production build, full Chromium economic UAT, live visual review, two-piece `Yours` filtering, and no-overflow checks pass.
+- 2026-07-26: Verified the diversified v3 character roster: exactly 42 unique transparent 384-by-384 WebPs with valid alpha corners and a 1.4 MiB total budget. Next.js production build, Prettier, the full economic/autonomous-cycle Chromium UAT, live light/dark visual review, and zero browser console errors pass.
 
 ## Decisions
 
@@ -216,6 +218,15 @@ When sources conflict, use this order:
 - Commands/tests: Documentation consistency audit, current official Robinhood Chain provider research, semantic color contrast calculations.
 - Result: No internal MVP product or architecture decision remains open. Local and testnet engineering can begin after explicit authorization.
 - Follow-up: Obtain explicit build authorization. Treat counsel policy, signer addresses, funded balances, credentials, live release manifests, and audit acceptance as external production gates rather than engineering design choices.
+
+### 2026-07-26 - Diverse Character Roster
+
+- Context: The v2 humans frequently read as the same narrow-faced white man in different clothing, weakening the collectible identity of the 42-piece brain.
+- Decision: Regenerate 33 human pieces as visibly distinct people while locking the engraved editorial screen-print style, framing, palette, transparency, and catalog mappings. Retain nine already-distinct beasts and characters.
+- Files: `apps/web/public/brain-art/v3/`, `apps/web/components/brain-map.tsx`, `apps/web/components/editorial-dashboard.tsx`, `design/brain-art/`, `tests/uat.mjs`.
+- Commands/tests: ImageGen, chroma-key helper, 384-by-384 alpha validation, Prettier, Next.js production build, full Chromium UAT, live light/dark browser review.
+- Result: The live brain has a balanced range of ages, sex and gender presentations, races and ethnicities, face shapes, body types, hairstyles, silhouettes, and props without changing any economics or interaction behavior.
+- Follow-up: None.
 
 ## Known Issues
 

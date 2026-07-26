@@ -78,15 +78,15 @@ try {
     assert.ok(response.ok(), `generated portrait asset ${href} must load`);
   }
   assert.equal(
-    artHrefs.filter((href) => href?.startsWith("/brain-art/v2/piece-")).length,
+    artHrefs.filter((href) => href?.startsWith("/brain-art/v3/piece-")).length,
     42,
-    "all character portraits must use the cache-safe v2 asset path",
+    "all character portraits must use the cache-safe v3 asset path",
   );
   const imageMetrics = await page.evaluate(async () => {
     const paths = Array.from(
       { length: 42 },
       (_, index) =>
-        `/brain-art/v2/piece-${String(index + 1).padStart(2, "0")}.webp`,
+        `/brain-art/v3/piece-${String(index + 1).padStart(2, "0")}.webp`,
     );
     return Promise.all(
       paths.map(
@@ -125,7 +125,7 @@ try {
         width === 384 && height === 384 && maxCornerAlpha <= 2,
     ),
     true,
-    "all v2 portraits must be 384 by 384 with transparent corners",
+    "all v3 portraits must be 384 by 384 with transparent corners",
   );
   await page
     .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
@@ -535,7 +535,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 v2 portraits, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: 42 diverse v3 portraits, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

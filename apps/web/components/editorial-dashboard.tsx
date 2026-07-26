@@ -259,7 +259,7 @@ export function EditorialDashboard({
                 <div className="piece-ledger-head">
                   <span className="detail-portrait">
                     <img
-                      src={`/brain-art/v2/piece-${String(selected.id).padStart(2, "0")}.webp`}
+                      src={`/brain-art/v3/piece-${String(selected.id).padStart(2, "0")}.webp`}
                       alt=""
                       aria-hidden="true"
                     />
