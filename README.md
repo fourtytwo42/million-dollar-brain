@@ -16,8 +16,9 @@ Product specification and architecture phase. No production contracts have been 
 - [AI Explainability](AI_EXPLAINABILITY.md)
 - [Keeper Wallet and Gas Policy](KEEPER_GAS_POLICY.md)
 - [Technology Stack](TECH_STACK.md)
+- [Chain, Asset, Wallet, and UAT Specification](CHAIN_COMPATIBILITY.md)
 
-The PRD and the seven specifications listed after it form the authoritative requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a superseded historical concept note.
+The PRD and the eight specifications listed after it form the authoritative requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a superseded historical concept note.
 
 ## Core design
 
@@ -27,5 +28,6 @@ The PRD and the seven specifications listed after it form the authoritative requ
 - Ornith proposes constrained target weights from an approved asset universe.
 - Deterministic validation and execution enforce portfolio and security limits.
 - Free structured data feeds and versioned calculations only.
+- Anvil for local iteration, Robinhood Chain public testnet next, and Robinhood Chain mainnet only after launch gates pass.
 
 Real-value deployment remains subject to smart-contract audits and legal analysis.

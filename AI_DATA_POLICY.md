@@ -40,15 +40,17 @@ The exact launch contracts are selected immediately before deployment from the t
 
 | Purpose | Free structured source |
 | --- | --- |
-| Canonical Stock Token identity and status | Robinhood Stock Token `/assets` API and official chain contracts |
-| Quote, trading halt, and underlying volume | Robinhood Stock Token `/prices` API |
-| Corporate actions and token multipliers | Robinhood Stock Token `/corporate-actions` API |
+| Canonical Stock Token identity and status | Robinhood Stock Token `https://api.robinhood.com/rhj/assets` and official chain contracts |
+| Quote, trading halt, and underlying volume | Robinhood Stock Token `https://api.robinhood.com/rhj/prices/{symbol}` |
+| Corporate actions and token multipliers | Robinhood Stock Token `https://api.robinhood.com/rhj/corporate-actions` |
 | Execution and NAV price | Chainlink feed on Robinhood Chain when supported |
 | Token balances, transfers, and pool state | Robinhood Chain RPC and indexed chain events |
 | Issuer filings and structured fundamentals | SEC EDGAR Submissions and Company Facts APIs |
 | Macro observations | FRED Series Observations API |
 
 No paid market-data provider, news API, search engine, social feed, or AI research service is required by the MVP.
+
+Robinhood Stock Token quotes describe the underlying asset and are not multiplier-adjusted. Supported Chainlink Stock Token feeds are already multiplier-adjusted. The price adapter records this semantic difference and must not apply the ERC-8056 multiplier twice.
 
 ## 4. Deterministically calculated metrics
 

@@ -226,6 +226,10 @@ Every approved asset has a permanent numeric ID and exact token contract:
   "name": "Example Asset",
   "token_contract": "0x0000000000000000000000000000000000000000",
   "decimals": 18,
+  "adapter_type": "robinhood_stock_token_erc8056",
+  "robinhood_uid": "0x...",
+  "current_ui_multiplier": "1.000000000000000000",
+  "pending_ui_multiplier": null,
   "asset_class": "tokenized_equity",
   "tags": ["technology", "ai_semiconductor"],
   "risk_tier": 2,
@@ -246,6 +250,9 @@ The on-chain registry should store:
 
 - Numeric asset ID.
 - Token contract and decimals.
+- Asset-adapter type.
+- Robinhood UID, current multiplier, pending multiplier, and effective time when applicable.
+- Canonical-source status and trading capabilities.
 - Enabled or paused state.
 - Asset class.
 - Category tags.
@@ -390,14 +397,15 @@ Before an asset becomes visible to the AI:
 
 1. Verify the canonical token contract.
 2. Verify decimals and transfer behavior.
-3. Configure approved oracle sources.
-4. Confirm liquidity and approved execution route.
-5. Assign asset class, tags, and risk tier.
-6. Set minimum and maximum weights.
-7. Test deposits, transfers, swaps, and redemption compatibility.
-8. Add the asset through the upgrade or asset-listing administrator.
-9. Emit an on-chain registry event.
-10. Include it in the next cycle's asset catalog.
+3. Assign and test `standard_erc20`, `robinhood_stock_token_erc8056`, or another explicitly approved adapter.
+4. Configure approved oracle sources, source semantics, sequencer checks, and corporate-action behavior.
+5. Confirm liquidity and at least one approved executable route.
+6. Assign asset class, tags, and risk tier.
+7. Set minimum and maximum weights.
+8. Test deposits, transfers, swaps, and redemption compatibility.
+9. Add the asset through the asset-listing administrator.
+10. Emit an on-chain registry event.
+11. Include it in the next cycle's asset catalog.
 
 Pausing an asset removes it from future purchases. The risk controller determines whether an existing position may be sold, held, or frozen during the pause.
 

@@ -2,7 +2,7 @@
 
 ## Product Requirements Document
 
-**Version:** 0.3  
+**Version:** 0.4
 **Status:** Consolidated MVP requirements; unresolved launch decisions are explicit  
 **Date:** 2026-07-25  
 **Implementation status:** Product and architecture specifications are committed to a private GitHub repository on the application VM. No contracts, token, production application, or blockchain deployment exist.
@@ -20,6 +20,7 @@ This PRD is the top-level product authority. The following linked specifications
 | `KEEPER_GAS_POLICY.md` | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation |
 | `UX_SCREENS.md` | Screen consolidation, drawers, modals, system states, and mobile behavior |
 | `TECH_STACK.md` | Frontend libraries, SVG brain, testing, and native Ubuntu deployment |
+| `CHAIN_COMPATIBILITY.md` | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
@@ -79,6 +80,7 @@ The AI does not custody assets or control a private key. It proposes portfolio t
 - Cross-chain basket assets.
 - Guaranteed returns, principal protection, or investment advice claims.
 - Mainnet launch before legal review, simulation, testnet validation, and security audits.
+- Automatic activation or trading of every token discovered on-chain.
 
 ## 5. Product actors
 
@@ -104,7 +106,7 @@ An authorized or permissionless caller that submits a signed scheduled proposal 
 
 ### 5.6 Upgrade administrator
 
-The authority that can upgrade protocol implementations. For the MVP, this is creator-controlled. A multisig and timelock are recommended even though decentralized governance is not required.
+The authority that can upgrade protocol implementations. Creator-controlled development authority is permitted on local Anvil and early testnet. Before real value, upgrade authority moves to a 2-of-3 multisig with a 48-hour timelock for normal upgrades.
 
 ## 6. Product components
 
@@ -219,9 +221,10 @@ Requirements:
 
 - Redemption requests are available on-chain at any time.
 - The user supplies a minimum acceptable redemption value.
-- Small redemptions should use the available base-asset reserve when possible.
-- Large or illiquid redemptions may be queued or settled in kind.
-- The exact instant, queued, in-kind, or hybrid policy remains unresolved.
+- Small redemptions settle immediately in USDG when the available reserve and risk limits permit.
+- Larger redemptions enter a FIFO USDG queue and are funded by bounded asset sales.
+- A queued request includes minimum proceeds and expiry protection and may be cancelled while unprocessed under the defined queue rules.
+- Stock Tokens are not distributed in kind in the MVP.
 - The user pays only their redemption transaction gas.
 
 ## 8. Brain requirements
@@ -269,7 +272,9 @@ A change made after the current AI snapshot affects the next scheduled cycle.
 - The full initial purchase price goes to the Creator DAO Vault.
 - No initial-sale proceeds go to brain-owner rewards.
 - Ownership transfer and payment routing are atomic.
-- The initial price formula remains unresolved.
+- The initial piece price equals the deployment's initial total brain valuation multiplied by the piece's immutable weight and divided by 10,000.
+- The initial total brain valuation is one deployment parameter applying uniformly through that formula.
+- Prices do not decay, and the administrator cannot selectively reprice an individual piece in the MVP.
 
 ### 8.4 Always-for-sale secondary purchase
 
@@ -502,6 +507,16 @@ Failure must not trigger an unapproved provider or model automatically unless th
 - Keeper and allocator signing keys remain outside the repository, frontend, model process, logs, and normal environment files.
 - Frontend and deployment details are controlled by `TECH_STACK.md`.
 
+### 10.8 Network environments
+
+- Daily contract and integration development uses local Anvil on chain ID 31337.
+- Robinhood Chain testnet uses chain ID 46630 and the public RPC `https://rpc.testnet.chain.robinhood.com`.
+- Robinhood Chain mainnet uses chain ID 4663.
+- The public testnet RPC is acceptable for testnet but must not be the sole mainnet RPC because it is rate-limited and not production-grade.
+- Contracts, ABIs, data schemas, and service behavior remain identical between environments; versioned network configuration supplies addresses and endpoints.
+- Local Anvil provides mock USDG, ERC-20, ERC-8056 Stock Token, Chainlink, sequencer, router, liquidity, halt, and corporate-action behavior.
+- The complete network specification is defined in `CHAIN_COMPATIBILITY.md`.
+
 ## 11. Portfolio compiler and execution requirements
 
 The AI chooses targets. Deterministic code chooses whether and how to trade.
@@ -523,6 +538,10 @@ The compiler must consider:
 - Oracle freshness.
 - Circuit-breaker state.
 - Estimated gas and execution cost.
+
+Execution uses allowlisted venue adapters rather than model-authored calldata. The adapter boundary can support Uniswap-compatible AMMs, signed RFQ or aggregator quotes, validated propAMMs, and validated order books. Every trade enforces an exact input or bounded maximum input, minimum proceeds, deadline, oracle deviation, slippage, token, venue, and allowance target.
+
+The system is architected for standard ERC-20 assets and Robinhood Stock Tokens using ERC-8056. Every official Stock Token may be discovered and represented, but an asset cannot enter the active decision universe until its canonical contract, multiplier behavior, oracle, sequencer checks, liquidity, execution route, transfer behavior, permissions, and legal eligibility pass review.
 
 Initial hard limits for simulation:
 
@@ -571,7 +590,7 @@ These may be added through a later upgrade.
 
 - The owner may withdraw Creator DAO Vault funds.
 - The owner must not have a direct Creator DAO Vault function that transfers basket principal or brain reward liabilities.
-- Using a creator-controlled multisig instead of a single externally owned account is recommended.
+- Local and early testnet development may use a creator EOA. Before real value, creator withdrawal authority moves to the approved 2-of-3 multisig.
 - Ownership transfer must use a two-step accept process.
 
 ## 13. Upgradeability requirements
@@ -595,10 +614,11 @@ Requirements:
 
 MVP authority:
 
-- Upgrade authority is creator-controlled.
-- A multisig is recommended.
-- A timelock and user exit window are recommended for non-emergency upgrades.
-- The exact delay and emergency-upgrade policy remain unresolved.
+- Upgrade authority may be creator-controlled on local Anvil and early testnet.
+- Before real value, upgrade and high-risk administrative authority moves to a 2-of-3 multisig.
+- Normal upgrades use a 48-hour timelock, publish code and migration details, and provide a user exit window.
+- Emergency pause is immediate but cannot install new implementation code.
+- Multisig membership remains a launch decision.
 
 Important trust disclosure:
 
@@ -777,13 +797,16 @@ Safety metrics:
 - Define upgrade authority and delay.
 - Obtain initial legal analysis.
 
-### Phase 1: economic and portfolio simulation
+### Phase 1: local Anvil implementation and simulation
 
+- Run a native Anvil chain on the application VM.
+- Deploy upgradeable contracts and every required external mock.
 - Simulate NAV, deposits, redemptions, fees, and rewards.
 - Simulate 20% brain-piece price compounding and circular trading.
 - Backtest constrained allocations.
 - Compare local and OpenRouter model behavior.
 - Measure gas and turnover sustainability at multiple TVL levels.
+- Run unit, integration, fuzz, invariant, upgrade, access-control, and end-to-end tests.
 
 ### Phase 2: shadow AI
 
@@ -793,9 +816,11 @@ Safety metrics:
 
 ### Phase 3: Robinhood Chain testnet
 
-- Deploy upgradeable contracts with valueless assets.
+- Deploy upgradeable contracts with valueless assets using the public testnet RPC.
 - Test deposits, redemptions, brain purchases, settings, fees, rewards, upgrades, and scheduled execution.
 - Complete adversarial, invariant, and upgrade testing.
+- Complete Codex in-app Browser UAT for public, responsive, accessible, and failure-state flows.
+- Complete user Chrome UAT for real wallet extensions, WalletConnect, network switching, signatures, rejection, and transaction lifecycle states.
 
 ### Phase 4: audited pilot
 
@@ -809,23 +834,24 @@ Safety metrics:
 Only genuinely unresolved decisions belong in this section:
 
 1. Eligible jurisdictions, users, legal entity, and compliance path.
-2. Initial brain-piece price formula and whether prices ever decay.
-3. Instant, queued, in-kind, or hybrid redemption and restricted-asset redemption behavior.
-4. Exact initial asset contracts and approved execution venue or router.
-5. No-trade bands and minimum trade sizes.
-6. Approved fallback model and whether automatic provider fallback is allowed.
-7. Upgrade proxy pattern.
-8. Upgrade and risk multisig membership.
-9. Timelock duration, emergency-upgrade policy, and user exit window.
-10. Creator DAO Vault safeguards beyond owner authorization.
-11. Initial seed capital and initial basket-share price.
-12. Whether future governance uses basket shares, brain pieces, another token, or remains absent.
-13. Final brand palette, typography, and light or dark theme behavior.
-14. Backend API framework, database, migrations, chain indexer, scheduler language, metrics, alerts, and backups. These must run natively on the VM without Docker.
+2. Exact initial total brain valuation used by the accepted weight-based initial-price formula.
+3. Exact initial asset contracts and first approved execution venue adapters.
+4. No-trade bands and minimum trade sizes.
+5. Approved fallback model and whether automatic provider fallback is allowed.
+6. Upgrade and risk multisig members.
+7. Creator DAO Vault safeguards beyond owner authorization.
+8. Initial seed capital and initial basket-share price.
+9. Whether future governance uses basket shares, brain pieces, another token, or remains absent.
+10. Final brand palette, typography, and light or dark theme behavior.
+11. Mainnet RPC provider, fallback provider, monitoring destination, and off-host backup destination.
 
 ## 21. Current decisions ledger
 
 - Robinhood Chain is the target network.
+- Local development uses native Foundry and Anvil on chain ID 31337.
+- Public integration uses Robinhood Chain testnet chain ID 46630 and its public RPC.
+- Production targets Robinhood Chain mainnet chain ID 4663 with a production-grade RPC selected before launch.
+- Robinhood Chain uses ETH for gas and standard EVM JSON-RPC compatibility.
 - Basket shares use entry and redemption fees rather than a transfer tax.
 - MVP fees are 1% entry and 1% redemption.
 - Basket fees split equally between the Creator DAO Vault and brain owners.
@@ -847,6 +873,9 @@ Only genuinely unresolved decisions belong in this section:
 - The AI receives the complete brain, approved assets, current basket, statistics, limits, and prior result.
 - The MVP decision universe is USDG plus at most 24 active risk assets; Ornith may hold at most 10 positions.
 - Candidates come from Robinhood's canonical metadata but require explicit risk-administrator approval.
+- The discoverable universe includes canonical Robinhood Stock Tokens and supported standard ERC-20s; discovery never grants trading approval.
+- Stock Token integration supports ERC-8056 multipliers and keeps raw balances, UI-scaled amounts, underlying quotes, and multiplier-adjusted Chainlink feeds distinct.
+- Venue adapters support safe expansion across validated AMM, RFQ or aggregator, propAMM, and order-book routes.
 - All agent information comes from free structured feeds or deterministic protocol calculations.
 - Ornith has no browsing, news, social, arbitrary HTTP, or AI-curated research access during allocation.
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
@@ -854,14 +883,21 @@ Only genuinely unresolved decisions belong in this section:
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
 - Application services and dependencies are installed directly on the Ubuntu VM and run as native `systemd` services. Docker is not used.
 - The frontend stack is locked in `TECH_STACK.md`: Next.js App Router, TypeScript, Node.js 24 LTS, npm, Tailwind CSS 4, shadcn/ui, wagmi, viem, TanStack Query, RainbowKit, SVG, ECharts, and Motion for React.
+- The backend uses TypeScript, Fastify, PostgreSQL, Drizzle, viem, Zod, and native `systemd` services and timers; Redis is excluded initially.
+- Contracts use Solidity, Foundry, OpenZeppelin Contracts Upgradeable, UUPS/ERC-1967, `AccessControl`, upgrade storage checks, and Slither.
+- Wallet connections support EIP-6963, EIP-1193, and WalletConnect, including MetaMask, Robinhood Wallet, Coinbase Wallet, Rabby, Brave Wallet, Rainbow, Trust Wallet, SafePal, and other compliant wallets.
+- Automated Playwright regression is supplemented by required Codex in-app Browser UAT and user Chrome wallet-extension UAT.
 - The AI returns only constrained target weights for approved assets.
 - OpenRouter and the local appliance are supported behind one provider interface.
 - Ornith 1.0 35B MoE Q5_K_M on GPU45 is the primary portfolio allocator.
 - The exact live API model ID is `ornith-1.0-35b-Q5_K_M-688b8d0a`.
 - Deterministic contracts validate and execute.
 - All protocol smart contracts are upgradeable.
+- Before real value, normal upgrades use a 2-of-3 multisig, 48-hour timelock, published upgrade details, and a user exit window; emergency pause cannot install code.
+- Initial brain-piece price equals initial total brain valuation multiplied by piece weight divided by 10,000; there is no price decay or selective per-piece repricing in the MVP.
+- Redemptions use a hybrid USDG model: small immediate redemptions when reserves permit and queued USDG redemption with bounded asset sales for larger exits; no in-kind Stock Token redemption in the MVP.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
-- The PRD and its seven linked normative specifications form one authoritative requirements set.
+- The PRD and its eight linked normative specifications form one authoritative requirements set.
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
 - The private source repository is `fourtytwo42/million-dollar-brain`.
 - The MVP schedule is hourly and configurable; any future interval change is an administrative protocol change.

@@ -1,7 +1,7 @@
 # MillionDollar Brain Technology Stack
 
-**Version:** 0.1  
-**Status:** Frontend and native deployment stack locked for MVP
+**Version:** 0.2
+**Status:** Application, contract, and native deployment stack locked for MVP
 
 ## 1. Deployment constraint
 
@@ -48,6 +48,10 @@ Dependency versions are pinned in `package-lock.json`. Upgrades occur through re
 | Mobile wallet transport | WalletConnect with a free project ID |
 
 Robinhood Chain and its testnet are defined explicitly with viem `defineChain` configuration. The application must not depend on a library shipping a built-in chain definition.
+
+Injected wallets are discovered through EIP-6963, with an EIP-1193 fallback. MetaMask, Robinhood Wallet, Coinbase Wallet, Rabby, Brave Wallet, Rainbow, Trust Wallet, SafePal, and other standards-compliant wallets are supported through injected connectors or WalletConnect. Ledger and Trezor use a compatible wallet application rather than a custom direct integration.
+
+The app supports add-and-switch requests for local Anvil, Robinhood Chain testnet, and Robinhood Chain mainnet. Wallet support and release UAT requirements are normative in `CHAIN_COMPATIBILITY.md`.
 
 Contract ABIs and addresses come from versioned deployment artifacts. The browser never receives:
 
@@ -133,7 +137,9 @@ Add another state library only after a documented need appears.
 | --- | --- |
 | Unit and component | Vitest |
 | React interaction | React Testing Library |
-| Browser and wallet flows | Playwright |
+| Automated browser and wallet flows | Playwright |
+| Interactive public and accessibility UAT | Codex in-app Browser |
+| Real extension and wallet UAT | User Chrome |
 | Accessibility checks | axe integrated into browser tests |
 | Type safety | TypeScript compiler |
 | Linting | ESLint |
@@ -149,6 +155,9 @@ Required frontend test coverage includes:
 - Proposal versus execution explanations.
 - Mobile navigation and brain interaction.
 - Admin authorization boundaries.
+- EIP-6963 injected-wallet discovery and WalletConnect.
+- Network add and switch across Anvil and Robinhood Chain.
+- Account changes, rejected signatures, pending, replaced, reverted, and successful transactions.
 
 ## 8. Native production layout
 
@@ -159,7 +168,7 @@ Caddy :443
   |
 Next.js 127.0.0.1:3000
   |
-Protocol API and Robinhood Chain services
+Fastify API, allocator, keeper, and Robinhood Chain services
 ```
 
 Production requirements:
@@ -185,15 +194,47 @@ Production requirements:
 - Content Security Policy restricts scripts, connections, frames, and images to approved origins.
 - Source maps are not publicly served unless deliberately enabled for a release.
 
-## 10. Deferred backend decisions
+## 10. Backend and automation
 
-This document locks the frontend and native deployment stack. These backend choices remain separate decisions:
+| Concern | MVP selection |
+| --- | --- |
+| API | Fastify on Node.js 24 LTS and TypeScript |
+| Database | PostgreSQL |
+| Schema and migrations | Drizzle ORM and Drizzle Kit |
+| Chain client and event ingestion | viem with checkpointed RPC log ingestion |
+| Runtime validation | Zod |
+| Scheduler | `systemd` timers invoking the TypeScript keeper |
+| Process management | Native `systemd` services |
+| Structured logs | JSON logs captured by `journald` |
+| Metrics | Prometheus-format service metrics |
+| Alerts | Health checks and configurable webhook or email adapter |
+| Backups | Native PostgreSQL `pg_dump` with encrypted off-host retention |
 
-- Protocol API framework.
-- Database and migration framework.
-- Chain event indexer.
-- Scheduler implementation language.
-- Metrics and alerting stack.
-- Backup and retention tooling.
+Redis, a separate queue system, PM2, and Docker are excluded initially. PostgreSQL owns durable jobs, chain checkpoints, cycle state, idempotency keys, and retry state.
 
-They must also run directly on the VM without Docker.
+## 11. Smart contracts and local chain
+
+| Concern | MVP selection |
+| --- | --- |
+| Language | Solidity |
+| Toolchain | Foundry: `forge`, `anvil`, and `cast` |
+| Local chain | Anvil chain ID 31337 on localhost |
+| Contract library | OpenZeppelin Contracts Upgradeable |
+| Proxy | UUPS behind ERC-1967 |
+| Authorization | OpenZeppelin `AccessControl` |
+| Upgrade checks | OpenZeppelin Foundry Upgrades and storage-layout validation |
+| Static analysis | Slither |
+
+The repository layout is:
+
+```text
+apps/web
+services/api
+services/allocator
+services/keeper
+packages/contracts
+packages/shared
+packages/config
+```
+
+All packages share strict TypeScript, lint, formatting, and test configuration where applicable. Detailed network, asset, oracle, wallet, and UAT requirements are controlled by `CHAIN_COMPATIBILITY.md`.
