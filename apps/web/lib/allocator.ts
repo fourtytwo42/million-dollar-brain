@@ -28,7 +28,8 @@ function responseText(body: unknown) {
     return "";
   }
   const payload = body as any;
-  if (typeof payload?.choices?.[0]?.message?.content === "string") return payload.choices[0].message.content;
+  if (typeof payload?.choices?.[0]?.message?.content === "string" && payload.choices[0].message.content.trim()) return payload.choices[0].message.content;
+  if (typeof payload?.choices?.[0]?.message?.reasoning_content === "string") return payload.choices[0].message.reasoning_content;
   if (typeof payload?.output_text === "string") return payload.output_text;
   const content = payload?.output?.flatMap((item: any) => item.content ?? []) ?? [];
   return content.map((part: any) => part.text ?? part?.text?.value ?? "").join("");
@@ -39,8 +40,8 @@ async function askAllocator(context: unknown): Promise<{ allocation: Allocation;
   try {
     const response = await fetch(`${process.env.MDB_AI_BASE_URL ?? "http://192.168.50.189:30001/v1"}/chat/completions`, {
       method: "POST", headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model: process.env.MDB_AI_MODEL ?? "ornith-1.0-35b-Q5_K_M-688b8d0a", messages: [{ role: "user", content: prompt }], max_tokens: 3000, temperature: 0.2, stream: false }),
-      signal: AbortSignal.timeout(90000),
+      body: JSON.stringify({ model: process.env.MDB_AI_MODEL ?? "ornith-1.0-35b-Q5_K_M-688b8d0a", messages: [{ role: "user", content: prompt }], max_tokens: 4096, temperature: 0.2, response_format: { type: "json_object" }, stream: false }),
+      signal: AbortSignal.timeout(180000),
     });
     if (!response.ok) throw new Error(`provider ${response.status}`);
     const text = responseText(await response.json());
