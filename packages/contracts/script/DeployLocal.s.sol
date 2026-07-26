@@ -41,7 +41,22 @@ contract DeployLocal is Script {
         RewardDistributor rewards = RewardDistributor(address(rewardProxy));
 
         BrainMarketplace brainImplementation = new BrainMarketplace();
-        ERC1967Proxy brainProxy = new ERC1967Proxy(address(brainImplementation), abi.encodeCall(BrainMarketplace.initialize, (deployer, address(usdg), address(rewards), deployer, brainWeights, 42_000e18)));
+        ERC1967Proxy brainProxy = new ERC1967Proxy(
+            address(brainImplementation),
+            abi.encodeCall(
+                BrainMarketplace.initialize,
+                (
+                    deployer,
+                    address(usdg),
+                    address(rewards),
+                    deployer,
+                    brainWeights,
+                    42_000e18,
+                    2,
+                    keccak256("MDB_BRAIN_CATALOG_V2")
+                )
+            )
+        );
         BrainMarketplace brain = BrainMarketplace(address(brainProxy));
         rewards.grantRole(rewards.BRAIN_ROLE(), address(brain));
 

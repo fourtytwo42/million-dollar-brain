@@ -46,7 +46,26 @@ contract BasketBrainTest is Test {
         RewardDistributor rewardImpl = new RewardDistributor();
         rewards = RewardDistributor(address(new ERC1967Proxy(address(rewardImpl), abi.encodeCall(RewardDistributor.initialize, (admin, address(usdg), rewardWeights)))));
         BrainMarketplace brainImpl = new BrainMarketplace();
-        brain = BrainMarketplace(address(new ERC1967Proxy(address(brainImpl), abi.encodeCall(BrainMarketplace.initialize, (admin, address(usdg), address(rewards), admin, brainWeights, 42_000e18)))));
+        brain = BrainMarketplace(
+            address(
+                new ERC1967Proxy(
+                    address(brainImpl),
+                    abi.encodeCall(
+                        BrainMarketplace.initialize,
+                        (
+                            admin,
+                            address(usdg),
+                            address(rewards),
+                            admin,
+                            brainWeights,
+                            42_000e18,
+                            2,
+                            keccak256("MDB_BRAIN_CATALOG_V2")
+                        )
+                    )
+                )
+            )
+        );
         rewards.grantRole(rewards.BRAIN_ROLE(), address(brain));
         address[] memory assets = new address[](2);
         assets[0] = address(nvda);
@@ -84,6 +103,9 @@ contract BasketBrainTest is Test {
     }
 
     function testBrainSaleExcludesTransferredPieceFromMarkupReward() public {
+        assertEq(brain.catalogVersion(), 2);
+        assertEq(brain.catalogHash(), keccak256("MDB_BRAIN_CATALOG_V2"));
+        assertTrue(brain.affinityId(1) != bytes32(0));
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);

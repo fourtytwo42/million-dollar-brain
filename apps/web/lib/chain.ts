@@ -3,6 +3,7 @@ import { createPublicClient, createWalletClient, http, parseAbi, type Address } 
 import { privateKeyToAccount } from "viem/accounts";
 import { localhost } from "viem/chains";
 import { basketAbi, brainAbi, erc20Abi } from "./abi";
+import { brainDefinition } from "./brain-catalog";
 
 export type Deployment = Record<"usdg" | "nvda" | "aapl" | "ethx" | "router" | "rewards" | "brain" | "basket", Address>;
 const rpcUrl = process.env.MDB_RPC_URL ?? "http://127.0.0.1:8545";
@@ -15,7 +16,7 @@ export function deployment(): Deployment { return JSON.parse(readFileSync(deploy
 
 export async function dashboard(address?: Address) {
   const d = deployment();
-  const [nav, supply, usdgBalance, nvdaBalance, aaplBalance, ethxBalance, shares] = await Promise.all([
+  const [nav, supply, usdgBalance, nvdaBalance, aaplBalance, ethxBalance, shares, catalogVersion, catalogHash] = await Promise.all([
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "nav" }),
     publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "totalSupply" }),
     publicClient.readContract({ address: d.usdg, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
@@ -23,6 +24,8 @@ export async function dashboard(address?: Address) {
     publicClient.readContract({ address: d.aapl, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
     publicClient.readContract({ address: d.ethx, abi: erc20Abi, functionName: "balanceOf", args: [d.basket] }),
     address ? publicClient.readContract({ address: d.basket, abi: basketAbi, functionName: "balanceOf", args: [address] }) : Promise.resolve(0n),
+    publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "catalogVersion" }),
+    publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "catalogHash" }),
   ]);
   const pieces = await Promise.all(Array.from({ length: 42 }, async (_, i) => {
     const id = BigInt(i + 1);
@@ -32,9 +35,21 @@ export async function dashboard(address?: Address) {
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "selectedPreset", args: [id] }),
       publicClient.readContract({ address: d.brain, abi: brainAbi, functionName: "immutableWeight", args: [id] }),
     ]);
-    return { id: i + 1, owner, price: price.toString(), preset: Number(preset), weight: Number(weight) };
+    const definition = brainDefinition(i + 1);
+    return {
+      id: i + 1,
+      owner,
+      price: price.toString(),
+      preset: Number(preset),
+      weight: Number(weight),
+      affinity: definition.affinity,
+      category: definition.category,
+      options: definition.options,
+      data: definition.data,
+      tags: definition.tags ?? [],
+    };
   }));
-  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
+  return { deployment: d, nav: nav.toString(), supply: supply.toString(), shares: shares.toString(), holdings: { USDG: usdgBalance.toString(), NVDA: nvdaBalance.toString(), AAPL: aaplBalance.toString(), ETHX: ethxBalance.toString() }, pieces, catalog: { version: Number(catalogVersion), hash: catalogHash }, browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl };
 }
 
 export const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);

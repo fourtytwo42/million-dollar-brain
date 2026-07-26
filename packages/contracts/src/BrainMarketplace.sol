@@ -19,10 +19,13 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
     IERC20 public usdg;
     IRewardDistributor public rewardDistributor;
     address public creatorVault;
+    uint16 public catalogVersion;
+    bytes32 public catalogHash;
     mapping(uint256 => address) public ownerOf;
     mapping(uint256 => uint256) public settledPrice;
     mapping(uint256 => uint8) public selectedPreset;
     mapping(uint256 => uint16) public immutableWeight;
+    mapping(uint256 => bytes32) public affinityId;
 
     event PiecePurchased(uint256 indexed pieceId, address indexed buyer, address indexed seller, uint256 paid, uint256 nextPrice);
     event PresetChanged(uint256 indexed pieceId, uint8 preset, address indexed owner);
@@ -33,21 +36,27 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
         address rewardDistributor_,
         address creatorVault_,
         uint16[] calldata weights,
-        uint256 initialBrainValuation
+        uint256 initialBrainValuation,
+        uint16 catalogVersion_,
+        bytes32 catalogHash_
     ) external initializer {
         require(weights.length == PIECE_COUNT, "weights length");
+        require(catalogVersion_ > 0 && catalogHash_ != bytes32(0), "catalog");
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         usdg = IERC20(usdg_);
         rewardDistributor = IRewardDistributor(rewardDistributor_);
         creatorVault = creatorVault_;
+        catalogVersion = catalogVersion_;
+        catalogHash = catalogHash_;
         uint256 totalWeight;
         for (uint256 i; i < PIECE_COUNT; ++i) totalWeight += weights[i];
         require(totalWeight == BPS, "weights total");
         for (uint256 i; i < PIECE_COUNT; ++i) {
             uint256 id = i + 1;
             immutableWeight[id] = weights[i];
+            affinityId[id] = keccak256(abi.encode("MDBP_AFFINITY", id));
             settledPrice[id] = (initialBrainValuation * weights[i]) / BPS;
             selectedPreset[id] = 1;
         }
