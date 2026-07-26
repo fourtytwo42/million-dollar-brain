@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Made the Brain map's `Yours (n)` ownership key an interactive, mutually exclusive filter that highlights only the connected wallet's pieces and clears on a second selection.
+- Last meaningful change: Removed the Characters/Ownership/Influence/Mood map selector and made the Brain one stable character-first view; ownership remains visible through halos and `Yours`, while influence and mood remain in labels, tooltips, and the inspector.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -100,6 +100,7 @@ When sources conflict, use this order:
 - 2026-07-26: Implemented historical decision exploration. `/api/status` returns the newest 50 valid cycle records; Decisions selects the latest by default and lets users inspect older AI or fallback cycles, their brain context, allocation, rationale, block, rebalance hash, and optional redemption-settlement hash. Production build, Prettier, full economic/AI Chromium UAT, historical selection, mobile overflow, and live in-app-browser visual checks pass.
 - 2026-07-26: Removed the duplicate Basket Snapshot from Brain and kept basket composition and funding actions on the dedicated Basket screen. Added a persistent double-outline halo for pieces owned by the connected wallet in Characters, Ownership, Influence, and Mood modes, with a textual `Yours (n)` legend. Next production build, Prettier, full Chromium UAT, live no-overflow check, and in-app-browser visual review pass.
 - 2026-07-26: Made `Yours (n) · double outline` clickable in every Brain map mode. It uses the same pressed-state, dim-nonmembers, and second-click-to-clear behavior as crew filters; choosing a crew clears `Yours` and choosing `Yours` clears the crew. Production build, full Chromium economic UAT, and live in-app-browser verification pass with exactly two connected-wallet-owned pieces highlighted and no horizontal overflow.
+- 2026-07-26: Removed the Brain's Characters/Ownership/Influence/Mood selector and its unused mode state, presentation type, SVG patterns, semantic fills, and legends. The map is now one character-first view with crew filters and the interactive `Yours` ownership filter; influence and current mood remain visible through accessible labels, tooltips, and the inspector. Production build, full Chromium economic UAT, live visual review, two-piece `Yours` filtering, and no-overflow checks pass.
 
 ## Decisions
 

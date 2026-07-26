@@ -1457,7 +1457,6 @@ footer {
     "Playfair Display",
     serif;
 }
-.brain-mode-control,
 .mobile-map-switch {
   display: flex;
   padding: 3px;
@@ -1465,7 +1464,6 @@ footer {
   border-radius: 5px;
   background: var(--surface-subtle);
 }
-.brain-mode-control button,
 .mobile-map-switch button {
   padding: 7px 9px;
   border: 0;
@@ -1473,7 +1471,6 @@ footer {
   color: var(--text-muted);
   font-size: 10px;
 }
-.brain-mode-control button.active,
 .mobile-map-switch button.active {
   background: var(--surface);
   color: var(--primary);
@@ -1647,58 +1644,6 @@ footer {
   stroke: var(--primary);
   stroke-width: 2;
 }
-.mode-ownership .piece-portrait,
-.mode-influence .piece-portrait,
-.mode-mood .piece-portrait {
-  opacity: 0.26;
-  filter: grayscale(1) saturate(0);
-}
-.mode-ownership .ownership-unowned .segment-fill {
-  fill: #d8d0c0;
-  fill-opacity: 0.7;
-}
-.mode-ownership .ownership-owned .segment-fill {
-  fill: url(#ownership-owned);
-  fill-opacity: 0.72;
-}
-.mode-ownership .ownership-mine .segment-fill {
-  fill: url(#ownership-mine);
-  fill-opacity: 0.92;
-}
-.mode-influence .segment-fill {
-  fill: #7a271f;
-  fill-opacity: calc(0.16 + var(--influence) * 0.68);
-}
-.mode-mood .mood-n2 .segment-fill,
-.legend-mood-n2 {
-  background: #345d72;
-  fill: #345d72;
-  fill-opacity: 0.82;
-}
-.mode-mood .mood-n1 .segment-fill,
-.legend-mood-n1 {
-  background: #88a9b7;
-  fill: #88a9b7;
-  fill-opacity: 0.72;
-}
-.mode-mood .mood-p0 .segment-fill,
-.legend-mood-p0 {
-  background: #c9c0aa;
-  fill: #c9c0aa;
-  fill-opacity: 0.6;
-}
-.mode-mood .mood-p1 .segment-fill,
-.legend-mood-p1 {
-  background: #d59a63;
-  fill: #d59a63;
-  fill-opacity: 0.74;
-}
-.mode-mood .mood-p2 .segment-fill,
-.legend-mood-p2 {
-  background: #8b3028;
-  fill: #8b3028;
-  fill-opacity: 0.84;
-}
 .brain-piece-tooltip {
   position: absolute;
   z-index: 5;
@@ -1789,32 +1734,6 @@ footer {
 }
 .legend-character {
   background: #b3a88f;
-}
-.legend-unowned {
-  background: #d8d0c0;
-}
-.legend-owned {
-  background: repeating-linear-gradient(
-    135deg,
-    #6f7b82 0 1px,
-    transparent 1px 4px
-  );
-}
-.legend-mine {
-  background: repeating-linear-gradient(
-    0deg,
-    #315b49 0 1px,
-    transparent 1px 4px
-  );
-}
-.legend-influence-low {
-  background: rgba(122, 39, 31, 0.2);
-}
-.legend-influence-mid {
-  background: rgba(122, 39, 31, 0.5);
-}
-.legend-influence-high {
-  background: rgba(122, 39, 31, 0.85);
 }
 .brain-list-panel {
   display: none;
@@ -1925,10 +1844,6 @@ footer {
   .brain-map-header {
     align-items: stretch;
     flex-direction: column;
-  }
-  .brain-mode-control {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
   }
   .mobile-map-switch {
     display: flex;

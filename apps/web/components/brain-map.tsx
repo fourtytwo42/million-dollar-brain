@@ -1,19 +1,12 @@
 "use client";
 
-import {
-  type CSSProperties,
-  type KeyboardEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useMemo, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import {
   BRAIN_PRESENTATION,
   BRAIN_PRESENTATION_BY_ID,
   BRAIN_SILHOUETTE_PATH,
   type BrainDirection,
-  type BrainMapMode,
 } from "../lib/brain-presentation";
 
 type MapPiece = {
@@ -33,19 +26,10 @@ type BrainMapProps = {
   pieces: MapPiece[];
   selectedId: number;
   account: string | null;
-  mode: BrainMapMode;
-  onModeChange: (mode: BrainMapMode) => void;
   onSelect: (pieceId: number) => void;
   onHover?: (pieceId: number | null) => void;
   onZoomChange?: (zoom: number) => void;
 };
-
-const modes: readonly { value: BrainMapMode; label: string }[] = [
-  { value: "characters", label: "Characters" },
-  { value: "ownership", label: "Ownership" },
-  { value: "influence", label: "Influence" },
-  { value: "mood", label: "Mood" },
-];
 
 function portraitPath(pieceId: number) {
   return `/brain-art/v2/piece-${String(pieceId).padStart(2, "0")}.webp`;
@@ -80,8 +64,6 @@ export function BrainMap({
   pieces,
   selectedId,
   account,
-  mode,
-  onModeChange,
   onSelect,
   onHover,
   onZoomChange,
@@ -97,9 +79,6 @@ export function BrainMap({
     () => new Map(pieces.map((piece) => [piece.id, piece])),
     [pieces],
   );
-  const weights = pieces.map((piece) => piece.weight);
-  const minWeight = Math.min(...weights, 0);
-  const maxWeight = Math.max(...weights, 1);
   const previewPiece = hoveredId ? pieceById.get(hoveredId) : undefined;
   const filteredPieces = pieces.filter((piece) => {
     const mood = piece.options[piece.preset]?.label ?? "";
@@ -165,19 +144,7 @@ export function BrainMap({
       <div className="brain-map-header">
         <div>
           <p className="section-kicker">THE 42</p>
-          <strong>Choose how to read the brain</strong>
-        </div>
-        <div className="brain-mode-control" aria-label="Brain map view">
-          {modes.map((item) => (
-            <button
-              key={item.value}
-              className={mode === item.value ? "active" : ""}
-              aria-pressed={mode === item.value}
-              onClick={() => onModeChange(item.value)}
-            >
-              {item.label}
-            </button>
-          ))}
+          <strong>Explore the community brain</strong>
         </div>
       </div>
 
@@ -227,7 +194,7 @@ export function BrainMap({
             data-zoom={zoom.toFixed(2)}
           >
             <svg
-              className={`brain-map mode-${mode}${highlightedCrew || mineHighlighted ? " has-piece-filter" : ""}`}
+              className={`brain-map mode-characters${highlightedCrew || mineHighlighted ? " has-piece-filter" : ""}`}
               viewBox="0 0 760 435"
               role="group"
               aria-label="Interactive 42-piece brain marketplace"
@@ -236,22 +203,6 @@ export function BrainMap({
                 <clipPath id="brain-boundary">
                   <path d={BRAIN_SILHOUETTE_PATH} />
                 </clipPath>
-                <pattern
-                  id="ownership-owned"
-                  width="8"
-                  height="8"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <path d="M0 8L8 0" />
-                </pattern>
-                <pattern
-                  id="ownership-mine"
-                  width="7"
-                  height="7"
-                  patternUnits="userSpaceOnUse"
-                >
-                  <path d="M0 3.5H7M3.5 0V7" />
-                </pattern>
                 {BRAIN_PRESENTATION.map((piece) => (
                   <clipPath id={`piece-boundary-${piece.id}`} key={piece.id}>
                     <path d={piece.path} />
@@ -268,14 +219,9 @@ export function BrainMap({
                   const presentation = BRAIN_PRESENTATION_BY_ID.get(piece.id);
                   if (!presentation) return null;
                   const state = ownershipState(piece, account);
-                  const moodValue = piece.options[piece.preset]?.value ?? 0;
-                  const influence =
-                    (piece.weight - minWeight) /
-                    Math.max(1, maxWeight - minWeight);
                   const classes = [
                     "brain-cell",
                     `ownership-${state}`,
-                    `mood-${moodValue < 0 ? `n${Math.abs(moodValue)}` : `p${moodValue}`}`,
                     selectedId === piece.id ? "selected" : "",
                     hoveredId === piece.id ? "hovered" : "",
                     highlightedCrew === piece.crew ||
@@ -289,11 +235,6 @@ export function BrainMap({
                   return (
                     <g
                       className={classes}
-                      style={
-                        {
-                          "--influence": influence.toFixed(3),
-                        } as CSSProperties
-                      }
                       key={piece.id}
                       data-region={presentation.region}
                       data-crew={piece.crew}
@@ -431,8 +372,7 @@ export function BrainMap({
         </div>
       </div>
 
-      <ModeLegend
-        mode={mode}
+      <CharacterLegend
         pieces={pieces}
         account={account}
         highlightedCrew={highlightedCrew}
@@ -450,8 +390,7 @@ export function BrainMap({
   );
 }
 
-function ModeLegend({
-  mode,
+function CharacterLegend({
   pieces,
   account,
   highlightedCrew,
@@ -459,7 +398,6 @@ function ModeLegend({
   onCrewHighlight,
   onMineHighlight,
 }: {
-  mode: BrainMapMode;
   pieces: MapPiece[];
   account: string | null;
   highlightedCrew: string | null;
@@ -486,87 +424,27 @@ function ModeLegend({
       Yours ({mineCount}) · double outline
     </button>
   );
-  if (mode === "characters") {
-    const crews = [...new Set(pieces.map((piece) => piece.crew))];
-    return (
-      <div className="map-legend" aria-label="Character crew legend">
-        <p>
-          {mineHighlighted
-            ? "Your pieces highlighted. Select Yours again to clear."
-            : highlightedCrew
-              ? `${highlightedCrew} highlighted. Select it again to clear.`
-              : "Select a crew or Yours to highlight its members."}
-        </p>
-        {ownershipKey}
-        {crews.map((crew) => (
-          <button
-            className={`crew-legend-button${highlightedCrew === crew ? " active" : ""}`}
-            key={crew}
-            aria-pressed={highlightedCrew === crew}
-            onClick={() => onCrewHighlight(crew)}
-          >
-            <i className="legend-character" />
-            {crew} ({pieces.filter((piece) => piece.crew === crew).length})
-          </button>
-        ))}
-      </div>
-    );
-  }
-  if (mode === "ownership") {
-    const counts = { unowned: 0, owned: 0, mine: 0 };
-    pieces.forEach((piece) => counts[ownershipState(piece, account)]++);
-    return (
-      <div className="map-legend" aria-label="Ownership legend">
-        <span>
-          <i className="legend-unowned" />
-          Unowned ({counts.unowned})
-        </span>
-        <span>
-          <i className="legend-owned" />
-          Other owners ({counts.owned})
-        </span>
-        <span>
-          <i className="legend-mine-halo" />
-          Yours ({counts.mine}) · double outline
-        </span>
-      </div>
-    );
-  }
-  if (mode === "influence") {
-    return (
-      <div className="map-legend" aria-label="Influence legend">
-        {ownershipKey}
-        <span>
-          <i className="legend-influence-low" />
-          Light: lower influence
-        </span>
-        <span>
-          <i className="legend-influence-mid" />
-          Medium
-        </span>
-        <span>
-          <i className="legend-influence-high" />
-          Dark: higher influence
-        </span>
-      </div>
-    );
-  }
+  const crews = [...new Set(pieces.map((piece) => piece.crew))];
   return (
-    <div className="map-legend" aria-label="Mood legend">
+    <div className="map-legend" aria-label="Character crew legend">
+      <p>
+        {mineHighlighted
+          ? "Your pieces highlighted. Select Yours again to clear."
+          : highlightedCrew
+            ? `${highlightedCrew} highlighted. Select it again to clear.`
+            : "Select a crew or Yours to highlight its members."}
+      </p>
       {ownershipKey}
-      {[-2, -1, 0, 1, 2].map((value) => (
-        <span key={value}>
-          <i
-            className={`legend-mood legend-mood-${value < 0 ? `n${Math.abs(value)}` : `p${value}`}`}
-          />
-          {value > 0 ? `+${value}` : value} (
-          {
-            pieces.filter(
-              (piece) => (piece.options[piece.preset]?.value ?? 0) === value,
-            ).length
-          }
-          )
-        </span>
+      {crews.map((crew) => (
+        <button
+          className={`crew-legend-button${highlightedCrew === crew ? " active" : ""}`}
+          key={crew}
+          aria-pressed={highlightedCrew === crew}
+          onClick={() => onCrewHighlight(crew)}
+        >
+          <i className="legend-character" />
+          {crew} ({pieces.filter((piece) => piece.crew === crew).length})
+        </button>
       ))}
     </div>
   );

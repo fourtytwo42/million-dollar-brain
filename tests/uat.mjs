@@ -136,10 +136,12 @@ try {
       name: /Selected brain piece:/,
     })
     .waitFor();
-  for (const mode of ["Ownership", "Influence", "Mood", "Characters"]) {
-    await page.getByRole("button", { name: mode, exact: true }).click();
-    await page.locator(`svg.brain-map.mode-${mode.toLowerCase()}`).waitFor();
-  }
+  assert.equal(
+    await page.getByLabel("Brain map view").count(),
+    0,
+    "the Brain must not expose the removed map-mode selector",
+  );
+  await page.locator("svg.brain-map.mode-characters").waitFor();
   for (const [crew, expected] of [
     ["Executive Dysfunction", 6],
     ["Market Mystics", 12],
@@ -533,7 +535,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 v2 portraits, anatomical segment manifest, four map modes, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: 42 v2 portraits, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, relocated inspector, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

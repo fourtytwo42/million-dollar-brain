@@ -27,5 +27,5 @@ The magenta sources were keyed with the ImageGen chroma-key helper, downsampled 
 - Theme-aware vector backplates remain visible below transparent portrait areas.
 - The anatomical distribution is 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces. These labels guide placement only: every cell is tessellated inside the same continuous outer mask. This presentation grouping does not alter catalog IDs or economics.
 - Characters mode uses 58% opacity and 35% saturation at rest, 85% on preview, and full color on selection.
-- Ownership, Influence, and Mood may neutralize portraits while accessible legends and the selected-piece inspector communicate the underlying value.
+- The Brain keeps one character-first portrait treatment. Ownership remains visible through the halo and `Yours` filter; influence and current mood remain explicit in accessible labels, tooltips, and the selected-piece inspector.
 - Accessible names come from catalog data, not text embedded in the image.

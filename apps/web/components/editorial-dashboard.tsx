@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import { BrainMap } from "./brain-map";
-import type { BrainMapMode } from "../lib/brain-presentation";
 
 type BrainOption = {
   label: string;
@@ -128,7 +127,6 @@ export function EditorialDashboard({
   onCancelRedemption: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
-  const [brainMode, setBrainMode] = useState<BrainMapMode>("characters");
   const [selectedCycleHash, setSelectedCycleHash] = useState<string | null>(
     null,
   );
@@ -249,8 +247,6 @@ export function EditorialDashboard({
               pieces={data?.pieces ?? []}
               selectedId={selectedId}
               account={account}
-              mode={brainMode}
-              onModeChange={setBrainMode}
               onSelect={setSelectedId}
             />
             {selected && (

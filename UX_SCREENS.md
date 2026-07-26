@@ -122,7 +122,8 @@ Use a `See why` action to open the latest decision.
 - Selected overlay may show ownership, weight, preset, price, or recent change.
 - Hover or tap shows piece name, current preset, influence, owner status, and price.
 - Selecting a piece opens the Brain Piece drawer.
-- Personally owned pieces retain a double-outline ownership halo in all map modes.
+- The Brain has one character-first map rather than a Characters/Ownership/Influence/Mood selector. Ownership is shown by the permanent halo; influence and current mood remain in the tooltip and inspector.
+- Personally owned pieces retain a double-outline ownership halo on the map.
 - A textual `Yours (n) · double outline` key communicates the connected wallet's count without relying on color alone. It acts like a crew filter: select it to highlight only the wallet's pieces and select it again to clear.
 
 The brain itself is the NFT marketplace. There is no separate marketplace page.

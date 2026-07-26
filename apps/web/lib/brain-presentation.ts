@@ -1,5 +1,3 @@
-export type BrainMapMode = "characters" | "ownership" | "influence" | "mood";
-
 export type BrainDirection = "up" | "down" | "left" | "right";
 export type BrainRegion = "cerebrum" | "cerebellum" | "brainstem";
 

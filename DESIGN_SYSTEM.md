@@ -171,12 +171,12 @@ Automated and manual testing still validates rendered contrast after font weight
 - Dense desktop tables become labeled cards below 768 pixels.
 - The 42-piece brain remains an SVG interaction map and never makes raster pixels responsible for hit testing, focus, selection, or ownership state.
 - The visual layer uses one continuous anatomically traced lateral-brain SVG silhouette plus 42 individually generated, versioned transparent character portraits. Cerebrum, cerebellum, and brainstem remain semantic placement metadata, but they do not create separate outer outlines or disconnected masks.
-- Characters is the default map mode. Ownership, Influence, and Mood use semantic fills, patterns, textual counts, and accessible names so color never carries meaning alone.
-- The four crew labels below Characters mode are toggle buttons. Activating one brings that crew to full color, strengthens its boundaries, mutes non-members, exposes `aria-pressed`, and clears when activated again.
+- The Brain uses one character-first map rather than a visualization-mode selector. Ownership remains visible through the permanent halo and `Yours` filter; influence and current mood remain explicit in tooltips and the selected-piece inspector.
+- The four crew labels below the map are toggle buttons. Activating one brings that crew to full color, strengthens its boundaries, mutes non-members, exposes `aria-pressed`, and clears when activated again.
 - Crew identity must never form horizontal catalog-order bands. The presentation manifest uses a fixed visual-slot permutation that scatters every crew across the width and height of the brain while preserving canonical piece IDs.
 - Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
 - The inspector permanently owns the desktop right rail and Brain Pulse is a compact full-width summary strip. The Brain screen ends after the primary map and inspector; basket information belongs on the dedicated Basket screen.
-- A connected wallet's pieces retain a positive-color double-outline halo in every map mode. The textual `Yours (n) · double outline` key is interactive: selecting it mutes non-owned pieces like a crew filter, and selecting it again clears the filter. This makes the treatment discoverable and ensures color is not the only ownership signal.
+- A connected wallet's pieces retain a positive-color double-outline halo on the map. The textual `Yours (n) · double outline` key is interactive: selecting it mutes non-owned pieces like a crew filter, and selecting it again clears the filter. This makes the treatment discoverable and ensures color is not the only ownership signal.
 - Mobile provides Map and searchable List views. Zoom is clamped to 1 through 2.5 times inside a native scrolling viewport.
 - The map does not overlay piece numbers or generic glyphs on the portraits. Catalog names remain available through accessible labels and the selected-piece ledger.
 - The generated art direction and canonical asset paths are defined in `design/brain-art/README.md`.
