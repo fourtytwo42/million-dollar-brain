@@ -54,6 +54,7 @@ The AI does not custody assets or control a private key. It proposes portfolio t
 
 - Arbitrary user-authored brain text.
 - AI-controlled private keys or unrestricted tool use.
+- Docker, container images, or container-orchestrated deployment.
 - AI discovery or purchase of arbitrary token contracts.
 - Leverage, borrowing, lending, shorting, options, or perpetual futures.
 - Permissionless asset listing.
@@ -791,6 +792,7 @@ Safety metrics:
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
 - Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
+- Application services and dependencies are installed directly on the Ubuntu VM and run as native `systemd` services. Docker is not used.
 - The AI returns only constrained target weights for approved assets.
 - OpenRouter and the local appliance are supported behind one provider interface.
 - Ornith 1.0 35B MoE Q5_K_M on GPU45 is the primary portfolio allocator.
