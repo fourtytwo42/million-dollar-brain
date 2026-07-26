@@ -10,40 +10,48 @@ page.on("pageerror", (error) => errors.push(error.message));
 
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByText("Own a thought.").waitFor();
+  await mkdir("var", { recursive: true });
   assert.equal(
-    await page.locator(".piece").count(),
+    await page.locator(".brain-cell").count(),
     42,
-    "the complete 42-piece brain must render",
+    "the complete 42-segment SVG brain must render",
+  );
+  assert.equal(
+    await page
+      .locator("svg.brain-map > path, svg.brain-map g.brain-cell > path")
+      .count(),
+    43,
+    "the brain must include one silhouette and exactly 42 interactive paths",
   );
   await page
-    .getByRole("heading", { name: "The Number-Go-Up Department" })
+    .getByRole("heading", { name: "The Number-Go-Up Department", exact: true })
     .waitFor();
-  await page.getByRole("heading", { name: "Silicon-Valley Brain" }).waitFor();
-  await page.getByRole("heading", { name: "Meme Lord" }).waitFor();
-  await page.getByText("Forty-two weird little minds.").waitFor();
+  await page.getByText("BRAIN PULSE", { exact: false }).waitFor();
+  await page.getByText("BASKET SNAPSHOT", { exact: false }).waitFor();
   assert.equal(
     await page.getByText("Risk-on", { exact: true }).count(),
     0,
     "generic placeholder presets must not render",
-  );
-  await page.getByRole("button", { name: "Sector Weirdos" }).click();
-  assert.equal(
-    await page.locator(".piece").count(),
-    16,
-    "crew filters must expose the sixteen sector characters",
-  );
-  await page.getByRole("button", { name: "All minds" }).click();
-  assert.equal(
-    await page.locator(".piece").count(),
-    42,
-    "All minds must restore the complete collection",
   );
   await page.getByRole("button", { name: "Fund dev wallet" }).click();
   await page
     .getByText("Wallet funded with 100,000 test USDG and 2 test ETH.")
     .waitFor({ timeout: 30000 });
 
+  await page.getByRole("button", { name: /Buy (piece|next)/ }).click();
+  await page
+    .getByText(/Brain piece \d+ is now yours\./)
+    .waitFor({ timeout: 45000 });
+  const selectedMood = page.getByRole("button", {
+    name: "+2 Moon With Seatbelts",
+    exact: true,
+  });
+  await selectedMood.click();
+  await page
+    .getByText(/now sets .+ to Moon With Seatbelts\./)
+    .waitFor({ timeout: 30000 });
+
+  await page.getByRole("button", { name: "Basket", exact: true }).click();
   const amount = page.getByLabel("Deposit USDG");
   await amount.fill("1000");
   await page.getByRole("button", { name: "Deposit USDG" }).click();
@@ -51,30 +59,15 @@ try {
     .getByText("Deposit complete. The 1% entry fee was routed on-chain.")
     .waitFor({ timeout: 45000 });
 
-  const capitalObjective = page.locator(".piece", {
-    has: page.getByRole("heading", { name: "The Number-Go-Up Department" }),
-  });
-  await capitalObjective.getByRole("button", { name: /Buy/ }).click();
-  await page
-    .getByText(/Brain piece \d+ is now yours\./)
-    .waitFor({ timeout: 45000 });
-  const ownedSelect = capitalObjective.getByLabel(
-    "Mood for The Number-Go-Up Department",
-  );
-  assert.equal(
-    await ownedSelect.locator("option").count(),
-    5,
-    "every brain piece must expose five closed moods",
-  );
-  await ownedSelect.selectOption("4");
-  await page.getByText(/now sets .+ to .+\./).waitFor({ timeout: 30000 });
-
   await amount.fill("100");
   await page.getByRole("button", { name: "Deposit USDG" }).click();
   await page
     .getByText("Deposit complete. The 1% entry fee was routed on-chain.")
     .waitFor({ timeout: 45000 });
-  const claim = page.getByRole("button", { name: "Claim brain rewards" });
+  const claim = page.getByRole("button", {
+    name: "Claim brain rewards",
+    exact: true,
+  });
   await claim.waitFor({ state: "visible" });
   assert.equal(
     await claim.isEnabled(),
@@ -95,9 +88,18 @@ try {
     true,
     `authorized allocation cycle failed: ${await cycleResponse.text()}`,
   );
-  await page.getByRole("button", { name: "Refresh on-chain state" }).click();
+  await page.getByRole("button", { name: "Decisions", exact: true }).click();
   await page
-    .getByRole("button", { name: "Redeem half of my liquid shares" })
+    .getByRole("heading", { name: "From collective brain to bounded trade." })
+    .waitFor();
+  await page.getByText("Brain requested").waitFor();
+  await page.getByText("Ornith proposed").waitFor();
+  await page.getByText("Protocol executed").waitFor();
+  await page.screenshot({ path: "var/uat-decisions.png", fullPage: true });
+  await page.getByRole("button", { name: "Basket", exact: true }).click();
+  await page.screenshot({ path: "var/uat-basket.png", fullPage: true });
+  await page
+    .getByRole("button", { name: "Redeem half my liquid shares" })
     .click();
   await page
     .getByText(
@@ -105,7 +107,7 @@ try {
     )
     .waitFor({ timeout: 45000 });
   await page
-    .getByText(/Redemption #\d+ is escrowed in the FIFO queue\./)
+    .getByRole("button", { name: /Cancel queued redemption #\d+/ })
     .waitFor();
   const settlementCycle = await page.request.post(`${baseUrl}/api/cycle`, {
     headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
@@ -122,22 +124,20 @@ try {
     /^0x[0-9a-f]{64}$/i,
     "hourly cycle must submit a queued-redemption settlement transaction",
   );
-  await page.getByRole("button", { name: "Refresh on-chain state" }).click();
   await page
-    .getByText(/Redemption #\d+ is escrowed in the FIFO queue\./)
-    .waitFor();
-  await page.getByRole("button", { name: "Cancel queued redemption" }).click();
+    .getByRole("button", { name: /Cancel queued redemption #\d+/ })
+    .click();
   await page
     .getByText("Queued redemption cancelled; escrowed shares returned.")
     .waitFor({ timeout: 45000 });
 
-  await mkdir("var", { recursive: true });
+  await page.getByRole("button", { name: "Brain", exact: true }).click();
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
   await page.getByRole("button", { name: "Dark" }).click();
   await page.screenshot({ path: "var/uat-dashboard-dark.png", fullPage: true });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: 42 collectible brain characters and five-option moods rendered; wallet funding, deposit, brain purchase, memeable preset update, reward claim, authorized allocation cycle, partial queued settlement, and cancellation completed in Chromium.",
+    "UAT PASS: normative three-screen editorial shell and accessible 42-path SVG brain rendered; funding, brain purchase, mood update, deposit, reward claim, decision explanation, queued settlement, cancellation, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

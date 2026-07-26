@@ -11,6 +11,7 @@ import {
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
+import { EditorialDashboard } from "./editorial-dashboard";
 
 type BrainOption = {
   label: string;
@@ -88,6 +89,10 @@ export function BrainDashboard() {
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [crewFilter, setCrewFilter] = useState("All minds");
+  const [screen, setScreen] = useState<"Brain" | "Basket" | "Decisions">(
+    "Brain",
+  );
+  const [selectedId, setSelectedId] = useState(1);
   const account = useMemo(() => (key ? privateKeyToAccount(key) : null), [key]);
 
   async function refresh() {
@@ -277,6 +282,55 @@ export function BrainDashboard() {
       (piece) =>
         account && piece.owner.toLowerCase() === account.address.toLowerCase(),
     ).length ?? 0;
+  const editorial = true;
+  if (editorial) {
+    return (
+      <EditorialDashboard
+        data={data}
+        account={account?.address ?? null}
+        message={message}
+        dark={dark}
+        screen={screen}
+        selectedId={selectedId}
+        amount={amount}
+        setAmount={setAmount}
+        setScreen={setScreen}
+        setSelectedId={setSelectedId}
+        onToggleTheme={() => setDark(!dark)}
+        onFaucet={() => faucet().catch((error) => setMessage(error.message))}
+        onDeposit={() =>
+          deposit().catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onRedeem={() =>
+          redeem().catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onBuy={(piece) =>
+          buy(piece).catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onPreset={(piece, value) =>
+          preset(piece, value).catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onClaim={() =>
+          claimRewards().catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onCancelRedemption={() =>
+          cancelRedemption().catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+      />
+    );
+  }
   return (
     <main className={dark ? "dark" : ""}>
       <section className="shell">

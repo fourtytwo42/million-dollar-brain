@@ -6,6 +6,8 @@ MillionDollar Brain is a proposed DeFi basket protocol for Robinhood Chain. Bask
 
 Usable local-devnet release running natively on the project VM. It includes upgradeable protocol contracts, a built-in browser development wallet, the complete 42-piece ERC-721 brain, entry and redemption economics, brain-owner claims, a creator vault, immediate and queued exits, an hourly keeper, and constrained Ornith allocation cycles.
 
+The live application follows the normative editorial mockups: its Brain view uses an accessible 42-path SVG as the marketplace, Brain Pulse explains the compiled state, Basket provides the portfolio ledger and user actions, and Decisions shows the Brain requested, Ornith proposed, and Protocol executed chain.
+
 This is still a simulation. The allowlist contains mock USDG, NVDA, AAPL, and ETHX assets on Anvil; no Robinhood testnet/mainnet contracts or real funds are enabled.
 
 ## Local release

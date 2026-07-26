@@ -7,6 +7,8 @@
 
 The native VM release implements the complete catalog-v3 collection: 42 named ERC-721 characters, four crews, protocol-authored lore, five closed moods per character, immutable portfolio affinities, and signed intensity from -2 through +2. It also implements always-for-sale pricing, basket shares, 1% entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault, owner reward claims, 1%-of-NAV immediate redemption, cancellable FIFO queued redemption with partial 5%-of-NAV hourly settlement, structured allocator context, deterministic output validation, keeper authentication, and systemd scheduling.
 
+The frontend now implements the normative screen hierarchy rather than a consolidated card dashboard: an accessible interactive 42-path SVG Brain marketplace with Brain Pulse and selected-piece ledger, a separate Basket ledger view, and a Decisions explanation view. Both editorial light and dark modes were visually compared against the accepted PRD mockups.
+
 The Anvil universe intentionally uses four mocks: USDG, NVDA, AAPL, and ETHX. Robinhood Chain asset discovery, canonical live manifests, production oracle/DEX adapters, full ten-position risk limits, multisig/timelock administration, observability, legal review, and independent audits remain release gates rather than unfinished local-product interactions.
 
 ## 1. Purpose
