@@ -136,6 +136,32 @@ try {
     await page.getByRole("button", { name: mode, exact: true }).click();
     await page.locator(`svg.brain-map.mode-${mode.toLowerCase()}`).waitFor();
   }
+  const mysticsCrew = page.getByRole("button", {
+    name: "Market Mystics (12)",
+    exact: true,
+  });
+  await mysticsCrew.click();
+  assert.equal(
+    await mysticsCrew.getAttribute("aria-pressed"),
+    "true",
+    "the selected crew legend must expose its active state",
+  );
+  assert.equal(
+    await page.locator(".brain-cell.crew-highlight").count(),
+    12,
+    "clicking Market Mystics must highlight exactly its 12 members",
+  );
+  assert.equal(
+    await page.locator("svg.brain-map.has-crew-filter").count(),
+    1,
+    "crew highlighting must visually mute non-members",
+  );
+  await mysticsCrew.click();
+  assert.equal(
+    await page.locator(".brain-cell.crew-highlight").count(),
+    0,
+    "clicking the active crew again must clear the highlight",
+  );
   const selectedSegment = page.locator(".brain-cell[aria-current=true]");
   await selectedSegment.focus();
   await page.getByRole("tooltip").waitFor();

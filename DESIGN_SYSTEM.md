@@ -170,6 +170,7 @@ Automated and manual testing still validates rendered contrast after font weight
 - The 42-piece brain remains an SVG interaction map and never makes raster pixels responsible for hit testing, focus, selection, or ownership state.
 - The visual layer uses one continuous anatomically traced lateral-brain SVG silhouette plus 42 individually generated, versioned transparent character portraits. Cerebrum, cerebellum, and brainstem remain semantic placement metadata, but they do not create separate outer outlines or disconnected masks.
 - Characters is the default map mode. Ownership, Influence, and Mood use semantic fills, patterns, textual counts, and accessible names so color never carries meaning alone.
+- The four crew labels below Characters mode are toggle buttons. Activating one brings that crew to full color, strengthens its boundaries, mutes non-members, exposes `aria-pressed`, and clears when activated again.
 - Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
 - The inspector permanently owns the desktop right rail. Brain Pulse is a compact full-width summary strip, and Basket Snapshot follows the primary map and inspector.
 - Mobile provides Map and searchable List views. Zoom is clamped to 1 through 2.5 times inside a native scrolling viewport.

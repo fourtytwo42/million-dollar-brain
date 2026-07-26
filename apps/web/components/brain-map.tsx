@@ -90,6 +90,7 @@ export function BrainMap({
   const [zoom, setZoom] = useState(1);
   const [mobileView, setMobileView] = useState<"map" | "list">("map");
   const [query, setQuery] = useState("");
+  const [highlightedCrew, setHighlightedCrew] = useState<string | null>(null);
   const segmentRefs = useRef(new Map<number, SVGGElement>());
   const pieceById = useMemo(
     () => new Map(pieces.map((piece) => [piece.id, piece])),
@@ -225,7 +226,7 @@ export function BrainMap({
             data-zoom={zoom.toFixed(2)}
           >
             <svg
-              className={`brain-map mode-${mode}`}
+              className={`brain-map mode-${mode}${highlightedCrew ? " has-crew-filter" : ""}`}
               viewBox="0 0 760 435"
               role="group"
               aria-label="Interactive 42-piece brain marketplace"
@@ -276,6 +277,7 @@ export function BrainMap({
                     `mood-${moodValue < 0 ? `n${Math.abs(moodValue)}` : `p${moodValue}`}`,
                     selectedId === piece.id ? "selected" : "",
                     hoveredId === piece.id ? "hovered" : "",
+                    highlightedCrew === piece.crew ? "crew-highlight" : "",
                   ]
                     .filter(Boolean)
                     .join(" ");
@@ -290,6 +292,7 @@ export function BrainMap({
                       }
                       key={piece.id}
                       data-region={presentation.region}
+                      data-crew={piece.crew}
                       role="button"
                       tabIndex={selectedId === piece.id ? 0 : -1}
                       aria-label={label}
@@ -417,7 +420,15 @@ export function BrainMap({
         </div>
       </div>
 
-      <ModeLegend mode={mode} pieces={pieces} account={account} />
+      <ModeLegend
+        mode={mode}
+        pieces={pieces}
+        account={account}
+        highlightedCrew={highlightedCrew}
+        onCrewHighlight={(crew) =>
+          setHighlightedCrew((current) => (current === crew ? null : crew))
+        }
+      />
     </div>
   );
 }
@@ -426,21 +437,34 @@ function ModeLegend({
   mode,
   pieces,
   account,
+  highlightedCrew,
+  onCrewHighlight,
 }: {
   mode: BrainMapMode;
   pieces: MapPiece[];
   account: string | null;
+  highlightedCrew: string | null;
+  onCrewHighlight: (crew: string) => void;
 }) {
   if (mode === "characters") {
     const crews = [...new Set(pieces.map((piece) => piece.crew))];
     return (
       <div className="map-legend" aria-label="Character crew legend">
-        <p>Portraits stay quiet until focused or selected.</p>
+        <p>
+          {highlightedCrew
+            ? `${highlightedCrew} highlighted. Select it again to clear.`
+            : "Select a crew to highlight its members."}
+        </p>
         {crews.map((crew) => (
-          <span key={crew}>
+          <button
+            className={`crew-legend-button${highlightedCrew === crew ? " active" : ""}`}
+            key={crew}
+            aria-pressed={highlightedCrew === crew}
+            onClick={() => onCrewHighlight(crew)}
+          >
             <i className="legend-character" />
             {crew} ({pieces.filter((piece) => piece.crew === crew).length})
-          </span>
+          </button>
         ))}
       </div>
     );

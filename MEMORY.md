@@ -5,7 +5,7 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish and verify the usable local-devnet release on VM `192.168.50.135`.
-- Last meaningful change: Replaced the failed three-blob anatomy with one continuous SVG silhouette traced from the anatomically convincing source artwork; all 42 cells now share that mask.
+- Last meaningful change: Made the four character-crew legend labels interactive toggles that highlight crew members and mute non-members without changing piece selection.
 - Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
@@ -93,6 +93,7 @@ When sources conflict, use this order:
 - 2026-07-25: Calculated the selected light and dark semantic color-pair contrast baselines recorded in `DESIGN_SYSTEM.md`.
 - 2026-07-25: Audited normative Markdown files for remaining open implementation decisions and replaced the PRD open-decision list with external production gates.
 - 2026-07-26: Verified the anatomical Brain redesign with a clean Next.js production build, Prettier, all 42 region assignments, light/dark/mobile screenshots, the complete Chromium economic flow, and a live autonomous allocation cycle.
+- 2026-07-26: Verified interactive crew filtering in Chromium: Market Mystics highlights exactly 12 pieces, applies an accessible pressed state, mutes the other 30, and clears on a second activation.
 
 ## Decisions
 
@@ -136,6 +137,15 @@ When sources conflict, use this order:
 - Commands/tests: Prettier, Next.js production build, clean-state Chromium UAT, live Ornith cycle, light/dark/mobile screenshot review.
 - Result: The mosaic has a recognizable continuous lateral brain profile without changing NFT identities, contracts, APIs, wallet behavior, or economics.
 - Follow-up: None for local release; retain the single shared outer mask if portrait transforms are adjusted later.
+
+### 2026-07-26 - Interactive Crew Highlighting
+
+- Context: Crew names below Characters mode were static labels even though users naturally expected them to explain which portraits belong together.
+- Decision: Convert all four crew labels into toggle buttons. The active crew uses full-color portraits, stronger boundaries, and a subtle fill while non-members are muted. Preserve the selected piece and all economic behavior.
+- Files: `apps/web/components/brain-map.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `DESIGN_SYSTEM.md`, `PRD.md`.
+- Commands/tests: Prettier, Next.js production build, clean-state Chromium UAT, Market Mystics 12-member assertion, toggle-clear assertion.
+- Result: Executive Dysfunction, Market Mystics, Sector Weirdos, and Decision Goblins can each be isolated directly from the legend with accessible pressed-state feedback.
+- Follow-up: None.
 
 ### 2026-07-23 - User-Triggered Portfolio Reviews
 
