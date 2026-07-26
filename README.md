@@ -18,6 +18,10 @@ Product specification and architecture phase. No production contracts have been 
 - [Technology Stack](TECH_STACK.md)
 - [Chain, Asset, Wallet, and UAT Specification](CHAIN_COMPATIBILITY.md)
 
+## Design references
+
+- [Primary screen mockups](design/mockups/README.md)
+
 The PRD and the eight specifications listed after it form the authoritative requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a superseded historical concept note.
 
 ## Core design
