@@ -100,6 +100,14 @@ contract BasketVault is
         uint256 indexed requestId, address indexed account, uint256 shares, uint256 net, uint256 fee
     );
     event Rebalanced(bytes32 indexed cycleHash, uint256 navAfter);
+    event RebalanceAssetTraded(
+        bytes32 indexed cycleHash,
+        address indexed asset,
+        bool isBuy,
+        uint256 assetAmount,
+        uint256 usdgAmount,
+        uint256 valuationUsd
+    );
     event TargetWeightsUpdated(bytes32 indexed cycleHash, address[] assets, uint16[] weights);
     event BasketV2Configured(
         address indexed valuation, uint256 maximumPriceAge, uint256 maximumSlippageBps
@@ -388,8 +396,11 @@ contract BasketVault is
                 if (sellAmount > 0) {
                     uint256 expectedProceeds = (sellAmount * unitPrice) / 1e18;
                     IERC20(asset).approve(address(router), sellAmount);
-                    router.sell(
+                    uint256 usdgReceived = router.sell(
                         asset, sellAmount, (expectedProceeds * (BPS - maximumSlippageBps)) / BPS
+                    );
+                    emit RebalanceAssetTraded(
+                        cycleHash, asset, false, sellAmount, usdgReceived, expectedProceeds
                     );
                 }
             }
@@ -405,7 +416,10 @@ contract BasketVault is
                     uint256 minimumOut = (buyValue * 1e18 * (BPS - maximumSlippageBps))
                         / (_unitPrice(asset) * BPS);
                     usdg.approve(address(router), buyValue);
-                    router.buy(asset, buyValue, minimumOut);
+                    uint256 assetReceived = router.buy(asset, buyValue, minimumOut);
+                    emit RebalanceAssetTraded(
+                        cycleHash, asset, true, assetReceived, buyValue, buyValue
+                    );
                 }
             }
         }

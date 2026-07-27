@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import { Test } from "forge-std/Test.sol";
+import { Vm } from "forge-std/Vm.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { MockToken } from "../src/MockToken.sol";
 import { MockRouter } from "../src/MockRouter.sol";
@@ -170,6 +171,49 @@ contract BasketBrainTest is Test {
         vm.prank(alice);
         basket.redeem(50e18, 1, block.timestamp + 1 hours);
         assertGt(usdg.balanceOf(alice), 90_000e18);
+    }
+
+    function testEventOnlyUpgradePreservesPoolStateAndEmitsRebalanceTrades() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+        uint256 supplyBefore = basket.totalSupply();
+        uint256 navBefore = basket.totalAssetsUsd();
+        uint256 aliceBefore = basket.balanceOf(alice);
+        uint256 nextRequestBefore = basket.nextRedemptionRequestId();
+
+        BasketVault replacement = new BasketVault();
+        vm.prank(admin);
+        basket.upgradeToAndCall(address(replacement), "");
+
+        assertEq(basket.totalSupply(), supplyBefore);
+        assertEq(basket.totalAssetsUsd(), navBefore);
+        assertEq(basket.balanceOf(alice), aliceBefore);
+        assertEq(basket.nextRedemptionRequestId(), nextRequestBefore);
+        assertEq(basket.maximumSlippageBps(), 100);
+
+        address[] memory targets = new address[](3);
+        uint16[] memory weights = new uint16[](3);
+        targets[0] = address(usdg);
+        targets[1] = address(nvda);
+        targets[2] = address(aapl);
+        weights[0] = 2_000;
+        weights[1] = 6_000;
+        weights[2] = 2_000;
+        vm.recordLogs();
+        vm.prank(admin);
+        basket.rebalance(targets, weights, keccak256("event-cycle"));
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 signature =
+            keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
+        uint256 tradeEvents;
+        for (uint256 i; i < logs.length; ++i) {
+            if (logs[i].topics.length > 0 && logs[i].topics[0] == signature) {
+                tradeEvents += 1;
+            }
+        }
+        assertGt(tradeEvents, 0);
     }
 
     function testBootstrapDepositBuysEveryPositiveTargetWithoutDilution() public {
