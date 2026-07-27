@@ -339,6 +339,19 @@ export function EditorialDashboard({
       (dependency) => data?.dataAvailability[dependency] === true,
     ) ?? false;
   const latestAllocation = data?.latestCycle?.allocation ?? { USDG: 10000 };
+  const holdingSlices = data
+    ? positiveBalanceSymbols(data.holdings).map((symbol) => {
+        const value = BigInt(data.holdingValues[symbol] ?? "0");
+        const nav = BigInt(data.nav);
+        return {
+          symbol,
+          value,
+          currentPercent:
+            nav > 0n ? Number((value * 1_000_000n) / nav) / 10_000 : 0,
+          targetPercent: (latestAllocation[symbol] ?? 0) / 100,
+        };
+      })
+    : [];
   const decisionHistory =
     data?.cycleHistory ?? (data?.latestCycle ? [data.latestCycle] : []);
   const selectedCycle =
@@ -750,29 +763,80 @@ export function EditorialDashboard({
                   }
                 />
               </div>
-              <h2>Current holdings and Ornith targets</h2>
-              <div className="holding-table">
-                {data &&
-                  positiveBalanceSymbols(data.holdings).map((symbol) => {
-                    const value = data.holdingValues[symbol] ?? "0";
-                    const current =
-                      (Number(value) / Math.max(1, Number(data.nav))) * 100;
-                    const target = (latestAllocation[symbol] ?? 0) / 100;
-                    return (
-                      <div
-                        key={symbol}
-                        data-testid="basket-holding-row"
-                        data-symbol={symbol}
-                      >
-                        <b>{symbol}</b>
-                        <span>{current.toFixed(2)}%</span>
-                        <i>
-                          <u style={{ width: `${current}%` }} />
-                        </i>
-                        <em>{target.toFixed(2)}% target</em>
-                      </div>
-                    );
-                  })}
+              <div className="holding-chart-heading">
+                <h2>Current portfolio distribution</h2>
+                <p>Live holdings compared with Ornith&apos;s latest targets.</p>
+              </div>
+              <div className="holding-distribution">
+                <figure className="holding-pie">
+                  <svg
+                    viewBox="0 0 200 200"
+                    role="img"
+                    aria-label={`Current portfolio distribution: ${holdingSlices
+                      .map(
+                        ({ symbol, currentPercent }) =>
+                          `${symbol} ${currentPercent.toFixed(2)}%`,
+                      )
+                      .join(", ")}`}
+                  >
+                    <circle
+                      className="holding-pie-track"
+                      cx="100"
+                      cy="100"
+                      r="70"
+                      pathLength="100"
+                    />
+                    {holdingSlices.map((slice, index) => {
+                      const offset = -holdingSlices
+                        .slice(0, index)
+                        .reduce((sum, item) => sum + item.currentPercent, 0);
+                      return (
+                        <circle
+                          key={slice.symbol}
+                          className="holding-pie-slice"
+                          cx="100"
+                          cy="100"
+                          r="70"
+                          pathLength="100"
+                          stroke={`var(--asset-${slice.symbol.toLowerCase()})`}
+                          strokeDasharray={`${slice.currentPercent} ${100 - slice.currentPercent}`}
+                          strokeDashoffset={offset}
+                        >
+                          <title>
+                            {slice.symbol}: {slice.currentPercent.toFixed(2)}%
+                          </title>
+                        </circle>
+                      );
+                    })}
+                  </svg>
+                  <figcaption>
+                    <span>LIVE BASKET</span>
+                    <strong>{holdingSlices.length}</strong>
+                    <small>assets held</small>
+                  </figcaption>
+                </figure>
+                <div className="holding-legend">
+                  {holdingSlices.map((slice) => (
+                    <div
+                      key={slice.symbol}
+                      data-testid="basket-holding-row"
+                      data-symbol={slice.symbol}
+                    >
+                      <i
+                        aria-hidden="true"
+                        style={{
+                          background: `var(--asset-${slice.symbol.toLowerCase()})`,
+                        }}
+                      />
+                      <b>{slice.symbol}</b>
+                      <span>
+                        <strong>{slice.currentPercent.toFixed(2)}%</strong>
+                        <small>${money(slice.value.toString())}</small>
+                      </span>
+                      <em>{slice.targetPercent.toFixed(2)}% target</em>
+                    </div>
+                  ))}
+                </div>
               </div>
             </article>
             <aside

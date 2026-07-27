@@ -508,6 +508,19 @@ try {
     expectedHeldSymbols,
     "the Basket portfolio must render only assets with positive balances",
   );
+  await page
+    .getByRole("img", { name: /^Current portfolio distribution:/ })
+    .waitFor();
+  assert.equal(
+    await page.locator(".holding-pie-slice").count(),
+    expectedHeldSymbols.length,
+    "the portfolio pie must contain one slice for every held asset",
+  );
+  assert.equal(
+    await page.locator(".holding-table").count(),
+    0,
+    "the previous holdings bar table must not remain",
+  );
   assert.equal(
     await page.getByRole("region", { name: "Your brain finances" }).count(),
     0,
@@ -838,7 +851,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
+    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

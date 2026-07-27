@@ -218,22 +218,19 @@ This combines the previous Portfolio and My Account screens.
 
 ### Holdings
 
-Use a sortable table on desktop and cards on mobile:
+Lead with an accessible donut chart showing the live USD-value distribution of
+the basket. Each positively held asset receives one visually distinct slice.
+A compact legend beside the chart shows the exact current percentage, USD value,
+and latest Ornith target. On mobile, the legend moves below the chart.
 
 The portfolio view lists only assets with a positive on-chain basket balance.
 Configured, approved, or previously held assets with a zero balance are omitted
-from the holdings table rather than shown as 0% positions.
+from the chart and legend rather than shown as 0% positions. The chart has a
+complete textual accessible label, and the legend ensures color is never the only
+way distribution is communicated.
 
-- Asset and verified-contract link.
-- Asset class and important tags.
 - Current and target weights.
-- Allowed allocation band.
 - USD value.
-- Price age and data health.
-- Return, volatility, liquidity, and risk tier.
-- Buy, sell, hold, paused, sell-only, or frozen state.
-
-Selecting an asset opens the Asset drawer.
 
 ### Your position
 
