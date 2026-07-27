@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node/bin:/usr/bin:/bin"
 work="$(mktemp -d)"
-port="${MDB_REHEARSAL_PORT:-18546}"
+port="${MDB_REHEARSAL_PORT:-$((20000 + RANDOM % 20000))}"
 rpc="http://127.0.0.1:${port}"
 evidence="${MDB_TESTNET_REHEARSAL_EVIDENCE:-$repo_root/var/testnet-readiness/rehearsal.json}"
 manifest="$repo_root/packages/contracts/deployments/.rehearsal-46630.json"
@@ -16,14 +16,22 @@ cleanup() {
   rm -f "$manifest"
   rm -rf "$work"
 }
-trap cleanup EXIT
+trap cleanup EXIT HUP INT TERM
 
 for _ in $(seq 1 100); do
+  kill -0 "$anvil_pid" 2>/dev/null || {
+    cat "$work/anvil.log" >&2
+    exit 1
+  }
   if cast chain-id --rpc-url "$rpc" >/dev/null 2>&1 && [[ -s "$work/anvil.json" ]]; then
     break
   fi
   sleep 0.1
 done
+[[ -s "$work/anvil.json" ]] || {
+  cat "$work/anvil.log" >&2
+  exit 1
+}
 [[ "$(cast chain-id --rpc-url "$rpc")" == "46630" ]]
 
 deployer_key="$(jq -er '.private_keys[0]' "$work/anvil.json")"
