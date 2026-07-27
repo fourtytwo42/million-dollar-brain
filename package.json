@@ -13,11 +13,19 @@
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",
     "test:network": "node --experimental-strip-types --test tests/network-policy.test.ts",
+    "test:wallet": "node --experimental-strip-types --test tests/wallet-dependencies.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },
   "engines": {
     "node": ">=24.18.0"
+  },
+  "overrides": {
+    "@rainbow-me/rainbowkit@2.2.11": {
+      "cuer@0.0.3": {
+        "qr": "0.5.5"
+      }
+    }
   },
   "devDependencies": {
     "playwright": "1.62.0",

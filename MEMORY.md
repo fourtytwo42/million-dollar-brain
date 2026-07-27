@@ -12,8 +12,8 @@ Durable project context lives here. Update this file whenever information should
   separate native systemd environments, and no-broadcast release tooling are
   implemented. Testnet uses Robinhood's official public RPC for both server and
   browser traffic.
-- Next step: Run the final clean-commit readiness gate and browser UAT. Do not
-  broadcast public-testnet contracts without new explicit authorization.
+- Next step: Fund the testnet operator and obtain explicit authorization only
+  when the user is ready to broadcast. Do not deploy from the current task.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -383,8 +383,20 @@ build`; authenticated live `/api/collect-market`.
   require the official public RPC, clean pushed source, encrypted signer,
   funded balance, and explicit `MDB_TESTNET_BROADCAST=true`; no public-testnet
   broadcast is authorized.
+- 2026-07-27: Final local Chromium UAT passed the full economic, autonomous,
+  responsive, and dark-mode flow. In-app Browser UAT verified the session-only
+  disposable wallet, EIP-6963/RainbowKit wallet list, WalletConnect QR,
+  launchpad-style Buy/Sell controls, and live portfolio performance. The live
+  QR test found an incompatibility between `cuer@0.0.3` and `qr@0.6.0`;
+  `package.json` now overrides that nested dependency to `qr@0.5.5`, and the QR
+  rendered successfully after rebuild.
 - Configure a free FRED API key when macro observations are desired. Until configured, macro availability remains false and dependent brain effects correctly become inactive.
-- The latest stable Next.js 16.2.12 dependency tree still includes audited high-severity advisories through its pinned `postcss` and `sharp` packages. Do not treat the public demo tunnel as a production deployment; update and re-audit when upstream ships fixed compatible dependencies.
+- After wallet integration, `npm audit` reports 27 advisories: 22 moderate, 5
+  high, and 0 critical. The high findings include axios through Coinbase CDP,
+  Next.js dependencies `postcss` and `sharp`, and ws in the wagmi/viem graph;
+  npm's aggregate fix requires breaking framework changes. Do not treat the
+  public demo tunnel or rehearsal as production. Re-audit and remediate or
+  explicitly accept each finding before a real-value release.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.

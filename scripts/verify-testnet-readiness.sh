@@ -29,6 +29,7 @@ forge fmt --check packages/contracts/script/DeployTestnet.s.sol
 forge test --root packages/contracts
 forge inspect --root packages/contracts src/BasketVault.sol:BasketVault storage-layout >/dev/null
 npm run test:network
+npm run test:wallet
 npm run test:market-data
 npm exec --workspace apps/web tsc -- --noEmit
 scripts/rehearse-testnet.sh >/dev/null

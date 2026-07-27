@@ -16,6 +16,12 @@ will be considered only after measured rate limits or reliability failures.
 No public-testnet contracts have been broadcast. Testnet services remain
 disabled until a valid `packages/contracts/deployments/testnet.json` exists.
 
+`npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
+across the pinned wallet and Next.js dependency graph. The available aggregate
+fix requires breaking framework changes, so this rehearsal records the finding
+instead of silently forcing incompatible upgrades. Re-audit and remediate or
+accept each advisory before a real-value release.
+
 ## Wallet policy
 
 - External EIP-6963 and WalletConnect wallets are supported through wagmi,

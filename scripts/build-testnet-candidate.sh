@@ -31,6 +31,7 @@ export MDB_OPERATOR_PRIVATE_KEY="$(
 
 cd "$repo_root"
 npm run test:network
+npm run test:wallet
 npm --workspace apps/web run build
 
 forbidden='192\.168\.50\.117|127\.0\.0\.1:8545|localhost:8545|ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'

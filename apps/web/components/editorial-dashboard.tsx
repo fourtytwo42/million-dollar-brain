@@ -601,7 +601,7 @@ export function EditorialDashboard({
               <b>Disposable test wallet</b> {short(account)} · session only
             </span>
             <button onClick={onCopyWallet}>Copy address</button>
-            <button onClick={onResetWallet}>Reset</button>
+            <button onClick={onResetWallet}>Reset test wallet</button>
             <button onClick={onConnectWallet}>Use your wallet</button>
           </div>
         )}

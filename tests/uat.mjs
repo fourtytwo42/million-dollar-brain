@@ -370,7 +370,7 @@ try {
     .nth(affordablePiece.id - 1);
   await affordableCell.focus();
   await page.keyboard.press("Enter");
-  await page.getByRole("button", { name: "Fund dev wallet" }).click();
+  await page.getByRole("button", { name: "Fund test wallet" }).click();
   await page
     .getByText("Wallet funded with 100,000 test USDG and 2 test ETH.")
     .waitFor({ timeout: 30000 });
