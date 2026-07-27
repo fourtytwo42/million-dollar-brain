@@ -196,7 +196,11 @@ export function BrainDashboard() {
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? "Devnet unavailable");
     setData(body);
-    setMessage("Local devnet connected.");
+    setMessage((current) =>
+      current === "Connecting to local devnet…"
+        ? "Local devnet connected."
+        : current,
+    );
   }
   useEffect(() => {
     const saved = localStorage.getItem("mdb-dev-private-key") as
