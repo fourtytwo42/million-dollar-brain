@@ -12,6 +12,7 @@
     "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",
+    "test:network": "node --experimental-strip-types --test tests/network-policy.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },

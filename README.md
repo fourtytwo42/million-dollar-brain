@@ -4,11 +4,11 @@ MillionDollar Brain is a proposed DeFi basket protocol for Robinhood Chain. Bask
 
 ## Current status
 
-Usable local-devnet release running natively on the project VM. It includes upgradeable protocol contracts, a built-in browser development wallet, the complete 42-piece ERC-721 brain, entry and redemption economics, brain-owner claims, a creator vault, immediate and queued exits, an hourly keeper, and constrained Ornith allocation cycles.
+Usable local-devnet release running natively on the project VM. It includes upgradeable protocol contracts, disposable and external wallet support, the complete 42-piece ERC-721 brain, entry and redemption economics, brain-owner claims, a creator vault, atomic exits, an hourly keeper, and constrained Ornith allocation cycles.
 
 The live application follows the normative editorial system: its Brain view uses character roster v4, a 10-human/32-nonhuman financial fever-dream bureaucracy inside curved SVG segments, crew and personal-ownership filters, a character-led Brain Pulse, and a complete selected-piece inspector. Basket provides the portfolio ledger and user actions. Decisions shows the Brain requested, Ornith proposed, and Protocol executed chain plus deterministic Brain Drama, historical character statistics, downloadable recap cards, and prefilled social sharing.
 
-This is still a simulation. The allowlist contains mock USDG, NVDA, AAPL, and ETHX assets on Anvil; no Robinhood testnet/mainnet contracts or real funds are enabled.
+This is still a simulation. The allowlist contains mock USDG, NVDA, AAPL, and ETHX assets on Anvil. Robinhood Testnet configuration and an isolated chain-46630 rehearsal exist, but no public-testnet/mainnet contracts or real funds are enabled. See [TESTNET_READINESS.md](TESTNET_READINESS.md).
 
 ## Local release
 

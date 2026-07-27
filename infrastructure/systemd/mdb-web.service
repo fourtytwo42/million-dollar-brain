@@ -1,0 +1,22 @@
+[Unit]
+Description=MillionDollar Brain local-devnet web application
+After=network-online.target mdb-anvil.service mdb-deploy.service postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/local.env
+Environment=MDB_NETWORK_MODE=local
+Environment=PORT=3000
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/start-web.sh
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var /home/hendo420/projects/million-dollar-brain/apps/web/.next/cache
+
+[Install]
+WantedBy=multi-user.target

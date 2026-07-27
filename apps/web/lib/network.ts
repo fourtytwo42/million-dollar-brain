@@ -25,6 +25,45 @@ export type MdbServerNetworkConfig = MdbPublicNetworkConfig & {
   databaseName: string;
 };
 
+export function validateNetworkConfig(
+  resolved: MdbServerNetworkConfig,
+): MdbServerNetworkConfig {
+  if (
+    resolved.mode === "mainnet" &&
+    (resolved.builtInWalletEnabled || resolved.faucetEnabled)
+  ) {
+    throw new Error("Mainnet cannot enable built-in wallets or faucets");
+  }
+  if (
+    resolved.mode !== "local" &&
+    /^https?:\/\/(127\.0\.0\.1|localhost|192\.168\.)/i.test(
+      resolved.browserRpcUrl,
+    )
+  ) {
+    throw new Error("Public-network browser RPC must be public HTTPS");
+  }
+  if (
+    resolved.mode === "testnet" &&
+    resolved.serverRpcUrl !== "https://rpc.testnet.chain.robinhood.com"
+  ) {
+    throw new Error(
+      "Testnet server RPC must use the official Robinhood public endpoint",
+    );
+  }
+  if (
+    resolved.mode === "testnet" &&
+    resolved.browserRpcUrl !== "https://rpc.testnet.chain.robinhood.com"
+  ) {
+    throw new Error(
+      "Testnet browser RPC must use the official Robinhood public endpoint",
+    );
+  }
+  if (resolved.mode === "mainnet" && resolved.mockAssets) {
+    throw new Error("Mainnet cannot use mock assets");
+  }
+  return resolved;
+}
+
 type NetworkManifest = {
   schemaVersion: 1;
   local: Omit<MdbServerNetworkConfig, "mode">;
@@ -117,24 +156,7 @@ export function resolveNetworkConfig(): MdbServerNetworkConfig {
     stateDir: process.env.MDB_STATE_DIR ?? base.stateDir,
     databaseName: process.env.MDB_DATABASE ?? base.databaseName,
   };
-  if (
-    resolved.mode === "mainnet" &&
-    (resolved.builtInWalletEnabled || resolved.faucetEnabled)
-  ) {
-    throw new Error("Mainnet cannot enable built-in wallets or faucets");
-  }
-  if (
-    resolved.mode !== "local" &&
-    /^https?:\/\/(127\.0\.0\.1|localhost|192\.168\.)/i.test(
-      resolved.browserRpcUrl,
-    )
-  ) {
-    throw new Error("Public-network browser RPC must be public HTTPS");
-  }
-  if (resolved.mode === "mainnet" && resolved.mockAssets) {
-    throw new Error("Mainnet cannot use mock assets");
-  }
-  return resolved;
+  return validateNetworkConfig(resolved);
 }
 
 export const networkConfig = resolveNetworkConfig();

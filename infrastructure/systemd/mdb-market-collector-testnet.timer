@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect official MillionDollar Brain testnet market data every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:30
+Persistent=true
+AccuracySec=1s
+Unit=mdb-market-collector-testnet.service
+
+[Install]
+WantedBy=timers.target

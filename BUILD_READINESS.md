@@ -245,6 +245,11 @@ Future governance is outside the MVP and requires a new PRD revision rather than
 
 The Robinhood public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure. It is not used as the sole production dependency.
 
+During the current testnet-readiness phase, both MDB server and browser traffic
+use `https://rpc.testnet.chain.robinhood.com`. A hosted testnet provider is
+deferred until actual rate-limit or reliability evidence requires one. The
+shared Robyn LAN node is explicitly outside MDB's runtime architecture.
+
 Reads use health-scored failover. A signed transaction may be broadcast to both dedicated providers using the same raw transaction and nonce; duplicate acceptance is harmless because the transaction hash is identical.
 
 ## 14. Application, monitoring, and backups

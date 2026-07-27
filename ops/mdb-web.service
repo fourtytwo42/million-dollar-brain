@@ -8,17 +8,8 @@ Requires=mdb-deploy.service
 Type=simple
 User=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
-Environment=PATH=/home/hendo420/.local/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
-Environment=MDB_RPC_URL=http://127.0.0.1:8545
-Environment=NEXT_PUBLIC_MDB_RPC_URL=http://192.168.50.135:8545
-Environment=MDB_AI_BASE_URL=http://192.168.50.189:30001/v1
-Environment=MDB_AI_MODEL=ornith-1.0-35b-Q5_K_M-688b8d0a
-Environment=MDB_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var
-Environment=MDB_CYCLE_TOKEN=mdb-local-devnet-keeper-v1
-Environment=DATABASE_URL=postgresql:///milliondollarbrain?host=/var/run/postgresql
-Environment=MDB_EXTERNAL_DATA_ENABLED=true
-Environment="MDB_SEC_USER_AGENT=MillionDollarBrain local research prototype"
-ExecStart=/home/hendo420/.local/node/bin/npm run start -w @million-dollar-brain/web
+EnvironmentFile=/etc/mdb/local.env
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/start-web.sh
 Restart=always
 RestartSec=3
 

@@ -5,7 +5,7 @@
 **Version:** 1.0
 **Status:** Build-ready MVP baseline; internal product and architecture decisions locked
 **Date:** 2026-07-25  
-**Implementation status:** Product and architecture specifications are committed to a private GitHub repository on the application VM. No contracts, token, production application, or blockchain deployment exist.
+**Implementation status:** A working local Anvil application, upgradeable contracts, autonomous Ornith cycle, market collector, disposable and external wallet layers, and isolated Robinhood chain-46630 rehearsal exist on the application VM. No public-testnet or mainnet deployment and no real-value activation have occurred.
 
 ### Normative PRD set
 
@@ -533,6 +533,9 @@ Failure must not trigger an unapproved provider or model automatically unless th
 
 - Daily contract and integration development uses local Anvil on chain ID 31337.
 - Robinhood Chain testnet uses chain ID 46630 and the public RPC `https://rpc.testnet.chain.robinhood.com`.
+- Both native server processes and browser wallets use that official public
+  testnet RPC until measured rate limits justify a hosted provider. MDB does
+  not use the shared Robyn LAN node.
 - Robinhood Chain mainnet uses chain ID 4663.
 - The public testnet RPC is acceptable for testnet but must not be the sole mainnet RPC because it is rate-limited and not production-grade.
 - Contracts, ABIs, data schemas, and service behavior remain identical between environments; versioned network configuration supplies addresses and endpoints.

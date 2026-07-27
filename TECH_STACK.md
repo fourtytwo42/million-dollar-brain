@@ -60,9 +60,20 @@ Dependency versions are pinned in `package-lock.json`. Upgrades occur through re
 
 Robinhood Chain and its testnet are defined explicitly with viem `defineChain` configuration. The application must not depend on a library shipping a built-in chain definition.
 
+Robinhood Testnet uses `https://rpc.testnet.chain.robinhood.com` for both
+browser and native server traffic until measured rate limits justify a hosted
+provider. MDB does not use Robyn's shared LAN RPC. Runtime policy tests reject
+private testnet RPCs and browser bundles are scanned for private endpoints and
+local development keys.
+
 Injected wallets are discovered through EIP-6963, with an EIP-1193 fallback. MetaMask, Robinhood Wallet, Coinbase Wallet, Rabby, Brave Wallet, Rainbow, Trust Wallet, SafePal, and other standards-compliant wallets are supported through injected connectors or WalletConnect. Ledger and Trezor use a compatible wallet application rather than a custom direct integration.
 
 The app supports add-and-switch requests for local Anvil, Robinhood Chain testnet, and Robinhood Chain mainnet. Wallet support and release UAT requirements are normative in `CHAIN_COMPATIBILITY.md`.
+
+The local and testnet applications retain a session-scoped disposable wallet
+so automated and extension-free testing remains possible. An external wallet
+takes precedence while connected. Mainnet validation makes the disposable
+wallet and faucet impossible to enable.
 
 Contract ABIs and addresses come from versioned deployment artifacts. The browser never receives:
 

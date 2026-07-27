@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect official MillionDollar Brain market data every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+AccuracySec=1s
+Unit=mdb-market-collector.service
+
+[Install]
+WantedBy=timers.target

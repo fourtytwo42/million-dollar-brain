@@ -7,19 +7,19 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Prepare parallel Robinhood Testnet readiness without
   broadcasting, add real-wallet support, and preserve the built-in disposable
   test wallet.
-- Last meaningful change: Runtime network configuration and RainbowKit/wagmi
-  wallet support are implemented and the local production build passes. The
-  user pivoted testnet to Robinhood's official public RPC for both server and
-  browser traffic; the temporary MDB allowlist on the shared Robyn node was
-  removed.
-- Next step: Complete the isolated chain-46630 deployment rehearsal, systemd
-  environment isolation, release gates, documentation, and browser UAT.
+- Last meaningful change: Runtime network configuration, RainbowKit/wagmi
+  wallet support, encrypted testnet signer, isolated chain-46630 rehearsal,
+  separate native systemd environments, and no-broadcast release tooling are
+  implemented. Testnet uses Robinhood's official public RPC for both server and
+  browser traffic.
+- Next step: Run the final clean-commit readiness gate and browser UAT. Do not
+  broadcast public-testnet contracts without new explicit authorization.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
 
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
-- The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, built-in development wallet, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
+- The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
@@ -372,8 +372,17 @@ build`; authenticated live `/api/collect-market`.
   Query, viem, and MDB Reown project ID
   `5a4c41c8c461ca59724069d740760a2f`. External wallets take precedence over a
   session-scoped disposable test wallet. Mainnet policy disables built-in
-  wallets and faucets. Production build and TypeScript checks pass; browser UAT
-  and chain-46630 rehearsal remain.
+  wallets and faucets. The MDB-specific encrypted testnet signer public address
+  is `0x4365543D9e895bb48835CEcedf0903E8770A3A63`; its secret material is stored
+  outside the repository. Testnet systemd units and database are separate and
+  disabled until a verified public deployment manifest exists.
+- 2026-07-27: The isolated chain-46630 rehearsal deployed the complete mock
+  stack, disabled automatic oracle freshness, minted proportional MDBS shares,
+  redeemed atomically with no queued state, and failed closed on a stale
+  required price. It recorded `broadcastPerformed: false`. Release scripts
+  require the official public RPC, clean pushed source, encrypted signer,
+  funded balance, and explicit `MDB_TESTNET_BROADCAST=true`; no public-testnet
+  broadcast is authorized.
 - Configure a free FRED API key when macro observations are desired. Until configured, macro availability remains false and dependent brain effects correctly become inactive.
 - The latest stable Next.js 16.2.12 dependency tree still includes audited high-severity advisories through its pinned `postcss` and `sharp` packages. Do not treat the public demo tunnel as a production deployment; update and re-audit when upstream ships fixed compatible dependencies.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.

@@ -1,0 +1,92 @@
+# Robinhood Testnet Readiness
+
+## Current position
+
+MDB keeps local development and Robinhood Testnet isolated.
+
+| Environment       | Port | Chain | RPC                                       | State                  |
+| ----------------- | ---: | ----: | ----------------------------------------- | ---------------------- |
+| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable     |
+| Robinhood Testnet | 3001 | 46630 | `https://rpc.testnet.chain.robinhood.com` | Installed but disabled |
+
+The official Robinhood endpoint is used for both server and browser testnet
+traffic. The shared Robyn LAN node is not an MDB dependency. A hosted provider
+will be considered only after measured rate limits or reliability failures.
+
+No public-testnet contracts have been broadcast. Testnet services remain
+disabled until a valid `packages/contracts/deployments/testnet.json` exists.
+
+## Wallet policy
+
+- External EIP-6963 and WalletConnect wallets are supported through wagmi,
+  RainbowKit, TanStack Query, viem, and MDB's Reown project.
+- A connected external wallet always takes precedence.
+- Local and testnet builds retain a session-scoped disposable wallet for
+  testing without an extension.
+- Mainnet runtime validation prohibits disposable wallets, faucets, and mock
+  assets.
+- Browser bundles receive only the public RPC and browser-safe runtime config.
+  They never receive an operator key, password, database name, or server path.
+
+## Operator identity
+
+The encrypted MDB-specific Robinhood Testnet signer is stored outside the
+repository with owner-only permissions. Its public address is:
+
+`0x4365543D9e895bb48835CEcedf0903E8770A3A63`
+
+It is intentionally separate from Robyn. Fund this address with Robinhood
+Testnet ETH before a future authorized deployment. Never commit the keystore
+password or decrypted key.
+
+## Safe verification
+
+Run the isolated chain-46630 rehearsal:
+
+```bash
+scripts/rehearse-testnet.sh
+```
+
+Build a testnet candidate without broadcasting:
+
+```bash
+scripts/build-testnet-candidate.sh
+```
+
+Run the complete readiness gate after the exact commit is clean and pushed:
+
+```bash
+scripts/verify-testnet-readiness.sh
+```
+
+Evidence is written under `var/testnet-readiness/` and is not a deployment
+manifest.
+
+## Future broadcast
+
+`scripts/deploy-testnet.sh` refuses to run unless all of these are true:
+
+- `MDB_TESTNET_BROADCAST=true` is set after explicit user authorization.
+- The official RPC reports chain ID `46630`.
+- The worktree is clean and exactly matches its pushed upstream commit.
+- The encrypted MDB operator signer exists and meets the configured ETH floor.
+- No testnet deployment manifest already exists.
+
+The script then performs the deployment and validates the generated manifest.
+Do not run it during local or rehearsal work.
+
+## Recovery
+
+If a testnet build or service fails:
+
+1. Leave the local port-3000 services running.
+2. Keep all `mdb-testnet-*` units disabled.
+3. Inspect `/etc/mdb/testnet.env` without printing secret values.
+4. Re-run the isolated rehearsal and candidate build.
+5. Do not create or hand-edit `testnet.json`; only an authorized deployment may
+   generate it.
+
+If the public RPC is rate-limited, record HTTP status, request rate, and time
+window before changing providers. A provider change must update both server and
+browser configuration, pass `npm run test:network`, and receive a new release
+evidence hash.
