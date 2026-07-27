@@ -22,7 +22,7 @@ export type Deployment = Record<
   | "brain"
   | "basket",
   Address
->;
+> & { oracle?: Address };
 const rpcUrl = process.env.MDB_RPC_URL ?? "http://127.0.0.1:8545";
 const deploymentFile =
   process.env.MDB_DEPLOYMENT_FILE ??
@@ -51,14 +51,14 @@ export function deployment(): Deployment {
   ) as Deployment;
 }
 
-const routerQuoteAbi = parseAbi([
-  "function quoteUsd(address token, uint256 amount) view returns (uint256)",
-]);
-
-export async function dashboard(address?: Address) {
+export async function dashboard(
+  address?: Address,
+  grossDeposit = 1_000n * 10n ** 18n,
+) {
   const d = deployment();
   const [
     nav,
+    navPerShare,
     supply,
     usdgBalance,
     nvdaBalance,
@@ -68,11 +68,18 @@ export async function dashboard(address?: Address) {
     pendingRedemption,
     catalogVersion,
     catalogHash,
+    depositPreview,
+    latestBlock,
   ] = await Promise.all([
     publicClient.readContract({
       address: d.basket,
       abi: basketAbi,
-      functionName: "nav",
+      functionName: "totalAssetsUsd",
+    }),
+    publicClient.readContract({
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "navPerShareWad",
     }),
     publicClient.readContract({
       address: d.basket,
@@ -129,25 +136,51 @@ export async function dashboard(address?: Address) {
       abi: brainAbi,
       functionName: "catalogHash",
     }),
+    publicClient.readContract({
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "previewDeposit",
+      args: [grossDeposit],
+    }),
+    publicClient.getBlock(),
   ]);
-  const [nvdaValue, aaplValue, ethxValue] = await Promise.all([
+  const assetAddresses = {
+    USDG: d.usdg,
+    NVDA: d.nvda,
+    AAPL: d.aapl,
+    ETHX: d.ethx,
+  } as const;
+  const [assetRows, redeemPreview] = await Promise.all([
+    Promise.all(
+      Object.entries(assetAddresses).map(async ([symbol, asset]) => {
+        const [value, weightBps, oracle] = await Promise.all([
+          publicClient.readContract({
+            address: d.basket,
+            abi: basketAbi,
+            functionName: "assetValueUsd",
+            args: [asset],
+          }),
+          publicClient.readContract({
+            address: d.basket,
+            abi: basketAbi,
+            functionName: "currentWeightBps",
+            args: [asset],
+          }),
+          publicClient.readContract({
+            address: d.basket,
+            abi: basketAbi,
+            functionName: "oracleStatus",
+            args: [asset],
+          }),
+        ]);
+        return { symbol, value, weightBps, oracle };
+      }),
+    ),
     publicClient.readContract({
-      address: d.router,
-      abi: routerQuoteAbi,
-      functionName: "quoteUsd",
-      args: [d.nvda, nvdaBalance],
-    }),
-    publicClient.readContract({
-      address: d.router,
-      abi: routerQuoteAbi,
-      functionName: "quoteUsd",
-      args: [d.aapl, aaplBalance],
-    }),
-    publicClient.readContract({
-      address: d.router,
-      abi: routerQuoteAbi,
-      functionName: "quoteUsd",
-      args: [d.ethx, ethxBalance],
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "previewRedeem",
+      args: [shares / 2n],
     }),
   ]);
   const pieces = await Promise.all(
@@ -221,9 +254,31 @@ export async function dashboard(address?: Address) {
         args: [address, ownedPieceIds],
       })
     : 0n;
+  const assetValues = Object.fromEntries(
+    assetRows.map((row) => [row.symbol, row.value.toString()]),
+  );
+  const currentWeightsBps = Object.fromEntries(
+    assetRows.map((row) => [row.symbol, Number(row.weightBps)]),
+  );
+  const oracleRows = Object.fromEntries(
+    assetRows.map((row) => [
+      row.symbol,
+      {
+        priceUsdWad: row.oracle[0].toString(),
+        updatedAt: Number(row.oracle[1]),
+        valid: row.oracle[2],
+      },
+    ]),
+  );
+  const oldestOracleTimestamp = Math.min(
+    ...assetRows
+      .filter((row) => row.oracle[2])
+      .map((row) => Number(row.oracle[1])),
+  );
   return {
     deployment: d,
     nav: nav.toString(),
+    navPerShare: navPerShare.toString(),
     supply: supply.toString(),
     shares: shares.toString(),
     redemption: { pendingRequestId: pendingRedemption.toString() },
@@ -233,11 +288,35 @@ export async function dashboard(address?: Address) {
       AAPL: aaplBalance.toString(),
       ETHX: ethxBalance.toString(),
     },
-    holdingValues: {
-      USDG: usdgBalance.toString(),
-      NVDA: nvdaValue.toString(),
-      AAPL: aaplValue.toString(),
-      ETHX: ethxValue.toString(),
+    holdingValues: assetValues,
+    currentWeightsBps,
+    oracle: {
+      assets: oracleRows,
+      chainTimestamp: Number(latestBlock.timestamp),
+      oldestTimestamp: Number.isFinite(oldestOracleTimestamp)
+        ? oldestOracleTimestamp
+        : 0,
+      fresh: assetRows.every(
+        (row) =>
+          row.oracle[2] &&
+          Number(row.oracle[1]) > 0 &&
+          Number(latestBlock.timestamp) - Number(row.oracle[1]) <= 120,
+      ),
+    },
+    previews: {
+      deposit: {
+        gross: grossDeposit.toString(),
+        fee: depositPreview[0].toString(),
+        netInvestment: depositPreview[1].toString(),
+        expectedShares: depositPreview[2].toString(),
+      },
+      redeem: {
+        shares: (shares / 2n).toString(),
+        gross: redeemPreview[0].toString(),
+        fee: redeemPreview[1].toString(),
+        net: redeemPreview[2].toString(),
+        immediate: redeemPreview[3],
+      },
     },
     pieces,
     rewards: { pending: pendingRewards.toString() },

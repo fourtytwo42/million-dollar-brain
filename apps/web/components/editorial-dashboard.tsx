@@ -70,10 +70,36 @@ type CycleRecord = {
   source: string;
   rationale?: string;
   allocation: Record<string, number>;
-  txHash: string;
+  txHash: string | null;
   redemptionTxHash?: string | null;
   block?: string;
   marketAsOf?: string;
+  inputHash?: string;
+  promptHash?: string;
+  executionStatus?: "executed" | "held";
+  contextFreshness?: {
+    requiredStateFresh: boolean;
+    requiredQuotesFresh: boolean;
+    holdRequired: boolean;
+    reasons: string[];
+  };
+  portfolioBefore?: {
+    navUsdWad: string;
+    navPerShareWad: string;
+    weightsBps: Record<string, number>;
+    return24hBps?: number | null;
+  };
+  portfolioAfter?: {
+    navUsdWad: string;
+    navPerShareWad: string;
+    weightsBps: Record<string, number>;
+  };
+  decisionContext?: {
+    tokenBudget: { estimatedTokens: number; detailedCycleLimit: number };
+    recentCycles: unknown[];
+    dataAvailability: Record<string, boolean>;
+    sourceManifest: { source: string; valid: boolean }[];
+  };
   characterRosterVersion?: number;
   memeRecap?: MemeRecap;
   brain?: {
@@ -86,10 +112,37 @@ type CycleRecord = {
 
 export type EditorialData = {
   nav: string;
+  navPerShare: string;
+  navChange24hBps: number | null;
   supply: string;
   shares: string;
   holdings: Record<string, string>;
   holdingValues: Record<string, string>;
+  currentWeightsBps: Record<string, number>;
+  oracle: {
+    chainTimestamp: number;
+    oldestTimestamp: number;
+    fresh: boolean;
+    assets: Record<
+      string,
+      { priceUsdWad: string; updatedAt: number; valid: boolean }
+    >;
+  };
+  previews: {
+    deposit: {
+      gross: string;
+      fee: string;
+      netInvestment: string;
+      expectedShares: string;
+    };
+    redeem: {
+      shares: string;
+      gross: string;
+      fee: string;
+      net: string;
+      immediate: boolean;
+    };
+  };
   pieces: EditorialPiece[];
   rewards: { pending: string };
   redemption: { pendingRequestId: string };
@@ -103,6 +156,15 @@ const money = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+const money4 = (value: string | bigint) =>
+  Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  });
+const oracleAge = (timestamp: number, referenceTimestamp: number) => {
+  const seconds = Math.max(0, referenceTimestamp - timestamp);
+  return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`;
+};
 const short = (value: string) =>
   value ? `${value.slice(0, 6)}…${value.slice(-4)}` : "";
 
@@ -181,8 +243,8 @@ export function EditorialDashboard({
     data?.pieces.find((piece) => piece.id === selectedId) ?? data?.pieces[0];
   const mine = Boolean(
     selected &&
-      account &&
-      selected.owner.toLowerCase() === account.toLowerCase(),
+    account &&
+    selected.owner.toLowerCase() === account.toLowerCase(),
   );
   const owned =
     data?.pieces.filter(
@@ -230,7 +292,7 @@ export function EditorialDashboard({
       process.env.NEXT_PUBLIC_APP_URL || window.location.origin,
     );
     url.searchParams.set("view", "decisions");
-    url.searchParams.set("cycle", cycle.txHash);
+    if (cycle.txHash) url.searchParams.set("cycle", cycle.txHash);
     return url.toString();
   }
 
@@ -307,10 +369,7 @@ export function EditorialDashboard({
         </nav>
         <div className="market-strip">
           <span className="share-price">
-            $
-            {data && BigInt(data.supply) > 0n
-              ? (Number(data.nav) / Number(data.supply)).toFixed(4)
-              : "1.0000"}
+            MDBS NAV price ${data ? money4(data.navPerShare) : "1.0000"}
           </span>
           <span className="healthy">● System healthy</span>
           <span>
@@ -514,20 +573,35 @@ export function EditorialDashboard({
           </section>
           <section className="basket-overview-grid">
             <article className="large-ledger-card">
-              <div className="snapshot-metrics four">
+              <div className="snapshot-metrics nav-metrics">
+                <Metric
+                  label="MDBS NAV price"
+                  value={`$${data ? money4(data.navPerShare) : "—"}`}
+                />
+                <Metric
+                  label="24-hour change"
+                  value={
+                    data?.navChange24hBps == null
+                      ? "Collecting history"
+                      : `${data.navChange24hBps >= 0 ? "+" : ""}${(data.navChange24hBps / 100).toFixed(2)}%`
+                  }
+                />
                 <Metric
                   label="Basket NAV"
                   value={`$${data ? money(data.nav) : "—"}`}
                 />
                 <Metric
-                  label="Your MDBS"
-                  value={data ? money(data.shares) : "—"}
+                  label="Circulating MDBS"
+                  value={data ? money(data.supply) : "—"}
                 />
                 <Metric
-                  label="USDG reserve"
-                  value={`$${data ? money(data.holdings.USDG) : "—"}`}
+                  label="Oracle"
+                  value={
+                    data?.oracle.fresh
+                      ? `Fresh · ${oracleAge(data.oracle.oldestTimestamp, data.oracle.chainTimestamp)} old`
+                      : "Stale · actions paused"
+                  }
                 />
-                <Metric label="Required reserve" value="20%" />
               </div>
               <h2>Current holdings and Ornith targets</h2>
               <div className="holding-table">
@@ -562,9 +636,9 @@ export function EditorialDashboard({
                 {data ? money(data.rewards.pending) : "0"} claimable
               </p>
               <p className="action-explainer">
-                Deposits mint basket shares after the 1% entry fee. Redemptions
-                return USDG immediately when small enough, or enter the visible
-                settlement queue.
+                MDBS is a pool share, not a fixed-price token. Deposits buy the
+                currently held assets proportionally. Redemptions sell the same
+                fraction and return USDG.
               </p>
               <label>
                 Deposit USDG
@@ -580,6 +654,36 @@ export function EditorialDashboard({
               >
                 Deposit USDG
               </button>
+              {data && (
+                <div className="trade-preview" aria-label="Deposit preview">
+                  <b>Live deposit preview</b>
+                  <span>
+                    Gross ${money(data.previews.deposit.gross)} · fee $
+                    {money(data.previews.deposit.fee)}
+                  </span>
+                  <span>
+                    Net invested ${money(data.previews.deposit.netInvestment)} ·
+                    expected {money(data.previews.deposit.expectedShares)} MDBS
+                  </span>
+                  <span>
+                    Current price ${money4(data.navPerShare)} · minimum 99% of
+                    preview
+                  </span>
+                  {Object.entries(data.currentWeightsBps)
+                    .filter(([, weight]) => weight > 0)
+                    .map(([symbol, weight]) => (
+                      <small key={symbol}>
+                        {symbol}: approximately $
+                        {money(
+                          (BigInt(data.previews.deposit.netInvestment) *
+                            BigInt(weight)) /
+                            10_000n,
+                        )}{" "}
+                        ({(weight / 100).toFixed(2)}%)
+                      </small>
+                    ))}
+                </div>
+              )}
               {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
                 <button className="full-button" onClick={onCancelRedemption}>
                   Cancel queued redemption #{data.redemption.pendingRequestId}
@@ -588,6 +692,25 @@ export function EditorialDashboard({
                 <button className="full-button" onClick={onRedeem}>
                   Redeem half my liquid shares
                 </button>
+              )}
+              {data && BigInt(data.previews.redeem.shares) > 0n && (
+                <div className="trade-preview" aria-label="Redemption preview">
+                  <b>Half-position redemption preview</b>
+                  <span>
+                    Burn {money(data.previews.redeem.shares)} MDBS · gross $
+                    {money(data.previews.redeem.gross)}
+                  </span>
+                  <span>
+                    Fee ${money(data.previews.redeem.fee)} · expected $
+                    {money(data.previews.redeem.net)} USDG
+                  </span>
+                  <span>
+                    Settlement:{" "}
+                    {data.previews.redeem.immediate
+                      ? "atomic proportional sale"
+                      : "cancellable FIFO queue"}
+                  </span>
+                </div>
               )}
               <button
                 className="full-button"
@@ -654,7 +777,8 @@ export function EditorialDashboard({
                     </span>
                     <strong>{allocationSummary(cycle.allocation)}</strong>
                     <small>
-                      Block {cycle.block ?? "—"} · {short(cycle.txHash)}
+                      Block {cycle.block ?? "—"} ·{" "}
+                      {cycle.txHash ? short(cycle.txHash) : "HOLD"}
                     </small>
                   </button>
                 ))}
@@ -691,6 +815,55 @@ export function EditorialDashboard({
               </div>
               {selectedCycle?.rationale && (
                 <p className="decision-rationale">{selectedCycle.rationale}</p>
+              )}
+              {selectedCycle?.decisionContext && (
+                <section
+                  className="decision-context-summary"
+                  aria-label="AI decision package"
+                >
+                  <div>
+                    <span>Decision package</span>
+                    <b>V2 · {selectedCycle.inputHash?.slice(0, 12)}…</b>
+                  </div>
+                  <div>
+                    <span>Context size</span>
+                    <b>
+                      ~
+                      {selectedCycle.decisionContext.tokenBudget.estimatedTokens.toLocaleString()}{" "}
+                      tokens ·{" "}
+                      {selectedCycle.decisionContext.recentCycles.length}
+                      /12 cycles
+                    </b>
+                  </div>
+                  <div>
+                    <span>Freshness</span>
+                    <b>
+                      {selectedCycle.contextFreshness?.holdRequired
+                        ? "HOLD REQUIRED"
+                        : "FRESH"}
+                    </b>
+                  </div>
+                  <div>
+                    <span>MDBS NAV price</span>
+                    <b>
+                      $
+                      {selectedCycle.portfolioAfter
+                        ? money4(selectedCycle.portfolioAfter.navPerShareWad)
+                        : "—"}
+                    </b>
+                  </div>
+                  <div>
+                    <span>Validated sources</span>
+                    <b>
+                      {
+                        selectedCycle.decisionContext.sourceManifest.filter(
+                          (source) => source.valid,
+                        ).length
+                      }
+                      /{selectedCycle.decisionContext.sourceManifest.length}
+                    </b>
+                  </div>
+                </section>
               )}
               {selectedCycle && selectedMeme && (
                 <section className="brain-drama" aria-label="Brain Drama">
@@ -937,7 +1110,7 @@ async function renderDecisionCard(
   context.fillStyle = "#675f55";
   context.font = "15px monospace";
   context.fillText(
-    `${cycleTimestamp(cycle.at)} · ${short(cycle.txHash)}`,
+    `${cycleTimestamp(cycle.at)} · ${cycle.txHash ? short(cycle.txHash) : "HOLD"}`,
     420,
     580,
   );
@@ -950,7 +1123,7 @@ async function renderDecisionCard(
   const url = canvas.toDataURL("image/png");
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `milliondollar-brain-${cycle.txHash.slice(2, 10)}.png`;
+  anchor.download = `milliondollar-brain-${cycle.txHash?.slice(2, 10) ?? "hold"}.png`;
   anchor.click();
 }
 

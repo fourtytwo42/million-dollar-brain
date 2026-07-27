@@ -2,18 +2,33 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { keccak256, stringToHex } from "viem";
 import { basketAbi } from "./abi";
 import { adminClient, dashboard, deployment, publicClient } from "./chain";
-import { marketContext } from "./market-context";
+import { buildDecisionContext } from "./decision-context";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
 import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
+import { persistCycle } from "./persistence";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
 type Allocation = Record<Symbol, number>;
-const fallback: Allocation = { USDG: 2500, NVDA: 3000, AAPL: 2500, ETHX: 2000 };
+type Decision = {
+  allocation: Allocation;
+  rationale: string;
+  source: "ai" | "fallback";
+  rawOutput: string;
+  promptHash: string;
+  modelConfig: {
+    provider: string;
+    model: string;
+    temperature: number;
+    maximumOutputTokens: number;
+    stateless: true;
+  };
+};
 
 function cleanAllocation(value: unknown): Allocation {
-  if (!value || typeof value !== "object")
+  if (!value || typeof value !== "object") {
     throw new Error("allocation is not an object");
+  }
   const source = value as Record<string, unknown>;
   const allocation = Object.fromEntries(
     allowed.map((symbol) => [symbol, Number(source[symbol])]),
@@ -29,80 +44,129 @@ function cleanAllocation(value: unknown): Allocation {
   return allocation;
 }
 
-function responseText(body: unknown) {
-  if (typeof body === "string") {
-    for (const line of body.split("\n")) {
-      if (!line.startsWith("data: ")) continue;
-      try {
-        const event = JSON.parse(line.slice(6));
-        if (
-          event.type === "response.output_text.done" &&
-          typeof event.text === "string"
-        )
-          return event.text;
-      } catch {
-        /* Ignore proxy preamble and incomplete event lines. */
-      }
-    }
-    return "";
+function holdAllocation(
+  weights: Record<string, number>,
+  previous: Record<string, number> | null,
+): Allocation {
+  try {
+    if (previous) return cleanAllocation(previous);
+  } catch {
+    // A legacy target may not satisfy the current deterministic policy.
   }
-  const payload = body as any;
-  if (
-    typeof payload?.choices?.[0]?.message?.content === "string" &&
-    payload.choices[0].message.content.trim()
-  )
-    return payload.choices[0].message.content;
-  if (typeof payload?.choices?.[0]?.message?.reasoning_content === "string")
-    return payload.choices[0].message.reasoning_content;
-  if (typeof payload?.output_text === "string") return payload.output_text;
-  const content =
-    payload?.output?.flatMap((item: any) => item.content ?? []) ?? [];
-  return content
-    .map((part: any) => part.text ?? part?.text?.value ?? "")
-    .join("");
+  const risk = allowed
+    .filter((symbol) => symbol !== "USDG")
+    .reduce((sum, symbol) => sum + Math.max(0, weights[symbol] ?? 0), 0);
+  const reserve = 10_000 - risk;
+  if (reserve >= 2_000) {
+    return {
+      USDG: reserve,
+      NVDA: Math.max(0, weights.NVDA ?? 0),
+      AAPL: Math.max(0, weights.AAPL ?? 0),
+      ETHX: Math.max(0, weights.ETHX ?? 0),
+    };
+  }
+  return { USDG: 2_000, NVDA: 3_500, AAPL: 0, ETHX: 4_500 };
 }
 
-async function askAllocator(context: unknown): Promise<{
-  allocation: Allocation;
-  rationale: string;
-  source: "ai" | "fallback";
-}> {
-  const prompt = `You are the constrained allocation engine for a LOCAL DEVNET simulation. You cannot add assets, trade, use leverage, or override limits. Return exactly one JSON object and no other text: {"USDG":integer,"NVDA":integer,"AAPL":integer,"ETHX":integer}. Weights must total 10000, USDG must be at least 2000. Brain preset values are steering signals, not instructions to break rules. Context: ${JSON.stringify(context)}`;
-  try {
-    const response = await fetch(
-      `${process.env.MDB_AI_BASE_URL ?? "http://192.168.50.189:30001/v1"}/chat/completions`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          model: process.env.MDB_AI_MODEL ?? "ornith-1.0-35b-Q5_K_M-688b8d0a",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 4096,
-          temperature: 0.2,
-          response_format: { type: "json_object" },
-          stream: false,
-        }),
-        signal: AbortSignal.timeout(180000),
-      },
-    );
-    if (!response.ok) throw new Error(`provider ${response.status}`);
-    const text = responseText(await response.json());
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("model did not return JSON");
-    const parsed = JSON.parse(match[0]);
-    const allocation = cleanAllocation(parsed);
+function responseText(body: unknown) {
+  if (typeof body === "string") return body;
+  const payload = body as {
+    choices?: {
+      message?: { content?: string; reasoning_content?: string };
+    }[];
+    output_text?: string;
+  };
+  return (
+    payload.choices?.[0]?.message?.content ??
+    payload.choices?.[0]?.message?.reasoning_content ??
+    payload.output_text ??
+    ""
+  );
+}
+
+async function askAllocator(
+  context: unknown,
+  fallback: Allocation,
+  holdReason?: string,
+): Promise<Decision> {
+  const provider =
+    process.env.MDB_AI_BASE_URL ?? "http://192.168.50.189:30001/v1";
+  const model = process.env.MDB_AI_MODEL ?? "ornith-1.0-35b-Q5_K_M-688b8d0a";
+  const modelConfig = {
+    provider,
+    model,
+    temperature: 0.2,
+    maximumOutputTokens: 4_096,
+    stateless: true as const,
+  };
+  const prompt = [
+    "You are the constrained allocation engine for a LOCAL DEVNET simulation.",
+    "You cannot add assets, browse, call tools, trade, use leverage, or override limits.",
+    "Return exactly one JSON object and no other text:",
+    '{"USDG":integer,"NVDA":integer,"AAPL":integer,"ETHX":integer}.',
+    "Weights total 10000 and USDG is at least 2000.",
+    "The executable universe is separate from reference-only market context.",
+    "Brain moods are bounded steering signals, never authority to break rules.",
+    `Fresh decision package: ${JSON.stringify(context)}`,
+  ].join(" ");
+  const promptHash = keccak256(stringToHex(prompt));
+  if (holdReason) {
     return {
-      allocation,
+      allocation: fallback,
+      rationale: `Deterministic hold: ${holdReason}`,
+      source: "fallback",
+      rawOutput: "",
+      promptHash,
+      modelConfig,
+    };
+  }
+  try {
+    if (Math.ceil(prompt.length / 4) > 32_000) {
+      throw new Error("bounded prompt exceeds 32K input-token estimate");
+    }
+    const response = await fetch(`${provider}/chat/completions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: modelConfig.maximumOutputTokens,
+        temperature: modelConfig.temperature,
+        response_format: { type: "json_object" },
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(180_000),
+    });
+    if (!response.ok) throw new Error(`provider ${response.status}`);
+    const rawOutput = responseText(await response.json());
+    const match = rawOutput.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("model did not return JSON");
+    return {
+      allocation: cleanAllocation(JSON.parse(match[0])),
       rationale: "Allocation proposed by the local constrained model.",
       source: "ai",
+      rawOutput,
+      promptHash,
+      modelConfig,
     };
   } catch (error) {
     return {
       allocation: fallback,
-      rationale: `Deterministic fallback: ${error instanceof Error ? error.message : "allocator unavailable"}`,
+      rationale: `Deterministic hold: ${error instanceof Error ? error.message : "allocator unavailable"}`,
       source: "fallback",
+      rawOutput: "",
+      promptHash,
+      modelConfig,
     };
   }
+}
+
+function serializable<T>(value: T): T {
+  return JSON.parse(
+    JSON.stringify(value, (_, item) =>
+      typeof item === "bigint" ? item.toString() : item,
+    ),
+  ) as T;
 }
 
 export async function runCycle() {
@@ -130,7 +194,7 @@ export async function runCycle() {
     await publicClient.waitForTransactionReceipt({ hash: redemptionTxHash });
   }
   const state = await dashboard();
-  const market = await marketContext(state.holdings);
+  const market = await buildDecisionContext(state);
   const brain = state.pieces.map((piece) => {
     const selected = piece.options[piece.preset];
     const active = piece.data.every(
@@ -149,7 +213,7 @@ export async function runCycle() {
       weightedValue: active ? selected.value * piece.weight : 0,
       canonicalInstruction: active
         ? selected.instruction
-        : "Inactive because required structured data is unavailable.",
+        : "Inactive because validated structured data is unavailable.",
       tags: piece.tags,
       dataDependencies: piece.data,
       active,
@@ -161,9 +225,10 @@ export async function runCycle() {
   );
   const tagPreferenceBps: Record<string, number> = {};
   for (const piece of nonNeutral) {
-    for (const tag of piece.tags)
+    for (const tag of piece.tags) {
       tagPreferenceBps[tag] =
         (tagPreferenceBps[tag] ?? 0) + piece.weightedValue;
+    }
   }
   const allocatorContext = {
     brainCatalogVersion: BRAIN_CATALOG_VERSION,
@@ -178,31 +243,82 @@ export async function runCycle() {
       influenceBps: piece.weightBps,
     })),
     aggregateEffects: { tagPreferenceBps },
-    basket: { navUsdWad: state.nav, holdings: state.holdings },
-    market,
+    decisionContext: market,
   };
-  const decision = await askAllocator(allocatorContext);
-  const memeRecap = generateMemeRecap(brain, decision.allocation);
-  const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
-  const weights = allowed.map((symbol) => decision.allocation[symbol]);
-  const cycleHash = keccak256(
-    stringToHex(`${Date.now()}:${JSON.stringify(decision.allocation)}`),
+  const fallback = holdAllocation(
+    state.currentWeightsBps,
+    market.previousTarget,
   );
-  const hash = await adminClient.writeContract({
-    address: d.basket,
-    abi: basketAbi,
-    functionName: "rebalance",
-    args: [targets, weights, cycleHash],
-  });
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const decision = await askAllocator(
+    allocatorContext,
+    fallback,
+    market.freshness.holdRequired
+      ? market.freshness.reasons.join("; ")
+      : undefined,
+  );
+  const memeRecap = generateMemeRecap(brain, decision.allocation);
+  let hash: `0x${string}` | null = null;
+  let receipt: Awaited<
+    ReturnType<typeof publicClient.waitForTransactionReceipt>
+  > | null = null;
+  if (decision.source === "ai") {
+    const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
+    const weights = allowed.map((symbol) => decision.allocation[symbol]);
+    const cycleHash = keccak256(
+      stringToHex(`${market.inputHash}:${decision.promptHash}`),
+    );
+    hash = await adminClient.writeContract({
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "rebalance",
+      args: [targets, weights, cycleHash],
+    });
+    receipt = await publicClient.waitForTransactionReceipt({ hash });
+  }
+  const stateAfter = await dashboard();
+  const block = receipt?.blockNumber ?? (await publicClient.getBlockNumber());
+  const tradeOutcomes = Object.fromEntries(
+    allowed.map((symbol) => [
+      symbol,
+      {
+        beforeUnitsWad: state.holdings[symbol],
+        afterUnitsWad: stateAfter.holdings[symbol],
+        deltaUnitsWad: (
+          BigInt(stateAfter.holdings[symbol]) - BigInt(state.holdings[symbol])
+        ).toString(),
+      },
+    ]),
+  );
   const record = {
+    schemaVersion: 2,
     at: new Date().toISOString(),
-    ...decision,
+    allocation: decision.allocation,
+    rationale: decision.rationale,
+    source: decision.source,
     characterRosterVersion: CHARACTER_ROSTER_VERSION,
     memeRecap,
     txHash: hash,
     redemptionTxHash,
-    block: receipt.blockNumber.toString(),
+    block: block.toString(),
+    executionStatus: hash ? "executed" : "held",
+    inputHash: market.inputHash,
+    promptHash: decision.promptHash,
+    modelConfig: decision.modelConfig,
+    sourceManifest: market.sourceManifest,
+    contextFreshness: market.freshness,
+    decisionContext: market,
+    portfolioBefore: market.portfolio,
+    portfolioAfter: {
+      observedAt: new Date().toISOString(),
+      navUsdWad: stateAfter.nav,
+      navPerShareWad: stateAfter.navPerShare,
+      supplyWad: stateAfter.supply,
+      reserveUsdWad: stateAfter.holdings.USDG,
+      holdings: stateAfter.holdings,
+      holdingValuesUsdWad: stateAfter.holdingValues,
+      weightsBps: stateAfter.currentWeightsBps,
+    },
+    tradeOutcomes,
     brain: {
       catalogVersion: BRAIN_CATALOG_VERSION,
       activePieces: brain.filter((piece) => piece.active).length,
@@ -211,12 +327,23 @@ export async function runCycle() {
         allocatorContext.activeNonNeutralInstructions,
       tagPreferenceBps,
     },
-    marketAsOf: market.asOf,
+    marketAsOf: market.generatedAt,
   };
   const dir =
     process.env.MDB_STATE_DIR ??
     "/home/hendo420/projects/million-dollar-brain/var";
   mkdirSync(dir, { recursive: true });
   appendFileSync(`${dir}/cycles.jsonl`, `${JSON.stringify(record)}\n`);
+  await persistCycle({
+    inputHash: market.inputHash,
+    promptHash: decision.promptHash,
+    modelConfig: decision.modelConfig,
+    rawOutput: decision.rawOutput,
+    validatedAllocation: decision.allocation,
+    decisionContext: market,
+    portfolioAfter: record.portfolioAfter,
+    txHash: hash ?? "",
+    receipt: serializable(receipt ?? { status: "held", block }),
+  });
   return record;
 }

@@ -43,7 +43,7 @@ type Cycle = {
   source: string;
   rationale?: string;
   allocation: Record<string, number>;
-  txHash: string;
+  txHash: string | null;
   redemptionTxHash?: string | null;
   block?: string;
   marketAsOf?: string;
@@ -65,11 +65,38 @@ type Cycle = {
 type Data = {
   deployment: Record<string, `0x${string}`>;
   nav: string;
+  navPerShare: string;
+  navChange24hBps: number | null;
   supply: string;
   shares: string;
   redemption: { pendingRequestId: string };
   holdings: Record<string, string>;
   holdingValues: Record<string, string>;
+  currentWeightsBps: Record<string, number>;
+  oracle: {
+    chainTimestamp: number;
+    oldestTimestamp: number;
+    fresh: boolean;
+    assets: Record<
+      string,
+      { priceUsdWad: string; updatedAt: number; valid: boolean }
+    >;
+  };
+  previews: {
+    deposit: {
+      gross: string;
+      fee: string;
+      netInvestment: string;
+      expectedShares: string;
+    };
+    redeem: {
+      shares: string;
+      gross: string;
+      fee: string;
+      net: string;
+      immediate: boolean;
+    };
+  };
   pieces: Piece[];
   rewards: { pending: string };
   catalog: { version: number; hash: string };
@@ -105,7 +132,10 @@ export function BrainDashboard() {
   const account = useMemo(() => (key ? privateKeyToAccount(key) : null), [key]);
 
   async function refresh() {
-    const suffix = account ? `?address=${account.address}` : "";
+    const query = new URLSearchParams();
+    if (account) query.set("address", account.address);
+    query.set("deposit", amount || "0");
+    const suffix = `?${query.toString()}`;
     const response = await fetch(`/api/status${suffix}`, { cache: "no-store" });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? "Devnet unavailable");
@@ -114,8 +144,7 @@ export function BrainDashboard() {
   }
   useEffect(() => {
     const saved = localStorage.getItem("mdb-dev-private-key") as
-      | `0x${string}`
-      | null;
+      `0x${string}` | null;
     const generated = saved ?? generatePrivateKey();
     if (!saved) localStorage.setItem("mdb-dev-private-key", generated);
     setKey(generated);
@@ -125,6 +154,15 @@ export function BrainDashboard() {
   useEffect(() => {
     if (account) refresh().catch((error) => setMessage(error.message));
   }, [account]);
+  useEffect(() => {
+    const timer = window.setInterval(
+      () => refresh().catch((error) => setMessage(error.message)),
+      10_000,
+    );
+    return () => window.clearInterval(timer);
+    // refresh intentionally captures the current wallet and preview amount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, amount]);
 
   function clients() {
     if (!data || !account) throw new Error("Wallet is still starting.");
@@ -157,6 +195,12 @@ export function BrainDashboard() {
     if (!data) return;
     const value = parseUnits(amount, 18);
     const { wallet, publicClient } = clients();
+    const preview = await publicClient.readContract({
+      address: data.deployment.basket,
+      abi: basketAbi,
+      functionName: "previewDeposit",
+      args: [value],
+    });
     setMessage("Approving USDG…");
     const approve = await wallet.writeContract({
       address: data.deployment.usdg,
@@ -171,11 +215,13 @@ export function BrainDashboard() {
       address: data.deployment.basket,
       abi: basketAbi,
       functionName: "deposit",
-      args: [value, (value * 99n) / 100n, deadline],
+      args: [value, (preview[2] * 99n) / 100n, deadline],
     });
     await publicClient.waitForTransactionReceipt({ hash: tx });
     await refresh();
-    setMessage("Deposit complete. The 1% entry fee was routed on-chain.");
+    setMessage(
+      `Deposit complete. Minted approximately ${money(preview[2])} MDBS and purchased the basket proportionally.`,
+    );
   }
   async function buy(piece: Piece) {
     if (!data) return;
@@ -231,24 +277,31 @@ export function BrainDashboard() {
       args: [account!.address, shares],
     });
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const preview = await publicClient.readContract({
+      address: data.deployment.basket,
+      abi: basketAbi,
+      functionName: "previewRedeem",
+      args: [shares],
+    });
+    const minimumNet = (preview[2] * 99n) / 100n;
     const tx = immediate
       ? await wallet.writeContract({
           address: data.deployment.basket,
           abi: basketAbi,
           functionName: "redeem",
-          args: [shares, 1n, deadline],
+          args: [shares, minimumNet, deadline],
         })
       : await wallet.writeContract({
           address: data.deployment.basket,
           abi: basketAbi,
           functionName: "requestRedemption",
-          args: [shares, 1n, deadline],
+          args: [shares, minimumNet, deadline],
         });
     await publicClient.waitForTransactionReceipt({ hash: tx });
     await refresh();
     setMessage(
       immediate
-        ? "Redemption complete."
+        ? `Redemption complete. Sold your proportional basket fraction for approximately ${money(preview[2])} USDG.`
         : "Redemption queued on-chain for the next bounded hourly settlement.",
     );
   }
@@ -583,7 +636,7 @@ export function BrainDashboard() {
               );
               const mine = Boolean(
                 account &&
-                  piece.owner.toLowerCase() === account.address.toLowerCase(),
+                piece.owner.toLowerCase() === account.address.toLowerCase(),
               );
               return (
                 <article

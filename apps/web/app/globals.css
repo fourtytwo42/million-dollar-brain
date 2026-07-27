@@ -1278,6 +1278,9 @@ footer {
 .snapshot-metrics.four {
   grid-template-columns: repeat(4, 1fr);
 }
+.snapshot-metrics.nav-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
 .snapshot-metrics > div {
   padding: 12px;
   border-right: 1px solid var(--border);
@@ -1423,6 +1426,53 @@ footer {
 }
 .transaction-card .primary-action {
   width: 100%;
+}
+.trade-preview {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.trade-preview b,
+.trade-preview span,
+.trade-preview small {
+  display: block;
+}
+.trade-preview span,
+.trade-preview small {
+  color: var(--text-muted);
+}
+.decision-context-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  margin: 12px 0;
+}
+.decision-context-summary > div {
+  padding: 10px;
+  border-right: 1px solid var(--border);
+}
+.decision-context-summary > div:last-child {
+  border-right: 0;
+}
+.decision-context-summary span,
+.decision-context-summary b {
+  display: block;
+}
+.decision-context-summary span {
+  color: var(--text-muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.decision-context-summary b {
+  margin-top: 5px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
 }
 .decision-source {
   font:
@@ -2397,7 +2447,9 @@ footer {
     min-height: auto;
   }
   .snapshot-metrics,
-  .snapshot-metrics.four {
+  .snapshot-metrics.four,
+  .snapshot-metrics.nav-metrics,
+  .decision-context-summary {
     grid-template-columns: 1fr;
   }
   .snapshot-actions {

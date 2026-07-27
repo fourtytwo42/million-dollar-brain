@@ -245,6 +245,28 @@ contract BasketBrainTest is Test {
         assertEq(aapl.balanceOf(address(basket)), aaplBefore);
     }
 
+    function testRebalanceIgnoresSubBasisPointRoundingDrift() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+        address[] memory targets = new address[](3);
+        uint16[] memory targetWeights = new uint16[](3);
+        targets[0] = address(usdg);
+        targets[1] = address(nvda);
+        targets[2] = address(aapl);
+        targetWeights[0] = 2_000;
+        targetWeights[1] = 4_000;
+        targetWeights[2] = 4_000;
+
+        vm.prank(admin);
+        basket.rebalance(targets, targetWeights, keccak256("rounding-drift"));
+
+        assertApproxEqAbs(basket.currentWeightBps(address(usdg)), 2_000, 1);
+        assertApproxEqAbs(basket.currentWeightBps(address(nvda)), 4_000, 1);
+        assertApproxEqAbs(basket.currentWeightBps(address(aapl)), 4_000, 1);
+    }
+
     function testStaleValuationFailsClosed() public {
         vm.warp(1_000);
         vm.startPrank(admin);
@@ -257,6 +279,34 @@ contract BasketBrainTest is Test {
         vm.expectRevert("stale price");
         basket.deposit(10_000e18, 1, block.timestamp + 1 hours);
         vm.stopPrank();
+    }
+
+    function testExecutionOutsideValuationSlippageRevertsAtomically() public {
+        vm.prank(admin);
+        router.setPrice(address(nvda), 360e18);
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        vm.expectRevert();
+        basket.deposit(10_000e18, 1, block.timestamp + 1 hours);
+        vm.stopPrank();
+        assertEq(basket.totalSupply(), 0);
+        assertEq(usdg.balanceOf(address(basket)), 0);
+    }
+
+    function testFuzzProportionalDepositDoesNotDiluteExistingHolder(uint96 rawAmount) public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+        uint256 priceBefore = basket.navPerShareWad();
+        uint256 amount = bound(uint256(rawAmount), 10e18, 25_000e18);
+
+        vm.startPrank(bob);
+        usdg.approve(address(basket), amount);
+        basket.deposit(amount, 1, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        assertApproxEqAbs(basket.navPerShareWad(), priceBefore, 5);
     }
 
     function testBrainSaleExcludesTransferredPieceFromMarkupReward() public {

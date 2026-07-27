@@ -1,11 +1,7 @@
 export const CHARACTER_ROSTER_VERSION = 4;
 
 export type CharacterKind =
-  | "human"
-  | "creature"
-  | "machine"
-  | "object"
-  | "supernatural";
+  "human" | "creature" | "machine" | "object" | "supernatural";
 
 export type MemeCharacter = {
   id: number;

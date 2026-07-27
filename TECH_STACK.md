@@ -223,6 +223,8 @@ Production requirements:
 
 Redis, a separate queue system, PM2, and Docker are excluded initially. PostgreSQL owns durable jobs, chain checkpoints, cycle state, idempotency keys, and retry state.
 
+The current local V2 cycle path writes native PostgreSQL tables for exact cycle inputs, source manifests, market observations, pre/post portfolio snapshots, raw model output, validated allocation, and execution receipts. The prompt itself remains stateless and bounded to 12 detailed historical cycles plus fixed rollups.
+
 ## 11. Smart contracts and local chain
 
 | Concern          | MVP selection                                               |

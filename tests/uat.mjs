@@ -455,6 +455,20 @@ try {
       `${symbol} must have a router-priced USD value`,
     );
   }
+  assert.ok(
+    BigInt(basketStatus.navPerShare) > 0n,
+    "the contract must expose a positive fixed-point MDBS NAV price",
+  );
+  assert.equal(
+    basketStatus.oracle.fresh,
+    true,
+    "all valuation prices must be fresh before basket actions",
+  );
+  assert.equal(
+    BigInt(basketStatus.previews.deposit.expectedShares) > 0n,
+    true,
+    "the status API must return a contract-backed deposit preview",
+  );
   const expectedHeldSymbols = Object.entries(basketStatus.holdings)
     .filter(([, balance]) => BigInt(balance) > 0n)
     .map(([symbol]) => symbol)
@@ -473,13 +487,13 @@ try {
   await amount.fill("1000");
   await page.getByRole("button", { name: "Deposit USDG" }).click();
   await page
-    .getByText("Deposit complete. The 1% entry fee was routed on-chain.")
+    .getByText(/Deposit complete\. Minted approximately/)
     .waitFor({ timeout: 45000 });
 
   await amount.fill("100");
   await page.getByRole("button", { name: "Deposit USDG" }).click();
   await page
-    .getByText("Deposit complete. The 1% entry fee was routed on-chain.")
+    .getByText(/Deposit complete\. Minted approximately/)
     .waitFor({ timeout: 45000 });
   const claim = page.getByRole("button", {
     name: "Claim brain rewards",
@@ -524,6 +538,29 @@ try {
     historyStatus.latestCycle.txHash,
     historyStatus.cycleHistory[0].txHash,
     "latest cycle must match the first historical record",
+  );
+  assert.equal(
+    historyStatus.latestCycle.schemaVersion,
+    2,
+    "new cycles must use the reproducible DecisionContextV2 record",
+  );
+  assert.equal(
+    historyStatus.latestCycle.decisionContext.recentCycles.length <= 12,
+    true,
+    "the model context must cap detailed history at 12 cycles",
+  );
+  assert.equal(
+    historyStatus.latestCycle.decisionContext.tokenBudget.estimatedTokens <=
+      32_000,
+    true,
+    "the model context must stay inside the 32K input budget",
+  );
+  assert.match(historyStatus.latestCycle.inputHash, /^0x[0-9a-f]{64}$/i);
+  assert.match(historyStatus.latestCycle.promptHash, /^0x[0-9a-f]{64}$/i);
+  assert.equal(
+    historyStatus.persistence.available,
+    true,
+    "native PostgreSQL cycle persistence must be healthy",
   );
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Decisions", exact: true }).click();
@@ -647,6 +684,16 @@ try {
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page.screenshot({ path: "var/uat-basket.png", fullPage: true });
+  await page.screenshot({
+    path: "design/mockups/basket-screen-v2-editorial.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await page.screenshot({
+    path: "design/mockups/basket-screen-v2-editorial-dark.png",
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Light", exact: true }).click();
   await page
     .getByRole("button", { name: "Redeem half my liquid shares" })
     .click();
@@ -701,7 +748,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: live contract NAV/share, proportional deposit and redemption previews, bounded DecisionContext V2 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

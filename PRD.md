@@ -199,7 +199,8 @@ MVP economics:
 ```text
 entry fee = deposit amount × 1%
 net contribution = deposit amount - entry fee
-shares minted = net contribution ÷ current NAV per share
+actual NAV added = post-swap NAV - pre-deposit NAV
+shares minted = actual NAV added × pre-deposit supply ÷ pre-deposit NAV
 ```
 
 Requirements:
@@ -207,7 +208,10 @@ Requirements:
 - Deposits are available on-chain at any time when prices are valid.
 - The user supplies a minimum acceptable share amount.
 - The transaction reverts if prices are stale or minted shares fall below the user's minimum.
-- Deposited base assets may remain in the reserve until the next scheduled allocation.
+- The vault retains the current USDG reserve fraction and buys every positively held risk asset in proportion to its pre-deposit basket value.
+- At zero supply, governance-configured bootstrap weights replace pre-deposit actual weights and initial shares mint at one USDG of actual NAV added.
+- Valuation and execution are separate: accepted swap results must remain inside protocol and user slippage bounds around fresh valuation-adapter prices.
+- Sub-trade dust below one basis point may remain in USDG and is included in actual NAV added.
 - The user pays only their deposit transaction gas.
 
 ### 7.4 Redemption
@@ -224,8 +228,8 @@ Requirements:
 
 - Redemption requests are available on-chain at any time.
 - The user supplies a minimum acceptable redemption value.
-- Small redemptions settle immediately in USDG when the available reserve and risk limits permit.
-- Larger redemptions enter a FIFO USDG queue and are funded by bounded asset sales.
+- An immediate redemption sells the exact ownership fraction of every positively held risk asset, combines those proceeds with the same fraction of the USDG reserve, deducts the fee, burns settled shares, and returns USDG.
+- Larger or temporarily unexecutable redemptions enter a FIFO USDG queue. Every partial settlement also liquidates all positions proportionally rather than choosing assets sequentially.
 - A queued request includes minimum proceeds and expiry protection and may be cancelled while unprocessed under the defined queue rules.
 - Stock Tokens are not distributed in kind in the MVP.
 - The user pays only their redemption transaction gas.
@@ -436,6 +440,7 @@ Every cycle supplies:
 - Previous target allocation and execution result.
 - Current risk, turnover, trade-size, slippage, and circuit-breaker limits.
 - Complete structured dossiers for every active asset, including source timestamps, formula versions, and validity flags.
+- At most 12 compact detailed cycles. Older history enters only through fixed 24-hour, 7-day, and 30-day rollups.
 
 No user-authored text enters the model context.
 
@@ -447,6 +452,8 @@ The complete brain is supplied in two forms:
 The asset catalog is supplied from the on-chain Asset Registry and contains only active, approved assets. Dynamic market statistics are supplied by approved data adapters and included in the cycle input hash.
 
 For the MVP, Ornith receives USDG plus no more than 24 active risk assets and may return no more than 10 non-zero target positions including USDG. All external information comes from free structured Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED sources. Versioned protocol code calculates derived metrics. Ornith has no browser, search, arbitrary HTTP, tool-calling, news, social, or AI-curated research access during allocation.
+
+Every model request is stateless, contains one freshly built `DecisionContextV2`, has no conversation ID or prior messages, and is rejected before dispatch if the deterministic 32,000-token estimate is exceeded. Required stale portfolio, valuation, quote, halt, or execution state produces a Hold. Optional unavailable fields are omitted and every dependent brain piece is inactive. PostgreSQL stores the exact context, input and prompt hashes, model configuration, raw output, validated allocation, source manifest, pre/post snapshots, market observations, and execution receipt; archived data is audit/replay material and is never automatically copied into a later prompt.
 
 ### 10.4 Model output
 
@@ -632,6 +639,7 @@ Because all contracts are upgradeable, users depend on the upgrade administrator
 The public application must show:
 
 - Basket NAV, supply, holdings, reserve, and current weights.
+- Contract-calculated `MDBS NAV price`, 24-hour change, oracle timestamp and freshness, circulating supply, and contract-backed entry/redemption previews.
 - Current AI target weights and drift.
 - Entry and redemption fee rates.
 - Pending or queued redemptions.
@@ -673,7 +681,7 @@ The implemented Brain map uses 42 individually generated character-roster-v4 por
 
 ![Decisions dark mode](design/mockups/decisions-screen-v2-editorial-dark.png)
 
-The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, and queued-redemption settlement transaction when present. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
+The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, queued-redemption settlement transaction, V2 input hash, bounded context size, source validity, freshness status, and post-cycle MDBS NAV price when present. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
 
 ## 15. Security requirements
 

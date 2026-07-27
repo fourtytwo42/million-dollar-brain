@@ -10,6 +10,7 @@
     "test:contracts": "forge test --root packages/contracts",
     "test:meme": "node --experimental-strip-types --test tests/meme-recap.test.ts",
     "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
+    "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },
@@ -17,6 +18,7 @@
     "node": ">=24.18.0"
   },
   "devDependencies": {
-    "playwright": "1.62.0"
+    "playwright": "1.62.0",
+    "prettier": "3.9.6"
   }
 }

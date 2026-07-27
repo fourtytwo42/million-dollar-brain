@@ -374,6 +374,7 @@ contract BasketVault is
     ) external onlyRole(KEEPER_ROLE) nonReentrant {
         _validateTargetWeights(targetAssets, weights);
         uint256 totalNav = totalAssetsUsd();
+        uint256 dustValue = (totalNav * DUST_BPS) / BPS;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
             uint256 targetWeight = _targetWeight(asset, targetAssets, weights);
@@ -381,11 +382,15 @@ contract BasketVault is
             uint256 targetValue = (totalNav * targetWeight) / BPS;
             if (currentValue > targetValue) {
                 uint256 valueToSell = currentValue - targetValue;
+                if (valueToSell <= dustValue) continue;
                 uint256 unitPrice = _unitPrice(asset);
                 uint256 sellAmount = (valueToSell * 1e18) / unitPrice;
                 if (sellAmount > 0) {
+                    uint256 expectedProceeds = (sellAmount * unitPrice) / 1e18;
                     IERC20(asset).approve(address(router), sellAmount);
-                    router.sell(asset, sellAmount, (valueToSell * (BPS - maximumSlippageBps)) / BPS);
+                    router.sell(
+                        asset, sellAmount, (expectedProceeds * (BPS - maximumSlippageBps)) / BPS
+                    );
                 }
             }
         }
@@ -396,9 +401,9 @@ contract BasketVault is
             uint256 targetValue = (totalNav * targetWeight) / BPS;
             if (targetValue > currentValue) {
                 uint256 buyValue = targetValue - currentValue;
-                if (buyValue > 0) {
-                    uint256 minimumOut =
-                        (buyValue * 1e18 * (BPS - maximumSlippageBps)) / (_unitPrice(asset) * BPS);
+                if (buyValue > dustValue) {
+                    uint256 minimumOut = (buyValue * 1e18 * (BPS - maximumSlippageBps))
+                        / (_unitPrice(asset) * BPS);
                     usdg.approve(address(router), buyValue);
                     router.buy(asset, buyValue, minimumOut);
                 }

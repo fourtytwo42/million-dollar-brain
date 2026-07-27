@@ -93,14 +93,16 @@ Rewards never expire. Ownership changes checkpoint rewards before settlement. Se
 ### Deposit
 
 - User actions are available at any time unless the required price, sequencer, compliance, or protocol state is invalid.
-- Shares mint from net contribution at current validated NAV.
+- The vault retains the current reserve fraction, purchases every positively held asset in proportion to pre-deposit value, and mints from actual post-swap NAV added at the pre-deposit NAV/share price.
 - Deposits require a user-provided minimum share amount and deadline.
 - Deposits above the active TVL or wallet cap revert.
+- Zero-supply deposits use the governance-configured bootstrap target and mint initial shares at one USDG of actual NAV added.
 
 ### Redemption
 
 - A redemption request escrows MDBS; shares burn only when settlement completes.
-- Immediate USDG settlement is allowed when the request is no more than 1% of NAV and the post-settlement USDG reserve remains at or above 20% of NAV.
+- Immediate USDG settlement is allowed when the request is no more than 1% of NAV and every held risk asset can be sold within fresh-price and slippage limits.
+- Immediate and queued settlements liquidate the same share fraction of every position, including the USDG reserve, so remaining weights are unchanged apart from rounding.
 - Every other request enters a FIFO USDG queue.
 - Queue settlement value is calculated from validated NAV at execution, not request time.
 - The user supplies minimum proceeds and a deadline.

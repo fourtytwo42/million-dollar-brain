@@ -5,9 +5,9 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Implement and validate live-NAV MDBS pool shares plus a bounded, reproducible AI decision context.
-- Last meaningful change: BasketVault V2 now values through a freshness-aware adapter, invests deposits in the existing pool composition, liquidates redemptions proportionally, persists targets, and derives MDBS price from live NAV and supply. Ten Foundry tests pass on the VM.
-- Next step: Upgrade the live local proxy without resetting balances, then expose the new NAV/previews and replace the allocator's hardcoded context with bounded history and validated source adapters.
-- Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
+- Last meaningful change: The live BasketVault proxy now runs V2 without resetting balances, supply, or queued-redemption state. The web app exposes contract NAV/share and previews, and each hourly cycle builds a stateless bounded `DecisionContextV2` from validated on-chain state, official structured sources, and at most 12 compact cycles, then stores exact artifacts in PostgreSQL.
+- Next step: Commit and push the final web/data/docs/UAT checkpoint after one last live browser review.
+- Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
 
@@ -111,6 +111,7 @@ When sources conflict, use this order:
 - 2026-07-26: Added the first-visit comprehension layer. The non-blocking `How it works` guide explains Own, Steer, Propose, and Verify, includes a five-term glossary, persists dismissal, and always reopens from the header. Brain, Basket, and Decisions now state their purpose and explain setting, fee, redemption, and execution consequences in plain language. Prettier, Next.js production build, full economic/autonomous Chromium UAT, desktop/mobile bounds checks, and live in-app-browser console review pass.
 - 2026-07-26: Replaced the large inline onboarding block with a fixed-position quick tour that shows one of four steps at a time, leaves the Brain in its normal above-the-fold position, becomes a 12-pixel-inset mobile bottom sheet, and collapses the glossary by default. Prettier, production build, full Chromium economic/autonomous UAT, an explicit no-layout-shift assertion, mobile bottom-sheet assertion, live visual review, and zero page-level horizontal overflow pass.
 - 2026-07-26: Centralized positive-position presentation rules in `apps/web/lib/portfolio-display.ts`. Basket hides assets whose actual on-chain token balance is zero; Decision history summaries, selected target rows, and share-card allocation summaries hide weights at or below zero. Two focused helper tests, Prettier, production build, full Chromium economic/autonomous UAT, and live Basket/Decision review pass. Live history visibly omits AAPL from cycles where its target was zero.
+- 2026-07-27: Upgraded the existing BasketVault UUPS proxy to live-NAV proportional pool shares without resetting MDBS supply, balances, fees, or queued redemptions. Thirteen Foundry tests plus a 256-run fuzz test verify live oracle NAV, non-dilutive proportional deposits, proportional exits, transfer isolation, stale-price failure, slippage, queue behavior, and dust handling. The live V2 allocator recorded a stateless bounded context with 12 cycles and 4,096 estimated tokens, persisted exact artifacts to native PostgreSQL, returned an Ornith allocation of USDG 20%, NVDA 50%, AAPL 0%, and ETHX 30%, and executed it on Anvil. Prettier, production build, focused data tests, full Chromium economic/autonomous UAT, responsive checks, and LAN/public HTTP checks pass.
 
 ## Decisions
 
@@ -131,6 +132,15 @@ When sources conflict, use this order:
 - Commands/tests: `npm run test:meme`, `npm run format:check`, `npm run test:contracts`, Next.js production build, full Chromium UAT, live hourly cycle, and in-app-browser deep-link and console verification.
 - Result: Every new cycle records an immutable factual cast recap and can produce a 1200-by-630 decision card while contracts, NFT IDs, presets, ownership, pricing, and basket economics remain unchanged.
 - Follow-up: None for local devnet. Keep the satire disclaimer and never describe fictional blame as causal performance attribution.
+
+### 2026-07-27 - Live NAV Pool Shares And Bounded Decision Context
+
+- Context: MDBS needed to behave like a true proportional claim on a managed pool, while Ornith needed fresh structured evidence without accumulating old prompts or unbounded history.
+- Decision: Value MDBS from fresh on-chain basket NAV divided by circulating supply. Deposits buy the current basket proportionally, redemptions liquidate the acting holder's proportional claim, and ordinary MDBS transfers never trade underlying assets. Build every model request statelessly from validated same-cycle data, at most 12 compact cycles, deterministic 32K-budget truncation, and a separately persisted exact input artifact.
+- Files: `packages/contracts/src/BasketVault.sol`, `packages/contracts/src/MockValuationOracle.sol`, `apps/web/lib/decision-context.ts`, `apps/web/lib/market-sources.ts`, `apps/web/lib/allocator.ts`, `apps/web/lib/chain.ts`, `apps/web/components/editorial-dashboard.tsx`, `tests/decision-context.test.ts`, `tests/uat.mjs`.
+- Commands/tests: Thirteen Foundry tests, 256-run fuzz test, focused decision-context tests, Prettier, Next.js production build, Chromium economic/autonomous UAT, live Ornith allocation, PostgreSQL artifact query, and LAN/public HTTP verification.
+- Result: The live local-devnet proxy preserves all V1 state while exposing fixed-point NAV/share and previews. The UI displays live pool value and proportional entry/exit effects, and historical Decisions expose reproducible V2 hashes, sources, freshness, outcomes, and execution evidence.
+- Follow-up: Configure a FRED API key when macro context is wanted; dependent brain inputs remain inactive until then. Do not activate real value until external release gates and dependency advisories are cleared.
 
 ### 2026-07-12 - Reset Stale Project Context
 
@@ -285,7 +295,8 @@ When sources conflict, use this order:
 
 ## Open Follow-ups
 
-- Replace the local allocator's hardcoded asset metrics with a bounded, freshness-validated decision package. The live implementation currently sends current NAV/holdings, router prices, tags, and static return/volatility/drawdown/liquidity values but no decision history, holdings history, cost basis, realized or unrealized P&L, turnover history, SEC fundamentals, macro data, or live external market feed. Several `DATA_AVAILABILITY` flags currently claim absent fields are available and must be corrected before those brain dependencies are trusted.
+- Configure a free FRED API key when macro observations are desired. Until configured, macro availability remains false and dependent brain effects correctly become inactive.
+- The latest stable Next.js 16.2.12 dependency tree still includes audited high-severity advisories through its pinned `postcss` and `sharp` packages. Do not treat the public demo tunnel as a production deployment; update and re-audit when upstream ships fixed compatible dependencies.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.
