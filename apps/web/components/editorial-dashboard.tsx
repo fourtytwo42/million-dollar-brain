@@ -648,16 +648,30 @@ export function EditorialDashboard({
               <p className="section-kicker">BASKET LEDGER</p>
               <h1>The portfolio, without the mystery.</h1>
               <p className="page-explainer">
-                MDBS represents your share of the whole basket. Deposit USDG to
-                mint shares; redeem shares to exit according to the reserve and
-                queue rules.
+                Buy MDBS with USDG to own a proportional share of the basket.
+                Sell MDBS to receive USDG based on the basket&apos;s live value.
               </p>
             </div>
             <div className="title-actions">
-              <button className="primary-action" onClick={onDeposit}>
-                Deposit
+              <button
+                className="primary-action"
+                onClick={() =>
+                  document
+                    .getElementById("buy-mdbs")
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                }
+              >
+                Buy MDBS
               </button>
-              <button onClick={onRedeem}>Redeem</button>
+              <button
+                onClick={() =>
+                  document
+                    .getElementById("sell-mdbs")
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
+                }
+              >
+                Sell MDBS
+              </button>
             </div>
           </section>
           <section className="basket-overview-grid">
@@ -725,89 +739,121 @@ export function EditorialDashboard({
                 {data ? money(data.rewards.pending) : "0"} claimable
               </p>
               <p className="action-explainer">
-                MDBS is a pool share, not a fixed-price token. Deposits buy the
-                currently held assets proportionally. Redemptions sell the same
-                fraction and return USDG.
+                MDBS is the token that represents your share of this portfolio.
+                Buying MDBS adds USDG to the basket and buys its current assets.
+                Selling MDBS sells your share and pays you in USDG.
               </p>
-              <label>
-                Deposit USDG
-                <input
-                  aria-label="Deposit USDG"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                />
-              </label>
-              <button
-                className="primary-action full-button"
-                onClick={onDeposit}
-              >
-                Deposit USDG
-              </button>
-              {data && (
-                <div className="trade-preview" aria-label="Deposit preview">
-                  <b>Live deposit preview</b>
-                  <span>
-                    Gross ${money(data.previews.deposit.gross)} · fee $
-                    {money(data.previews.deposit.fee)}
-                  </span>
-                  <span>
-                    Net invested ${money(data.previews.deposit.netInvestment)} ·
-                    expected {money(data.previews.deposit.expectedShares)} MDBS
-                  </span>
-                  <span>
-                    Current price ${money4(data.navPerShare)} · minimum 99% of
-                    preview
-                  </span>
-                  {Object.entries(data.currentWeightsBps)
-                    .filter(([, weight]) => weight > 0)
-                    .map(([symbol, weight]) => (
-                      <small key={symbol}>
-                        {symbol}: approximately $
-                        {money(
-                          (BigInt(data.previews.deposit.netInvestment) *
-                            BigInt(weight)) /
-                            10_000n,
-                        )}{" "}
-                        ({(weight / 100).toFixed(2)}%)
-                      </small>
-                    ))}
+              <section className="position-action" id="buy-mdbs">
+                <div className="position-action-heading">
+                  <span>1</span>
+                  <div>
+                    <h3>Buy MDBS</h3>
+                    <p>Pay with USDG and receive basket-share tokens.</p>
+                  </div>
                 </div>
-              )}
-              {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
-                <button className="full-button" onClick={onCancelRedemption}>
-                  Cancel queued redemption #{data.redemption.pendingRequestId}
+                <label>
+                  You pay
+                  <div className="token-input">
+                    <input
+                      aria-label="USDG to spend"
+                      value={amount}
+                      onChange={(event) => setAmount(event.target.value)}
+                    />
+                    <b>USDG</b>
+                  </div>
+                </label>
+                <button
+                  className="primary-action full-button"
+                  onClick={onDeposit}
+                >
+                  Buy MDBS
                 </button>
-              ) : (
-                <button className="full-button" onClick={onRedeem}>
-                  Redeem half my liquid shares
-                </button>
-              )}
-              {data && BigInt(data.previews.redeem.shares) > 0n && (
-                <div className="trade-preview" aria-label="Redemption preview">
-                  <b>Half-position redemption preview</b>
-                  <span>
-                    Burn {money(data.previews.redeem.shares)} MDBS · gross $
-                    {money(data.previews.redeem.gross)}
-                  </span>
-                  <span>
-                    Fee ${money(data.previews.redeem.fee)} · expected $
-                    {money(data.previews.redeem.net)} USDG
-                  </span>
-                  <span>
-                    Settlement:{" "}
-                    {data.previews.redeem.immediate
-                      ? "atomic proportional sale"
-                      : "cancellable FIFO queue"}
-                  </span>
+                {data && (
+                  <div className="trade-preview" aria-label="Buy MDBS preview">
+                    <b>You receive approximately</b>
+                    <strong>
+                      {money(data.previews.deposit.expectedShares)} MDBS
+                    </strong>
+                    <span>
+                      You pay ${money(data.previews.deposit.gross)} USDG · buy
+                      fee ${money(data.previews.deposit.fee)}
+                    </span>
+                    <span>
+                      ${money(data.previews.deposit.netInvestment)} enters the
+                      basket at ${money4(data.navPerShare)} per MDBS
+                    </span>
+                    <span>Minimum received: 99% of this preview</span>
+                    <small>Your USDG buys:</small>
+                    {Object.entries(data.currentWeightsBps)
+                      .filter(([, weight]) => weight > 0)
+                      .map(([symbol, weight]) => (
+                        <small key={symbol}>
+                          {symbol}: approximately $
+                          {money(
+                            (BigInt(data.previews.deposit.netInvestment) *
+                              BigInt(weight)) /
+                              10_000n,
+                          )}{" "}
+                          ({(weight / 100).toFixed(2)}%)
+                        </small>
+                      ))}
+                  </div>
+                )}
+              </section>
+              <section className="position-action" id="sell-mdbs">
+                <div className="position-action-heading">
+                  <span>2</span>
+                  <div>
+                    <h3>Sell MDBS</h3>
+                    <p>Sell basket-share tokens and receive USDG.</p>
+                  </div>
                 </div>
-              )}
-              <button
-                className="full-button"
-                disabled={!data || BigInt(data.rewards.pending) === 0n}
-                onClick={onClaim}
-              >
-                Claim brain rewards
-              </button>
+                {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
+                  <button className="full-button" onClick={onCancelRedemption}>
+                    Cancel queued sale #{data.redemption.pendingRequestId}
+                  </button>
+                ) : (
+                  <button className="full-button" onClick={onRedeem}>
+                    Sell 50% of my MDBS
+                  </button>
+                )}
+                {data && BigInt(data.previews.redeem.shares) > 0n && (
+                  <div className="trade-preview" aria-label="Sell MDBS preview">
+                    <b>You receive approximately</b>
+                    <strong>{money(data.previews.redeem.net)} USDG</strong>
+                    <span>
+                      You sell {money(data.previews.redeem.shares)} MDBS ·
+                      current value ${money(data.previews.redeem.gross)}
+                    </span>
+                    <span>
+                      Sell fee ${money(data.previews.redeem.fee)} · net $
+                      {money(data.previews.redeem.net)} USDG
+                    </span>
+                    <span>
+                      Timing:{" "}
+                      {data.previews.redeem.immediate
+                        ? "immediate"
+                        : "queued until the basket can sell safely"}
+                    </span>
+                  </div>
+                )}
+              </section>
+              <section className="position-action claim-action">
+                <div className="position-action-heading">
+                  <span>3</span>
+                  <div>
+                    <h3>Claim rewards</h3>
+                    <p>Collect fees earned by brain pieces you own.</p>
+                  </div>
+                </div>
+                <button
+                  className="full-button"
+                  disabled={!data || BigInt(data.rewards.pending) === 0n}
+                  onClick={onClaim}
+                >
+                  Claim ${data ? money(data.rewards.pending) : "0"} USDG
+                </button>
+              </section>
             </aside>
           </section>
           {data && (
@@ -872,11 +918,11 @@ export function EditorialDashboard({
                     {money(data.portfolioAccounting.unrealizedPnlUsdWad)}
                   </span>
                   <span>
-                    Deposits 24h $
+                    MDBS buys 24h $
                     {money(data.portfolioAccounting.deposits24hUsdWad)}
                   </span>
                   <span>
-                    Redemptions 24h $
+                    MDBS sells 24h $
                     {money(data.portfolioAccounting.redemptions24hUsdWad)}
                   </span>
                   <small>
@@ -1243,7 +1289,7 @@ export function EditorialDashboard({
                   </div>
                   {selectedCycle?.redemptionTxHash && (
                     <div className="execution-record">
-                      <b>Redemption settlement</b>
+                      <b>Queued MDBS sale settlement</b>
                       <code>{selectedCycle.redemptionTxHash}</code>
                     </div>
                   )}
@@ -1394,7 +1440,7 @@ function HowItWorks({
       eyebrow: "01 · OWN",
       actor: "You",
       title: "Own a share of the basket",
-      copy: "Deposit USDG to mint MDBS. Each MDBS represents your redeemable share of the entire portfolio, not one individual asset.",
+      copy: "Buy MDBS with USDG. Each MDBS token represents your share of the entire portfolio. Sell MDBS whenever you want to exit.",
       action: "See the basket",
       destination: "Basket" as const,
     },

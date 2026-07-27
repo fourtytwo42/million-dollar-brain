@@ -445,7 +445,7 @@ try {
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page
     .getByText(
-      "MDBS represents your share of the whole basket. Deposit USDG to mint shares; redeem shares to exit according to the reserve and queue rules.",
+      "Buy MDBS with USDG to own a proportional share of the basket. Sell MDBS to receive USDG based on the basket's live value.",
       { exact: true },
     )
     .waitFor();
@@ -504,21 +504,26 @@ try {
     expectedHeldSymbols,
     "the Basket portfolio must render only assets with positive balances",
   );
-  const amount = page.getByLabel("Deposit USDG");
+  const amount = page.getByLabel("USDG to spend");
   await amount.fill("1000");
-  await page.getByRole("button", { name: "Deposit USDG" }).click();
   await page
-    .getByText(/Deposit complete\. Minted approximately/)
+    .getByRole("button", { name: "Buy MDBS", exact: true })
+    .last()
+    .click();
+  await page
+    .getByText(/Purchase complete\. You bought approximately/)
     .waitFor({ timeout: 45000 });
 
   await amount.fill("100");
-  await page.getByRole("button", { name: "Deposit USDG" }).click();
   await page
-    .getByText(/Deposit complete\. Minted approximately/)
+    .getByRole("button", { name: "Buy MDBS", exact: true })
+    .last()
+    .click();
+  await page
+    .getByText(/Purchase complete\. You bought approximately/)
     .waitFor({ timeout: 45000 });
   const claim = page.getByRole("button", {
-    name: "Claim brain rewards",
-    exact: true,
+    name: /^Claim \$[\d,.]+ USDG$/,
   });
   await claim.waitFor({ state: "visible" });
   assert.equal(
@@ -735,17 +740,13 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Light", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Redeem half my liquid shares" })
-    .click();
+  await page.getByRole("button", { name: "Sell 50% of my MDBS" }).click();
   await page
     .getByText(
-      "Redemption queued on-chain for the next bounded hourly settlement.",
+      "Sale queued on-chain because the basket cannot safely complete it immediately.",
     )
     .waitFor({ timeout: 45000 });
-  await page
-    .getByRole("button", { name: /Cancel queued redemption #\d+/ })
-    .waitFor();
+  await page.getByRole("button", { name: /Cancel queued sale #\d+/ }).waitFor();
   const settlementCycle = await page.request.post(`${baseUrl}/api/cycle`, {
     headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
     timeout: 210000,
@@ -772,12 +773,12 @@ try {
     })
     .waitFor();
   const remainingRedemption = page.getByRole("button", {
-    name: /Cancel queued redemption #\d+/,
+    name: /Cancel queued sale #\d+/,
   });
   if ((await remainingRedemption.count()) === 1) {
     await remainingRedemption.click();
     await page
-      .getByText("Queued redemption cancelled; escrowed shares returned.")
+      .getByText("Queued sale cancelled; your MDBS was returned.")
       .waitFor({ timeout: 45000 });
   } else {
     assert.equal(

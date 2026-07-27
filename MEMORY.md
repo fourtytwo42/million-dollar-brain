@@ -4,9 +4,9 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete official market history, tracked portfolio accounting, and DecisionContext V3.
-- Last meaningful change: A one-minute native collector now stores multiplier-adjusted Robinhood quotes for NVDA, AAPL, SPY, QQQ, and SOXX, builds local candles/features, indexes vault trades, and matures decision outcomes. The live allocator produced and executed a stateless V3 Ornith cycle while keeping SPY/QQQ/SOXX/ETH-USD reference-only.
-- Next step: Commit and push the final V3 browser-UAT and documentation checkpoint.
+- Current task: Replace user-facing deposit and redemption language with simple MDBS buy, sell, and claim actions.
+- Last meaningful change: The Basket action rail now presents three numbered sections: Buy MDBS, Sell MDBS, and Claim rewards. Previews lead with tokens or USDG received, while deposit, mint, redeem, and burn remain internal contract/accounting terms.
+- Next step: Commit and push the verified MDBS buy, sell, and claim checkpoint.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -152,6 +152,15 @@ When sources conflict, use this order:
 - Commands/tests: Market/context unit tests, Foundry upgrade/event/invariant tests, production build, live collector, autonomous Ornith cycle, PostgreSQL queries, Chromium UAT, and public endpoint checks.
 - Result: DecisionContext V3 supplies calculated features, coverage, tracked accounting, benchmarks, and outcomes without raw candles or prompt accumulation. Basket and Decisions expose the same evidence and explain immature metrics.
 - Follow-up: Let official history mature naturally; do not backfill from unofficial providers. Configure FRED separately when desired.
+
+### 2026-07-27 - User-Facing MDBS Buy And Sell Language
+
+- Context: Deposit, mint, redeem, and burn accurately described the contracts but made the Basket feel like infrastructure instead of a token users can buy and sell.
+- Decision: Primary wallet language is `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. The buy preview leads with MDBS received; the sell preview leads with USDG received and immediate-or-queued timing. Technical deposit/redemption names remain unchanged in contracts, APIs, accounting schemas, and audit evidence.
+- Files: `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-dashboard.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `UX_SCREENS.md`.
+- Commands/tests: Prettier, Next.js production build, live desktop in-app-browser review, safe scroll-target check, page-level overflow check, and full Chromium economic/autonomous-cycle UAT.
+- Result: The Basket now reads as a familiar token purchase/sale flow without hiding the proportional pool mechanics or settlement queue. Buy, sell, claim, responsive, history, autonomous cycle, queued settlement, and dark-mode tests pass.
+- Follow-up: None for the local devnet.
 
 ### 2026-07-12 - Reset Stale Project Context
 

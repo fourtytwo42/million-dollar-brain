@@ -644,6 +644,7 @@ The public application must show:
 
 - Basket NAV, supply, holdings, reserve, and current weights.
 - Contract-calculated `MDBS NAV price`, 24-hour change, oracle timestamp and freshness, circulating supply, and contract-backed entry/redemption previews.
+- User-facing basket actions are always labelled `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. Deposit, mint, redeem, and burn remain contract and accounting terms only, not primary wallet action labels.
 - Current AI target weights and drift.
 - Entry and redemption fee rates.
 - Pending or queued redemptions.

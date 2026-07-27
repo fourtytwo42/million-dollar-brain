@@ -1419,6 +1419,60 @@ footer {
   padding: 12px;
   margin-top: 6px;
 }
+.position-action {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  scroll-margin: 110px;
+}
+.position-action-heading {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 9px;
+  align-items: start;
+}
+.position-action-heading > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font: 700 11px/1 var(--font-mono);
+}
+.position-action-heading h3,
+.position-action-heading p {
+  margin: 0;
+}
+.position-action-heading h3 {
+  font-size: 15px;
+}
+.position-action-heading p {
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.position-action label {
+  margin-top: 13px;
+}
+.token-input {
+  position: relative;
+}
+.token-input input {
+  padding-right: 58px;
+}
+.token-input b {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  color: var(--text-muted);
+  font: 700 10px/1 var(--font-mono);
+  transform: translateY(-50%);
+}
+.trade-preview strong {
+  color: var(--text);
+  font-size: 16px;
+}
 .full-button {
   width: 100%;
   padding: 11px;

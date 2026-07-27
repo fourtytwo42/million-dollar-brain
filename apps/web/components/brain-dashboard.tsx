@@ -249,7 +249,7 @@ export function BrainDashboard() {
       functionName: "previewDeposit",
       args: [value],
     });
-    setMessage("Approving USDG…");
+    setMessage("Approving USDG for your MDBS purchase…");
     const approve = await wallet.writeContract({
       address: data.deployment.usdg,
       abi: erc20Abi,
@@ -257,7 +257,7 @@ export function BrainDashboard() {
       args: [data.deployment.basket, value],
     });
     await publicClient.waitForTransactionReceipt({ hash: approve });
-    setMessage("Minting basket shares…");
+    setMessage("Buying MDBS and adding your funds to the basket…");
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const tx = await wallet.writeContract({
       address: data.deployment.basket,
@@ -268,7 +268,7 @@ export function BrainDashboard() {
     await publicClient.waitForTransactionReceipt({ hash: tx });
     await refresh();
     setMessage(
-      `Deposit complete. Minted approximately ${money(preview[2])} MDBS and purchased the basket proportionally.`,
+      `Purchase complete. You bought approximately ${money(preview[2])} MDBS, backed by your proportional share of the basket.`,
     );
   }
   async function buy(piece: Piece) {
@@ -317,7 +317,7 @@ export function BrainDashboard() {
     const { wallet, publicClient } = clients();
     const shares = BigInt(data.shares) / 2n;
     if (!shares) return;
-    setMessage("Requesting a liquid redemption…");
+    setMessage("Selling MDBS for USDG…");
     const immediate = await publicClient.readContract({
       address: data.deployment.basket,
       abi: basketAbi,
@@ -349,14 +349,14 @@ export function BrainDashboard() {
     await refresh();
     setMessage(
       immediate
-        ? `Redemption complete. Sold your proportional basket fraction for approximately ${money(preview[2])} USDG.`
-        : "Redemption queued on-chain for the next bounded hourly settlement.",
+        ? `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`
+        : "Sale queued on-chain because the basket cannot safely complete it immediately.",
     );
   }
   async function cancelRedemption() {
     if (!data || BigInt(data.redemption.pendingRequestId) === 0n) return;
     const { wallet, publicClient } = clients();
-    setMessage("Cancelling queued redemption…");
+    setMessage("Cancelling queued MDBS sale…");
     const tx = await wallet.writeContract({
       address: data.deployment.basket,
       abi: basketAbi,
@@ -365,7 +365,7 @@ export function BrainDashboard() {
     });
     await publicClient.waitForTransactionReceipt({ hash: tx });
     await refresh();
-    setMessage("Queued redemption cancelled; escrowed shares returned.");
+    setMessage("Queued sale cancelled; your MDBS was returned.");
   }
   async function claimRewards() {
     if (!data || !account) return;
@@ -505,7 +505,7 @@ export function BrainDashboard() {
                 )
               }
             >
-              Claim brain rewards
+              Claim rewards
             </button>
           </div>
         </section>
@@ -549,7 +549,7 @@ export function BrainDashboard() {
             </div>
             <div className="buy-row">
               <input
-                aria-label="Deposit USDG"
+                aria-label="USDG to spend"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 inputMode="decimal"
@@ -561,14 +561,14 @@ export function BrainDashboard() {
                   )
                 }
               >
-                Deposit USDG
+                Buy MDBS
               </button>
             </div>
             {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
               <>
                 <p className="queue-note">
-                  Redemption #{data.redemption.pendingRequestId} is escrowed in
-                  the FIFO queue.
+                  MDBS sale #{data.redemption.pendingRequestId} is waiting in
+                  the settlement queue.
                 </p>
                 <button
                   className="quiet full"
@@ -578,7 +578,7 @@ export function BrainDashboard() {
                     )
                   }
                 >
-                  Cancel queued redemption
+                  Cancel queued sale
                 </button>
               </>
             ) : (
@@ -588,7 +588,7 @@ export function BrainDashboard() {
                   redeem().catch((e) => setMessage(e.shortMessage ?? e.message))
                 }
               >
-                Redeem half of my liquid shares
+                Sell 50% of my MDBS
               </button>
             )}
           </article>

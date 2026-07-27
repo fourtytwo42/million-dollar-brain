@@ -55,7 +55,7 @@ Opening the wallet menu shows the Account drawer:
 - Brain pieces owned.
 - Claimable brain rewards.
 - Pending transactions.
-- Deposit, Redeem, and Claim All actions.
+- Buy MDBS, Sell MDBS, and Claim rewards actions. Deposit and redeem terminology is reserved for technical contract detail, not primary user controls.
 - Network and wallet controls.
 - Personal transaction history.
 
