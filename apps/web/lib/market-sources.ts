@@ -164,6 +164,20 @@ export async function coinbaseEthCandles() {
   );
 }
 
+export async function coinbaseEthTicker() {
+  return fetchJson<{
+    price: string;
+    time: string;
+    bid: string;
+    ask: string;
+    volume: string;
+  }>(
+    "coinbase-eth-usd-ticker",
+    "https://api.exchange.coinbase.com/products/ETH-USD/ticker",
+    15_000,
+  );
+}
+
 type SecUnit = {
   end?: string;
   filed?: string;

@@ -457,6 +457,14 @@ Every model request is stateless, contains one freshly built `DecisionContextV3`
 
 The native market collector samples official Robinhood quotes for executable NVDA/AAPL and reference-only SPY/QQQ/SOXX every minute. It applies the Stock Token multiplier, deduplicates source timestamps, builds retained one-minute, 15-minute, hourly, and daily candles, and calculates versioned returns, volatility, drawdown, momentum, mean reversion, spread, liquidity, execution cost, relative strength, correlation, and beta. Stock features mature only from post-activation official history; no third-party backfill is permitted. ETH-USD remains an official Coinbase reference series, and FRED remains optional until configured.
 
+On local Anvil only, each successful collector pass also synchronizes the mock
+valuation oracle and mock execution router to the same fresh official AAPL,
+NVDA, and Coinbase ETH-USD prices. Both values are verified after mining and
+rolled back together if the paired update cannot complete. This makes local MDBS
+NAV and P&L move with the market without presenting mock prices as production
+oracles. Testnet and mainnet use approved production valuation and execution
+adapters instead.
+
 Portfolio accounting uses a clearly labelled activation mark plus post-activation vault events and receipts. It tracks weighted-average basis, realized/unrealized P&L, time-weighted returns, turnover, fees, gas, deposits, redemptions, and one-hour/24-hour decision outcomes. Reference assets are structurally non-executable and cannot appear in a validated allocation.
 
 ### 10.4 Model output
@@ -659,6 +667,13 @@ The public application must show:
 - Current contract implementations and upgrade history.
 - Oracle, keeper, provider, and circuit-breaker status.
 - Clear separation between deposits, withdrawals, fees, and investment performance.
+- Basket presents an MDBS price-history chart, time-weighted returns, total,
+  realized, and unrealized P&L, and user cash flows. It does not expose raw
+  benchmark warm-up or observation-count diagnostics in the default portfolio
+  view.
+- Decisions contains an expandable `Market data and pricing` audit panel with
+  current on-chain price sources, timestamps, calculated history coverage, and
+  reference-only status.
 
 The proposed information architecture, individual screens, transaction modals, admin states, and mobile behavior are defined in `UX_SCREENS.md`.
 

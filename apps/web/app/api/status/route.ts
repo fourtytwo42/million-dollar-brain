@@ -12,7 +12,9 @@ import {
 import {
   buildPortfolioAccounting,
   decisionOutcomeMap,
+  portfolioPerformanceHistory,
 } from "@/lib/portfolio-accounting";
+import { localPriceSyncHealth } from "@/lib/market-price-sync";
 
 export const runtime = "nodejs";
 function tokenAmount(value: string) {
@@ -49,18 +51,27 @@ export async function GET(request: NextRequest) {
     const deposit = request.nextUrl.searchParams.get("deposit") ?? "1000";
     const sell = request.nextUrl.searchParams.get("sell");
     const history = cycleHistory();
-    const [current, persistence, marketData, features, outcomes] =
-      await Promise.all([
-        dashboard(
-          address && isAddress(address) ? address : undefined,
-          tokenAmount(deposit),
-          sell == null ? undefined : tokenAmount(sell),
-        ),
-        databaseHealth(),
-        marketDataHealth(),
-        latestMarketFeatures(),
-        decisionOutcomeMap(),
-      ]);
+    const [
+      current,
+      persistence,
+      marketData,
+      features,
+      outcomes,
+      performanceHistory,
+      priceSync,
+    ] = await Promise.all([
+      dashboard(
+        address && isAddress(address) ? address : undefined,
+        tokenAmount(deposit),
+        sell == null ? undefined : tokenAmount(sell),
+      ),
+      databaseHealth(),
+      marketDataHealth(),
+      latestMarketFeatures(),
+      decisionOutcomeMap(),
+      portfolioPerformanceHistory(),
+      localPriceSyncHealth(),
+    ]);
     const portfolioAccounting = await buildPortfolioAccounting(current);
     const enrichedHistory = history.map((cycle) => ({
       ...cycle,
@@ -91,6 +102,8 @@ export async function GET(request: NextRequest) {
       marketData,
       marketFeatures: features,
       portfolioAccounting,
+      performanceHistory,
+      priceSync,
       benchmarks: REFERENCE_UNIVERSE.map((symbol) => ({
         symbol,
         executable: false,

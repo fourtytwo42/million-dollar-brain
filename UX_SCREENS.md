@@ -212,9 +212,16 @@ This combines the previous Portfolio and My Account screens.
 - Current allocation chart.
 - Ornith target allocation.
 - Stable reserve and required minimum.
-- Performance for 24 hours, seven days, 30 days, and since launch.
-- Realized and unrealized basket performance.
+- MDBS NAV-price history with one-hour, 24-hour, seven-day, and since-activation
+  time-weighted returns as each window becomes available.
+- Total, realized, and unrealized basket P&L.
+- User buys and sells shown separately from investment results.
 - Current drift and expected next rebalance time.
+
+Technical reference-universe and official-history warm-up cards do not appear on
+Basket. Ready benchmarks may appear as a compact comparison beside performance.
+Source coverage, timestamps, and immature-window explanations live in the
+expandable `Market data and pricing` audit panel on Decisions.
 
 ### Holdings
 

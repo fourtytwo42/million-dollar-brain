@@ -176,7 +176,24 @@ async function ensureSchema(client: PoolClient) {
       duration_ms integer,
       details jsonb NOT NULL DEFAULT '{}'::jsonb
     );
-    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2)
+    CREATE TABLE IF NOT EXISTS mdb_price_syncs (
+      id bigserial PRIMARY KEY,
+      observed_at timestamptz NOT NULL DEFAULT now(),
+      symbol text NOT NULL,
+      source text NOT NULL,
+      source_observed_at timestamptz NOT NULL,
+      price_wad numeric NOT NULL,
+      previous_oracle_price_wad numeric NOT NULL,
+      previous_router_price_wad numeric NOT NULL,
+      oracle_tx_hash text,
+      router_tx_hash text,
+      status text NOT NULL CHECK (status IN ('updated','unchanged','failed')),
+      source_hash text NOT NULL,
+      details jsonb NOT NULL DEFAULT '{}'::jsonb
+    );
+    CREATE INDEX IF NOT EXISTS mdb_price_syncs_symbol_time_idx
+      ON mdb_price_syncs (symbol, observed_at DESC);
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3)
       ON CONFLICT (version) DO NOTHING;
   `);
 }

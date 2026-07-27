@@ -489,6 +489,25 @@ try {
     true,
     "all valuation prices must be fresh before basket actions",
   );
+  assert.deepEqual(
+    basketStatus.priceSync.prices.map(({ symbol }) => symbol).sort(),
+    ["AAPL", "ETHX", "NVDA"],
+    "the local oracle must expose audited official-feed syncs for every risk asset",
+  );
+  assert.equal(
+    basketStatus.priceSync.worker.last_error,
+    null,
+    "the paired oracle and execution-router sync must be healthy",
+  );
+  assert.ok(
+    basketStatus.performanceHistory.length > 0,
+    "the status API must expose persisted MDBS price history",
+  );
+  assert.notEqual(
+    BigInt(basketStatus.portfolioAccounting.totalPnlUsdWad),
+    0n,
+    "live official prices must produce tracked portfolio gain or loss instead of a permanently flat mock NAV",
+  );
   assert.equal(
     BigInt(basketStatus.previews.deposit.expectedShares) > 0n,
     true,
@@ -520,6 +539,20 @@ try {
     await page.locator(".holding-table").count(),
     0,
     "the previous holdings bar table must not remain",
+  );
+  await page
+    .getByRole("region", { name: "MDBS portfolio performance" })
+    .waitFor();
+  await page.getByText("Portfolio gain / loss", { exact: true }).waitFor();
+  assert.equal(
+    await page.getByText("Reference only", { exact: true }).count(),
+    0,
+    "the Basket must not show internal reference-universe diagnostics",
+  );
+  assert.equal(
+    await page.getByText("Official history warm-up", { exact: true }).count(),
+    0,
+    "the Basket must not show raw observation-count diagnostics",
   );
   assert.equal(
     await page.getByRole("region", { name: "Your brain finances" }).count(),
@@ -667,6 +700,19 @@ try {
       "Follow the full chain of evidence: what brain owners requested, what the AI proposed, and what the protocol actually executed.",
       { exact: true },
     )
+    .waitFor();
+  const marketDataDetails = page.getByText("Market data and pricing", {
+    exact: true,
+  });
+  await marketDataDetails.click();
+  for (const source of [
+    "Robinhood Stock Token API",
+    "Coinbase Exchange ETH-USD ticker",
+  ]) {
+    await page.getByText(source, { exact: true }).first().waitFor();
+  }
+  await page
+    .getByText(/Reference benchmarks remain non-executable\./)
     .waitFor();
   const historyItems = page.getByTestId("decision-history-item");
   assert.equal(
@@ -833,9 +879,7 @@ try {
     .getByRole("heading", { name: "Returns separated from cash flows." })
     .waitFor();
   await page
-    .getByRole("region", {
-      name: "Portfolio performance and official market history",
-    })
+    .getByRole("region", { name: "MDBS portfolio performance" })
     .waitFor();
   await page.getByRole("tab", { name: "Sell", exact: true }).click();
   await page.getByText("View quote details", { exact: true }).last().click();
@@ -851,7 +895,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
+    "UAT PASS: official market collector, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live MDBS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, expandable decision data provenance, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

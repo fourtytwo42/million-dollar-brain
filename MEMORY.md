@@ -4,9 +4,13 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Replace the Basket holdings bars with a clearer portfolio distribution chart.
-- Last meaningful change: Basket now leads with a responsive value-weighted donut chart and a textual legend showing each held asset's exact percentage, USD value, and latest Ornith target.
-- Next step: None for local devnet.
+- Current task: Replace internal market warm-up diagnostics with user-facing
+  MDBS performance and connect local-devnet valuation to fresh official prices.
+- Last meaningful change: The minute collector now synchronizes paired
+  AAPL/NVDA/ETHX mock oracle and router prices from Robinhood and Coinbase,
+  while Basket shows live MDBS price history and portfolio P&L. Technical
+  sources and coverage moved to an expandable Decisions audit panel.
+- Next step: None for this local-devnet feature.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -116,6 +120,7 @@ When sources conflict, use this order:
 - 2026-07-27: Final in-app-browser V3 review found that Coinbase hourly candles arrived newest-first, causing a negative ETH history span and selecting the oldest observation as current. `apps/web/lib/decision-context.ts` now sorts ETH observations oldest-first, and `tests/market-data.test.ts` prevents regression. A new live Ornith cycle executed transaction `0xee75b2fd8f5433f26f02a51104b1e4aa03c61f833061a4f6756c5800287ca512`; Decisions now shows 350 ETH samples, a positive 20,940-minute span, and the newest `$1,940.72` price. The final Chromium UAT now selects the least-expensive live brain piece and its own catalog preset instead of assuming piece 1 remains affordable; the complete economic, autonomous-cycle, responsive, history, and dark-mode run passes against accumulated devnet state.
 - 2026-07-27: Upgraded the live BasketVault UUPS proxy to atomic-only MDBS sales in transaction `0xaabb1430a26488e22473497b4709cad695078ccb6170751463748b5d31d19c37`. Pre/post state matched exactly: NAV `24588033990218702047742`, supply `24588033990218702085339`, NAV/share `999999999999999998`, and queue counters both `25`, proving no outstanding request. The old request entry point now reverts with `queued exits disabled`. Sixteen Foundry tests plus 256 fuzz runs, Prettier, production build, full Chromium economic/autonomous UAT, and final in-app-browser inspection pass. The live Sell panel shows 25%, 50%, 75%, and Max, explains atomic settlement in collapsed details, and exposes no queue state. A refresh-message race found by UAT was also fixed so successful buy/sell receipts remain visible.
 - 2026-07-27: Replaced Basket's horizontal holdings bars with an accessible value-weighted donut chart. The chart includes only positively held assets and uses distinct light/dark palette slices; its adjacent legend preserves exact current weight, USD value, and latest Ornith target, and stacks below the chart on mobile. Prettier, production build, full Chromium economic/autonomous UAT, positive-only slice assertions, and live in-app-browser light/dark visual review pass.
+- 2026-07-27: Replaced Basket's reference-only and raw observation-count cards with MDBS price history, time-weighted returns, total/realized/unrealized P&L, and cash-flow separation. The Decisions audit panel now owns official source, current on-chain price, and coverage details. The chain-31337 collector synchronizes and verifies matching mock oracle/router prices from Robinhood AAPL/NVDA and Coinbase ETH-USD. Live proof kept supply at `26667033990218702090051`, moved NAV/share from `999999999999999998` to `996709512611462297`, and produced non-zero P&L. Seven market tests, four context tests, two display tests, sixteen Foundry tests plus 256 fuzz runs, Prettier, production build, complete Chromium economic/autonomous UAT, and final in-app-browser review pass.
 
 ## Decisions
 
@@ -332,6 +337,26 @@ When sources conflict, use this order:
 - 2026-07-26: Temporarily aligned and clipped the generated raster brain to the original mosaic mask. This fit-only approach was superseded the same day by the authored three-region anatomical SVG because the original global mask still read as a blob.
 - 2026-07-12: Reset stale project-specific memory while retaining the durable memory-management logic.
 - 2026-07-23: Produced the initial MillionDollar Brain product brief without building or deploying anything.
+
+### 2026-07-27 - Live local valuation and user-facing performance
+
+- Context: Basket showed raw reference-history diagnostics and MDBS stayed near
+  $1 because local oracle/router prices were fixed deployment mocks.
+- Decision: Keep benchmark coverage inside Decisions and show price history,
+  time-weighted returns, P&L, and separate user flows on Basket.
+- Files: `apps/web/lib/market-price-sync.ts`,
+  `apps/web/lib/portfolio-accounting.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/app/api/collect-market/route.ts`.
+- Commands/tests: `npm run test:market-data`; `npm --workspace apps/web run
+build`; authenticated live `/api/collect-market`.
+- Result: AAPL, NVDA, and ETHX were synchronized from Robinhood/Coinbase into
+  both local mock valuation and execution contracts. MDBS supply remained
+  `26667033990218702090051`, NAV/share moved from
+  `999999999999999998` to `996709512611462297`, and tracked unrealized P&L
+  became `-87747539034520851976` WAD. Last verified 2026-07-27.
+- Follow-up: Production still requires approved Robinhood Chain valuation and
+  execution adapters; the official-feed contract sync is chain-31337-only.
 
 ## Open Follow-ups
 

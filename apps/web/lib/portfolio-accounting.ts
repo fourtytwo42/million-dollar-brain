@@ -25,6 +25,8 @@ export type PortfolioAccountingV1 = {
   formulaVersion: "weighted-average-cost-v1";
   observedAt: string;
   activationBlock: string | null;
+  navUsdWad: string;
+  navPerShareWad: string;
   positions: Record<string, AccountingPositionV1>;
   realizedPnlUsdWad: string;
   unrealizedPnlUsdWad: string;
@@ -148,8 +150,9 @@ export async function buildPortfolioAccounting(
         snapshot: { navPerShareWad?: string };
       }>(
         `SELECT observed_at::text,snapshot
-           FROM mdb_portfolio_snapshots
-          WHERE phase='after' AND observed_at >= now() - interval '31 days'
+           FROM mdb_accounting_snapshots
+          WHERE observed_at >= now() - interval '31 days'
+            AND snapshot ? 'navPerShareWad'
           ORDER BY observed_at ASC`,
       );
       const currentPrice = BigInt(state.navPerShare);
@@ -197,6 +200,8 @@ export async function buildPortfolioAccounting(
         observedAt,
         activationBlock:
           priorResult.rows[0]?.block_number ?? state.blockNumber ?? null,
+        navUsdWad: state.nav,
+        navPerShareWad: state.navPerShare,
         positions,
         realizedPnlUsdWad: totalRealized.toString(),
         unrealizedPnlUsdWad: totalUnrealized.toString(),
@@ -224,6 +229,8 @@ export async function buildPortfolioAccounting(
       formulaVersion: "weighted-average-cost-v1",
       observedAt,
       activationBlock: null,
+      navUsdWad: state.nav,
+      navPerShareWad: state.navPerShare,
       positions: {},
       realizedPnlUsdWad: "0",
       unrealizedPnlUsdWad: "0",
@@ -239,6 +246,44 @@ export async function buildPortfolioAccounting(
       gas24hWei: "0",
       sourceHash: stableHash({ unavailable: true, observedAt }),
     }
+  );
+}
+
+export async function portfolioPerformanceHistory() {
+  return (
+    (await withDatabase(async (client) => {
+      const result = await client.query<{
+        observed_at: string;
+        nav_per_share_wad: string;
+        nav_usd_wad: string;
+        total_pnl_usd_wad: string;
+      }>(
+        `SELECT DISTINCT ON (
+             date_trunc('hour',observed_at)
+             + floor(extract(minute from observed_at) / 5) * interval '5 minutes'
+           )
+           observed_at::text,
+           snapshot->>'navPerShareWad' AS nav_per_share_wad,
+           snapshot->>'navUsdWad' AS nav_usd_wad,
+           snapshot->>'totalPnlUsdWad' AS total_pnl_usd_wad
+         FROM mdb_accounting_snapshots
+        WHERE observed_at >= now() - interval '30 days'
+          AND snapshot ? 'navPerShareWad'
+        ORDER BY
+          date_trunc('hour',observed_at)
+          + floor(extract(minute from observed_at) / 5) * interval '5 minutes',
+          observed_at DESC
+        LIMIT 8640`,
+      );
+      return result.rows
+        .map((row) => ({
+          observedAt: new Date(row.observed_at).toISOString(),
+          navPerShareWad: row.nav_per_share_wad,
+          navUsdWad: row.nav_usd_wad,
+          totalPnlUsdWad: row.total_pnl_usd_wad,
+        }))
+        .sort((a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt));
+    })) ?? []
   );
 }
 

@@ -186,12 +186,15 @@ export type EditorialData = {
   marketFeatures: Record<
     string,
     {
+      currentPrice: number | null;
       return1hBps: number | null;
       return24hBps: number | null;
       coverage: { sampleCount: number; spanMinutes: number; reasons: string[] };
     }
   >;
   portfolioAccounting: {
+    navUsdWad: string;
+    navPerShareWad: string;
     realizedPnlUsdWad: string;
     unrealizedPnlUsdWad: string;
     totalPnlUsdWad: string;
@@ -212,10 +215,36 @@ export type EditorialData = {
     symbol: string;
     executable: false;
     features: {
+      return1hBps?: number | null;
       return24hBps?: number | null;
-      coverage?: { reasons: string[] };
+      return7dBps?: number | null;
+      coverage?: {
+        sampleCount: number;
+        spanMinutes: number;
+        reasons: string[];
+      };
     } | null;
   }[];
+  performanceHistory: {
+    observedAt: string;
+    navPerShareWad: string;
+    navUsdWad: string;
+    totalPnlUsdWad: string;
+  }[];
+  priceSync: {
+    worker: {
+      last_succeeded_at: string | null;
+      last_error: string | null;
+      details?: unknown;
+    } | null;
+    prices: {
+      symbol: string;
+      source: string;
+      source_observed_at: string;
+      price_wad: string;
+      status: string;
+    }[];
+  };
 };
 
 const money = (value: string | bigint) =>
@@ -227,6 +256,10 @@ const money4 = (value: string | bigint) =>
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   });
+const signedMoney = (value: string | bigint) => {
+  const amount = BigInt(value);
+  return `${amount >= 0n ? "+" : "−"}$${money(amount >= 0n ? amount : -amount)}`;
+};
 const inputAmount = (value: bigint) =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", {
     useGrouping: false,
@@ -381,13 +414,17 @@ export function EditorialDashboard({
     }
     return stats;
   }, {});
-  const navSeries = [...decisionHistory]
-    .reverse()
-    .flatMap((cycle) =>
-      cycle.portfolioAfter?.navPerShareWad
-        ? [Number(formatUnits(BigInt(cycle.portfolioAfter.navPerShareWad), 18))]
-        : [],
-    );
+  const navSeries = (
+    data?.performanceHistory.length
+      ? data.performanceHistory.map((point) => point.navPerShareWad)
+      : [...decisionHistory]
+          .reverse()
+          .flatMap((cycle) =>
+            cycle.portfolioAfter?.navPerShareWad
+              ? [cycle.portfolioAfter.navPerShareWad]
+              : [],
+          )
+  ).map((value) => Number(formatUnits(BigInt(value), 18)));
   const navMinimum = navSeries.length ? Math.min(...navSeries) : 0;
   const navMaximum = navSeries.length ? Math.max(...navSeries) : 0;
   const navPoints = navSeries
@@ -401,6 +438,19 @@ export function EditorialDashboard({
       return `${x},${y}`;
     })
     .join(" ");
+  const allTimeReturnBps =
+    navSeries.length > 1 && navSeries[0] > 0
+      ? Math.round(
+          ((navSeries[navSeries.length - 1] - navSeries[0]) / navSeries[0]) *
+            10_000,
+        )
+      : null;
+  const liveBenchmarks =
+    data?.benchmarks.filter(
+      (benchmark) =>
+        benchmark.features?.return1hBps != null ||
+        benchmark.features?.return24hBps != null,
+    ) ?? [];
 
   function decisionUrl(cycle: CycleRecord) {
     const url = new URL(
@@ -1017,29 +1067,32 @@ export function EditorialDashboard({
           {data && (
             <section
               className="portfolio-performance"
-              aria-label="Portfolio performance and official market history"
+              aria-label="MDBS portfolio performance"
             >
               <div className="performance-heading">
                 <div>
-                  <p className="section-kicker">PERFORMANCE &amp; DATA</p>
+                  <p className="section-kicker">PERFORMANCE</p>
                   <h2>Returns separated from cash flows.</h2>
                 </div>
                 <span>
-                  {data.marketData.worker?.last_error
-                    ? "Collector degraded"
-                    : "Official collector healthy"}
+                  {data.priceSync.worker?.last_error
+                    ? "Live pricing issue"
+                    : "Live pricing healthy"}
                 </span>
               </div>
               <div className="performance-grid">
                 <article className="nav-history-chart">
                   <div>
-                    <b>MDBS NAV history</b>
-                    <small>{navSeries.length} recorded decision points</small>
+                    <div>
+                      <b>MDBS performance</b>
+                      <strong>${data ? money4(data.navPerShare) : "—"}</strong>
+                    </div>
+                    <small>{navSeries.length} live price observations</small>
                   </div>
                   <svg
                     viewBox="0 0 100 52"
                     role="img"
-                    aria-label="MDBS NAV price history"
+                    aria-label={`MDBS performance history. Current price $${money4(data.navPerShare)}. All-time return ${percentBps(allTimeReturnBps)}.`}
                     preserveAspectRatio="none"
                   >
                     <polyline points={navPoints} />
@@ -1058,59 +1111,68 @@ export function EditorialDashboard({
                       )}
                     />
                     <Metric
-                      label="Turnover 24h"
+                      label="7-day return"
                       value={percentBps(
-                        data.portfolioAccounting.turnover24hBps,
+                        data.portfolioAccounting.timeWeightedReturn7dBps,
                       )}
                     />
+                    <Metric
+                      label="All time"
+                      value={percentBps(allTimeReturnBps)}
+                    />
                   </div>
+                  {liveBenchmarks.length > 0 && (
+                    <div className="benchmark-comparison">
+                      <span>MARKET COMPARISON</span>
+                      {liveBenchmarks.map((benchmark) => (
+                        <small key={benchmark.symbol}>
+                          <b>{benchmark.symbol}</b>{" "}
+                          {benchmark.features?.return24hBps != null
+                            ? `24h ${percentBps(benchmark.features.return24hBps)}`
+                            : `1h ${percentBps(benchmark.features?.return1hBps)}`}
+                        </small>
+                      ))}
+                    </div>
+                  )}
                 </article>
                 <article className="pnl-ledger">
-                  <b>Tracked accounting</b>
+                  <b>Portfolio gain / loss</b>
+                  <strong
+                    className={
+                      BigInt(data.portfolioAccounting.totalPnlUsdWad) >= 0n
+                        ? "positive-value"
+                        : "negative-value"
+                    }
+                  >
+                    {signedMoney(data.portfolioAccounting.totalPnlUsdWad)}
+                  </strong>
                   <span>
-                    Realized P&amp;L $
-                    {money(data.portfolioAccounting.realizedPnlUsdWad)}
+                    Unrealized{" "}
+                    <b>
+                      {signedMoney(
+                        data.portfolioAccounting.unrealizedPnlUsdWad,
+                      )}
+                    </b>
                   </span>
                   <span>
-                    Unrealized P&amp;L $
-                    {money(data.portfolioAccounting.unrealizedPnlUsdWad)}
+                    Realized{" "}
+                    <b>
+                      {signedMoney(data.portfolioAccounting.realizedPnlUsdWad)}
+                    </b>
+                  </span>
+                  <hr />
+                  <span>
+                    User buys, 24h{" "}
+                    <b>${money(data.portfolioAccounting.deposits24hUsdWad)}</b>
                   </span>
                   <span>
-                    MDBS buys 24h $
-                    {money(data.portfolioAccounting.deposits24hUsdWad)}
-                  </span>
-                  <span>
-                    MDBS sells 24h $
-                    {money(data.portfolioAccounting.redemptions24hUsdWad)}
+                    User sells, 24h{" "}
+                    <b>
+                      ${money(data.portfolioAccounting.redemptions24hUsdWad)}
+                    </b>
                   </span>
                   <small>
-                    Existing positions begin from a labelled activation mark;
-                    pre-activation P&amp;L is never invented.
-                  </small>
-                </article>
-                <article className="benchmark-ledger">
-                  <b>Reference only</b>
-                  {data.benchmarks.map((benchmark) => (
-                    <span key={benchmark.symbol}>
-                      {benchmark.symbol}
-                      <em>{percentBps(benchmark.features?.return24hBps)}</em>
-                    </span>
-                  ))}
-                  <small>
-                    Benchmarks can inform Ornith but cannot be held.
-                  </small>
-                </article>
-                <article className="coverage-ledger">
-                  <b>Official history warm-up</b>
-                  {data.marketData.coverage.map((coverage) => (
-                    <span key={coverage.symbol}>
-                      {coverage.symbol}
-                      <em>{coverage.count} observations</em>
-                    </span>
-                  ))}
-                  <small>
-                    Metrics activate only after their official-history threshold
-                    is satisfied.
+                    User cash flows are excluded from investment returns.
                   </small>
                 </article>
               </div>
@@ -1134,6 +1196,46 @@ export function EditorialDashboard({
               {selectedCycle?.source?.toUpperCase() ?? "NO CYCLE"}
             </span>
           </section>
+          {data && (
+            <details className="decision-data-details current-market-details">
+              <summary>Market data and pricing</summary>
+              <div>
+                {data.priceSync.prices.map((price) => (
+                  <article key={price.symbol}>
+                    <b>{price.symbol} · on-chain price</b>
+                    <strong>${money4(price.price_wad)}</strong>
+                    <span>{price.source}</span>
+                    <small>
+                      Updated{" "}
+                      {new Date(price.source_observed_at).toLocaleTimeString()}
+                    </small>
+                  </article>
+                ))}
+                {Object.entries(data.marketFeatures).map(
+                  ([symbol, features]) => (
+                    <article key={`coverage-${symbol}`}>
+                      <b>{symbol} · market history</b>
+                      <span>1h {percentBps(features.return1hBps)}</span>
+                      <span>
+                        24h{" "}
+                        {features.return24hBps != null
+                          ? percentBps(features.return24hBps)
+                          : `${(features.coverage.spanMinutes / 60).toFixed(1)}h / 20h collected`}
+                      </span>
+                      {features.coverage.reasons.slice(1).map((reason) => (
+                        <small key={reason}>{reason}</small>
+                      ))}
+                    </article>
+                  ),
+                )}
+              </div>
+              <small>
+                These official feeds inform Ornith and local-devnet valuation.
+                Reference benchmarks remain non-executable. Raw candles and old
+                prompts are never inserted into later model contexts.
+              </small>
+            </details>
+          )}
           <section className="decision-history-layout">
             <aside className="decision-history" aria-label="Decision history">
               <div className="decision-history-heading">

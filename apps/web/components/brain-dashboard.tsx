@@ -123,12 +123,15 @@ type Data = {
   marketFeatures: Record<
     string,
     {
+      currentPrice: number | null;
       return1hBps: number | null;
       return24hBps: number | null;
       coverage: { sampleCount: number; spanMinutes: number; reasons: string[] };
     }
   >;
   portfolioAccounting: {
+    navUsdWad: string;
+    navPerShareWad: string;
     realizedPnlUsdWad: string;
     unrealizedPnlUsdWad: string;
     totalPnlUsdWad: string;
@@ -149,10 +152,36 @@ type Data = {
     symbol: string;
     executable: false;
     features: {
+      return1hBps?: number | null;
       return24hBps?: number | null;
-      coverage?: { reasons: string[] };
+      return7dBps?: number | null;
+      coverage?: {
+        sampleCount: number;
+        spanMinutes: number;
+        reasons: string[];
+      };
     } | null;
   }[];
+  performanceHistory: {
+    observedAt: string;
+    navPerShareWad: string;
+    navUsdWad: string;
+    totalPnlUsdWad: string;
+  }[];
+  priceSync: {
+    worker: {
+      last_succeeded_at: string | null;
+      last_error: string | null;
+      details?: unknown;
+    } | null;
+    prices: {
+      symbol: string;
+      source: string;
+      source_observed_at: string;
+      price_wad: string;
+      status: string;
+    }[];
+  };
 };
 const localChain = defineChain({
   id: 31337,

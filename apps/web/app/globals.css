@@ -2596,7 +2596,7 @@ footer {
 }
 .performance-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(180px, 1fr));
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 0.8fr);
   gap: 14px;
   padding-top: 18px;
 }
@@ -2611,6 +2611,17 @@ footer {
   margin: 14px 0;
   background: var(--surface-subtle);
 }
+.nav-history-chart > div:first-child > div {
+  display: grid;
+  gap: 3px;
+}
+.nav-history-chart > div:first-child strong {
+  color: var(--primary);
+  font:
+    700 25px/1 "Source Serif 4",
+    "Playfair Display",
+    serif;
+}
 .nav-history-chart polyline {
   fill: none;
   stroke: var(--primary);
@@ -2619,7 +2630,7 @@ footer {
 }
 .performance-metrics {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   border-top: 1px solid var(--border);
 }
 .performance-metrics > div {
@@ -2631,6 +2642,51 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 11px;
+}
+.pnl-ledger > strong {
+  font:
+    700 32px/1.05 "Source Serif 4",
+    "Playfair Display",
+    serif;
+}
+.pnl-ledger span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pnl-ledger hr {
+  width: 100%;
+  margin: 3px 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.positive-value {
+  color: var(--positive);
+}
+.negative-value {
+  color: var(--negative);
+}
+.benchmark-comparison {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.benchmark-comparison > span {
+  color: var(--text-muted);
+  font:
+    700 8px/1.2 "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+  letter-spacing: 0.08em;
+}
+.benchmark-comparison small {
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
 }
 .benchmark-ledger em,
 .coverage-ledger em {
@@ -2664,6 +2720,10 @@ footer {
   padding: 9px 11px;
   border-left: 3px solid var(--primary);
   background: var(--surface-subtle);
+}
+.current-market-details {
+  margin-top: -2px;
+  margin-bottom: 18px;
 }
 @media (max-width: 1150px) {
   .performance-grid {
@@ -2726,6 +2786,9 @@ footer {
   .performance-grid,
   .decision-data-details > div {
     grid-template-columns: 1fr;
+  }
+  .performance-metrics {
+    grid-template-columns: 1fr 1fr;
   }
   .performance-metrics {
     grid-template-columns: 1fr;

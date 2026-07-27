@@ -1,0 +1,287 @@
+import { keccak256, parseAbi, stringToHex, type Address } from "viem";
+import { adminClient, deployment, publicClient } from "./chain";
+import { coinbaseEthTicker } from "./market-sources";
+import { withDatabase } from "./persistence";
+import { changedByAtLeastOneBps, decimalWad } from "./price-sync-math";
+
+const oracleAbi = parseAbi([
+  "function prices(address token) view returns (uint256 priceWad,uint256 updatedAt,bool valid)",
+  "function setPrice(address token,uint256 priceWad)",
+]);
+const routerPriceAbi = parseAbi([
+  "function priceWad(address token) view returns (uint256)",
+  "function setPrice(address token,uint256 priceWad)",
+]);
+
+type PriceCandidate = {
+  symbol: "NVDA" | "AAPL" | "ETHX";
+  token: Address;
+  priceWad: bigint;
+  source: string;
+  sourceObservedAt: string;
+  sourceHash: string;
+};
+
+function hash(value: unknown) {
+  return keccak256(stringToHex(JSON.stringify(value)));
+}
+
+async function candidates() {
+  const d = deployment();
+  const stockRows =
+    (await withDatabase(async (client) => {
+      const result = await client.query<{
+        symbol: "NVDA" | "AAPL";
+        price: string;
+        observed_at: string;
+        source_hash: string;
+      }>(
+        `SELECT DISTINCT ON (symbol) symbol,
+                adjusted_midpoint::text AS price,
+                source_generated_at::text AS observed_at,
+                source_hash
+           FROM mdb_quote_observations
+          WHERE symbol IN ('NVDA','AAPL')
+            AND valid=true AND halted=false
+          ORDER BY symbol,source_generated_at DESC`,
+      );
+      return result.rows;
+    })) ?? [];
+  if (stockRows.length !== 2) {
+    throw new Error("fresh NVDA and AAPL observations are required");
+  }
+  const now = Date.now();
+  const stocks = stockRows.map((row) => {
+    if (now - Date.parse(row.observed_at) > 120_000) {
+      throw new Error(`${row.symbol} quote is older than 120 seconds`);
+    }
+    return {
+      symbol: row.symbol,
+      token: row.symbol === "NVDA" ? d.nvda : d.aapl,
+      priceWad: decimalWad(row.price),
+      source: "Robinhood Stock Token API",
+      sourceObservedAt: new Date(row.observed_at).toISOString(),
+      sourceHash: row.source_hash,
+    } satisfies PriceCandidate;
+  });
+  const eth = await coinbaseEthTicker();
+  if (!eth.valid || !eth.value?.price || !eth.value.time) {
+    throw new Error(
+      `ETH-USD ticker unavailable: ${eth.error ?? "invalid response"}`,
+    );
+  }
+  if (now - Date.parse(eth.value.time) > 120_000) {
+    throw new Error("ETH-USD ticker is older than 120 seconds");
+  }
+  return [
+    ...stocks,
+    {
+      symbol: "ETHX",
+      token: d.ethx,
+      priceWad: decimalWad(eth.value.price),
+      source: "Coinbase Exchange ETH-USD ticker",
+      sourceObservedAt: new Date(eth.value.time).toISOString(),
+      sourceHash: hash(eth.value),
+    } satisfies PriceCandidate,
+  ];
+}
+
+export async function syncLocalMarketPrices() {
+  if (process.env.MDB_LOCAL_PRICE_SYNC_ENABLED === "false") {
+    return { enabled: false, updated: [], unchanged: [] };
+  }
+  const chainId = await publicClient.getChainId();
+  if (chainId !== 31337) {
+    return {
+      enabled: false,
+      updated: [],
+      unchanged: [],
+      reason: "local devnet only",
+    };
+  }
+  const started = Date.now();
+  await withDatabase((client) =>
+    client.query(
+      `INSERT INTO mdb_worker_state(worker,last_started_at,details)
+       VALUES ('market-price-sync',now(),'{}')
+       ON CONFLICT(worker) DO UPDATE SET last_started_at=excluded.last_started_at`,
+    ),
+  );
+  try {
+    const d = deployment();
+    if (!d.oracle) throw new Error("local valuation oracle is not configured");
+    const prices = await candidates();
+    const updated: string[] = [];
+    const unchanged: string[] = [];
+    for (const candidate of prices) {
+      const [oraclePrice, routerPrice] = await Promise.all([
+        publicClient.readContract({
+          address: d.oracle,
+          abi: oracleAbi,
+          functionName: "prices",
+          args: [candidate.token],
+        }),
+        publicClient.readContract({
+          address: d.router,
+          abi: routerPriceAbi,
+          functionName: "priceWad",
+          args: [candidate.token],
+        }),
+      ]);
+      const shouldUpdate =
+        oraclePrice[0] !== routerPrice ||
+        changedByAtLeastOneBps(oraclePrice[0], candidate.priceWad) ||
+        changedByAtLeastOneBps(routerPrice, candidate.priceWad);
+      let oracleTxHash: `0x${string}` | null = null;
+      let routerTxHash: `0x${string}` | null = null;
+      if (shouldUpdate) {
+        oracleTxHash = await adminClient.writeContract({
+          address: d.oracle,
+          abi: oracleAbi,
+          functionName: "setPrice",
+          args: [candidate.token, candidate.priceWad],
+        });
+        await publicClient.waitForTransactionReceipt({ hash: oracleTxHash });
+        try {
+          routerTxHash = await adminClient.writeContract({
+            address: d.router,
+            abi: routerPriceAbi,
+            functionName: "setPrice",
+            args: [candidate.token, candidate.priceWad],
+          });
+          await publicClient.waitForTransactionReceipt({ hash: routerTxHash });
+          const [verifiedOracle, verifiedRouter] = await Promise.all([
+            publicClient.readContract({
+              address: d.oracle,
+              abi: oracleAbi,
+              functionName: "prices",
+              args: [candidate.token],
+            }),
+            publicClient.readContract({
+              address: d.router,
+              abi: routerPriceAbi,
+              functionName: "priceWad",
+              args: [candidate.token],
+            }),
+          ]);
+          if (
+            verifiedOracle[0] !== candidate.priceWad ||
+            verifiedRouter !== candidate.priceWad
+          ) {
+            throw new Error(`${candidate.symbol} price verification failed`);
+          }
+        } catch (error) {
+          const oracleRollback = await adminClient.writeContract({
+            address: d.oracle,
+            abi: oracleAbi,
+            functionName: "setPrice",
+            args: [candidate.token, oraclePrice[0]],
+          });
+          await publicClient.waitForTransactionReceipt({
+            hash: oracleRollback,
+          });
+          const routerRollback = await adminClient.writeContract({
+            address: d.router,
+            abi: routerPriceAbi,
+            functionName: "setPrice",
+            args: [candidate.token, routerPrice],
+          });
+          await publicClient.waitForTransactionReceipt({
+            hash: routerRollback,
+          });
+          throw error;
+        }
+        updated.push(candidate.symbol);
+      } else {
+        unchanged.push(candidate.symbol);
+      }
+      await withDatabase((client) =>
+        client.query(
+          `INSERT INTO mdb_price_syncs
+            (symbol,source,source_observed_at,price_wad,
+             previous_oracle_price_wad,previous_router_price_wad,
+             oracle_tx_hash,router_tx_hash,status,source_hash,details)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+          [
+            candidate.symbol,
+            candidate.source,
+            candidate.sourceObservedAt,
+            candidate.priceWad.toString(),
+            oraclePrice[0].toString(),
+            routerPrice.toString(),
+            oracleTxHash,
+            routerTxHash,
+            shouldUpdate ? "updated" : "unchanged",
+            candidate.sourceHash,
+            JSON.stringify({ chainId, thresholdBps: 1 }),
+          ],
+        ),
+      );
+    }
+    const details = {
+      updated,
+      unchanged,
+      durationMs: Date.now() - started,
+      sources: prices.map((price) => ({
+        symbol: price.symbol,
+        source: price.source,
+        observedAt: price.sourceObservedAt,
+        priceWad: price.priceWad.toString(),
+      })),
+    };
+    await withDatabase((client) =>
+      client.query(
+        `UPDATE mdb_worker_state SET last_succeeded_at=now(),
+           last_error=null,duration_ms=$1,details=$2
+         WHERE worker='market-price-sync'`,
+        [Date.now() - started, JSON.stringify(details)],
+      ),
+    );
+    return { enabled: true, ...details };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "price sync failed";
+    await withDatabase((client) =>
+      client.query(
+        `UPDATE mdb_worker_state SET last_failed_at=now(),
+           last_error=$1,duration_ms=$2
+         WHERE worker='market-price-sync'`,
+        [message, Date.now() - started],
+      ),
+    );
+    throw error;
+  }
+}
+
+export async function localPriceSyncHealth() {
+  return (
+    (await withDatabase(async (client) => {
+      const [worker, prices] = await Promise.all([
+        client.query<{
+          last_started_at: string | null;
+          last_succeeded_at: string | null;
+          last_failed_at: string | null;
+          last_error: string | null;
+          duration_ms: number | null;
+          details: unknown;
+        }>("SELECT * FROM mdb_worker_state WHERE worker='market-price-sync'"),
+        client.query<{
+          symbol: string;
+          source: string;
+          source_observed_at: string;
+          price_wad: string;
+          oracle_tx_hash: string | null;
+          router_tx_hash: string | null;
+          status: string;
+        }>(
+          `SELECT DISTINCT ON (symbol) symbol,source,
+                  source_observed_at::text,price_wad::text,
+                  oracle_tx_hash,router_tx_hash,status
+             FROM mdb_price_syncs
+            ORDER BY symbol,observed_at DESC`,
+        ),
+      ]);
+      return { worker: worker.rows[0] ?? null, prices: prices.rows };
+    })) ?? { worker: null, prices: [] }
+  );
+}

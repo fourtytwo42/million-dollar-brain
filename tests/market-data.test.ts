@@ -5,6 +5,10 @@ import {
   calculateMarketFeatures,
   correlationAndBeta,
 } from "../apps/web/lib/market-history.ts";
+import {
+  changedByAtLeastOneBps,
+  decimalWad,
+} from "../apps/web/lib/price-sync-math.ts";
 
 function candles(count: number, minutes = 1) {
   const start = Date.parse("2026-01-01T00:00:00Z");
@@ -52,6 +56,19 @@ test("correlation and beta require twenty aligned returns", () => {
   assert.ok((related.beta ?? 0) > 0.999);
 });
 
+test("official decimal prices convert to exact WAD values", () => {
+  assert.equal(decimalWad("335.44"), 335_440000000000000000n);
+  assert.equal(decimalWad("3000"), 3_000000000000000000000n);
+  assert.equal(decimalWad("1.1234567890123456789"), 1_123456789012345678n);
+  assert.throws(() => decimalWad("-1"), /invalid decimal price/);
+});
+
+test("local oracle sync ignores sub-basis-point noise", () => {
+  const current = decimalWad("100");
+  assert.equal(changedByAtLeastOneBps(current, decimalWad("100.009")), false);
+  assert.equal(changedByAtLeastOneBps(current, decimalWad("100.01")), true);
+});
+
 test("V3 context remains stateless, bounded, and excludes raw candles", () => {
   const allocator = readFileSync("apps/web/lib/allocator.ts", "utf8");
   const context = readFileSync("apps/web/lib/decision-context.ts", "utf8");
@@ -66,4 +83,18 @@ test("V3 context remains stateless, bounded, and excludes raw candles", () => {
     allocator,
     /SPY.*cleanAllocation|QQQ.*cleanAllocation|SOXX.*cleanAllocation/,
   );
+});
+
+test("collector synchronizes the local oracle and execution router", () => {
+  const collector = readFileSync(
+    "apps/web/app/api/collect-market/route.ts",
+    "utf8",
+  );
+  const sync = readFileSync("apps/web/lib/market-price-sync.ts", "utf8");
+  assert.match(collector, /syncLocalMarketPrices/);
+  assert.match(sync, /chainId !== 31337/);
+  assert.match(sync, /Robinhood Stock Token API/);
+  assert.match(sync, /Coinbase Exchange ETH-USD ticker/);
+  assert.match(sync, /verifiedOracle\[0\] !== candidate\.priceWad/);
+  assert.match(sync, /verifiedRouter !== candidate\.priceWad/);
 });

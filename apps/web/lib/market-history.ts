@@ -1,6 +1,10 @@
 import { keccak256, stringToHex } from "viem";
 import { stableDecisionJson } from "./decision-math.ts";
-import { robinhoodStockData, type RobinhoodSymbol } from "./market-sources.ts";
+import {
+  coinbaseEthCandles,
+  robinhoodStockData,
+  type RobinhoodSymbol,
+} from "./market-sources.ts";
 import { withDatabase } from "./persistence.ts";
 
 export const EXECUTABLE_STOCKS = ["NVDA", "AAPL"] as const;
@@ -294,11 +298,14 @@ export async function collectOfficialMarketData(state?: CollectorState) {
   const started = Date.now();
   const observedAt = new Date().toISOString();
   const stocks = [...EXECUTABLE_STOCKS, ...REFERENCE_STOCKS];
-  const fetched = await Promise.all(
-    stocks.map(
-      async (symbol) => [symbol, await robinhoodStockData(symbol)] as const,
+  const [fetched, ethHistory] = await Promise.all([
+    Promise.all(
+      stocks.map(
+        async (symbol) => [symbol, await robinhoodStockData(symbol)] as const,
+      ),
     ),
-  );
+    coinbaseEthCandles(),
+  ]);
   const result = await withDatabase(async (client) => {
     await client.query("BEGIN");
     try {
@@ -481,6 +488,38 @@ export async function collectOfficialMarketData(state?: CollectorState) {
             JSON.stringify(enriched),
             JSON.stringify(enriched.coverage),
             enriched.sourceHash,
+          ],
+        );
+      }
+      if (ethHistory.valid && ethHistory.value?.length) {
+        const ethCandles = [...ethHistory.value]
+          .sort((a, b) => a[0] - b[0])
+          .map(
+            (row) =>
+              ({
+                bucket_start: new Date(row[0] * 1_000),
+                low: String(row[1]),
+                high: String(row[2]),
+                open: String(row[3]),
+                close: String(row[4]),
+                average_spread_bps: 0,
+                sample_count: 1,
+              }) satisfies Candle,
+          );
+        const ethFeatures = calculateMarketFeatures("ETH-USD", ethCandles);
+        await client.query(
+          `INSERT INTO mdb_market_features
+             (symbol,observed_at,formula_version,features,coverage,source_hash)
+           VALUES ('ETH-USD',$1,$2,$3,$4,$5)
+           ON CONFLICT(symbol,observed_at) DO UPDATE SET
+             features=excluded.features,coverage=excluded.coverage,
+             source_hash=excluded.source_hash`,
+          [
+            observedAt,
+            ethFeatures.formulaVersion,
+            JSON.stringify(ethFeatures),
+            JSON.stringify(ethFeatures.coverage),
+            ethFeatures.sourceHash,
           ],
         );
       }
