@@ -289,6 +289,10 @@ function calculateCountdown() {
 export function EditorialDashboard({
   data,
   account,
+  network,
+  walletSource,
+  externalConnected,
+  wrongChain,
   message,
   dark,
   screen,
@@ -301,6 +305,11 @@ export function EditorialDashboard({
   setSelectedId,
   onToggleTheme,
   onFaucet,
+  onConnectWallet,
+  onDisconnectWallet,
+  onSwitchWallet,
+  onResetWallet,
+  onCopyWallet,
   onDeposit,
   onRedeem,
   onBuy,
@@ -309,6 +318,16 @@ export function EditorialDashboard({
 }: {
   data: EditorialData | null;
   account: string | null;
+  network: {
+    mode: "local" | "testnet" | "mainnet";
+    chainId: number;
+    networkLabel: string;
+    builtInWalletEnabled: boolean;
+    faucetEnabled: boolean;
+  } | null;
+  walletSource: "external" | "built-in";
+  externalConnected: boolean;
+  wrongChain: boolean;
   message: string;
   dark: boolean;
   screen: "Brain" | "Basket" | "Decisions";
@@ -321,6 +340,11 @@ export function EditorialDashboard({
   setSelectedId: (pieceId: number) => void;
   onToggleTheme: () => void;
   onFaucet: () => void;
+  onConnectWallet: () => void;
+  onDisconnectWallet: () => void;
+  onSwitchWallet: () => void;
+  onResetWallet: () => void;
+  onCopyWallet: () => void;
   onDeposit: () => void;
   onRedeem: () => void;
   onBuy: (piece: EditorialPiece) => void;
@@ -543,15 +567,44 @@ export function EditorialDashboard({
           <button className="theme-control" onClick={onToggleTheme}>
             {dark ? "Light" : "Dark"}
           </button>
-          <button className="primary-action" onClick={onFaucet}>
-            {account ? "Fund dev wallet" : "Connect wallet"}
-          </button>
+          {wrongChain ? (
+            <button className="primary-action" onClick={onSwitchWallet}>
+              Switch to {network?.networkLabel}
+            </button>
+          ) : (
+            <button
+              className="theme-control"
+              onClick={externalConnected ? onDisconnectWallet : onConnectWallet}
+            >
+              {externalConnected
+                ? `External ${account ? short(account) : "wallet"}`
+                : "Connect wallet"}
+            </button>
+          )}
+          {network?.faucetEnabled && (
+            <button className="primary-action" onClick={onFaucet}>
+              Fund {walletSource === "built-in" ? "test wallet" : "wallet"}
+            </button>
+          )}
         </div>
       </header>
 
-      {message !== "Local devnet connected." && (
+      {!message.endsWith(" connected.") && (
         <div className="editorial-banner">{message}</div>
       )}
+
+      {walletSource === "built-in" &&
+        network?.builtInWalletEnabled &&
+        account && (
+          <div className="test-wallet-strip" role="status">
+            <span>
+              <b>Disposable test wallet</b> {short(account)} · session only
+            </span>
+            <button onClick={onCopyWallet}>Copy address</button>
+            <button onClick={onResetWallet}>Reset</button>
+            <button onClick={onConnectWallet}>Use your wallet</button>
+          </div>
+        )}
 
       {showGuide && (
         <HowItWorks

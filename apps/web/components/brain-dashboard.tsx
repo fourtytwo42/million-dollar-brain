@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 import {
   createPublicClient,
   createWalletClient,
@@ -10,6 +11,12 @@ import {
   parseUnits,
 } from "viem";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  useAccount,
+  useDisconnect,
+  useSwitchChain,
+  useWalletClient,
+} from "wagmi";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 import { EditorialDashboard } from "./editorial-dashboard";
 
@@ -64,6 +71,20 @@ type Cycle = {
   };
 };
 type Data = {
+  network: {
+    mode: "local" | "testnet" | "mainnet";
+    chainId: number;
+    chainName: string;
+    networkLabel: string;
+    nativeCurrency: { name: string; symbol: string; decimals: number };
+    browserRpcUrl: string;
+    explorerUrl: string;
+    confirmations: number;
+    builtInWalletEnabled: boolean;
+    faucetEnabled: boolean;
+    faucetLanOnly: boolean;
+    mockAssets: boolean;
+  };
   deployment: Record<string, `0x${string}`>;
   nav: string;
   navPerShare: string;
@@ -183,12 +204,6 @@ type Data = {
     }[];
   };
 };
-const localChain = defineChain({
-  id: 31337,
-  name: "MillionDollar Brain Devnet",
-  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-  rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
-});
 const short = (value: string) =>
   value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "";
 const money = (value: string | bigint) =>
@@ -213,7 +228,27 @@ export function BrainDashboard() {
     "Brain",
   );
   const [selectedId, setSelectedId] = useState(1);
-  const account = useMemo(() => (key ? privateKeyToAccount(key) : null), [key]);
+  const external = useAccount();
+  const { data: externalWallet } = useWalletClient({
+    chainId: data?.network.chainId,
+  });
+  const { disconnectAsync } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
+  const { openConnectModal } = useConnectModal();
+  const builtInAccount = useMemo(
+    () => (key ? privateKeyToAccount(key) : null),
+    [key],
+  );
+  const account = useMemo(
+    () =>
+      external.address
+        ? { address: external.address }
+        : builtInAccount
+          ? { address: builtInAccount.address }
+          : null,
+    [builtInAccount, external.address],
+  );
+  const walletSource = external.address ? "external" : "built-in";
 
   async function refresh() {
     const query = new URLSearchParams();
@@ -223,23 +258,41 @@ export function BrainDashboard() {
     const suffix = `?${query.toString()}`;
     const response = await fetch(`/api/status${suffix}`, { cache: "no-store" });
     const body = await response.json();
-    if (!response.ok) throw new Error(body.error ?? "Devnet unavailable");
+    if (!response.ok) throw new Error(body.error ?? "Network unavailable");
     setData(body);
     setMessage((current) =>
       current === "Connecting to local devnet…"
-        ? "Local devnet connected."
+        ? `${body.network.networkLabel} connected.`
         : current,
     );
   }
   useEffect(() => {
-    const saved = localStorage.getItem("mdb-dev-private-key") as
-      `0x${string}` | null;
-    const generated = saved ?? generatePrivateKey();
-    if (!saved) localStorage.setItem("mdb-dev-private-key", generated);
-    setKey(generated);
     refresh().catch((error) => setMessage(error.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!data?.network.builtInWalletEnabled) {
+      setKey(null);
+      return;
+    }
+    const storageKey = `mdb-test-wallet-${data.network.chainId}`;
+    let saved = sessionStorage.getItem(storageKey) as `0x${string}` | null;
+    if (!saved && data.network.mode === "local") {
+      saved = localStorage.getItem("mdb-dev-private-key") as
+        `0x${string}` | null;
+      if (saved) {
+        sessionStorage.setItem(storageKey, saved);
+        localStorage.removeItem("mdb-dev-private-key");
+      }
+    }
+    const generated = saved ?? generatePrivateKey();
+    if (!saved) sessionStorage.setItem(storageKey, generated);
+    setKey(generated);
+  }, [
+    data?.network.builtInWalletEnabled,
+    data?.network.chainId,
+    data?.network.mode,
+  ]);
   useEffect(() => {
     if (account) refresh().catch((error) => setMessage(error.message));
   }, [account]);
@@ -270,21 +323,48 @@ export function BrainDashboard() {
 
   function clients() {
     if (!data || !account) throw new Error("Wallet is still starting.");
+    const activeChain = defineChain({
+      id: data.network.chainId,
+      name: data.network.chainName,
+      nativeCurrency: data.network.nativeCurrency,
+      rpcUrls: { default: { http: [data.browserRpcUrl] } },
+      blockExplorers: data.network.explorerUrl
+        ? {
+            default: {
+              name: `${data.network.networkLabel} Explorer`,
+              url: data.network.explorerUrl,
+            },
+          }
+        : undefined,
+      testnet: data.network.mode !== "mainnet",
+    });
+    const publicClient = createPublicClient({
+      chain: activeChain,
+      transport: http(data.browserRpcUrl),
+    });
+    if (external.address) {
+      if (external.chainId !== data.network.chainId) {
+        throw new Error(`Switch your wallet to ${data.network.networkLabel}.`);
+      }
+      if (!externalWallet)
+        throw new Error("The connected wallet is not ready.");
+      return { wallet: externalWallet, publicClient };
+    }
+    if (!builtInAccount) {
+      throw new Error("The disposable test wallet is not ready.");
+    }
     return {
       wallet: createWalletClient({
-        account,
-        chain: localChain,
+        account: builtInAccount,
+        chain: activeChain,
         transport: http(data.browserRpcUrl),
       }),
-      publicClient: createPublicClient({
-        chain: localChain,
-        transport: http(data.browserRpcUrl),
-      }),
+      publicClient,
     };
   }
   async function faucet() {
     if (!account) return;
-    setMessage("Funding your local development wallet…");
+    setMessage(`Funding your ${data?.network.networkLabel ?? "test"} wallet…`);
     const response = await fetch("/api/faucet", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -293,7 +373,40 @@ export function BrainDashboard() {
     const body = await response.json();
     if (!response.ok) throw new Error(body.error);
     await refresh();
-    setMessage("Wallet funded with 100,000 test USDG and 2 test ETH.");
+    setMessage(
+      data?.network.mode === "local"
+        ? "Wallet funded with 100,000 test USDG and 2 test ETH."
+        : "Test wallet funding completed.",
+    );
+  }
+  async function connectExternalWallet() {
+    if (!openConnectModal) throw new Error("Wallet selection is not ready.");
+    openConnectModal();
+  }
+  async function disconnectExternalWallet() {
+    await disconnectAsync();
+    setMessage(
+      "External wallet disconnected. Disposable test wallet is active.",
+    );
+  }
+  async function switchExternalWallet() {
+    if (!data) return;
+    await switchChainAsync({ chainId: data.network.chainId });
+  }
+  function resetBuiltInWallet() {
+    if (!data?.network.builtInWalletEnabled) return;
+    const generated = generatePrivateKey();
+    sessionStorage.setItem(
+      `mdb-test-wallet-${data.network.chainId}`,
+      generated,
+    );
+    setKey(generated);
+    setMessage("Disposable test wallet reset. Fund it before transacting.");
+  }
+  async function copyWalletAddress() {
+    if (!account) return;
+    await navigator.clipboard.writeText(account.address);
+    setMessage("Wallet address copied.");
   }
   async function deposit() {
     if (!data) return;
@@ -432,6 +545,12 @@ export function BrainDashboard() {
       <EditorialDashboard
         data={data}
         account={account?.address ?? null}
+        network={data?.network ?? null}
+        walletSource={walletSource}
+        externalConnected={Boolean(external.address)}
+        wrongChain={Boolean(
+          external.address && data && external.chainId !== data.network.chainId,
+        )}
         message={message}
         dark={dark}
         screen={screen}
@@ -444,6 +563,19 @@ export function BrainDashboard() {
         setSelectedId={setSelectedId}
         onToggleTheme={() => setDark(!dark)}
         onFaucet={() => faucet().catch((error) => setMessage(error.message))}
+        onConnectWallet={() =>
+          connectExternalWallet().catch((error) => setMessage(error.message))
+        }
+        onDisconnectWallet={() =>
+          disconnectExternalWallet().catch((error) => setMessage(error.message))
+        }
+        onSwitchWallet={() =>
+          switchExternalWallet().catch((error) => setMessage(error.message))
+        }
+        onResetWallet={resetBuiltInWallet}
+        onCopyWallet={() =>
+          copyWalletAddress().catch((error) => setMessage(error.message))
+        }
         onDeposit={() =>
           deposit().catch((error) =>
             setMessage(error.shortMessage ?? error.message),

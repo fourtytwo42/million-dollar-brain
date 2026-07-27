@@ -4,13 +4,16 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Replace internal market warm-up diagnostics with user-facing
-  MDBS performance and connect local-devnet valuation to fresh official prices.
-- Last meaningful change: The minute collector now synchronizes paired
-  AAPL/NVDA/ETHX mock oracle and router prices from Robinhood and Coinbase,
-  while Basket shows live MDBS price history and portfolio P&L. Technical
-  sources and coverage moved to an expandable Decisions audit panel.
-- Next step: None for this local-devnet feature.
+- Current task: Prepare parallel Robinhood Testnet readiness without
+  broadcasting, add real-wallet support, and preserve the built-in disposable
+  test wallet.
+- Last meaningful change: Runtime network configuration and RainbowKit/wagmi
+  wallet support are implemented and the local production build passes. The
+  user pivoted testnet to Robinhood's official public RPC for both server and
+  browser traffic; the temporary MDB allowlist on the shared Robyn node was
+  removed.
+- Next step: Complete the isolated chain-46630 deployment rehearsal, systemd
+  environment isolation, release gates, documentation, and browser UAT.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -360,6 +363,17 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
+- 2026-07-27: MDB testnet uses
+  `https://rpc.testnet.chain.robinhood.com` for both server and browser traffic
+  until an observed rate limit justifies another provider. The shared Robyn RPC
+  node remains Robyn-only; `.135` is blocked and `.250` was reverified on chain
+  `46630`.
+- 2026-07-27: Real-wallet support now uses pinned RainbowKit, wagmi, TanStack
+  Query, viem, and MDB Reown project ID
+  `5a4c41c8c461ca59724069d740760a2f`. External wallets take precedence over a
+  session-scoped disposable test wallet. Mainnet policy disables built-in
+  wallets and faucets. Production build and TypeScript checks pass; browser UAT
+  and chain-46630 rehearsal remain.
 - Configure a free FRED API key when macro observations are desired. Until configured, macro availability remains false and dependent brain effects correctly become inactive.
 - The latest stable Next.js 16.2.12 dependency tree still includes audited high-severity advisories through its pinned `postcss` and `sharp` packages. Do not treat the public demo tunnel as a production deployment; update and re-audit when upstream ships fixed compatible dependencies.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.

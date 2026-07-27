@@ -7,9 +7,9 @@ import {
   type Address,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { localhost } from "viem/chains";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "./abi";
 import { brainDefinition } from "./brain-catalog";
+import { networkConfig, publicNetworkConfig, viemChain } from "./network";
 
 export type Deployment = Record<
   | "usdg"
@@ -23,23 +23,26 @@ export type Deployment = Record<
   | "basket",
   Address
 > & { oracle?: Address };
-const rpcUrl = process.env.MDB_RPC_URL ?? "http://127.0.0.1:8545";
-const deploymentFile =
-  process.env.MDB_DEPLOYMENT_FILE ??
-  "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/local.json";
-export const chain = {
-  ...localhost,
-  id: 31337,
-  rpcUrls: { default: { http: [rpcUrl] } },
-};
+const rpcUrl = networkConfig.serverRpcUrl;
+const deploymentFile = networkConfig.deploymentFile;
+export const chain = viemChain({
+  ...publicNetworkConfig(networkConfig),
+  browserRpcUrl: rpcUrl,
+});
 export const publicClient = createPublicClient({
   chain,
   transport: http(rpcUrl),
 });
-export const admin = privateKeyToAccount(
-  (process.env.MDB_DEV_PRIVATE_KEY ??
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`,
-);
+const operatorPrivateKey =
+  process.env.MDB_OPERATOR_PRIVATE_KEY ??
+  process.env.MDB_DEV_PRIVATE_KEY ??
+  (networkConfig.mode === "local"
+    ? "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+    : undefined);
+if (!operatorPrivateKey) {
+  throw new Error(`MDB operator signer is required for ${networkConfig.mode}`);
+}
+export const admin = privateKeyToAccount(operatorPrivateKey as `0x${string}`);
 export const adminClient = createWalletClient({
   account: admin,
   chain,
@@ -292,6 +295,7 @@ export async function dashboard(
       .map((row) => Number(row.oracle[1])),
   );
   return {
+    network: publicNetworkConfig(networkConfig),
     deployment: d,
     blockNumber: latestBlock.number.toString(),
     nav: nav.toString(),
@@ -339,7 +343,7 @@ export async function dashboard(
     pieces,
     rewards: { pending: pendingRewards.toString() },
     catalog: { version: Number(catalogVersion), hash: catalogHash },
-    browserRpcUrl: process.env.NEXT_PUBLIC_MDB_RPC_URL ?? rpcUrl,
+    browserRpcUrl: networkConfig.browserRpcUrl,
   };
 }
 

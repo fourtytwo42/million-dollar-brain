@@ -3,6 +3,7 @@ import { adminClient, deployment, publicClient } from "./chain";
 import { coinbaseEthTicker } from "./market-sources";
 import { withDatabase } from "./persistence";
 import { changedByAtLeastOneBps, decimalWad } from "./price-sync-math";
+import { networkConfig } from "./network";
 
 const oracleAbi = parseAbi([
   "function prices(address token) view returns (uint256 priceWad,uint256 updatedAt,bool valid)",
@@ -91,12 +92,25 @@ export async function syncLocalMarketPrices() {
     return { enabled: false, updated: [], unchanged: [] };
   }
   const chainId = await publicClient.getChainId();
-  if (chainId !== 31337) {
+  if (chainId === 4663) {
     return {
       enabled: false,
       updated: [],
       unchanged: [],
-      reason: "local devnet only",
+      reason: "mock-price synchronization is permanently disabled on mainnet",
+    };
+  }
+  const permitted =
+    chainId === 31337 ||
+    (chainId === 46630 &&
+      networkConfig.mode === "testnet" &&
+      networkConfig.mockAssets);
+  if (!permitted) {
+    return {
+      enabled: false,
+      updated: [],
+      unchanged: [],
+      reason: "mock-price synchronization is not permitted on this network",
     };
   }
   const started = Date.now();

@@ -1,4 +1,5 @@
 import "./globals.css";
+import { WalletProvider } from "@/components/wallet-provider";
 
 export const metadata = {
   title: "MillionDollar Brain",
@@ -11,7 +12,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <WalletProvider>{children}</WalletProvider>
+      </body>
     </html>
   );
 }

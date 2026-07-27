@@ -92,7 +92,8 @@ test("collector synchronizes the local oracle and execution router", () => {
   );
   const sync = readFileSync("apps/web/lib/market-price-sync.ts", "utf8");
   assert.match(collector, /syncLocalMarketPrices/);
-  assert.match(sync, /chainId !== 31337/);
+  assert.match(sync, /chainId === 46630/);
+  assert.match(sync, /chainId === 4663/);
   assert.match(sync, /Robinhood Stock Token API/);
   assert.match(sync, /Coinbase Exchange ETH-USD ticker/);
   assert.match(sync, /verifiedOracle\[0\] !== candidate\.priceWad/);
