@@ -50,6 +50,8 @@ The exact launch contracts are selected immediately before deployment from the t
 
 No paid market-data provider, news API, search engine, social feed, or AI research service is required by the MVP.
 
+The runtime builds official stock history locally. A one-minute collector stores multiplier-adjusted Robinhood observations for executable NVDA/AAPL and reference-only SPY/QQQ/SOXX, then derives candles and versioned features in PostgreSQL. No unofficial historical backfill is allowed. Every metric carries coverage and remains unavailable until its specified official-history window matures. Raw candles remain outside the model prompt.
+
 Robinhood Stock Token quotes describe the underlying asset and are not multiplier-adjusted. Supported Chainlink Stock Token feeds are already multiplier-adjusted. The price adapter records this semantic difference and must not apply the ERC-8056 multiplier twice.
 
 ## 4. Deterministically calculated metrics

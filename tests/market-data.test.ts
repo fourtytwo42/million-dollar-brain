@@ -58,6 +58,7 @@ test("V3 context remains stateless, bounded, and excludes raw candles", () => {
   assert.match(context, /schemaVersion: 3/);
   assert.match(context, /maximumInputTokens: 32_000/);
   assert.match(context, /detailedCycleLimit: 12/);
+  assert.match(context, /\.sort\(\(a, b\) => a\.time - b\.time\)/);
   assert.doesNotMatch(allocator, /conversation[_A-Z]?id/i);
   assert.doesNotMatch(context, /rawCandles/);
   assert.match(allocator, /const allowed = \["USDG", "NVDA", "AAPL", "ETHX"\]/);

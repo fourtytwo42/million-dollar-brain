@@ -359,6 +359,17 @@ try {
     0,
     "generic placeholder presets must not render",
   );
+  const statusResponse = await page.request.get(`${baseUrl}/api/status`);
+  assert.ok(statusResponse.ok(), "status must load before the brain purchase");
+  const statusBeforePurchase = await statusResponse.json();
+  const affordablePiece = [...statusBeforePurchase.pieces].sort(
+    (left, right) => (BigInt(left.price) < BigInt(right.price) ? -1 : 1),
+  )[0];
+  const affordableCell = page
+    .locator(".brain-cell")
+    .nth(affordablePiece.id - 1);
+  await affordableCell.focus();
+  await page.keyboard.press("Enter");
   await page.getByRole("button", { name: "Fund dev wallet" }).click();
   await page
     .getByText("Wallet funded with 100,000 test USDG and 2 test ETH.")
@@ -412,13 +423,23 @@ try {
     0,
     "clicking Yours again must clear the ownership highlight",
   );
+  const targetPreset =
+    affordablePiece.preset === 4
+      ? affordablePiece.options[0]
+      : affordablePiece.options[4];
+  const targetPresetValue =
+    targetPreset.value > 0 ? `+${targetPreset.value}` : `${targetPreset.value}`;
   const selectedMood = page.getByRole("button", {
-    name: "+2 Moon With Seatbelts",
+    name: `${targetPresetValue} ${targetPreset.label}`,
     exact: true,
   });
   await selectedMood.click();
+  const escapedPresetLabel = targetPreset.label.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
   await page
-    .getByText(/now sets .+ to Moon With Seatbelts\./)
+    .getByText(new RegExp(`now sets .+ to ${escapedPresetLabel}\\.`))
     .waitFor({ timeout: 30000 });
 
   await page.getByRole("button", { name: "Basket", exact: true }).click();

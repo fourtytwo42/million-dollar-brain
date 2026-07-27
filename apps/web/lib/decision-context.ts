@@ -337,7 +337,8 @@ export async function buildDecisionContext(
   };
   const ethRows = (eth.value ?? [])
     .filter((row) => row.length >= 5)
-    .map((row) => ({ time: row[0], close: row[4] }));
+    .map((row) => ({ time: row[0], close: row[4] }))
+    .sort((a, b) => a.time - b.time);
   const ethPerformance = calculateCandleMetrics(ethRows);
   const equity = { NVDA: nvda, AAPL: aapl } as const;
   const sec = { NVDA: nvdaSec, AAPL: aaplSec } as const;

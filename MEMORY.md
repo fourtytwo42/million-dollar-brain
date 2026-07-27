@@ -4,9 +4,9 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Implement and validate live-NAV MDBS pool shares plus a bounded, reproducible AI decision context.
-- Last meaningful change: The live BasketVault proxy now runs V2 without resetting balances, supply, or queued-redemption state. The web app exposes contract NAV/share and previews, and each hourly cycle builds a stateless bounded `DecisionContextV2` from validated on-chain state, official structured sources, and at most 12 compact cycles, then stores exact artifacts in PostgreSQL.
-- Next step: Commit and push the final web/data/docs/UAT checkpoint after one last live browser review.
+- Current task: Complete official market history, tracked portfolio accounting, and DecisionContext V3.
+- Last meaningful change: A one-minute native collector now stores multiplier-adjusted Robinhood quotes for NVDA, AAPL, SPY, QQQ, and SOXX, builds local candles/features, indexes vault trades, and matures decision outcomes. The live allocator produced and executed a stateless V3 Ornith cycle while keeping SPY/QQQ/SOXX/ETH-USD reference-only.
+- Next step: Commit and push the final V3 browser-UAT and documentation checkpoint.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -112,6 +112,8 @@ When sources conflict, use this order:
 - 2026-07-26: Replaced the large inline onboarding block with a fixed-position quick tour that shows one of four steps at a time, leaves the Brain in its normal above-the-fold position, becomes a 12-pixel-inset mobile bottom sheet, and collapses the glossary by default. Prettier, production build, full Chromium economic/autonomous UAT, an explicit no-layout-shift assertion, mobile bottom-sheet assertion, live visual review, and zero page-level horizontal overflow pass.
 - 2026-07-26: Centralized positive-position presentation rules in `apps/web/lib/portfolio-display.ts`. Basket hides assets whose actual on-chain token balance is zero; Decision history summaries, selected target rows, and share-card allocation summaries hide weights at or below zero. Two focused helper tests, Prettier, production build, full Chromium economic/autonomous UAT, and live Basket/Decision review pass. Live history visibly omits AAPL from cycles where its target was zero.
 - 2026-07-27: Upgraded the existing BasketVault UUPS proxy to live-NAV proportional pool shares without resetting MDBS supply, balances, fees, or queued redemptions. Thirteen Foundry tests plus a 256-run fuzz test verify live oracle NAV, non-dilutive proportional deposits, proportional exits, transfer isolation, stale-price failure, slippage, queue behavior, and dust handling. The live V2 allocator recorded a stateless bounded context with 12 cycles and 4,096 estimated tokens, persisted exact artifacts to native PostgreSQL, returned an Ornith allocation of USDG 20%, NVDA 50%, AAPL 0%, and ETHX 30%, and executed it on Anvil. Prettier, production build, focused data tests, full Chromium economic/autonomous UAT, responsive checks, and LAN/public HTTP checks pass.
+- 2026-07-27: Installed and enabled `mdb-market-collector.timer`. It records five official Robinhood streams every minute, deduplicates by source timestamp, builds retained candles and independently gated features, indexes post-activation vault events, and stores accounting/outcome evidence in versioned PostgreSQL tables. The event-only BasketVault upgrade preserved supply `14737533990218702064854`, NAV `14737533990218702034940`, and redemption counter `17`. A live V3 Ornith cycle used 6,021 estimated tokens, kept SPY/QQQ/SOXX/ETH-USD non-executable, allocated USDG 20%, NVDA 40%, AAPL 10%, and ETHX 30%, and executed transaction `0x5f5611217d86fee9902610d5521a2585603e74ade7bbe7927b92c49b544334f2` in block 321. Four market tests, four context tests, five meme tests, two display tests, fourteen Foundry tests plus 256 fuzz runs, production build, full Chromium UAT, and public HTTP checks pass.
+- 2026-07-27: Final in-app-browser V3 review found that Coinbase hourly candles arrived newest-first, causing a negative ETH history span and selecting the oldest observation as current. `apps/web/lib/decision-context.ts` now sorts ETH observations oldest-first, and `tests/market-data.test.ts` prevents regression. A new live Ornith cycle executed transaction `0xee75b2fd8f5433f26f02a51104b1e4aa03c61f833061a4f6756c5800287ca512`; Decisions now shows 350 ETH samples, a positive 20,940-minute span, and the newest `$1,940.72` price. The final Chromium UAT now selects the least-expensive live brain piece and its own catalog preset instead of assuming piece 1 remains affordable; the complete economic, autonomous-cycle, responsive, history, and dark-mode run passes against accumulated devnet state.
 
 ## Decisions
 
@@ -141,6 +143,15 @@ When sources conflict, use this order:
 - Commands/tests: Thirteen Foundry tests, 256-run fuzz test, focused decision-context tests, Prettier, Next.js production build, Chromium economic/autonomous UAT, live Ornith allocation, PostgreSQL artifact query, and LAN/public HTTP verification.
 - Result: The live local-devnet proxy preserves all V1 state while exposing fixed-point NAV/share and previews. The UI displays live pool value and proportional entry/exit effects, and historical Decisions expose reproducible V2 hashes, sources, freshness, outcomes, and execution evidence.
 - Follow-up: Configure a FRED API key when macro context is wanted; dependent brain inputs remain inactive until then. Do not activate real value until external release gates and dependency advisories are cleared.
+
+### 2026-07-27 - Official Market Memory And DecisionContext V3
+
+- Context: Current Robinhood quotes and SEC facts did not give Ornith stock price history, honest cost basis, cash-flow-adjusted returns, or benchmark-relative outcomes.
+- Decision: Build history only from official observations collected after activation. Sample executable NVDA/AAPL and reference-only SPY/QQQ/SOXX every minute, retain aggregated candles, gate every feature by its own maturity threshold, and never let reference data grant execution permission. Use a weighted-average-cost activation mark for existing positions and keep legacy cycles immutable.
+- Files: `apps/web/lib/market-history.ts`, `apps/web/lib/portfolio-accounting.ts`, `apps/web/lib/decision-context.ts`, `ops/mdb-market-collector.timer`, `packages/contracts/src/BasketVault.sol`.
+- Commands/tests: Market/context unit tests, Foundry upgrade/event/invariant tests, production build, live collector, autonomous Ornith cycle, PostgreSQL queries, Chromium UAT, and public endpoint checks.
+- Result: DecisionContext V3 supplies calculated features, coverage, tracked accounting, benchmarks, and outcomes without raw candles or prompt accumulation. Basket and Decisions expose the same evidence and explain immature metrics.
+- Follow-up: Let official history mature naturally; do not backfill from unofficial providers. Configure FRED separately when desired.
 
 ### 2026-07-12 - Reset Stale Project Context
 
