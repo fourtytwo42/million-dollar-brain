@@ -348,12 +348,6 @@ export function BrainDashboard() {
       throw new Error("You cannot sell more MDBS than you own.");
     }
     setMessage("Selling MDBS for USDG…");
-    const immediate = await publicClient.readContract({
-      address: data.deployment.basket,
-      abi: basketAbi,
-      functionName: "canRedeemImmediately",
-      args: [account!.address, shares],
-    });
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const preview = await publicClient.readContract({
       address: data.deployment.basket,
@@ -362,40 +356,17 @@ export function BrainDashboard() {
       args: [shares],
     });
     const minimumNet = (preview[2] * 99n) / 100n;
-    const tx = immediate
-      ? await wallet.writeContract({
-          address: data.deployment.basket,
-          abi: basketAbi,
-          functionName: "redeem",
-          args: [shares, minimumNet, deadline],
-        })
-      : await wallet.writeContract({
-          address: data.deployment.basket,
-          abi: basketAbi,
-          functionName: "requestRedemption",
-          args: [shares, minimumNet, deadline],
-        });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
-    await refresh();
-    setMessage(
-      immediate
-        ? `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`
-        : "Sale queued on-chain because the basket cannot safely complete it immediately.",
-    );
-  }
-  async function cancelRedemption() {
-    if (!data || BigInt(data.redemption.pendingRequestId) === 0n) return;
-    const { wallet, publicClient } = clients();
-    setMessage("Cancelling queued MDBS sale…");
     const tx = await wallet.writeContract({
       address: data.deployment.basket,
       abi: basketAbi,
-      functionName: "cancelRedemption",
-      args: [BigInt(data.redemption.pendingRequestId)],
+      functionName: "redeem",
+      args: [shares, minimumNet, deadline],
     });
     await publicClient.waitForTransactionReceipt({ hash: tx });
     await refresh();
-    setMessage("Queued sale cancelled; your MDBS was returned.");
+    setMessage(
+      `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`,
+    );
   }
   async function claimRewards() {
     if (!data || !account) return;
@@ -462,11 +433,6 @@ export function BrainDashboard() {
         }
         onClaim={() =>
           claimRewards().catch((error) =>
-            setMessage(error.shortMessage ?? error.message),
-          )
-        }
-        onCancelRedemption={() =>
-          cancelRedemption().catch((error) =>
             setMessage(error.shortMessage ?? error.message),
           )
         }
@@ -596,33 +562,14 @@ export function BrainDashboard() {
                 Buy MDBS
               </button>
             </div>
-            {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
-              <>
-                <p className="queue-note">
-                  MDBS sale #{data.redemption.pendingRequestId} is waiting in
-                  the settlement queue.
-                </p>
-                <button
-                  className="quiet full"
-                  onClick={() =>
-                    cancelRedemption().catch((e) =>
-                      setMessage(e.shortMessage ?? e.message),
-                    )
-                  }
-                >
-                  Cancel queued sale
-                </button>
-              </>
-            ) : (
-              <button
-                className="quiet full"
-                onClick={() =>
-                  redeem().catch((e) => setMessage(e.shortMessage ?? e.message))
-                }
-              >
-                Sell 50% of my MDBS
-              </button>
-            )}
+            <button
+              className="quiet full"
+              onClick={() =>
+                redeem().catch((e) => setMessage(e.shortMessage ?? e.message))
+              }
+            >
+              Sell MDBS
+            </button>
           </article>
           <article className="card agent">
             <p className="eyebrow">AI ALLOCATION ENGINE</p>

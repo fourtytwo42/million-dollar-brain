@@ -50,6 +50,8 @@ contract BasketVault is
     uint256 public constant CREATOR_FEE_SHARE_BPS = 4_000;
     uint256 public constant MIN_USDG_BPS = 2_000;
     uint256 public constant MAX_QUEUE_SETTLEMENT_BPS = 500;
+    // Retained in the ABI for upgrade compatibility. Redemptions are now
+    // atomic at every size and no longer use this legacy queue threshold.
     uint256 public constant MAX_IMMEDIATE_REDEMPTION_BPS = 100;
     uint256 public constant MIN_REDEMPTION_VALUE = 10e18;
     uint256 public constant TVL_CAP = 100_000e18;
@@ -222,8 +224,7 @@ contract BasketVault is
         gross = (shares * totalAssetsUsd()) / supply;
         fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
-        immediate = gross >= MIN_REDEMPTION_VALUE
-            && gross <= (totalAssetsUsd() * MAX_IMMEDIATE_REDEMPTION_BPS) / BPS;
+        immediate = gross >= MIN_REDEMPTION_VALUE;
     }
 
     function deposit(uint256 grossAmount, uint256 minimumShares, uint256 deadline)
@@ -265,12 +266,11 @@ contract BasketVault is
     {
         require(block.timestamp <= deadline, "expired");
         uint256 supply = totalSupply();
+        require(shares > 0 && shares <= balanceOf(msg.sender), "invalid shares");
+        require(supply > 0, "no supply");
         uint256 currentNav = totalAssetsUsd();
         uint256 expectedGross = (shares * currentNav) / supply;
         require(expectedGross >= MIN_REDEMPTION_VALUE, "minimum redemption");
-        require(
-            expectedGross <= (currentNav * MAX_IMMEDIATE_REDEMPTION_BPS) / BPS, "queue required"
-        );
         uint256 gross = _liquidateProRata(msg.sender, shares, supply);
         uint256 fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
@@ -289,23 +289,13 @@ contract BasketVault is
 
     function requestRedemption(uint256 shares, uint256 minimumNet, uint256 deadline)
         external
-        nonReentrant
         returns (uint256 requestId)
     {
-        require(shares > 0, "zero shares");
-        require(block.timestamp <= deadline, "expired");
-        require(
-            totalSupply() > 0
-                && (shares * totalAssetsUsd()) / totalSupply() >= MIN_REDEMPTION_VALUE,
-            "minimum redemption"
-        );
-        require(pendingRedemptionByAccount[msg.sender] == 0, "request already pending");
-        requestId = nextRedemptionRequestId++;
-        pendingRedemptionByAccount[msg.sender] = requestId;
-        redemptionRequests[requestId] =
-            RedemptionRequest(msg.sender, shares, minimumNet, deadline, true);
-        _transfer(msg.sender, address(this), shares);
-        emit RedemptionQueued(requestId, msg.sender, shares, minimumNet);
+        shares;
+        minimumNet;
+        deadline;
+        requestId;
+        revert("queued exits disabled");
     }
 
     function cancelRedemption(uint256 requestId) external nonReentrant {
@@ -321,58 +311,11 @@ contract BasketVault is
     function processRedemptions(uint256 maximumRequests)
         external
         onlyRole(KEEPER_ROLE)
-        nonReentrant
         returns (uint256 settled)
     {
-        require(maximumRequests > 0, "zero maximum");
-        uint256 startingNav = totalAssetsUsd();
-        uint256 settlementLimit = (startingNav * MAX_QUEUE_SETTLEMENT_BPS) / BPS;
-        uint256 settledGross;
-        uint256 requestId = nextRedemptionToProcess;
-        while (requestId < nextRedemptionRequestId && settled < maximumRequests) {
-            RedemptionRequest storage request = redemptionRequests[requestId];
-            if (!request.pending) {
-                ++requestId;
-                continue;
-            }
-            if (block.timestamp > request.deadline) break;
-            uint256 currentNav = totalAssetsUsd();
-            uint256 supply = totalSupply();
-            uint256 fullGross = (request.shares * currentNav) / supply;
-            uint256 fullNet = fullGross - ((fullGross * FEE_BPS) / BPS);
-            if (fullNet < request.minimumNet || settledGross >= settlementLimit) break;
-
-            uint256 remainingCapacity = settlementLimit - settledGross;
-            uint256 sharesToSettle = request.shares;
-            if (fullGross > remainingCapacity) {
-                sharesToSettle = (remainingCapacity * supply) / currentNav;
-                if (sharesToSettle == 0) break;
-            }
-
-            uint256 requestSharesBefore = request.shares;
-            uint256 chunkMinimumNet = (request.minimumNet * sharesToSettle) / requestSharesBefore;
-            address account = request.account;
-            uint256 gross = _liquidateProRata(account, sharesToSettle, supply);
-            uint256 fee = (gross * FEE_BPS) / BPS;
-            uint256 net = gross - fee;
-            require(net >= chunkMinimumNet, "proceeds below minimum");
-
-            request.shares -= sharesToSettle;
-            request.minimumNet -= chunkMinimumNet;
-            if (request.shares == 0) {
-                request.pending = false;
-                pendingRedemptionByAccount[account] = 0;
-            }
-            _burn(address(this), sharesToSettle);
-            _routeFee(fee);
-            require(usdg.transfer(account, net), "redeem transfer failed");
-            settledGross += gross;
-            ++settled;
-            emit QueuedRedemptionSettled(requestId, account, sharesToSettle, net, fee);
-            if (!request.pending) ++requestId;
-            else break;
-        }
-        nextRedemptionToProcess = requestId;
+        maximumRequests;
+        settled;
+        revert("queued exits disabled");
     }
 
     function rebalance(

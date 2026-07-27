@@ -782,25 +782,37 @@ try {
     .click();
   await page
     .getByText(
-      "Sale queued on-chain because the basket cannot safely complete it immediately.",
+      /Sale complete\. You received approximately .* USDG for your MDBS\./,
     )
     .first()
     .waitFor({ timeout: 45000 });
-  await page.getByRole("button", { name: "Cancel queued sale" }).waitFor();
-  const settlementCycle = await page.request.post(`${baseUrl}/api/cycle`, {
+  const afterAtomicSale = await (
+    await page.request.get(`${baseUrl}/api/status?sell=1`)
+  ).json();
+  assert.equal(
+    afterAtomicSale.redemption.pendingRequestId,
+    "0",
+    "an atomic sale must never create a pending redemption",
+  );
+  assert.equal(
+    await page.getByRole("button", { name: "Cancel queued sale" }).count(),
+    0,
+    "the Basket must not expose a queued-sale state",
+  );
+  const postSaleCycle = await page.request.post(`${baseUrl}/api/cycle`, {
     headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
     timeout: 210000,
   });
   assert.equal(
-    settlementCycle.ok(),
+    postSaleCycle.ok(),
     true,
-    `queue settlement cycle failed: ${await settlementCycle.text()}`,
+    `post-sale autonomous cycle failed: ${await postSaleCycle.text()}`,
   );
-  const settlement = await settlementCycle.json();
-  assert.match(
-    settlement.redemptionTxHash ?? "",
-    /^0x[0-9a-f]{64}$/i,
-    "hourly cycle must submit a queued-redemption settlement transaction",
+  const postSaleResult = await postSaleCycle.json();
+  assert.equal(
+    postSaleResult.redemptionTxHash ?? null,
+    null,
+    "autonomous cycles must not process a redemption queue",
   );
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Basket", exact: true }).click();
@@ -813,22 +825,8 @@ try {
     })
     .waitFor();
   await page.getByRole("tab", { name: "Sell", exact: true }).click();
-  const remainingRedemption = page.getByRole("button", {
-    name: "Cancel queued sale",
-  });
-  if ((await remainingRedemption.count()) === 1) {
-    await remainingRedemption.click();
-    await page
-      .getByText("Queued sale cancelled; your MDBS was returned.")
-      .first()
-      .waitFor({ timeout: 45000 });
-  } else {
-    assert.equal(
-      await remainingRedemption.count(),
-      0,
-      "a fully settled redemption must leave no cancellable request",
-    );
-  }
+  await page.getByText("View quote details", { exact: true }).last().click();
+  await page.getByText(/Settlement is atomic:/).waitFor();
 
   await page.getByRole("button", { name: "Brain", exact: true }).click();
   await page.screenshot({ path: "var/uat-dashboard.png", fullPage: true });
@@ -840,7 +838,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, proportional deposit and redemption previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

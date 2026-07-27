@@ -69,7 +69,7 @@ Show a banner only when action is needed:
 - Prices or data are stale.
 - Scheduled allocation is delayed.
 - Execution is paused.
-- Redemption is queued.
+- A sale fails atomically and the user should retry after the stated market or pricing condition clears.
 - Upgrade is pending.
 - Protocol is paused.
 
@@ -303,10 +303,10 @@ States:
 - Custom share amount plus 25%, 50%, 75%, and Max presets.
 - Compact approximate USDG received.
 - One `Sell MDBS` action.
-- Collapsed quote details containing gross NAV value, 1% sell fee, estimated net proceeds, immediate-or-queued timing, minimum-proceeds protection, and freshness.
-- A queued sale replaces the form with its queue identifier, explanation, and cancel action until settled or cancelled.
+- Collapsed quote details containing gross NAV value, 1% sell fee, estimated net proceeds, atomic settlement, minimum-proceeds protection, and freshness.
+- The form explains that all proportional underlying sales, the MDBS burn, and the USDG payment either succeed together or leave the user and vault unchanged.
 
-The interface must not promise an immediate USDG sale when the current reserve or settlement state cannot support it.
+The interface must show a specific failure when fresh pricing, trading availability, liquidity, deadline, or slippage protections prevent atomic settlement.
 
 ## 9. Screen 3: Decisions
 

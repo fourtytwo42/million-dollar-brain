@@ -4,9 +4,9 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Separate MDBS trading from brain-piece finances and make Basket trading resemble a compact token launchpad.
-- Last meaningful change: Basket now has one compact Buy/Sell panel with live wallet balances, custom amounts, quick presets, a contract-backed approximate quote, collapsed details, and one primary action. Brain ownership and rewards moved beneath the selected-piece inspector.
-- Next step: Commit and push the verified launchpad trading checkpoint.
+- Current task: Make every MDBS sale atomic and remove the active redemption queue.
+- Last meaningful change: BasketVault, the web app, and the hourly allocator now use atomic-only proportional sales. Queue creation and keeper processing are disabled while legacy storage/events and cancellation remain for upgrade compatibility.
+- Next step: Upgrade the live UUPS proxy, verify preserved state and atomic sell behavior, run full browser UAT, then commit and push.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -72,7 +72,7 @@ When sources conflict, use this order:
 - The AI proposes typed target weights but never holds a key or bypasses the deterministic risk engine.
 - Treat the executable asset universe as governance-allowlisted. The agent must not buy arbitrary discovered token contracts.
 - A universal 2% fee would create a fee-on-transfer token and impair Uniswap v3/v4 compatibility. The current recommendation is to simulate a 1% entry plus 1% exit fee, split equally between the creator DAO and brain reward pool.
-- Redemption is hybrid USDG-only: small requests may settle immediately while preserving the 20% reserve; other requests enter a cancellable FIFO queue. Stock Tokens are not distributed in kind.
+- Redemption is atomic USDG-only at every valid size. The vault proportionally sells the acting holder's fraction of all positively held assets, burns MDBS, routes fees, and transfers USDG in one transaction. If any required step cannot meet freshness, availability, deadline, or slippage checks, the whole transaction reverts and no state changes. New queue creation and processing are disabled; legacy queue storage and cancellation remain only for upgrade compatibility.
 - Brain pieces use an always-for-sale model: the full initial sale goes to the creator DAO; later buyers pay 120% of the last settled price, the seller receives the prior price, and only the 20% increase is split equally between the DAO and brain pool.
 - Brain rewards on later purchases use a pre-transaction ownership snapshot so a buyer cannot immediately recover part of their own payment. Initial sales create no brain-owner reward and require no reward escrow.
 - Portfolio review is scheduled, initially hourly, and independent of user actions. A scheduler or permissionless keeper submits signed AI proposals and is funded or reimbursed from the creator DAO's existing fee share.
@@ -153,13 +153,22 @@ When sources conflict, use this order:
 - Result: DecisionContext V3 supplies calculated features, coverage, tracked accounting, benchmarks, and outcomes without raw candles or prompt accumulation. Basket and Decisions expose the same evidence and explain immature metrics.
 - Follow-up: Let official history mature naturally; do not backfill from unofficial providers. Configure FRED separately when desired.
 
+### 2026-07-27 - Atomic-Only MDBS Sales
+
+- Context: The legacy 1%-of-NAV immediate threshold sent larger MDBS sales into a keeper-settled queue, which could leave old sales pending.
+- Decision: Every valid MDBS sale must proportionally liquidate underlying assets, burn shares, route the exit fee, and pay USDG in the same transaction or revert completely. Disable new queue requests and keeper processing, stop hourly queue processing, preserve storage and legacy cancellation for UUPS compatibility, and keep historical settlement hashes labelled as legacy evidence.
+- Files: `packages/contracts/src/BasketVault.sol`, `packages/contracts/test/BasketBrain.t.sol`, `apps/web/lib/allocator.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/components/editorial-dashboard.tsx`, `tests/uat.mjs`, `PRD.md`, `UX_SCREENS.md`.
+- Commands/tests: Sixteen Foundry tests plus 256 fuzz runs, including a large atomic exit, forced execution failure with full state preservation, and disabled queue entry points; Prettier and Next.js production build.
+- Result: The active implementation has no path that creates or processes queued sales. The live pre-upgrade counters both equal 25, proving no outstanding escrowed requests.
+- Follow-up: Complete the live UUPS upgrade and browser UAT, then record preserved-state and transaction evidence.
+
 ### 2026-07-27 - User-Facing MDBS Buy And Sell Language
 
 - Context: Deposit, mint, redeem, and burn accurately described the contracts but made the Basket feel like infrastructure instead of a token users can buy and sell.
-- Decision: Primary wallet language is `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. The buy preview leads with MDBS received; the sell preview leads with USDG received and immediate-or-queued timing. Technical deposit/redemption names remain unchanged in contracts, APIs, accounting schemas, and audit evidence.
+- Decision: Primary wallet language is `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. The buy preview leads with MDBS received; the sell preview leads with USDG received and atomic settlement status. Technical deposit/redemption names remain unchanged in contracts, APIs, accounting schemas, and audit evidence.
 - Files: `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-dashboard.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `UX_SCREENS.md`.
 - Commands/tests: Prettier, Next.js production build, live desktop in-app-browser review, safe scroll-target check, page-level overflow check, and full Chromium economic/autonomous-cycle UAT.
-- Result: The Basket now reads as a familiar token purchase/sale flow without hiding the proportional pool mechanics or settlement queue. Buy, sell, claim, responsive, history, autonomous cycle, queued settlement, and dark-mode tests pass.
+- Result: The Basket now reads as a familiar token purchase/sale flow without hiding the proportional pool mechanics.
 - Follow-up: None for the local devnet.
 
 ### 2026-07-27 - Launchpad Trade Panel And Brain Finance Separation

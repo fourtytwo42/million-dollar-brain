@@ -273,7 +273,6 @@ export function EditorialDashboard({
   onBuy,
   onPreset,
   onClaim,
-  onCancelRedemption,
 }: {
   data: EditorialData | null;
   account: string | null;
@@ -294,7 +293,6 @@ export function EditorialDashboard({
   onBuy: (piece: EditorialPiece) => void;
   onPreset: (piece: EditorialPiece, preset: number) => void;
   onClaim: () => void;
-  onCancelRedemption: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
   const [selectedCycleHash, setSelectedCycleHash] = useState<string | null>(
@@ -888,18 +886,6 @@ export function EditorialDashboard({
                     Buy MDBS
                   </button>
                 </>
-              ) : data && BigInt(data.redemption.pendingRequestId) > 0n ? (
-                <div className="queued-trade">
-                  <span>SALE WAITING</span>
-                  <strong>Queue #{data.redemption.pendingRequestId}</strong>
-                  <p>
-                    The basket will settle this sale when it can liquidate every
-                    position safely.
-                  </p>
-                  <button className="trade-submit" onClick={onCancelRedemption}>
-                    Cancel queued sale
-                  </button>
-                </div>
               ) : (
                 <>
                   <label className="trade-amount-box">
@@ -940,10 +926,8 @@ export function EditorialDashboard({
                           proceeds are 99% of this quote
                         </p>
                         <p>
-                          Timing:{" "}
-                          {data.previews.redeem.immediate
-                            ? "immediate"
-                            : "queued until the basket can sell safely"}
+                          Settlement is atomic: the complete sale succeeds in
+                          this transaction or nothing changes.
                         </p>
                       </details>
                     </div>
@@ -1399,7 +1383,7 @@ export function EditorialDashboard({
                   </div>
                   {selectedCycle?.redemptionTxHash && (
                     <div className="execution-record">
-                      <b>Queued MDBS sale settlement</b>
+                      <b>Legacy queued MDBS sale settlement</b>
                       <code>{selectedCycle.redemptionTxHash}</code>
                     </div>
                   )}

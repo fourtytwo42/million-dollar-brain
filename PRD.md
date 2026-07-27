@@ -226,11 +226,11 @@ net user value = gross redemption - redemption fee
 
 Requirements:
 
-- Redemption requests are available on-chain at any time.
+- Atomic redemptions are available on-chain at any time.
 - The user supplies a minimum acceptable redemption value.
-- An immediate redemption sells the exact ownership fraction of every positively held risk asset, combines those proceeds with the same fraction of the USDG reserve, deducts the fee, burns settled shares, and returns USDG.
-- Larger or temporarily unexecutable redemptions enter a FIFO USDG queue. Every partial settlement also liquidates all positions proportionally rather than choosing assets sequentially.
-- A queued request includes minimum proceeds and expiry protection and may be cancelled while unprocessed under the defined queue rules.
+- Every redemption sells the exact ownership fraction of every positively held risk asset, combines those proceeds with the same fraction of the USDG reserve, deducts the fee, burns the shares, and returns USDG in one transaction.
+- If any required sale cannot execute within price freshness, liquidity, deadline, or slippage protections, the entire transaction reverts and no balances or holdings change.
+- New queued redemptions and keeper settlement are disabled. Legacy queue storage and events remain only for upgrade compatibility.
 - Stock Tokens are not distributed in kind in the MVP.
 - The user pays only their redemption transaction gas.
 
@@ -649,7 +649,7 @@ The public application must show:
 - Brain-piece ownership count, claimable brain revenue, fee explanation, and reward claiming appear only beneath the selected-piece inspector on Brain. They are not duplicated in the Basket trading panel.
 - Current AI target weights and drift.
 - Entry and redemption fee rates.
-- Pending or queued redemptions.
+- Atomic sale success or a specific revert reason; no pending redemption state is created.
 - All 42 brain pieces, affinities, weights, selections, owners, and prices.
 - The current compiled brain snapshot.
 - Brain reward accrual and claimable amounts.
@@ -688,7 +688,7 @@ The implemented Brain map uses 42 individually generated character-roster-v4 por
 
 ![Decisions dark mode](design/mockups/decisions-screen-v2-editorial-dark.png)
 
-The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, queued-redemption settlement transaction, V2 input hash, bounded context size, source validity, freshness status, and post-cycle MDBS NAV price when present. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
+The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, legacy queued-redemption settlement transaction when one exists, V2 input hash, bounded context size, source validity, freshness status, and post-cycle MDBS NAV price when present. New cycles never process a redemption queue. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
 
 ## 15. Security requirements
 
@@ -791,12 +791,12 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 ### 17.8 Redeem basket shares
 
 1. User chooses a share amount or percentage.
-2. Application shows gross NAV value, the locked 1% redemption fee, the fee split, expected net value, price freshness, gas, and settlement mode.
+2. Application shows gross NAV value, the locked 1% redemption fee, the fee split, expected net value, price freshness, gas, and atomic settlement protection.
 3. User supplies minimum acceptable proceeds and signs the transaction.
 4. Basket shares are burned.
 5. The fee routes 50% to eligible brain owners, 40% to creator-withdrawable revenue, and 10% to the Automation Reserve.
-6. The user receives the supported immediate, queued, in-kind, or hybrid settlement after the final redemption policy is selected.
-7. Redemption status remains visible until settlement completes.
+6. The proportional underlying sales, share burn, fee routing, and USDG payment all complete in the same transaction.
+7. If any step cannot complete safely, the transaction reverts and the user keeps their MDBS.
 
 ### 17.9 Missed or failed AI cycle
 
@@ -950,8 +950,8 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - All protocol smart contracts are upgradeable.
 - Before real value, normal upgrades use a 2-of-3 multisig, 48-hour timelock, published upgrade details, and a user exit window; emergency pause cannot install code.
 - Initial brain-piece price equals initial total brain valuation multiplied by piece weight divided by 10,000; there is no price decay or selective per-piece repricing in the MVP.
-- Redemptions use a hybrid USDG model: small immediate redemptions when reserves permit and queued USDG redemption with bounded asset sales for larger exits; no in-kind Stock Token redemption in the MVP.
-- Immediate redemption is limited to 1% of NAV while preserving the 20% USDG reserve; other redemptions use the cancellable FIFO USDG queue, which liquidates at most 5% of NAV per hourly cycle.
+- Redemptions are atomic USDG exits at every valid size: the vault proportionally sells underlying assets, burns MDBS, routes the fee, and pays USDG in one transaction.
+- There is no active redemption queue. A halted, stale, illiquid, expired, or out-of-slippage sale reverts completely, leaving MDBS and vault holdings unchanged.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
 - MDBS and MDBP have no governance rights; the MVP contains no voting, proposals, delegation, or quorum.
 - Mainnet uses Alchemy as primary RPC and WebSocket provider, QuickNode as secondary, and the public RPC only for tertiary read-only diagnostics.

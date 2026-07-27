@@ -176,28 +176,7 @@ function serializable<T>(value: T): T {
 
 export async function runCycle() {
   const d = deployment();
-  const [nextToProcess, nextRequestId] = await Promise.all([
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "nextRedemptionToProcess",
-    }),
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "nextRedemptionRequestId",
-    }),
-  ]);
-  let redemptionTxHash: `0x${string}` | null = null;
-  if (nextToProcess < nextRequestId) {
-    redemptionTxHash = await adminClient.writeContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "processRedemptions",
-      args: [10n],
-    });
-    await publicClient.waitForTransactionReceipt({ hash: redemptionTxHash });
-  }
+  const redemptionTxHash: `0x${string}` | null = null;
   await syncVaultLedger();
   const state = await dashboard();
   const market = await buildDecisionContext(state);

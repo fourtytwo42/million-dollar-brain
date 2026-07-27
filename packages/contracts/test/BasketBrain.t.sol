@@ -405,7 +405,7 @@ contract BasketBrainTest is Test {
         assertEq(rewards.pendingRewards(alice, pieceIds), 0);
     }
 
-    function testQueuedRedemptionIsEscrowedCancellableAndKeeperSettled() public {
+    function testLargeRedemptionExecutesAtomicallyWithoutQueue() public {
         vm.startPrank(alice);
         usdg.approve(address(basket), 10_000e18);
         basket.deposit(10_000e18, 9_900e18, block.timestamp + 1 hours);
@@ -422,35 +422,52 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("illiquid"));
 
-        uint256 queuedShares = 4_000e18;
-        assertFalse(basket.canRedeemImmediately(alice, queuedShares));
+        uint256 soldShares = 4_000e18;
+        assertTrue(basket.canRedeemImmediately(alice, soldShares));
+        uint256 beforeUsdg = usdg.balanceOf(alice);
+        uint256 beforeSupply = basket.totalSupply();
         vm.prank(alice);
-        uint256 cancelledId = basket.requestRedemption(queuedShares, 1, block.timestamp + 1 hours);
-        assertEq(basket.balanceOf(address(basket)), queuedShares);
-        vm.prank(alice);
-        basket.cancelRedemption(cancelledId);
-        assertEq(basket.balanceOf(alice), 9_900e18);
-
-        vm.prank(alice);
-        uint256 requestId = basket.requestRedemption(queuedShares, 1, block.timestamp + 1 hours);
-        uint256 beforeSettlement = usdg.balanceOf(alice);
-        vm.prank(admin);
-        uint256 settled = basket.processRedemptions(10);
-        assertEq(settled, 1);
-        assertEq(basket.pendingRedemptionByAccount(alice), requestId);
-        (, uint256 remainingAfterFirstCycle,,, bool pending) = basket.redemptionRequests(requestId);
-        assertTrue(pending);
-        assertGt(remainingAfterFirstCycle, 0);
-        assertLt(remainingAfterFirstCycle, queuedShares);
-        assertGt(usdg.balanceOf(alice), beforeSettlement);
-        assertEq(basket.balanceOf(address(basket)), remainingAfterFirstCycle);
-
-        for (uint256 i; i < 20 && basket.pendingRedemptionByAccount(alice) != 0; ++i) {
-            vm.prank(admin);
-            basket.processRedemptions(10);
-        }
+        basket.redeem(soldShares, 1, block.timestamp + 1 hours);
+        assertEq(basket.totalSupply(), beforeSupply - soldShares);
+        assertEq(basket.balanceOf(alice), 9_900e18 - soldShares);
+        assertGt(usdg.balanceOf(alice), beforeUsdg);
         assertEq(basket.pendingRedemptionByAccount(alice), 0);
         assertEq(basket.balanceOf(address(basket)), 0);
+    }
+
+    function testAtomicRedemptionFailureLeavesStateUnchanged() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_900e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        uint256 shares = 4_000e18;
+        uint256 beforeShares = basket.balanceOf(alice);
+        uint256 beforeSupply = basket.totalSupply();
+        uint256 beforeNvda = nvda.balanceOf(address(basket));
+        uint256 beforeUsdg = usdg.balanceOf(alice);
+        vm.prank(admin);
+        router.setPrice(address(nvda), 90e18);
+
+        vm.prank(alice);
+        vm.expectRevert();
+        basket.redeem(shares, 1, block.timestamp + 1 hours);
+
+        assertEq(basket.balanceOf(alice), beforeShares);
+        assertEq(basket.totalSupply(), beforeSupply);
+        assertEq(nvda.balanceOf(address(basket)), beforeNvda);
+        assertEq(usdg.balanceOf(alice), beforeUsdg);
+        assertEq(basket.pendingRedemptionByAccount(alice), 0);
+    }
+
+    function testQueuedRedemptionsAreDisabled() public {
+        vm.prank(alice);
+        vm.expectRevert("queued exits disabled");
+        basket.requestRedemption(100e18, 1, block.timestamp + 1 hours);
+
+        vm.prank(admin);
+        vm.expectRevert("queued exits disabled");
+        basket.processRedemptions(10);
     }
 
     function testDepositAndRedemptionCapsAreEnforced() public {
@@ -461,9 +478,9 @@ contract BasketBrainTest is Test {
         basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
         vm.expectRevert("minimum redemption");
         basket.redeem(5e18, 1, block.timestamp + 1 hours);
-        vm.expectRevert("minimum redemption");
+        vm.expectRevert("queued exits disabled");
         basket.requestRedemption(5e18, 1, block.timestamp + 1 hours);
-        vm.expectRevert("expired");
+        vm.expectRevert("queued exits disabled");
         basket.requestRedemption(100e18, 1, block.timestamp - 1);
         vm.stopPrank();
     }
