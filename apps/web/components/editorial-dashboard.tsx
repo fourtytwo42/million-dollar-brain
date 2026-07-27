@@ -134,6 +134,7 @@ export type EditorialData = {
   navChange24hBps: number | null;
   supply: string;
   shares: string;
+  walletUsdg: string;
   holdings: Record<string, string>;
   holdingValues: Record<string, string>;
   currentWeightsBps: Record<string, number>;
@@ -226,6 +227,11 @@ const money4 = (value: string | bigint) =>
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   });
+const inputAmount = (value: bigint) =>
+  Number(formatUnits(value, 18)).toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: 6,
+  });
 const oracleAge = (timestamp: number, referenceTimestamp: number) => {
   const seconds = Math.max(0, referenceTimestamp - timestamp);
   return seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`;
@@ -256,6 +262,8 @@ export function EditorialDashboard({
   selectedId,
   amount,
   setAmount,
+  sellAmount,
+  setSellAmount,
   setScreen,
   setSelectedId,
   onToggleTheme,
@@ -275,6 +283,8 @@ export function EditorialDashboard({
   selectedId: number;
   amount: string;
   setAmount: (value: string) => void;
+  sellAmount: string;
+  setSellAmount: (value: string) => void;
   setScreen: (screen: "Brain" | "Basket" | "Decisions") => void;
   setSelectedId: (pieceId: number) => void;
   onToggleTheme: () => void;
@@ -291,6 +301,7 @@ export function EditorialDashboard({
     null,
   );
   const [showGuide, setShowGuide] = useState(false);
+  const [tradeSide, setTradeSide] = useState<"buy" | "sell">("buy");
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -319,6 +330,10 @@ export function EditorialDashboard({
     data?.pieces.filter(
       (piece) => account && piece.owner.toLowerCase() === account.toLowerCase(),
     ).length ?? 0;
+  const chooseSellPercent = (percent: number) => {
+    if (!data) return;
+    setSellAmount(inputAmount((BigInt(data.shares) * BigInt(percent)) / 100n));
+  };
   const latestPreferences =
     data?.latestCycle?.brain?.activeNonNeutralInstructions ?? [];
   const selectedActive =
@@ -608,23 +623,16 @@ export function EditorialDashboard({
                         ? "Unowned · initial sale to Creator DAO"
                         : `Owner ${short(selected.owner)}`}
                     </span>
-                    <span>
-                      Next price ${money(selected.price)} · Rewards $
-                      {data ? money(data.rewards.pending) : "0"}
-                    </span>
+                    <span>Next price ${money(selected.price)}</span>
                     <small>
                       This piece is always for sale. Each completed purchase
                       raises its next price by 20%.
                     </small>
                   </div>
                   {mine ? (
-                    <button
-                      className="primary-action"
-                      disabled={!data || BigInt(data.rewards.pending) === 0n}
-                      onClick={onClaim}
-                    >
-                      Claim ${data ? money(data.rewards.pending) : "0"} rewards
-                    </button>
+                    <span className="owned-piece-status">
+                      ✓ You own this piece
+                    </span>
                   ) : (
                     <button
                       className="primary-action"
@@ -635,6 +643,42 @@ export function EditorialDashboard({
                     </button>
                   )}
                 </div>
+                <section
+                  className="brain-finances"
+                  aria-label="Your brain finances"
+                >
+                  <div>
+                    <p className="section-kicker">YOUR BRAIN FINANCES</p>
+                    <h3>Ownership and rewards</h3>
+                  </div>
+                  <div className="brain-finance-metrics">
+                    <span>
+                      <small>Pieces owned</small>
+                      <strong>{owned}</strong>
+                    </span>
+                    <span>
+                      <small>Claimable</small>
+                      <strong>
+                        ${data ? money(data.rewards.pending) : "0"} USDG
+                      </strong>
+                    </span>
+                  </div>
+                  <p>
+                    Brain-piece owners share the brain side of MDBS buy and sell
+                    fees. Rewards accrue until you claim them.
+                  </p>
+                  <button
+                    className="primary-action full-button"
+                    disabled={
+                      !data ||
+                      owned === 0 ||
+                      BigInt(data.rewards.pending) === 0n
+                    }
+                    onClick={onClaim}
+                  >
+                    Claim ${data ? money(data.rewards.pending) : "0"} USDG
+                  </button>
+                </section>
               </aside>
             )}
           </section>
@@ -655,20 +699,22 @@ export function EditorialDashboard({
             <div className="title-actions">
               <button
                 className="primary-action"
-                onClick={() =>
+                onClick={() => {
+                  setTradeSide("buy");
                   document
-                    .getElementById("buy-mdbs")
-                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
-                }
+                    .getElementById("basket-trade")
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
               >
                 Buy MDBS
               </button>
               <button
-                onClick={() =>
+                onClick={() => {
+                  setTradeSide("sell");
                   document
-                    .getElementById("sell-mdbs")
-                    ?.scrollIntoView({ behavior: "smooth", block: "center" })
-                }
+                    .getElementById("basket-trade")
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
               >
                 Sell MDBS
               </button>
@@ -731,129 +777,193 @@ export function EditorialDashboard({
                   })}
               </div>
             </article>
-            <aside className="transaction-card">
-              <p className="section-kicker">YOUR POSITION</p>
-              <h2>{data ? money(data.shares) : "0"} MDBS</h2>
-              <p>
-                {owned} brain pieces · $
-                {data ? money(data.rewards.pending) : "0"} claimable
-              </p>
-              <p className="action-explainer">
-                MDBS is the token that represents your share of this portfolio.
-                Buying MDBS adds USDG to the basket and buys its current assets.
-                Selling MDBS sells your share and pays you in USDG.
-              </p>
-              <section className="position-action" id="buy-mdbs">
-                <div className="position-action-heading">
-                  <span>1</span>
-                  <div>
-                    <h3>Buy MDBS</h3>
-                    <p>Pay with USDG and receive basket-share tokens.</p>
-                  </div>
-                </div>
-                <label>
-                  You pay
-                  <div className="token-input">
+            <aside
+              className="transaction-card launchpad-trade"
+              id="basket-trade"
+              aria-label="Buy or sell MDBS"
+            >
+              <div
+                className="trade-side-tabs"
+                role="tablist"
+                aria-label="Trade"
+              >
+                <button
+                  role="tab"
+                  aria-selected={tradeSide === "buy"}
+                  className={tradeSide === "buy" ? "active" : ""}
+                  onClick={() => setTradeSide("buy")}
+                >
+                  Buy
+                </button>
+                <button
+                  role="tab"
+                  aria-selected={tradeSide === "sell"}
+                  className={tradeSide === "sell" ? "active" : ""}
+                  onClick={() => setTradeSide("sell")}
+                >
+                  Sell
+                </button>
+              </div>
+
+              <div className="trade-balance-row">
+                <span>{tradeSide === "buy" ? "YOU PAY" : "YOU SELL"}</span>
+                <strong>
+                  Balance{" "}
+                  {data
+                    ? money(tradeSide === "buy" ? data.walletUsdg : data.shares)
+                    : "0"}{" "}
+                  {tradeSide === "buy" ? "USDG" : "MDBS"}
+                </strong>
+              </div>
+
+              {tradeSide === "buy" ? (
+                <>
+                  <label className="trade-amount-box">
                     <input
                       aria-label="USDG to spend"
+                      inputMode="decimal"
                       value={amount}
                       onChange={(event) => setAmount(event.target.value)}
                     />
                     <b>USDG</b>
+                  </label>
+                  <div className="quick-trade-presets" aria-label="Buy presets">
+                    {["100", "500", "1000"].map((value) => (
+                      <button key={value} onClick={() => setAmount(value)}>
+                        {Number(value).toLocaleString()}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() =>
+                        data && setAmount(inputAmount(BigInt(data.walletUsdg)))
+                      }
+                    >
+                      Max
+                    </button>
                   </div>
-                </label>
-                <button
-                  className="primary-action full-button"
-                  onClick={onDeposit}
-                >
-                  Buy MDBS
-                </button>
-                {data && (
-                  <div className="trade-preview" aria-label="Buy MDBS preview">
-                    <b>You receive approximately</b>
-                    <strong>
-                      {money(data.previews.deposit.expectedShares)} MDBS
-                    </strong>
-                    <span>
-                      You pay ${money(data.previews.deposit.gross)} USDG · buy
-                      fee ${money(data.previews.deposit.fee)}
-                    </span>
-                    <span>
-                      ${money(data.previews.deposit.netInvestment)} enters the
-                      basket at ${money4(data.navPerShare)} per MDBS
-                    </span>
-                    <span>Minimum received: 99% of this preview</span>
-                    <small>Your USDG buys:</small>
-                    {Object.entries(data.currentWeightsBps)
-                      .filter(([, weight]) => weight > 0)
-                      .map(([symbol, weight]) => (
-                        <small key={symbol}>
-                          {symbol}: approximately $
-                          {money(
-                            (BigInt(data.previews.deposit.netInvestment) *
-                              BigInt(weight)) /
-                              10_000n,
-                          )}{" "}
-                          ({(weight / 100).toFixed(2)}%)
-                        </small>
-                      ))}
-                  </div>
-                )}
-              </section>
-              <section className="position-action" id="sell-mdbs">
-                <div className="position-action-heading">
-                  <span>2</span>
-                  <div>
-                    <h3>Sell MDBS</h3>
-                    <p>Sell basket-share tokens and receive USDG.</p>
-                  </div>
-                </div>
-                {data && BigInt(data.redemption.pendingRequestId) > 0n ? (
-                  <button className="full-button" onClick={onCancelRedemption}>
-                    Cancel queued sale #{data.redemption.pendingRequestId}
+                  {data && (
+                    <div className="compact-quote">
+                      <span>YOU RECEIVE APPROXIMATELY</span>
+                      <strong>
+                        {money(data.previews.deposit.expectedShares)} MDBS
+                      </strong>
+                      <details key="buy-quote-details">
+                        <summary>View quote details</summary>
+                        <p>
+                          Buy fee ${money(data.previews.deposit.fee)} · $
+                          {money(data.previews.deposit.netInvestment)} enters
+                          the basket
+                        </p>
+                        <p>
+                          MDBS NAV price ${money4(data.navPerShare)} · minimum
+                          received is 99% of this quote
+                        </p>
+                        <b>Your USDG buys</b>
+                        {Object.entries(data.currentWeightsBps)
+                          .filter(([, weight]) => weight > 0)
+                          .map(([symbol, weight]) => (
+                            <small key={symbol}>
+                              {symbol}: approximately $
+                              {money(
+                                (BigInt(data.previews.deposit.netInvestment) *
+                                  BigInt(weight)) /
+                                  10_000n,
+                              )}{" "}
+                              ({(weight / 100).toFixed(2)}%)
+                            </small>
+                          ))}
+                      </details>
+                    </div>
+                  )}
+                  <button
+                    className="primary-action trade-submit"
+                    disabled={
+                      !data ||
+                      Number(amount) <= 0 ||
+                      Number(amount) >
+                        Number(formatUnits(BigInt(data.walletUsdg), 18))
+                    }
+                    onClick={onDeposit}
+                  >
+                    Buy MDBS
                   </button>
-                ) : (
-                  <button className="full-button" onClick={onRedeem}>
-                    Sell 50% of my MDBS
+                </>
+              ) : data && BigInt(data.redemption.pendingRequestId) > 0n ? (
+                <div className="queued-trade">
+                  <span>SALE WAITING</span>
+                  <strong>Queue #{data.redemption.pendingRequestId}</strong>
+                  <p>
+                    The basket will settle this sale when it can liquidate every
+                    position safely.
+                  </p>
+                  <button className="trade-submit" onClick={onCancelRedemption}>
+                    Cancel queued sale
                   </button>
-                )}
-                {data && BigInt(data.previews.redeem.shares) > 0n && (
-                  <div className="trade-preview" aria-label="Sell MDBS preview">
-                    <b>You receive approximately</b>
-                    <strong>{money(data.previews.redeem.net)} USDG</strong>
-                    <span>
-                      You sell {money(data.previews.redeem.shares)} MDBS ·
-                      current value ${money(data.previews.redeem.gross)}
-                    </span>
-                    <span>
-                      Sell fee ${money(data.previews.redeem.fee)} · net $
-                      {money(data.previews.redeem.net)} USDG
-                    </span>
-                    <span>
-                      Timing:{" "}
-                      {data.previews.redeem.immediate
-                        ? "immediate"
-                        : "queued until the basket can sell safely"}
-                    </span>
-                  </div>
-                )}
-              </section>
-              <section className="position-action claim-action">
-                <div className="position-action-heading">
-                  <span>3</span>
-                  <div>
-                    <h3>Claim rewards</h3>
-                    <p>Collect fees earned by brain pieces you own.</p>
-                  </div>
                 </div>
-                <button
-                  className="full-button"
-                  disabled={!data || BigInt(data.rewards.pending) === 0n}
-                  onClick={onClaim}
-                >
-                  Claim ${data ? money(data.rewards.pending) : "0"} USDG
-                </button>
-              </section>
+              ) : (
+                <>
+                  <label className="trade-amount-box">
+                    <input
+                      aria-label="MDBS to sell"
+                      inputMode="decimal"
+                      value={sellAmount}
+                      onChange={(event) => setSellAmount(event.target.value)}
+                    />
+                    <b>MDBS</b>
+                  </label>
+                  <div
+                    className="quick-trade-presets"
+                    aria-label="Sell presets"
+                  >
+                    {[25, 50, 75].map((percent) => (
+                      <button
+                        key={percent}
+                        onClick={() => chooseSellPercent(percent)}
+                      >
+                        {percent}%
+                      </button>
+                    ))}
+                    <button onClick={() => chooseSellPercent(100)}>Max</button>
+                  </div>
+                  {data && BigInt(data.previews.redeem.shares) > 0n && (
+                    <div className="compact-quote">
+                      <span>YOU RECEIVE APPROXIMATELY</span>
+                      <strong>{money(data.previews.redeem.net)} USDG</strong>
+                      <details key="sell-quote-details">
+                        <summary>View quote details</summary>
+                        <p>
+                          You sell {money(data.previews.redeem.shares)} MDBS ·
+                          current value ${money(data.previews.redeem.gross)}
+                        </p>
+                        <p>
+                          Sell fee ${money(data.previews.redeem.fee)} · minimum
+                          proceeds are 99% of this quote
+                        </p>
+                        <p>
+                          Timing:{" "}
+                          {data.previews.redeem.immediate
+                            ? "immediate"
+                            : "queued until the basket can sell safely"}
+                        </p>
+                      </details>
+                    </div>
+                  )}
+                  <button
+                    className="primary-action trade-submit"
+                    disabled={
+                      !data ||
+                      Number(sellAmount) <= 0 ||
+                      Number(sellAmount) >
+                        Number(formatUnits(BigInt(data.shares), 18))
+                    }
+                    onClick={onRedeem}
+                  >
+                    Sell MDBS
+                  </button>
+                </>
+              )}
+
+              <p className="trade-status">{message}</p>
             </aside>
           </section>
           {data && (

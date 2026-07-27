@@ -54,6 +54,7 @@ export function deployment(): Deployment {
 export async function dashboard(
   address?: Address,
   grossDeposit = 1_000n * 10n ** 18n,
+  requestedRedeem?: bigint,
 ) {
   const d = deployment();
   const [
@@ -65,6 +66,7 @@ export async function dashboard(
     aaplBalance,
     ethxBalance,
     shares,
+    walletUsdg,
     pendingRedemption,
     catalogVersion,
     catalogHash,
@@ -120,6 +122,14 @@ export async function dashboard(
       : Promise.resolve(0n),
     address
       ? publicClient.readContract({
+          address: d.usdg,
+          abi: erc20Abi,
+          functionName: "balanceOf",
+          args: [address],
+        })
+      : Promise.resolve(0n),
+    address
+      ? publicClient.readContract({
           address: d.basket,
           abi: basketAbi,
           functionName: "pendingRedemptionByAccount",
@@ -150,6 +160,12 @@ export async function dashboard(
     AAPL: d.aapl,
     ETHX: d.ethx,
   } as const;
+  const redeemShares =
+    requestedRedeem == null
+      ? shares / 2n
+      : requestedRedeem > shares
+        ? shares
+        : requestedRedeem;
   const [assetRows, redeemPreview] = await Promise.all([
     Promise.all(
       Object.entries(assetAddresses).map(async ([symbol, asset]) => {
@@ -180,7 +196,7 @@ export async function dashboard(
       address: d.basket,
       abi: basketAbi,
       functionName: "previewRedeem",
-      args: [shares / 2n],
+      args: [redeemShares],
     }),
   ]);
   const pieces = await Promise.all(
@@ -282,6 +298,7 @@ export async function dashboard(
     navPerShare: navPerShare.toString(),
     supply: supply.toString(),
     shares: shares.toString(),
+    walletUsdg: walletUsdg.toString(),
     redemption: { pendingRequestId: pendingRedemption.toString() },
     holdings: {
       USDG: usdgBalance.toString(),
@@ -312,7 +329,7 @@ export async function dashboard(
         expectedShares: depositPreview[2].toString(),
       },
       redeem: {
-        shares: (shares / 2n).toString(),
+        shares: redeemShares.toString(),
         gross: redeemPreview[0].toString(),
         fee: redeemPreview[1].toString(),
         net: redeemPreview[2].toString(),

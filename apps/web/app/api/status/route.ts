@@ -15,7 +15,7 @@ import {
 } from "@/lib/portfolio-accounting";
 
 export const runtime = "nodejs";
-function depositAmount(value: string) {
+function tokenAmount(value: string) {
   try {
     return parseUnits(value || "0", 18);
   } catch {
@@ -47,12 +47,14 @@ export async function GET(request: NextRequest) {
   try {
     const address = request.nextUrl.searchParams.get("address");
     const deposit = request.nextUrl.searchParams.get("deposit") ?? "1000";
+    const sell = request.nextUrl.searchParams.get("sell");
     const history = cycleHistory();
     const [current, persistence, marketData, features, outcomes] =
       await Promise.all([
         dashboard(
           address && isAddress(address) ? address : undefined,
-          depositAmount(deposit),
+          tokenAmount(deposit),
+          sell == null ? undefined : tokenAmount(sell),
         ),
         databaseHealth(),
         marketDataHealth(),

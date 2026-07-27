@@ -134,7 +134,12 @@ The brain itself is the NFT marketplace. There is no separate marketplace page.
 - Change the selected mood when owned.
 - Claim brain-owner rewards.
 
-Deposits, redemptions, holdings, and allocation detail belong on Basket and are not duplicated on Brain.
+MDBS trading, holdings, and allocation detail belong on Basket and are not duplicated on Brain. Brain-piece finances remain on Brain beneath the selected-piece inspector:
+
+- Number of pieces owned.
+- Total claimable brain-owner rewards.
+- Plain-language explanation of buy/sell fee sharing.
+- Claim-all action.
 
 - Inspect or purchase a brain piece.
 - View latest decision.
@@ -186,7 +191,7 @@ For a piece owned by another wallet:
 For the current owner:
 
 - Change preset.
-- Claim accrued rewards.
+- View the shared Brain finances block and claim accrued rewards.
 - View ownership and selection history.
 
 ## 5. Screen 2: Basket
@@ -200,7 +205,7 @@ This combines the previous Portfolio and My Account screens.
 - Total basket NAV.
 - Share price.
 - Connected wallet's shares and value, when connected.
-- Deposit and Redeem buttons.
+- Buy MDBS and Sell MDBS shortcuts that select and scroll to the matching trade tab without submitting a transaction.
 
 ### Overview section
 
@@ -235,14 +240,12 @@ Selecting an asset opens the Asset drawer.
 When connected:
 
 - Basket shares.
-- Current redemption estimate.
+- Current sell estimate.
 - Average entry value where available.
 - Personal realized and unrealized result.
-- Deposit and redemption history.
-- Owned brain pieces summary.
-- Claimable rewards.
+- MDBS buy and sell history.
 
-This section replaces a separate Account page.
+Brain-piece ownership and rewards are intentionally excluded and remain on Brain.
 
 ### Empty and disconnected states
 
@@ -253,7 +256,7 @@ Without a wallet:
 
 With no shares:
 
-- Show a concise first-deposit explanation.
+- Show a concise first-buy explanation.
 - Do not hide portfolio data.
 
 ## 6. Asset drawer
@@ -273,20 +276,16 @@ With no shares:
 - Plain-language reason it is held, not held, increased, or reduced.
 - Recent basket trades involving the asset.
 
-## 7. Deposit modal
+## 7. Buy MDBS panel
 
-**Available from:** Brain, Basket, and Account drawer
+**Available on:** Basket
 
 - USDG wallet balance.
-- Deposit amount.
-- Current NAV per share.
-- 1% entry fee.
-- Creator and brain-owner fee split.
-- Net basket contribution.
-- Estimated shares received.
-- Minimum-shares protection.
-- Gas estimate.
-- Data-freshness status.
+- Buy/Sell segmented control.
+- Custom USDG amount plus 100, 500, 1,000, and Max presets.
+- Compact approximate MDBS received.
+- One `Buy MDBS` action.
+- Collapsed quote details containing current NAV per share, 1% buy fee, net basket contribution, proportional underlying purchases, minimum-shares protection, and freshness.
 
 States:
 
@@ -296,22 +295,18 @@ States:
 - Confirmed.
 - Failed with a specific recovery action.
 
-## 8. Redeem modal
+## 8. Sell MDBS panel
 
-**Available from:** Brain, Basket, and Account drawer
+**Available on:** Basket
 
-- Share balance.
-- Share amount or percentage.
-- Gross NAV value.
-- 1% redemption fee.
-- Estimated net proceeds.
-- Reserve availability.
-- Expected settlement mode and time.
-- Minimum-proceeds protection.
-- Gas estimate.
-- Data-freshness status.
+- MDBS wallet balance.
+- Custom share amount plus 25%, 50%, 75%, and Max presets.
+- Compact approximate USDG received.
+- One `Sell MDBS` action.
+- Collapsed quote details containing gross NAV value, 1% sell fee, estimated net proceeds, immediate-or-queued timing, minimum-proceeds protection, and freshness.
+- A queued sale replaces the form with its queue identifier, explanation, and cancel action until settled or cancelled.
 
-The interface must not promise immediate USDG redemption when the current reserve or settlement state cannot support it.
+The interface must not promise an immediate USDG sale when the current reserve or settlement state cannot support it.
 
 ## 9. Screen 3: Decisions
 

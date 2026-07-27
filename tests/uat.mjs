@@ -480,6 +480,10 @@ try {
     BigInt(basketStatus.navPerShare) > 0n,
     "the contract must expose a positive fixed-point MDBS NAV price",
   );
+  assert.ok(
+    BigInt(basketStatus.walletUsdg) >= 0n,
+    "the trade panel must receive the connected wallet's USDG balance",
+  );
   assert.equal(
     basketStatus.oracle.fresh,
     true,
@@ -504,6 +508,31 @@ try {
     expectedHeldSymbols,
     "the Basket portfolio must render only assets with positive balances",
   );
+  assert.equal(
+    await page.getByRole("region", { name: "Your brain finances" }).count(),
+    0,
+    "brain ownership and reward finances must not appear on Basket",
+  );
+  const buyQuoteDetails = page.locator(".compact-quote details").first();
+  assert.equal(
+    await buyQuoteDetails.getAttribute("open"),
+    null,
+    "launchpad quote details must be collapsed by default",
+  );
+  await buyQuoteDetails.locator("summary").click();
+  await buyQuoteDetails.getByText("Your USDG buys", { exact: true }).waitFor();
+  await page.getByRole("tab", { name: "Sell", exact: true }).click();
+  assert.equal(
+    await page.getByText("Your USDG buys", { exact: true }).count(),
+    0,
+    "Sell mode must not retain Buy's expanded allocation details",
+  );
+  await page.getByRole("tab", { name: "Buy", exact: true }).click();
+  assert.equal(
+    await page.locator(".compact-quote details").getAttribute("open"),
+    null,
+    "Buy quote details must reset to compact when returning from Sell",
+  );
   const amount = page.getByLabel("USDG to spend");
   await amount.fill("1000");
   await page
@@ -512,6 +541,7 @@ try {
     .click();
   await page
     .getByText(/Purchase complete\. You bought approximately/)
+    .first()
     .waitFor({ timeout: 45000 });
 
   await amount.fill("100");
@@ -521,7 +551,10 @@ try {
     .click();
   await page
     .getByText(/Purchase complete\. You bought approximately/)
+    .first()
     .waitFor({ timeout: 45000 });
+  await page.getByRole("button", { name: "Brain", exact: true }).click();
+  await page.getByRole("region", { name: "Your brain finances" }).waitFor();
   const claim = page.getByRole("button", {
     name: /^Claim \$[\d,.]+ USDG$/,
   });
@@ -535,6 +568,7 @@ try {
   await page
     .getByText("Brain-owner rewards claimed to your development wallet.")
     .waitFor({ timeout: 45000 });
+  await page.getByRole("button", { name: "Basket", exact: true }).click();
 
   const cycleResponse = await page.request.post(`${baseUrl}/api/cycle`, {
     headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
@@ -740,13 +774,19 @@ try {
     fullPage: true,
   });
   await page.getByRole("button", { name: "Light", exact: true }).click();
-  await page.getByRole("button", { name: "Sell 50% of my MDBS" }).click();
+  await page.getByRole("tab", { name: "Sell", exact: true }).click();
+  await page.getByRole("button", { name: "50%", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Sell MDBS", exact: true })
+    .last()
+    .click();
   await page
     .getByText(
       "Sale queued on-chain because the basket cannot safely complete it immediately.",
     )
+    .first()
     .waitFor({ timeout: 45000 });
-  await page.getByRole("button", { name: /Cancel queued sale #\d+/ }).waitFor();
+  await page.getByRole("button", { name: "Cancel queued sale" }).waitFor();
   const settlementCycle = await page.request.post(`${baseUrl}/api/cycle`, {
     headers: { "x-mdb-cycle-token": "mdb-local-devnet-keeper-v1" },
     timeout: 210000,
@@ -772,13 +812,15 @@ try {
       name: "Portfolio performance and official market history",
     })
     .waitFor();
+  await page.getByRole("tab", { name: "Sell", exact: true }).click();
   const remainingRedemption = page.getByRole("button", {
-    name: /Cancel queued sale #\d+/,
+    name: "Cancel queued sale",
   });
   if ((await remainingRedemption.count()) === 1) {
     await remainingRedemption.click();
     await page
       .getByText("Queued sale cancelled; your MDBS was returned.")
+      .first()
       .waitFor({ timeout: 45000 });
   } else {
     assert.equal(

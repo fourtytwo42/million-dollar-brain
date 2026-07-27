@@ -70,6 +70,7 @@ type Data = {
   navChange24hBps: number | null;
   supply: string;
   shares: string;
+  walletUsdg: string;
   redemption: { pendingRequestId: string };
   holdings: Record<string, string>;
   holdingValues: Record<string, string>;
@@ -165,6 +166,11 @@ const money = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+const inputAmount = (value: bigint) =>
+  Number(formatUnits(value, 18)).toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: 6,
+  });
 
 export function BrainDashboard() {
   const [data, setData] = useState<Data | null>(null);
@@ -172,6 +178,7 @@ export function BrainDashboard() {
   const [message, setMessage] = useState("Connecting to local devnet…");
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
+  const [sellAmount, setSellAmount] = useState("");
   const [crewFilter, setCrewFilter] = useState("All minds");
   const [screen, setScreen] = useState<"Brain" | "Basket" | "Decisions">(
     "Brain",
@@ -183,6 +190,7 @@ export function BrainDashboard() {
     const query = new URLSearchParams();
     if (account) query.set("address", account.address);
     query.set("deposit", amount || "0");
+    query.set("sell", sellAmount || "0");
     const suffix = `?${query.toString()}`;
     const response = await fetch(`/api/status${suffix}`, { cache: "no-store" });
     const body = await response.json();
@@ -203,6 +211,16 @@ export function BrainDashboard() {
     if (account) refresh().catch((error) => setMessage(error.message));
   }, [account]);
   useEffect(() => {
+    if (!account) return;
+    const timer = window.setTimeout(
+      () => refresh().catch((error) => setMessage(error.message)),
+      250,
+    );
+    return () => window.clearTimeout(timer);
+    // refresh intentionally captures the current wallet and preview amounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account, amount, sellAmount]);
+  useEffect(() => {
     const timer = window.setInterval(
       () => refresh().catch((error) => setMessage(error.message)),
       10_000,
@@ -210,7 +228,12 @@ export function BrainDashboard() {
     return () => window.clearInterval(timer);
     // refresh intentionally captures the current wallet and preview amount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, amount]);
+  }, [account, amount, sellAmount]);
+  useEffect(() => {
+    if (!sellAmount && data && BigInt(data.shares) > 0n) {
+      setSellAmount(inputAmount(BigInt(data.shares) / 4n));
+    }
+  }, [data, sellAmount]);
 
   function clients() {
     if (!data || !account) throw new Error("Wallet is still starting.");
@@ -242,6 +265,10 @@ export function BrainDashboard() {
   async function deposit() {
     if (!data) return;
     const value = parseUnits(amount, 18);
+    if (!value) throw new Error("Enter a USDG amount to spend.");
+    if (value > BigInt(data.walletUsdg)) {
+      throw new Error("You do not have enough USDG for this purchase.");
+    }
     const { wallet, publicClient } = clients();
     const preview = await publicClient.readContract({
       address: data.deployment.basket,
@@ -315,8 +342,11 @@ export function BrainDashboard() {
   async function redeem() {
     if (!data || BigInt(data.shares) === 0n) return;
     const { wallet, publicClient } = clients();
-    const shares = BigInt(data.shares) / 2n;
-    if (!shares) return;
+    const shares = parseUnits(sellAmount || "0", 18);
+    if (!shares) throw new Error("Enter an MDBS amount to sell.");
+    if (shares > BigInt(data.shares)) {
+      throw new Error("You cannot sell more MDBS than you own.");
+    }
     setMessage("Selling MDBS for USDG…");
     const immediate = await publicClient.readContract({
       address: data.deployment.basket,
@@ -404,6 +434,8 @@ export function BrainDashboard() {
         selectedId={selectedId}
         amount={amount}
         setAmount={setAmount}
+        sellAmount={sellAmount}
+        setSellAmount={setSellAmount}
         setScreen={setScreen}
         setSelectedId={setSelectedId}
         onToggleTheme={() => setDark(!dark)}

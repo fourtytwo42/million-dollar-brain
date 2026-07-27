@@ -4,9 +4,9 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Replace user-facing deposit and redemption language with simple MDBS buy, sell, and claim actions.
-- Last meaningful change: The Basket action rail now presents three numbered sections: Buy MDBS, Sell MDBS, and Claim rewards. Previews lead with tokens or USDG received, while deposit, mint, redeem, and burn remain internal contract/accounting terms.
-- Next step: Commit and push the verified MDBS buy, sell, and claim checkpoint.
+- Current task: Separate MDBS trading from brain-piece finances and make Basket trading resemble a compact token launchpad.
+- Last meaningful change: Basket now has one compact Buy/Sell panel with live wallet balances, custom amounts, quick presets, a contract-backed approximate quote, collapsed details, and one primary action. Brain ownership and rewards moved beneath the selected-piece inspector.
+- Next step: Commit and push the verified launchpad trading checkpoint.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -160,6 +160,15 @@ When sources conflict, use this order:
 - Files: `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-dashboard.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `UX_SCREENS.md`.
 - Commands/tests: Prettier, Next.js production build, live desktop in-app-browser review, safe scroll-target check, page-level overflow check, and full Chromium economic/autonomous-cycle UAT.
 - Result: The Basket now reads as a familiar token purchase/sale flow without hiding the proportional pool mechanics or settlement queue. Buy, sell, claim, responsive, history, autonomous cycle, queued settlement, and dark-mode tests pass.
+- Follow-up: None for the local devnet.
+
+### 2026-07-27 - Launchpad Trade Panel And Brain Finance Separation
+
+- Context: The numbered Buy, Sell, and Claim rail still mixed two products and exposed too much quote detail. The user wanted a pump.fun-style trading interaction while keeping the editorial MillionDollar Brain visual system.
+- Decision: Basket contains one Buy/Sell segmented trade panel. Buy supports custom USDG plus 100, 500, 1,000, and Max presets. Sell supports custom MDBS plus 25%, 50%, 75%, and Max presets. The compact quote shows only approximate proceeds by default; fees, minimums, timing, and proportional assets are collapsed. Brain ownership count, claimable rewards, fee explanation, and claim action live only beneath the selected-piece inspector.
+- Files: `apps/web/lib/chain.ts`, `apps/web/app/api/status/route.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/app/globals.css`, `tests/uat.mjs`, `PRD.md`, `UX_SCREENS.md`.
+- Commands/tests: Prettier, Next.js production build, live Buy/Sell tab and preset review, exact dynamic sell preview check, expanded quote check, Brain finance placement check, page-level overflow check, and full Chromium economic/autonomous-cycle UAT.
+- Result: The live VM exposes wallet USDG, dynamically previews the exact selected sell amount, keeps details collapsed by default, and cleanly separates basket trading from brain revenue. Buy, sell, claim, queue settlement, responsive, history, autonomous-cycle, and dark-mode flows pass.
 - Follow-up: None for the local devnet.
 
 ### 2026-07-12 - Reset Stale Project Context

@@ -645,6 +645,8 @@ The public application must show:
 - Basket NAV, supply, holdings, reserve, and current weights.
 - Contract-calculated `MDBS NAV price`, 24-hour change, oracle timestamp and freshness, circulating supply, and contract-backed entry/redemption previews.
 - User-facing basket actions are always labelled `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. Deposit, mint, redeem, and burn remain contract and accounting terms only, not primary wallet action labels.
+- Basket trading uses one compact launchpad-style Buy/Sell panel with wallet balance, custom amount, quick presets, an approximate receive quote, one primary action, and collapsed contract-backed details. Buy presets are fixed USDG amounts plus Max; sell presets are 25%, 50%, 75%, and Max.
+- Brain-piece ownership count, claimable brain revenue, fee explanation, and reward claiming appear only beneath the selected-piece inspector on Brain. They are not duplicated in the Basket trading panel.
 - Current AI target weights and drift.
 - Entry and redemption fee rates.
 - Pending or queued redemptions.
