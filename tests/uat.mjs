@@ -541,8 +541,27 @@ try {
   );
   assert.equal(
     historyStatus.latestCycle.schemaVersion,
-    2,
-    "new cycles must use the reproducible DecisionContextV2 record",
+    3,
+    "new cycles must use the reproducible DecisionContextV3 record",
+  );
+  assert.equal(
+    historyStatus.latestCycle.decisionContext.benchmarks.every(
+      (benchmark) => benchmark.executable === false,
+    ),
+    true,
+    "reference benchmarks must never be executable",
+  );
+  assert.equal(
+    historyStatus.marketData.coverage.length,
+    5,
+    "official collector must track two executable stocks and three reference ETFs",
+  );
+  assert.equal(
+    historyStatus.latestCycle.decisionContext.assets.some((asset) =>
+      ["SPY", "QQQ", "SOXX"].includes(asset.symbol),
+    ),
+    false,
+    "reference assets must not enter the executable dossier list",
   );
   assert.equal(
     historyStatus.latestCycle.decisionContext.recentCycles.length <= 12,
@@ -569,6 +588,7 @@ try {
       name: "Explore every decision and execution.",
     })
     .waitFor();
+  await page.getByText("Data behind this decision").waitFor();
   await page
     .getByText(
       "Follow the full chain of evidence: what brain owners requested, what the AI proposed, and what the protocol actually executed.",
@@ -722,6 +742,14 @@ try {
   );
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Basket", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Returns separated from cash flows." })
+    .waitFor();
+  await page
+    .getByRole("region", {
+      name: "Portfolio performance and official market history",
+    })
+    .waitFor();
   const remainingRedemption = page.getByRole("button", {
     name: /Cancel queued redemption #\d+/,
   });
@@ -748,7 +776,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: live contract NAV/share, proportional deposit and redemption previews, bounded DecisionContext V2 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
+    "UAT PASS: official market collector, reference-only benchmark separation, cash-flow-adjusted accounting, live contract NAV/share, proportional deposit and redemption previews, bounded DecisionContext V3 evidence, PostgreSQL persistence, positive-only portfolio and decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queued settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

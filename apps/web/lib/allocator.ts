@@ -6,6 +6,11 @@ import { buildDecisionContext } from "./decision-context";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
 import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
 import { persistCycle } from "./persistence";
+import {
+  buildPortfolioAccounting,
+  persistAccountingSnapshot,
+  syncVaultLedger,
+} from "./portfolio-accounting";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -193,6 +198,7 @@ export async function runCycle() {
     });
     await publicClient.waitForTransactionReceipt({ hash: redemptionTxHash });
   }
+  await syncVaultLedger();
   const state = await dashboard();
   const market = await buildDecisionContext(state);
   const brain = state.pieces.map((piece) => {
@@ -276,6 +282,8 @@ export async function runCycle() {
     receipt = await publicClient.waitForTransactionReceipt({ hash });
   }
   const stateAfter = await dashboard();
+  await syncVaultLedger();
+  const accountingAfter = await buildPortfolioAccounting(stateAfter);
   const block = receipt?.blockNumber ?? (await publicClient.getBlockNumber());
   const tradeOutcomes = Object.fromEntries(
     allowed.map((symbol) => [
@@ -290,7 +298,7 @@ export async function runCycle() {
     ]),
   );
   const record = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     at: new Date().toISOString(),
     allocation: decision.allocation,
     rationale: decision.rationale,
@@ -328,6 +336,7 @@ export async function runCycle() {
       tagPreferenceBps,
     },
     marketAsOf: market.generatedAt,
+    accountingAfter,
   };
   const dir =
     process.env.MDB_STATE_DIR ??
@@ -345,5 +354,6 @@ export async function runCycle() {
     txHash: hash ?? "",
     receipt: serializable(receipt ?? { status: "held", block }),
   });
+  await persistAccountingSnapshot(accountingAfter, stateAfter.blockNumber);
   return record;
 }

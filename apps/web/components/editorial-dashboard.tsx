@@ -66,6 +66,7 @@ type MemeRecap = {
 };
 
 type CycleRecord = {
+  schemaVersion?: number;
   at: string;
   source: string;
   rationale?: string;
@@ -95,10 +96,27 @@ type CycleRecord = {
     weightsBps: Record<string, number>;
   };
   decisionContext?: {
+    schemaVersion?: number;
     tokenBudget: { estimatedTokens: number; detailedCycleLimit: number };
     recentCycles: unknown[];
     dataAvailability: Record<string, boolean>;
     sourceManifest: { source: string; valid: boolean }[];
+    accounting?: {
+      totalPnlUsdWad: string;
+      turnover24hBps: number | null;
+    };
+    benchmarks?: {
+      symbol: string;
+      features: {
+        return24hBps: number | null;
+        coverage: {
+          sampleCount: number;
+          spanMinutes: number;
+          reasons: string[];
+        };
+      } | null;
+    }[];
+    decisionOutcomes?: unknown;
   };
   characterRosterVersion?: number;
   memeRecap?: MemeRecap;
@@ -150,6 +168,53 @@ export type EditorialData = {
   dataAvailability: Record<string, boolean>;
   latestCycle: CycleRecord | null;
   cycleHistory: CycleRecord[];
+  marketData: {
+    configured: boolean;
+    worker: {
+      last_succeeded_at?: string | null;
+      last_error?: string | null;
+      duration_ms?: number | null;
+    } | null;
+    coverage: {
+      symbol: string;
+      count: number;
+      oldest: string | null;
+      newest: string | null;
+    }[];
+  };
+  marketFeatures: Record<
+    string,
+    {
+      return1hBps: number | null;
+      return24hBps: number | null;
+      coverage: { sampleCount: number; spanMinutes: number; reasons: string[] };
+    }
+  >;
+  portfolioAccounting: {
+    realizedPnlUsdWad: string;
+    unrealizedPnlUsdWad: string;
+    totalPnlUsdWad: string;
+    timeWeightedReturn1hBps: number | null;
+    timeWeightedReturn24hBps: number | null;
+    timeWeightedReturn7dBps: number | null;
+    timeWeightedReturn30dBps: number | null;
+    turnover24hBps: number | null;
+    deposits24hUsdWad: string;
+    redemptions24hUsdWad: string;
+    fees24hUsdWad: string;
+    positions: Record<
+      string,
+      { contributionUsdWad: string; basisOrigin: string }
+    >;
+  };
+  benchmarks: {
+    symbol: string;
+    executable: false;
+    features: {
+      return24hBps?: number | null;
+      coverage?: { reasons: string[] };
+    } | null;
+  }[];
 };
 
 const money = (value: string | bigint) =>
@@ -167,6 +232,10 @@ const oracleAge = (timestamp: number, referenceTimestamp: number) => {
 };
 const short = (value: string) =>
   value ? `${value.slice(0, 6)}…${value.slice(-4)}` : "";
+const percentBps = (value: number | null | undefined) =>
+  value == null
+    ? "Warming up"
+    : `${value >= 0 ? "+" : ""}${(value / 100).toFixed(2)}%`;
 
 function calculateCountdown() {
   const next = new Date();
@@ -286,6 +355,26 @@ export function EditorialDashboard({
     }
     return stats;
   }, {});
+  const navSeries = [...decisionHistory]
+    .reverse()
+    .flatMap((cycle) =>
+      cycle.portfolioAfter?.navPerShareWad
+        ? [Number(formatUnits(BigInt(cycle.portfolioAfter.navPerShareWad), 18))]
+        : [],
+    );
+  const navMinimum = navSeries.length ? Math.min(...navSeries) : 0;
+  const navMaximum = navSeries.length ? Math.max(...navSeries) : 0;
+  const navPoints = navSeries
+    .map((value, index) => {
+      const x =
+        navSeries.length > 1 ? (index / (navSeries.length - 1)) * 100 : 50;
+      const y =
+        navMaximum > navMinimum
+          ? 46 - ((value - navMinimum) / (navMaximum - navMinimum)) * 40
+          : 26;
+      return `${x},${y}`;
+    })
+    .join(" ");
 
   function decisionUrl(cycle: CycleRecord) {
     const url = new URL(
@@ -721,6 +810,108 @@ export function EditorialDashboard({
               </button>
             </aside>
           </section>
+          {data && (
+            <section
+              className="portfolio-performance"
+              aria-label="Portfolio performance and official market history"
+            >
+              <div className="performance-heading">
+                <div>
+                  <p className="section-kicker">PERFORMANCE &amp; DATA</p>
+                  <h2>Returns separated from cash flows.</h2>
+                </div>
+                <span>
+                  {data.marketData.worker?.last_error
+                    ? "Collector degraded"
+                    : "Official collector healthy"}
+                </span>
+              </div>
+              <div className="performance-grid">
+                <article className="nav-history-chart">
+                  <div>
+                    <b>MDBS NAV history</b>
+                    <small>{navSeries.length} recorded decision points</small>
+                  </div>
+                  <svg
+                    viewBox="0 0 100 52"
+                    role="img"
+                    aria-label="MDBS NAV price history"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline points={navPoints} />
+                  </svg>
+                  <div className="performance-metrics">
+                    <Metric
+                      label="1-hour TWR"
+                      value={percentBps(
+                        data.portfolioAccounting.timeWeightedReturn1hBps,
+                      )}
+                    />
+                    <Metric
+                      label="24-hour TWR"
+                      value={percentBps(
+                        data.portfolioAccounting.timeWeightedReturn24hBps,
+                      )}
+                    />
+                    <Metric
+                      label="Turnover 24h"
+                      value={percentBps(
+                        data.portfolioAccounting.turnover24hBps,
+                      )}
+                    />
+                  </div>
+                </article>
+                <article className="pnl-ledger">
+                  <b>Tracked accounting</b>
+                  <span>
+                    Realized P&amp;L $
+                    {money(data.portfolioAccounting.realizedPnlUsdWad)}
+                  </span>
+                  <span>
+                    Unrealized P&amp;L $
+                    {money(data.portfolioAccounting.unrealizedPnlUsdWad)}
+                  </span>
+                  <span>
+                    Deposits 24h $
+                    {money(data.portfolioAccounting.deposits24hUsdWad)}
+                  </span>
+                  <span>
+                    Redemptions 24h $
+                    {money(data.portfolioAccounting.redemptions24hUsdWad)}
+                  </span>
+                  <small>
+                    Existing positions begin from a labelled activation mark;
+                    pre-activation P&amp;L is never invented.
+                  </small>
+                </article>
+                <article className="benchmark-ledger">
+                  <b>Reference only</b>
+                  {data.benchmarks.map((benchmark) => (
+                    <span key={benchmark.symbol}>
+                      {benchmark.symbol}
+                      <em>{percentBps(benchmark.features?.return24hBps)}</em>
+                    </span>
+                  ))}
+                  <small>
+                    Benchmarks can inform Ornith but cannot be held.
+                  </small>
+                </article>
+                <article className="coverage-ledger">
+                  <b>Official history warm-up</b>
+                  {data.marketData.coverage.map((coverage) => (
+                    <span key={coverage.symbol}>
+                      {coverage.symbol}
+                      <em>{coverage.count} observations</em>
+                    </span>
+                  ))}
+                  <small>
+                    Metrics activate only after their official-history threshold
+                    is satisfied.
+                  </small>
+                </article>
+              </div>
+            </section>
+          )}
         </div>
       )}
 
@@ -817,53 +1008,109 @@ export function EditorialDashboard({
                 <p className="decision-rationale">{selectedCycle.rationale}</p>
               )}
               {selectedCycle?.decisionContext && (
-                <section
-                  className="decision-context-summary"
-                  aria-label="AI decision package"
-                >
-                  <div>
-                    <span>Decision package</span>
-                    <b>V2 · {selectedCycle.inputHash?.slice(0, 12)}…</b>
-                  </div>
-                  <div>
-                    <span>Context size</span>
-                    <b>
-                      ~
-                      {selectedCycle.decisionContext.tokenBudget.estimatedTokens.toLocaleString()}{" "}
-                      tokens ·{" "}
-                      {selectedCycle.decisionContext.recentCycles.length}
-                      /12 cycles
-                    </b>
-                  </div>
-                  <div>
-                    <span>Freshness</span>
-                    <b>
-                      {selectedCycle.contextFreshness?.holdRequired
-                        ? "HOLD REQUIRED"
-                        : "FRESH"}
-                    </b>
-                  </div>
-                  <div>
-                    <span>MDBS NAV price</span>
-                    <b>
-                      $
-                      {selectedCycle.portfolioAfter
-                        ? money4(selectedCycle.portfolioAfter.navPerShareWad)
-                        : "—"}
-                    </b>
-                  </div>
-                  <div>
-                    <span>Validated sources</span>
-                    <b>
-                      {
-                        selectedCycle.decisionContext.sourceManifest.filter(
-                          (source) => source.valid,
-                        ).length
-                      }
-                      /{selectedCycle.decisionContext.sourceManifest.length}
-                    </b>
-                  </div>
-                </section>
+                <>
+                  <section
+                    className="decision-context-summary"
+                    aria-label="AI decision package"
+                  >
+                    <div>
+                      <span>Decision package</span>
+                      <b>
+                        V{selectedCycle.schemaVersion ?? 2} ·{" "}
+                        {selectedCycle.inputHash?.slice(0, 12)}…
+                      </b>
+                    </div>
+                    <div>
+                      <span>Context size</span>
+                      <b>
+                        ~
+                        {selectedCycle.decisionContext.tokenBudget.estimatedTokens.toLocaleString()}{" "}
+                        tokens ·{" "}
+                        {selectedCycle.decisionContext.recentCycles.length}/12
+                        cycles
+                      </b>
+                    </div>
+                    <div>
+                      <span>Freshness</span>
+                      <b>
+                        {selectedCycle.contextFreshness?.holdRequired
+                          ? "HOLD REQUIRED"
+                          : "FRESH"}
+                      </b>
+                    </div>
+                    <div>
+                      <span>MDBS NAV price</span>
+                      <b>
+                        $
+                        {selectedCycle.portfolioAfter
+                          ? money4(selectedCycle.portfolioAfter.navPerShareWad)
+                          : "—"}
+                      </b>
+                    </div>
+                    <div>
+                      <span>Validated sources</span>
+                      <b>
+                        {
+                          selectedCycle.decisionContext.sourceManifest.filter(
+                            (source) => source.valid,
+                          ).length
+                        }
+                        /{selectedCycle.decisionContext.sourceManifest.length}
+                      </b>
+                    </div>
+                  </section>
+                  {selectedCycle.schemaVersion === 3 && (
+                    <details className="decision-data-details">
+                      <summary>Data behind this decision</summary>
+                      <div>
+                        <article>
+                          <b>Portfolio accounting</b>
+                          <span>
+                            Tracked P&amp;L $
+                            {selectedCycle.decisionContext.accounting
+                              ? money(
+                                  selectedCycle.decisionContext.accounting
+                                    .totalPnlUsdWad,
+                                )
+                              : "—"}
+                          </span>
+                          <span>
+                            Turnover{" "}
+                            {percentBps(
+                              selectedCycle.decisionContext.accounting
+                                ?.turnover24hBps,
+                            )}
+                          </span>
+                        </article>
+                        {(selectedCycle.decisionContext.benchmarks ?? []).map(
+                          (benchmark) => (
+                            <article key={benchmark.symbol}>
+                              <b>{benchmark.symbol} · reference only</b>
+                              <span>
+                                24h{" "}
+                                {percentBps(benchmark.features?.return24hBps)}
+                              </span>
+                              <span>
+                                {benchmark.features
+                                  ? `${benchmark.features.coverage.sampleCount} samples · ${benchmark.features.coverage.spanMinutes}m span`
+                                  : "Feed unavailable"}
+                              </span>
+                              {benchmark.features?.coverage.reasons.map(
+                                (reason) => (
+                                  <small key={reason}>{reason}</small>
+                                ),
+                              )}
+                            </article>
+                          ),
+                        )}
+                      </div>
+                      <small>
+                        Raw candles and old prompts are never inserted into the
+                        model context. Unavailable metrics remain inactive.
+                      </small>
+                    </details>
+                  )}
+                </>
               )}
               {selectedCycle && selectedMeme && (
                 <section className="brain-drama" aria-label="Brain Drama">

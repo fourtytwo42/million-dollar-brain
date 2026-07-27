@@ -39,6 +39,7 @@ type Piece = {
   tags: string[];
 };
 type Cycle = {
+  schemaVersion?: number;
   at: string;
   source: string;
   rationale?: string;
@@ -104,6 +105,53 @@ type Data = {
   dataAvailability: Record<string, boolean>;
   latestCycle: Cycle | null;
   cycleHistory: Cycle[];
+  marketData: {
+    configured: boolean;
+    worker: {
+      last_succeeded_at?: string | null;
+      last_error?: string | null;
+      duration_ms?: number | null;
+    } | null;
+    coverage: {
+      symbol: string;
+      count: number;
+      oldest: string | null;
+      newest: string | null;
+    }[];
+  };
+  marketFeatures: Record<
+    string,
+    {
+      return1hBps: number | null;
+      return24hBps: number | null;
+      coverage: { sampleCount: number; spanMinutes: number; reasons: string[] };
+    }
+  >;
+  portfolioAccounting: {
+    realizedPnlUsdWad: string;
+    unrealizedPnlUsdWad: string;
+    totalPnlUsdWad: string;
+    timeWeightedReturn1hBps: number | null;
+    timeWeightedReturn24hBps: number | null;
+    timeWeightedReturn7dBps: number | null;
+    timeWeightedReturn30dBps: number | null;
+    turnover24hBps: number | null;
+    deposits24hUsdWad: string;
+    redemptions24hUsdWad: string;
+    fees24hUsdWad: string;
+    positions: Record<
+      string,
+      { contributionUsdWad: string; basisOrigin: string }
+    >;
+  };
+  benchmarks: {
+    symbol: string;
+    executable: false;
+    features: {
+      return24hBps?: number | null;
+      coverage?: { reasons: string[] };
+    } | null;
+  }[];
 };
 const localChain = defineChain({
   id: 31337,

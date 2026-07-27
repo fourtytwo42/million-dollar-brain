@@ -9,6 +9,19 @@ import {
   type SourceValue,
 } from "./market-sources";
 import { recentPortfolioSnapshots } from "./persistence";
+import {
+  collectOfficialMarketData,
+  latestMarketFeatures,
+  REFERENCE_UNIVERSE,
+  type DataCoverageV1,
+  type MarketFeatureSetV1,
+} from "./market-history";
+import {
+  buildPortfolioAccounting,
+  emptyDecisionOutcomes,
+  type DecisionOutcomeV2,
+  type PortfolioAccountingV1,
+} from "./portfolio-accounting";
 import { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 export { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 
@@ -112,6 +125,13 @@ export type MarketRegimeV1 = {
   referenceOnlyUniverse: string[];
 };
 
+export type BenchmarkDossierV1 = {
+  symbol: string;
+  executable: false;
+  features: MarketFeatureSetV1 | null;
+  coverage: DataCoverageV1 | null;
+};
+
 export type CycleOutcomeV1 = {
   at: string;
   source: string;
@@ -123,8 +143,8 @@ export type CycleOutcomeV1 = {
   maturedReturn24hBps: number | null;
 };
 
-export type DecisionContextV2 = {
-  schemaVersion: 2;
+export type DecisionContextV3 = {
+  schemaVersion: 3;
   generatedAt: string;
   mode: "local_devnet_simulation";
   tokenBudget: {
@@ -137,6 +157,12 @@ export type DecisionContextV2 = {
   previousTarget: Record<string, number> | null;
   recentCycles: CycleOutcomeV1[];
   assets: AssetDossierV2[];
+  accounting: PortfolioAccountingV1;
+  benchmarks: BenchmarkDossierV1[];
+  decisionOutcomes: {
+    oneHour: DecisionOutcomeV2;
+    twentyFourHour: DecisionOutcomeV2;
+  };
   marketRegime: MarketRegimeV1;
   dataAvailability: Record<string, boolean>;
   freshness: {
@@ -154,6 +180,9 @@ export type DecisionContextV2 = {
   sourceManifest: SourceStamp[];
   inputHash: string;
 };
+
+// Kept as a source-compatible alias while legacy persisted V2 records remain readable.
+export type DecisionContextV2 = DecisionContextV3;
 
 type DashboardState = {
   deployment: Record<string, Address>;
@@ -246,18 +275,30 @@ function latestFactValue(
 
 export async function buildDecisionContext(
   state: DashboardState,
-): Promise<DecisionContextV2> {
+): Promise<DecisionContextV3> {
   const generatedAt = new Date().toISOString();
-  const [nvda, aapl, eth, nvdaSec, aaplSec, macro, storedSnapshots] =
-    await Promise.all([
-      robinhoodStockData("NVDA"),
-      robinhoodStockData("AAPL"),
-      coinbaseEthCandles(),
-      secCompanyFacts("NVDA"),
-      secCompanyFacts("AAPL"),
-      fredMacro(),
-      recentPortfolioSnapshots(),
-    ]);
+  await collectOfficialMarketData(state);
+  const [
+    nvda,
+    aapl,
+    eth,
+    nvdaSec,
+    aaplSec,
+    macro,
+    storedSnapshots,
+    collectedFeatures,
+    accounting,
+  ] = await Promise.all([
+    robinhoodStockData("NVDA"),
+    robinhoodStockData("AAPL"),
+    coinbaseEthCandles(),
+    secCompanyFacts("NVDA"),
+    secCompanyFacts("AAPL"),
+    fredMacro(),
+    recentPortfolioSnapshots(),
+    latestMarketFeatures(),
+    buildPortfolioAccounting(state),
+  ]);
   const currentPrice = BigInt(state.navPerShare);
   const history = cycleHistory(currentPrice);
   const snapshotPrices = storedSnapshots
@@ -336,6 +377,7 @@ export async function buildDecisionContext(
       const liabilities = facts
         ? latestFactValue(facts.value, "Liabilities")
         : { value: null, filed: null };
+      const officialFeature = collectedFeatures[symbol];
       const performance =
         symbol === "ETHX"
           ? ethPerformance
@@ -349,12 +391,13 @@ export async function buildDecisionContext(
                 maximumDrawdownBps: 0,
               }
             : {
-                return1hBps: null,
-                return24hBps: null,
-                return7dBps: null,
-                return30dBps: null,
-                volatility30dBps: null,
-                maximumDrawdownBps: null,
+                return1hBps: officialFeature?.return1hBps ?? null,
+                return24hBps: officialFeature?.return24hBps ?? null,
+                return7dBps: officialFeature?.return7dBps ?? null,
+                return30dBps: officialFeature?.return30dBps ?? null,
+                volatility30dBps: officialFeature?.volatility30dBps ?? null,
+                maximumDrawdownBps:
+                  officialFeature?.maximumDrawdown30dBps ?? null,
               };
       const provenance: SourceStamp[] = [];
       if (source) {
@@ -411,9 +454,12 @@ export async function buildDecisionContext(
           balanceWad: state.holdings[symbol] ?? "0",
           valueUsdWad: state.holdingValues[symbol] ?? "0",
           weightBps: state.currentWeightsBps[symbol] ?? 0,
-          costBasisUsdWad: null,
-          realizedPnlUsdWad: null,
-          unrealizedPnlUsdWad: null,
+          costBasisUsdWad:
+            accounting.positions[symbol]?.costBasisUsdWad ?? null,
+          realizedPnlUsdWad:
+            accounting.positions[symbol]?.realizedPnlUsdWad ?? null,
+          unrealizedPnlUsdWad:
+            accounting.positions[symbol]?.unrealizedPnlUsdWad ?? null,
         },
         quote: {
           bidUsd: bid,
@@ -458,7 +504,8 @@ export async function buildDecisionContext(
             : symbol === "USDG"
               ? 10_000
               : null,
-          estimatedPriceImpactBps: null,
+          estimatedPriceImpactBps:
+            officialFeature?.estimatedExecutionCostBps ?? null,
           estimatedExecutionCostBps:
             quote && midpoint && bid !== null && ask !== null
               ? Math.round(((ask - bid) / midpoint) * 5_000)
@@ -540,7 +587,7 @@ export async function buildDecisionContext(
     ),
   );
   const partial = {
-    schemaVersion: 2 as const,
+    schemaVersion: 3 as const,
     generatedAt,
     mode: "local_devnet_simulation" as const,
     tokenBudget: {
@@ -553,6 +600,64 @@ export async function buildDecisionContext(
     previousTarget: history[0]?.allocation ?? null,
     recentCycles: history,
     assets,
+    accounting,
+    benchmarks: REFERENCE_UNIVERSE.map((symbol) => ({
+      symbol,
+      executable: false as const,
+      features:
+        symbol === "ETH-USD"
+          ? ({
+              formulaVersion: "market-features-v1",
+              symbol,
+              observedAt: generatedAt,
+              currentPrice: ethRows.at(-1)?.close ?? null,
+              ...ethPerformance,
+              return90dBps: null,
+              maximumDrawdown30dBps: ethPerformance.maximumDrawdownBps,
+              momentumBps: ethPerformance.return7dBps,
+              meanReversionBps:
+                ethPerformance.return7dBps !== null &&
+                ethPerformance.return24hBps !== null
+                  ? Math.round(
+                      ethPerformance.return24hBps -
+                        ethPerformance.return7dBps / 7,
+                    )
+                  : null,
+              averageSpreadBps: null,
+              spreadTrendBps: null,
+              liquidityScoreBps: null,
+              estimatedExecutionCostBps: null,
+              correlationToBasket: null,
+              betaToBasket: null,
+              relativeStrengthBps: null,
+              coverage: {
+                sampleCount: ethRows.length,
+                oldestAt: ethRows[0]
+                  ? new Date(ethRows[0].time * 1_000).toISOString()
+                  : null,
+                newestAt: ethRows.at(-1)
+                  ? new Date(ethRows.at(-1)!.time * 1_000).toISOString()
+                  : null,
+                spanMinutes:
+                  ethRows.length > 1
+                    ? Math.floor((ethRows.at(-1)!.time - ethRows[0].time) / 60)
+                    : 0,
+                return1hReady: ethPerformance.return1hBps !== null,
+                return24hReady: ethPerformance.return24hBps !== null,
+                return7dReady: ethPerformance.return7dBps !== null,
+                return30dReady: ethPerformance.return30dBps !== null,
+                reasons: [],
+              },
+              sourceHash: stamp(eth, generatedAt, "coinbase-hourly-candles-v1")
+                .hash,
+            } satisfies MarketFeatureSetV1)
+          : (collectedFeatures[symbol] ?? null),
+      coverage:
+        symbol === "ETH-USD"
+          ? null
+          : (collectedFeatures[symbol]?.coverage ?? null),
+    })),
+    decisionOutcomes: emptyDecisionOutcomes(),
     marketRegime: {
       breadthPositiveBps: riskReturns.length
         ? Math.round(
@@ -569,12 +674,7 @@ export async function buildDecisionContext(
       correlationRegime: null,
       riskOnScore: median,
       macro: macro.value,
-      referenceOnlyUniverse: [
-        "NVDA underlying equity",
-        "AAPL underlying equity",
-        "ETH-USD",
-        "FRED macro series",
-      ],
+      referenceOnlyUniverse: [...REFERENCE_UNIVERSE, "FRED macro series"],
     },
     dataAvailability,
     freshness: {

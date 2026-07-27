@@ -3,9 +3,16 @@ export {
   type AssetDossierV2,
   type CycleOutcomeV1,
   type DecisionContextV2,
+  type DecisionContextV3,
+  type BenchmarkDossierV1,
   type MarketRegimeV1,
   type PortfolioSnapshotV2,
 } from "./decision-context";
+export type { DataCoverageV1, MarketFeatureSetV1 } from "./market-history";
+export type {
+  DecisionOutcomeV2,
+  PortfolioAccountingV1,
+} from "./portfolio-accounting";
 
 // A missing field is unavailable. Nothing is optimistically marked true.
 export const DATA_AVAILABILITY: Record<string, boolean> = {

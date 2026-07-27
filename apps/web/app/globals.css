@@ -2178,7 +2178,113 @@ footer {
   flex-direction: column;
   gap: 5px;
 }
+.portfolio-performance {
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 22px;
+}
+.performance-heading,
+.nav-history-chart > div:first-child,
+.benchmark-ledger span,
+.coverage-ledger span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.performance-heading {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+}
+.performance-heading h2 {
+  margin: 3px 0 0;
+}
+.performance-heading > span {
+  color: var(--success);
+  font:
+    700 11px/1.2 "JetBrains Mono",
+    monospace;
+  text-transform: uppercase;
+}
+.performance-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(180px, 1fr));
+  gap: 14px;
+  padding-top: 18px;
+}
+.performance-grid article {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+.nav-history-chart svg {
+  width: 100%;
+  height: 150px;
+  margin: 14px 0;
+  background: var(--surface-subtle);
+}
+.nav-history-chart polyline {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.8;
+  vector-effect: non-scaling-stroke;
+}
+.performance-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--border);
+}
+.performance-metrics > div {
+  padding: 10px 8px 0;
+}
+.pnl-ledger,
+.benchmark-ledger,
+.coverage-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.benchmark-ledger em,
+.coverage-ledger em {
+  color: var(--text-muted);
+  font-style: normal;
+}
+.performance-grid small,
+.decision-data-details small {
+  color: var(--text-muted);
+}
+.decision-data-details {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.decision-data-details summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+.decision-data-details > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+.decision-data-details article {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 11px;
+  border-left: 3px solid var(--primary);
+  background: var(--surface-subtle);
+}
 @media (max-width: 1150px) {
+  .performance-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .decision-data-details > div {
+    grid-template-columns: 1fr 1fr;
+  }
   .editorial-header {
     grid-template-columns: 1fr auto;
   }
@@ -2230,6 +2336,13 @@ footer {
   }
 }
 @media (max-width: 720px) {
+  .performance-grid,
+  .decision-data-details > div {
+    grid-template-columns: 1fr;
+  }
+  .performance-metrics {
+    grid-template-columns: 1fr;
+  }
   .editorial-header {
     height: auto;
     grid-template-columns: 1fr;
