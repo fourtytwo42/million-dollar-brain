@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MockToken} from "../src/MockToken.sol";
-import {MockRouter} from "../src/MockRouter.sol";
-import {RewardDistributor} from "../src/RewardDistributor.sol";
-import {CreatorVault} from "../src/CreatorVault.sol";
-import {BrainMarketplace} from "../src/BrainMarketplace.sol";
-import {BasketVault} from "../src/BasketVault.sol";
+import { Test } from "forge-std/Test.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockToken } from "../src/MockToken.sol";
+import { MockRouter } from "../src/MockRouter.sol";
+import { MockValuationOracle } from "../src/MockValuationOracle.sol";
+import { RewardDistributor } from "../src/RewardDistributor.sol";
+import { CreatorVault } from "../src/CreatorVault.sol";
+import { BrainMarketplace } from "../src/BrainMarketplace.sol";
+import { BasketVault } from "../src/BasketVault.sol";
 
 contract BasketBrainTest is Test {
     address internal admin = makeAddr("admin");
@@ -19,6 +20,7 @@ contract BasketBrainTest is Test {
     MockToken internal nvda;
     MockToken internal aapl;
     MockRouter internal router;
+    MockValuationOracle internal oracle;
     RewardDistributor internal rewards;
     CreatorVault internal creatorVault;
     BrainMarketplace internal brain;
@@ -29,10 +31,15 @@ contract BasketBrainTest is Test {
         nvda = new MockToken("Mock NVIDIA", "NVDA", 18, admin);
         aapl = new MockToken("Mock Apple", "AAPL", 18, admin);
         router = new MockRouter(address(usdg), admin);
+        oracle = new MockValuationOracle(admin);
         vm.prank(admin);
         router.setPrice(address(nvda), 180e18);
         vm.prank(admin);
         router.setPrice(address(aapl), 220e18);
+        vm.prank(admin);
+        oracle.setPrice(address(nvda), 180e18);
+        vm.prank(admin);
+        oracle.setPrice(address(aapl), 220e18);
         vm.startPrank(admin);
         usdg.mint(address(router), 10_000_000e18);
         nvda.mint(address(router), 100_000e18);
@@ -41,11 +48,21 @@ contract BasketBrainTest is Test {
         usdg.mint(bob, 100_000e18);
         uint256[] memory rewardWeights = new uint256[](42);
         uint16[] memory brainWeights = new uint16[](42);
-        for (uint256 i; i < 6; ++i) brainWeights[i] = 500;
-        for (uint256 i = 6; i < 18; ++i) brainWeights[i] = 300;
-        for (uint256 i = 18; i < 34; ++i) brainWeights[i] = 150;
-        for (uint256 i = 34; i < 42; ++i) brainWeights[i] = 125;
-        for (uint256 i; i < 42; ++i) rewardWeights[i] = brainWeights[i];
+        for (uint256 i; i < 6; ++i) {
+            brainWeights[i] = 500;
+        }
+        for (uint256 i = 6; i < 18; ++i) {
+            brainWeights[i] = 300;
+        }
+        for (uint256 i = 18; i < 34; ++i) {
+            brainWeights[i] = 150;
+        }
+        for (uint256 i = 34; i < 42; ++i) {
+            brainWeights[i] = 125;
+        }
+        for (uint256 i; i < 42; ++i) {
+            rewardWeights[i] = brainWeights[i];
+        }
         CreatorVault creatorVaultImpl = new CreatorVault();
         creatorVault = CreatorVault(
             address(
@@ -112,6 +129,15 @@ contract BasketBrainTest is Test {
                 )
             )
         );
+        address[] memory bootstrapAssets = new address[](3);
+        uint16[] memory bootstrapWeights = new uint16[](3);
+        bootstrapAssets[0] = address(usdg);
+        bootstrapAssets[1] = address(nvda);
+        bootstrapAssets[2] = address(aapl);
+        bootstrapWeights[0] = 2_000;
+        bootstrapWeights[1] = 4_000;
+        bootstrapWeights[2] = 4_000;
+        basket.reinitializeV2(address(oracle), 120, 100, bootstrapAssets, bootstrapWeights);
         vm.stopPrank();
     }
 
@@ -130,23 +156,107 @@ contract BasketBrainTest is Test {
         assertEq(usdg.balanceOf(address(creatorVault)) - creatorBefore, 80e18);
         address[] memory targets = new address[](3);
         uint16[] memory weights = new uint16[](3);
-        targets[0] = address(usdg); weights[0] = 2_000;
-        targets[1] = address(nvda); weights[1] = 4_000;
-        targets[2] = address(aapl); weights[2] = 4_000;
+        targets[0] = address(usdg);
+        weights[0] = 2_000;
+        targets[1] = address(nvda);
+        weights[1] = 4_000;
+        targets[2] = address(aapl);
+        weights[2] = 4_000;
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("cycle"));
         assertGt(nvda.balanceOf(address(basket)), 0);
 
-        // Immediate withdrawals are deliberately limited to the USDG reserve.
-        // Return to a liquid target before proving the synchronous redemption path.
-        targets[0] = address(usdg); weights[0] = 10_000;
-        targets[1] = address(nvda); weights[1] = 0;
-        targets[2] = address(aapl); weights[2] = 0;
-        vm.prank(admin);
-        basket.rebalance(targets, weights, keccak256("liquidate"));
+        // A synchronous redemption now liquidates the same fraction of every position.
         vm.prank(alice);
         basket.redeem(50e18, 1, block.timestamp + 1 hours);
         assertGt(usdg.balanceOf(alice), 90_000e18);
+    }
+
+    function testBootstrapDepositBuysEveryPositiveTargetWithoutDilution() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        uint256 aliceShares = basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        assertEq(aliceShares, 9_900e18);
+        assertGt(nvda.balanceOf(address(basket)), 0);
+        assertGt(aapl.balanceOf(address(basket)), 0);
+        assertApproxEqAbs(basket.navPerShareWad(), 1e18, 2);
+        uint256 nvdaWeightBefore = basket.currentWeightBps(address(nvda));
+        uint256 aaplWeightBefore = basket.currentWeightBps(address(aapl));
+
+        vm.startPrank(bob);
+        usdg.approve(address(basket), type(uint256).max);
+        uint256 bobShares = basket.deposit(5_000e18, 4_949e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        assertApproxEqAbs(bobShares, 4_950e18, 3);
+        assertApproxEqAbs(basket.navPerShareWad(), 1e18, 3);
+        assertApproxEqAbs(basket.currentWeightBps(address(nvda)), nvdaWeightBefore, 1);
+        assertApproxEqAbs(basket.currentWeightBps(address(aapl)), aaplWeightBefore, 1);
+    }
+
+    function testNavPriceMovesWithOracleWithoutChangingSupply() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+        uint256 supplyBefore = basket.totalSupply();
+        uint256 priceBefore = basket.navPerShareWad();
+
+        vm.prank(admin);
+        oracle.setPrice(address(nvda), 270e18);
+
+        assertEq(basket.totalSupply(), supplyBefore);
+        assertGt(basket.navPerShareWad(), priceBefore);
+    }
+
+    function testProportionalRedemptionPreservesRemainingWeights() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        vm.stopPrank();
+        uint256 usdgWeightBefore = basket.currentWeightBps(address(usdg));
+        uint256 nvdaWeightBefore = basket.currentWeightBps(address(nvda));
+        uint256 aaplWeightBefore = basket.currentWeightBps(address(aapl));
+        uint256 priceBefore = basket.navPerShareWad();
+
+        vm.prank(alice);
+        basket.redeem(50e18, 1, block.timestamp + 1 hours);
+
+        assertApproxEqAbs(basket.currentWeightBps(address(usdg)), usdgWeightBefore, 1);
+        assertApproxEqAbs(basket.currentWeightBps(address(nvda)), nvdaWeightBefore, 1);
+        assertApproxEqAbs(basket.currentWeightBps(address(aapl)), aaplWeightBefore, 1);
+        assertApproxEqAbs(basket.navPerShareWad(), priceBefore, 3);
+    }
+
+    function testSecondaryTransferDoesNotTradeUnderlying() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        basket.deposit(10_000e18, 9_899e18, block.timestamp + 1 hours);
+        uint256 usdgBefore = usdg.balanceOf(address(basket));
+        uint256 nvdaBefore = nvda.balanceOf(address(basket));
+        uint256 aaplBefore = aapl.balanceOf(address(basket));
+        assertTrue(basket.transfer(bob, 1_000e18));
+        vm.stopPrank();
+
+        assertEq(usdg.balanceOf(address(basket)), usdgBefore);
+        assertEq(nvda.balanceOf(address(basket)), nvdaBefore);
+        assertEq(aapl.balanceOf(address(basket)), aaplBefore);
+    }
+
+    function testStaleValuationFailsClosed() public {
+        vm.warp(1_000);
+        vm.startPrank(admin);
+        oracle.setAutomaticFreshness(false);
+        oracle.setPriceStatus(address(nvda), 180e18, block.timestamp - 121, true);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdg.approve(address(basket), 10_000e18);
+        vm.expectRevert("stale price");
+        basket.deposit(10_000e18, 1, block.timestamp + 1 hours);
+        vm.stopPrank();
     }
 
     function testBrainSaleExcludesTransferredPieceFromMarkupReward() public {
@@ -209,9 +319,12 @@ contract BasketBrainTest is Test {
 
         address[] memory targets = new address[](3);
         uint16[] memory weights = new uint16[](3);
-        targets[0] = address(usdg); weights[0] = 2_000;
-        targets[1] = address(nvda); weights[1] = 4_000;
-        targets[2] = address(aapl); weights[2] = 4_000;
+        targets[0] = address(usdg);
+        weights[0] = 2_000;
+        targets[1] = address(nvda);
+        weights[1] = 4_000;
+        targets[2] = address(aapl);
+        weights[2] = 4_000;
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("illiquid"));
 
@@ -231,7 +344,7 @@ contract BasketBrainTest is Test {
         uint256 settled = basket.processRedemptions(10);
         assertEq(settled, 1);
         assertEq(basket.pendingRedemptionByAccount(alice), requestId);
-        (, uint256 remainingAfterFirstCycle, , , bool pending) = basket.redemptionRequests(requestId);
+        (, uint256 remainingAfterFirstCycle,,, bool pending) = basket.redemptionRequests(requestId);
         assertTrue(pending);
         assertGt(remainingAfterFirstCycle, 0);
         assertLt(remainingAfterFirstCycle, queuedShares);

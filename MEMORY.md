@@ -4,9 +4,9 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Keep the verified meme-universe local-devnet release healthy on VM `192.168.50.135`.
-- Last meaningful change: Portfolio presentation now omits empty positions. Basket lists only positive on-chain balances, while Decision summaries, details, and share cards list only positive target weights from the selected cycle.
-- Next step: Keep the native services healthy and use the release at `http://192.168.50.135:3000`; Robinhood public testnet work begins only when canonical asset, oracle, venue, signer, and RPC inputs are supplied.
+- Current task: Implement and validate live-NAV MDBS pool shares plus a bounded, reproducible AI decision context.
+- Last meaningful change: BasketVault V2 now values through a freshness-aware adapter, invests deposits in the existing pool composition, liquidates redemptions proportionally, persists targets, and derives MDBS price from live NAV and supply. Ten Foundry tests pass on the VM.
+- Next step: Upgrade the live local proxy without resetting balances, then expose the new NAV/previews and replace the allocator's hardcoded context with bounded history and validated source adapters.
 - Blockers: None for local use. Real-value activation remains gated on counsel, production integrations and credentials, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -285,6 +285,7 @@ When sources conflict, use this order:
 
 ## Open Follow-ups
 
+- Replace the local allocator's hardcoded asset metrics with a bounded, freshness-validated decision package. The live implementation currently sends current NAV/holdings, router prices, tags, and static return/volatility/drawdown/liquidity values but no decision history, holdings history, cost basis, realized or unrealized P&L, turnover history, SEC fundamentals, macro data, or live external market feed. Several `DATA_AVAILABILITY` flags currently claim absent fields are available and must be corrected before those brain dependencies are trusted.
 - Obtain qualified legal analysis before accepting funds or publicly offering a basket-backed token.
 - Supply production signer addresses, funded balances, provider credentials, domain, notification targets, and backup account.
 - Generate and verify the release-candidate asset, oracle, venue, and contract manifests from then-current canonical sources.
