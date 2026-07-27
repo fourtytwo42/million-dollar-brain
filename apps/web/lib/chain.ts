@@ -277,6 +277,7 @@ export async function dashboard(
   );
   return {
     deployment: d,
+    blockNumber: latestBlock.number.toString(),
     nav: nav.toString(),
     navPerShare: navPerShare.toString(),
     supply: supply.toString(),

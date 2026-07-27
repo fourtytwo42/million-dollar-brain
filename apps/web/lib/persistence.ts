@@ -32,6 +32,10 @@ function database() {
 
 async function ensureSchema(client: PoolClient) {
   await client.query(`
+    CREATE TABLE IF NOT EXISTS mdb_schema_migrations (
+      version integer PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS mdb_cycle_records (
       input_hash text PRIMARY KEY,
       created_at timestamptz NOT NULL,
@@ -63,10 +67,123 @@ async function ensureSchema(client: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS mdb_cycle_records_created_at_idx
       ON mdb_cycle_records (created_at DESC);
+
+    CREATE TABLE IF NOT EXISTS mdb_asset_registry (
+      symbol text PRIMARY KEY,
+      role text NOT NULL CHECK (role IN ('executable', 'reference')),
+      source text NOT NULL,
+      source_uid text,
+      token_name text NOT NULL,
+      multiplier numeric NOT NULL,
+      status text NOT NULL,
+      metadata jsonb NOT NULL,
+      observed_at timestamptz NOT NULL,
+      retrieved_at timestamptz NOT NULL,
+      source_hash text NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS mdb_quote_observations (
+      symbol text NOT NULL REFERENCES mdb_asset_registry(symbol),
+      source_generated_at timestamptz NOT NULL,
+      retrieved_at timestamptz NOT NULL,
+      bid numeric NOT NULL,
+      ask numeric NOT NULL,
+      midpoint numeric NOT NULL,
+      adjusted_midpoint numeric NOT NULL,
+      spread_bps integer NOT NULL,
+      daily_volume numeric,
+      halted boolean NOT NULL,
+      multiplier numeric NOT NULL,
+      oracle_price_wad numeric,
+      chain_block numeric,
+      valid boolean NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (symbol, source_generated_at)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_quote_observations_symbol_time_idx
+      ON mdb_quote_observations (symbol, source_generated_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_price_candles (
+      symbol text NOT NULL,
+      interval text NOT NULL CHECK (interval IN ('1m','15m','1h','1d')),
+      bucket_start timestamptz NOT NULL,
+      open numeric NOT NULL,
+      high numeric NOT NULL,
+      low numeric NOT NULL,
+      close numeric NOT NULL,
+      average_spread_bps integer NOT NULL,
+      sample_count integer NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (symbol, interval, bucket_start)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_market_features (
+      symbol text NOT NULL,
+      observed_at timestamptz NOT NULL,
+      formula_version text NOT NULL,
+      features jsonb NOT NULL,
+      coverage jsonb NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (symbol, observed_at)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_market_features_latest_idx
+      ON mdb_market_features (symbol, observed_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_trade_ledger (
+      tx_hash text NOT NULL,
+      log_index integer NOT NULL,
+      block_number numeric NOT NULL,
+      observed_at timestamptz NOT NULL,
+      operation text NOT NULL,
+      symbol text NOT NULL,
+      side text NOT NULL CHECK (side IN ('buy','sell')),
+      asset_amount_wad numeric NOT NULL,
+      usdg_amount_wad numeric NOT NULL,
+      valuation_usd_wad numeric,
+      gas_wei numeric,
+      metadata jsonb NOT NULL,
+      PRIMARY KEY (tx_hash, log_index)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_cash_flows (
+      tx_hash text NOT NULL,
+      log_index integer NOT NULL,
+      block_number numeric NOT NULL,
+      observed_at timestamptz NOT NULL,
+      kind text NOT NULL,
+      account text NOT NULL,
+      gross_usdg_wad numeric NOT NULL,
+      fee_usdg_wad numeric NOT NULL,
+      shares_wad numeric NOT NULL,
+      PRIMARY KEY (tx_hash, log_index)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_accounting_snapshots (
+      observed_at timestamptz PRIMARY KEY,
+      block_number numeric,
+      activation_basis boolean NOT NULL DEFAULT false,
+      snapshot jsonb NOT NULL,
+      source_hash text NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS mdb_decision_outcomes (
+      input_hash text NOT NULL REFERENCES mdb_cycle_records(input_hash) ON DELETE CASCADE,
+      horizon text NOT NULL CHECK (horizon IN ('1h','24h')),
+      matured_at timestamptz NOT NULL,
+      outcome jsonb NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (input_hash, horizon)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_worker_state (
+      worker text PRIMARY KEY,
+      last_started_at timestamptz,
+      last_succeeded_at timestamptz,
+      last_failed_at timestamptz,
+      last_error text,
+      duration_ms integer,
+      details jsonb NOT NULL DEFAULT '{}'::jsonb
+    );
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2)
+      ON CONFLICT (version) DO NOTHING;
   `);
 }
 
-async function withSchema<T>(callback: (client: PoolClient) => Promise<T>) {
+export async function withDatabase<T>(
+  callback: (client: PoolClient) => Promise<T>,
+) {
   const activePool = database();
   if (!activePool) return null;
   const client = await activePool.connect();
@@ -80,7 +197,7 @@ async function withSchema<T>(callback: (client: PoolClient) => Promise<T>) {
 }
 
 export async function persistCycle(record: PersistedCycle) {
-  return withSchema(async (client) => {
+  return withDatabase(async (client) => {
     await client.query("BEGIN");
     try {
       await client.query(
@@ -143,7 +260,7 @@ export async function persistCycle(record: PersistedCycle) {
 
 export async function databaseHealth() {
   try {
-    const result = await withSchema(async (client) => {
+    const result = await withDatabase(async (client) => {
       const count = await client.query<{ count: string }>(
         "SELECT count(*)::text AS count FROM mdb_cycle_records",
       );
@@ -167,7 +284,7 @@ export async function databaseHealth() {
 export async function recentPortfolioSnapshots(limit = 32) {
   try {
     return (
-      (await withSchema(async (client) => {
+      (await withDatabase(async (client) => {
         const result = await client.query<{ snapshot: unknown }>(
           `SELECT snapshot
              FROM mdb_portfolio_snapshots

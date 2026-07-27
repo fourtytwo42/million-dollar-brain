@@ -37,7 +37,7 @@ function save<T>(key: string, value: T) {
   );
 }
 
-async function fetchJson<T>(
+export async function fetchJson<T>(
   key: string,
   url: string,
   maximumAgeMs: number,
@@ -97,7 +97,7 @@ async function fetchJson<T>(
   }
 }
 
-type RobinhoodAsset = {
+export type RobinhoodAsset = {
   id: string;
   tokenSymbol: string;
   tokenName: string;
@@ -105,7 +105,7 @@ type RobinhoodAsset = {
   status: string;
   tradingCapabilities?: Record<string, unknown> | null;
 };
-type RobinhoodQuote = {
+export type RobinhoodQuote = {
   tokenSymbol: string;
   bid: string;
   ask: string;
@@ -114,7 +114,9 @@ type RobinhoodQuote = {
   generatedAt: string;
 };
 
-export async function robinhoodStockData(symbol: "NVDA" | "AAPL") {
+export type RobinhoodSymbol = "NVDA" | "AAPL" | "SPY" | "QQQ" | "SOXX";
+
+export async function robinhoodStockData(symbol: RobinhoodSymbol) {
   const [assets, quote, actions] = await Promise.all([
     fetchJson<{ assets: RobinhoodAsset[] }>(
       "robinhood-assets",
