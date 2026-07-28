@@ -251,10 +251,10 @@ const money = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
-const money4 = (value: string | bigint) =>
+const usd = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 const signedMoney = (value: string | bigint) => {
   const amount = BigInt(value);
@@ -558,7 +558,7 @@ export function EditorialDashboard({
         </nav>
         <div className="market-strip">
           <span className="share-price">
-            MDBS NAV price ${data ? money4(data.navPerShare) : "1.0000"}
+            MDBS NAV price ${data ? usd(data.navPerShare) : "1.00"}
           </span>
           <span className="healthy">● System healthy</span>
           <span>
@@ -833,7 +833,7 @@ export function EditorialDashboard({
               <div className="snapshot-metrics nav-metrics">
                 <Metric
                   label="MDBS NAV price"
-                  value={`$${data ? money4(data.navPerShare) : "—"}`}
+                  value={`$${data ? usd(data.navPerShare) : "—"}`}
                 />
                 <Metric
                   label="24-hour change"
@@ -1014,7 +1014,7 @@ export function EditorialDashboard({
                           the basket
                         </p>
                         <p>
-                          MDBS NAV price ${money4(data.navPerShare)} · minimum
+                          MDBS NAV price ${usd(data.navPerShare)} · minimum
                           received is 99% of this quote
                         </p>
                         <b>Your USDG buys</b>
@@ -1132,14 +1132,14 @@ export function EditorialDashboard({
                   <div>
                     <div>
                       <b>MDBS performance</b>
-                      <strong>${data ? money4(data.navPerShare) : "—"}</strong>
+                      <strong>${data ? usd(data.navPerShare) : "—"}</strong>
                     </div>
                     <small>{navSeries.length} live price observations</small>
                   </div>
                   <svg
                     viewBox="0 0 100 52"
                     role="img"
-                    aria-label={`MDBS performance history. Current price $${money4(data.navPerShare)}. All-time return ${percentBps(allTimeReturnBps)}.`}
+                    aria-label={`MDBS performance history. Current price $${usd(data.navPerShare)}. All-time return ${percentBps(allTimeReturnBps)}.`}
                     preserveAspectRatio="none"
                   >
                     <polyline points={navPoints} />
@@ -1250,7 +1250,7 @@ export function EditorialDashboard({
                 {data.priceSync.prices.map((price) => (
                   <article key={price.symbol}>
                     <b>{price.symbol} · on-chain price</b>
-                    <strong>${money4(price.price_wad)}</strong>
+                    <strong>${usd(price.price_wad)}</strong>
                     <span>{price.source}</span>
                     <small>
                       Updated{" "}
@@ -1396,7 +1396,7 @@ export function EditorialDashboard({
                       <b>
                         $
                         {selectedCycle.portfolioAfter
-                          ? money4(selectedCycle.portfolioAfter.navPerShareWad)
+                          ? usd(selectedCycle.portfolioAfter.navPerShareWad)
                           : "—"}
                       </b>
                     </div>
