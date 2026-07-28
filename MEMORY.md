@@ -6,13 +6,13 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Deployed a fresh public-testnet V3 replica stack,
-  added one-transaction official-price publishing, wired signed swap-plan user
-  flows, and added a secret-gated acceptance hook without exposing disposable
-  wallet controls in the testnet UI.
-- Next step: Upgrade the testnet execution block-reference window for
-  Robinhood Chain's fast block cadence, complete atomic buy/sell plus
-  brain/claim acceptance, and verify an autonomous Ornith rebalance.
+- Last meaningful change: Verified the fresh public-testnet V3 stack through a
+  real DecisionContext V4 Ornith rebalance and a complete signed-plan
+  buy/sell/brain/claim acceptance run. Testnet collector and hourly cycle
+  timers are active and isolated from local.
+- Next step: Complete mainnet-shadow service installation, update the 72-hour
+  V3 endurance runner, run browser UAT, and start the time-gated evidence
+  windows.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, 72 hours of clean testnet evidence, and
@@ -142,6 +142,20 @@ When sources conflict, use this order:
   non-broadcast shadow simulations. Ten focused universe/context tests, all
   existing market/network/wallet tests, TypeScript, and the Next.js production
   build pass on the VM.
+- 2026-07-28: Completed fresh V3 public-testnet acceptance. V4 freshness now
+  follows the active manifest rather than the legacy four-symbol compatibility
+  context, and model-returned checksum addresses are canonicalized without
+  permitting duplicate aliases or unknown contracts. Ornith evaluated all 12
+  registered replicas and executed an eight-risk-position allocation of 20%
+  USDG plus 10% each AAPL, NVDA, MSFT, AMZN, GOOGL, META, SPY, and WETH in
+  transaction
+  `0x5096932d5ec2bd626728dae2399c50e99b08b0329042d30e3d1f74440d69696a`.
+  A subsequent acceptance run changed a brain preset, bought MDBS, sold MDBS
+  atomically, and claimed rewards; all assertions passed with no queued sale,
+  a fresh oracle, positive NAV/supply, and eight risk positions. Testnet
+  collector and cycle timers are active at second 30 and minute 32,
+  respectively; local services remain active and separate. Eight asset-
+  universe tests, five context tests, and the production build pass.
 - 2026-07-28: Standardized visible USD-denominated NAV and oracle prices to exactly two decimal places. Replaced the four-decimal formatter and `$1.0000` fallback with the shared two-decimal USD formatter. Two portfolio-display tests, the Next.js production build, both live web-service restarts, and in-app-browser checks pass; the testnet header, Basket NAV card, performance chart label, and accessibility text all show `$1.00`.
 - 2026-07-28: Verified the network-specific test-control presentation after the user stopped the endurance run. On local port 3000, in-app-browser UAT found exactly one `Fund test wallet` button and one `Disposable test wallet` strip. On testnet port 3001, both counts are zero while `Connect wallet` remains present. The removed `YOU ARE HERE: THE STEERING LAYER` banner is absent in both environments. Eleven network-policy tests, seven wallet tests, the Next.js production build, both web-service restarts, and HTTP 200 checks pass. Future testnet endurance funding uses the retained session-wallet key plus `/api/faucet` hook rather than visible controls.
 - 2026-07-12: Read `AGENTS.md` and `MEMORY.md`; identified stale project-specific memory and preserved the repository-local instruction logic.
@@ -556,9 +570,11 @@ build`; authenticated live `/api/collect-market`.
   is `0x4365543D9e895bb48835CEcedf0903E8770A3A63`; its secret material is stored
   outside the repository. Testnet systemd units, database, state, and deployment
   manifest are active and separate from local.
-- 2026-07-27: The public chain-46630 deployment is mock-only and valueless.
-  Testnet services are active. A further public deployment or any real-value
-  activation requires a new explicit authorization.
+- 2026-07-28: The public chain-46630 deployment is valueless and uses clearly
+  labelled production-interface replicas published from official mainnet
+  market data. Testnet services are active. It is not evidence of canonical
+  Stock Token deployments on testnet, and a further public deployment or any
+  real-value activation requires explicit authorization.
 - 2026-07-27: Final local Chromium UAT passed the full economic, autonomous,
   responsive, and dark-mode flow. In-app Browser UAT verified the session-only
   disposable wallet, EIP-6963/RainbowKit wallet list, WalletConnect QR,
@@ -594,6 +610,7 @@ build`; authenticated live `/api/collect-market`.
 ## Archive
 
 - No archived entries yet.
+
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
 - Context: The fresh chain-46630 replica stack requires every user buy, user sell, and autonomous rebalance to use the same signed `SwapPlan[]` interface.
@@ -602,6 +619,7 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: `forge test --root packages/contracts` passed 21/21; web TypeScript passed; web production build passed and includes `/api/quote-plan`.
 - Result: Plans bind the chain, vault, exact token pair/input, minimum output, recipient, venue/spender, calldata hash, expiry, block, and nonce. Basket valuation and trade sizing now respect token decimals rather than assuming every compatible ERC-20 has 18 decimals. The fresh replica qualification window is seven days so the 72-hour acceptance run cannot expire mid-run; daily refresh remains required for durable operation.
 - Follow-up: Complete official-price publishing for every replica, add strict deployment/cutover gates and mainnet shadow evidence, then deploy and UAT the fresh V3 testnet stack.
+
 ### 2026-07-28 - Canonical Mainnet Shadow and Reserve Decimal Correction
 
 - Context: Read-only mainnet shadow validation found canonical Robinhood mainnet USDG uses 6 decimals while the existing dev/test USDG replicas use 18.
@@ -610,6 +628,7 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: The first shadow run on chain 4663 inspected 98 official canonical assets; runtime code and every Stock Token UID matched, and sampled `oraclePaused` values were false. `forge test --root packages/contracts` passed 22/22 including canonical six-decimal USDG-shaped NAV/share accounting.
 - Result: USDG 6-decimal transfers now reconcile to 18-decimal NAV and MDBS shares; mainnet quote/execution plans preserve raw token units. Shadow gates truthfully remain false for absent 0x credentials, Chainlink feed mappings, and the required 30-day evidence.
 - Follow-up: Publish and commit the dynamic market/shadow tooling, then broadcast the fresh production-interface replica deployment to chain 46630 and begin its 72-hour acceptance clock.
+
 ### 2026-07-28 - Testnet Rehearsal and EIP-170 Gate
 
 - Context: A no-broadcast rehearsal against Robinhood Testnet simulated the complete fresh V3 deployment.
