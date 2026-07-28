@@ -278,7 +278,7 @@ const usd = (value: string | bigint) =>
   });
 const signedMoney = (value: string | bigint) => {
   const amount = BigInt(value);
-  return `${amount >= 0n ? "+" : "−"}$${money(amount >= 0n ? amount : -amount)}`;
+  return `${amount >= 0n ? "+" : "−"}$${usd(amount >= 0n ? amount : -amount)}`;
 };
 const inputAmount = (value: bigint) =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", {
@@ -872,7 +872,7 @@ export function EditorialDashboard({
                 />
                 <Metric
                   label="Basket NAV"
-                  value={`$${data ? money(data.nav) : "—"}`}
+                  value={`$${data ? usd(data.nav) : "—"}`}
                 />
                 <Metric
                   label="Circulating MDBS"
@@ -955,7 +955,7 @@ export function EditorialDashboard({
                       <b>{slice.symbol}</b>
                       <span>
                         <strong>{slice.currentPercent.toFixed(2)}%</strong>
-                        <small>${money(slice.value.toString())}</small>
+                        <small>${usd(slice.value.toString())}</small>
                       </span>
                       <em>{slice.targetPercent.toFixed(2)}% target</em>
                     </div>
@@ -1253,13 +1253,11 @@ export function EditorialDashboard({
                   <hr />
                   <span>
                     User buys, 24h{" "}
-                    <b>${money(data.portfolioAccounting.deposits24hUsdWad)}</b>
+                    <b>${usd(data.portfolioAccounting.deposits24hUsdWad)}</b>
                   </span>
                   <span>
                     User sells, 24h{" "}
-                    <b>
-                      ${money(data.portfolioAccounting.redemptions24hUsdWad)}
-                    </b>
+                    <b>${usd(data.portfolioAccounting.redemptions24hUsdWad)}</b>
                   </span>
                   <small>
                     User cash flows are excluded from investment returns.
@@ -1656,7 +1654,7 @@ export function EditorialDashboard({
       <footer className="editorial-footer">
         <span>
           {network?.mode === "testnet"
-            ? `${network.networkLabel} mock deployment · no real funds`
+            ? `${network.networkLabel} production-interface replicas · no real funds`
             : network?.mode === "mainnet"
               ? `${network.networkLabel} · live network`
               : "Local Anvil simulation · no real funds"}

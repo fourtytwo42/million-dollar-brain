@@ -1962,6 +1962,7 @@ footer {
   background: var(--surface-subtle);
   color: var(--text-muted);
   font-size: 13px;
+  overflow-wrap: anywhere;
 }
 .brain-drama {
   border: 1px solid var(--border);
