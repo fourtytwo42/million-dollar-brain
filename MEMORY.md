@@ -6,10 +6,9 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Started the two-hour public-testnet V3 endurance run
-  and installed the hourly read-only mainnet shadow. The shadow verifies all
-  canonical identities and records per-asset feed, capitalization/history,
-  $25K impact, $250K depth, and continuity gates.
+- Last meaningful change: Accelerated only Robinhood Testnet AI decisions to
+  every 15 minutes and verified an immediate Ornith-directed on-chain
+  rebalance. Local and intended mainnet cadence remain hourly.
 - Next step: Complete final contract/build/browser UAT and keep the endurance
   and shadow evidence services running. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -650,7 +649,7 @@ build`; authenticated live `/api/collect-market`.
 - Decision: Robinhood Testnet runs its AI cycle every 15 minutes at `:02`, `:17`, `:32`, and `:47`. Local devnet and the intended mainnet cadence remain hourly.
 - Files: `apps/web/lib/network.ts`, `config/networks.json`, `apps/web/components/editorial-dashboard.tsx`, `infrastructure/systemd/mdb-cycle-testnet.timer`, `tests/network-policy.test.ts`.
 - Commands/tests: Network policy test, production build, live systemd timer inspection, and a live testnet cycle.
-- Result: The public runtime config and UI report the real network-specific cadence; invalid cadence values fail runtime validation.
+- Result: The public runtime config and UI report the real network-specific cadence; invalid cadence values fail runtime validation. An immediate proof cycle completed at `2026-07-28T19:43:21.185Z` with source `ai` and executed transaction `0x6c180b72d40d370d0bfa3fd1601d8a28caaf8ef4c4eb9215801c41451a00515f`.
 - Follow-up: Keep the accelerated cadence limited to testnet testing and restore 60 minutes if the test workload no longer needs it.
 
 ### 2026-07-28 - First Multi-user Rehearsal Findings
