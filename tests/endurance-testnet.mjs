@@ -132,14 +132,15 @@ async function getHealthyStatus(page) {
   throw lastError;
 }
 
-async function runAcceptance(page) {
+async function runAcceptanceActor(page, scenario) {
   const token = process.env.MDB_CYCLE_TOKEN;
   assert.ok(token, "MDB_CYCLE_TOKEN is unavailable to the endurance runner");
   const response = await page.request.post(
     `${baseUrl}/api/testnet-acceptance`,
     {
       headers: { "x-mdb-cycle-token": token },
-      timeout: 180_000,
+      data: { scenario },
+      timeout: 360_000,
     },
   );
   const body = await response.json();
@@ -151,11 +152,28 @@ async function runAcceptance(page) {
   assert.equal(body.ok, true);
   assert.equal(body.assertions?.noQueuedSale, true);
   assert.equal(body.assertions?.oracleFresh, true);
+  assert.equal(body.assertions?.oversizedSellRejected, true);
+  assert.equal(body.assertions?.actorFunded, true);
+  assert.equal(body.scenario, scenario);
   assert.ok(body.transactions?.buy);
   assert.ok(body.transactions?.sell);
   assert.ok(body.transactions?.preset);
-  assert.ok(body.transactions?.claim);
+  assert.ok(body.transactions?.brainPurchase);
   return body;
+}
+
+async function runAcceptance(page, checkpoint) {
+  const baseScenario = checkpoint * 3;
+  const setupUser = await runAcceptanceActor(page, baseScenario);
+  const concurrentUsers = await Promise.all([
+    runAcceptanceActor(page, baseScenario + 1),
+    runAcceptanceActor(page, baseScenario + 2),
+  ]);
+  const users = [setupUser, ...concurrentUsers];
+  assert.equal(new Set(users.map((user) => user.actor)).size, 3);
+  assert.ok(users.some((user) => user.purchaseType === "initial"));
+  assert.ok(users.some((user) => user.purchaseType === "resale"));
+  return { ok: true, concurrentRequests: 2, userActions: 3, users };
 }
 
 async function verifyServices() {
@@ -294,6 +312,27 @@ async function claimRewards(page) {
 }
 
 async function verifyUi(page, checkpoint) {
+  const viewports = [
+    { width: 390, height: 844, name: "mobile" },
+    { width: 768, height: 1024, name: "tablet" },
+    { width: 1440, height: 1100, name: "desktop" },
+  ];
+  const responsive = [];
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
+    await dismissGuide(page);
+    const widths = await page.evaluate(() => ({
+      client: document.documentElement.clientWidth,
+      scroll: document.documentElement.scrollWidth,
+    }));
+    assert.ok(
+      widths.scroll <= widths.client,
+      `${viewport.name} has horizontal page overflow`,
+    );
+    responsive.push({ ...viewport, ...widths });
+  }
+
   await page.getByRole("button", { name: "Decisions", exact: true }).click();
   await page
     .getByRole("heading", {
@@ -326,6 +365,13 @@ async function verifyUi(page, checkpoint) {
   assert.equal(await crew.getAttribute("aria-pressed"), "true");
   await crew.click();
   assert.equal(await page.locator(".brain-cell").count(), 42);
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Connect wallet", exact: true })
+      .count(),
+    1,
+  );
+  return responsive;
 }
 
 async function runCheckpoint(page, checkpoint, browserErrors) {
@@ -335,8 +381,8 @@ async function runCheckpoint(page, checkpoint, browserErrors) {
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  const acceptance = await runAcceptance(page);
-  await verifyUi(page, checkpoint);
+  const acceptance = await runAcceptance(page, checkpoint);
+  const responsive = await verifyUi(page, checkpoint);
 
   const statusAfter = await getHealthyStatus(page);
   assert.equal(statusAfter.redemption.pendingRequestId, "0");
@@ -347,7 +393,7 @@ async function runCheckpoint(page, checkpoint, browserErrors) {
   assert.equal(pricedNav, BigInt(statusAfter.nav));
   assert.equal(browserErrors.length, 0, browserErrors.join(" | "));
 
-  if (checkpoint === 0 || checkpoint === 108 || checkpoint === 216) {
+  if (checkpoint % 3 === 0) {
     await page.screenshot({
       path: `${stateDirectory}/checkpoint-${String(checkpoint).padStart(2, "0")}.png`,
       fullPage: true,
@@ -369,6 +415,7 @@ async function runCheckpoint(page, checkpoint, browserErrors) {
     latestCycleTxHash: statusAfter.latestCycle.txHash,
     services: servicesBefore,
     actions: acceptance,
+    responsive,
     browserErrors: [...browserErrors],
   };
 }
@@ -446,8 +493,16 @@ try {
     completedCheckpoints: state.completedCheckpoints,
     failures: state.failedAttempts,
     failedAttempts: state.failedAttempts,
-    atomicBuys: Boolean(state.lastCheckpoint?.actions?.transactions?.buy),
-    atomicSells: Boolean(state.lastCheckpoint?.actions?.transactions?.sell),
+    atomicBuys: Boolean(
+      state.lastCheckpoint?.actions?.users?.every(
+        (user) => user.transactions?.buy,
+      ),
+    ),
+    atomicSells: Boolean(
+      state.lastCheckpoint?.actions?.users?.every(
+        (user) => user.transactions?.sell,
+      ),
+    ),
     autonomousCycles: Boolean(state.lastCheckpoint?.latestCycleTxHash),
     lastCheckpoint: state.lastCheckpoint,
   });

@@ -158,6 +158,13 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.match(endurance, /2 \* 60 \* 60 \* 1000/);
   assert.match(endurance, /existing\.startedAt \+ durationMs/);
   assert.match(enduranceUnit, /MDB_ENDURANCE_DURATION_MS=7200000/);
+  assert.match(endurance, /concurrentRequests: 2/);
+  assert.match(endurance, /userActions: 3/);
+  assert.match(endurance, /width: 390/);
+  assert.match(endurance, /widths\.scroll <= widths\.client/);
+  assert.match(acceptance, /million-dollar-brain:endurance/);
+  assert.match(acceptance, /purchaseType:/);
+  assert.match(acceptance, /oversizedSellRejected/);
 });
 
 test("test-only wallet controls are visible locally but hidden on testnet", () => {

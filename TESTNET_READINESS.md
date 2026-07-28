@@ -18,7 +18,12 @@ The archived V2 mock release has been replaced by the committed
 labelled production-interface replicas, not canonical Stock Tokens. The V3
 web, collector, and hourly cycle services are active and isolated from local.
 The two-hour endurance runner uses hidden automation hooks; the visible testnet
-UI remains external-wallet-first.
+UI remains external-wallet-first. Three secret-derived test actors submit real
+chain-46630 transactions for varied buys, atomic sells, initial brain
+purchases, resales, preset changes, and claims. Every checkpoint also checks a
+rejected oversized exit, concurrent authenticated requests, NAV and oracle
+invariants, autonomous-cycle freshness, browser errors, and mobile/tablet/
+desktop overflow.
 
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
 across the pinned wallet and Next.js dependency graph. The available aggregate

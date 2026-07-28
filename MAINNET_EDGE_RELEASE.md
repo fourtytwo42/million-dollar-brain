@@ -83,8 +83,11 @@ Engineering acceptance requires:
 - A clean production build and browser UAT in light, dark, desktop, and mobile
   layouts.
 - A clean two-hour V3 Robinhood Testnet endurance run with 20-minute
-  checkpoints exercising buy, atomic sell, brain preset, claim, NAV
-  reconciliation, autonomous-cycle freshness, and browser errors.
+  checkpoints. Each checkpoint drives three secret-derived test actors through
+  varied MDBS buys and atomic sells, initial brain purchases and 120% resales,
+  preset changes, reward claims, rejected oversized exits, concurrent server
+  requests, NAV reconciliation, autonomous-cycle freshness, and desktop,
+  tablet, and mobile browser checks.
 - Thirty consecutive passing mainnet-shadow qualification dates for every
   launch asset.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,

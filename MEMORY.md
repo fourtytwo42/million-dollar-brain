@@ -634,6 +634,15 @@ build`; authenticated live `/api/collect-market`.
 - Result: Commits through `a7414f9` are pushed. The fresh endurance run started at `2026-07-28T17:53:24Z`; checkpoints 0 and 1 passed with buy, atomic sell, brain preset, claim, fresh prices, positive/reconciled NAV, no queued sale, and no browser errors. Restarting the web units at the presentation cutover restarted the coupled endurance worker, but preserved the same state, start time, and completion clock. Mainnet shadow validates all 98 official canonical identities read-only and records zero qualification days until required external evidence is configured.
 - Follow-up: Let the two-hour run complete without resetting its state. Supply verified Chainlink feed mappings, a server-only 0x API key, approved capitalization/AUM and history evidence, redundant production RPCs, production roles, audit results, and the other external release inputs. Accumulate 30 uninterrupted qualification days. Do not broadcast mainnet.
 
+### 2026-07-28 - Multi-user Production Rehearsal
+
+- Context: The user requested real-use simulation rather than a narrow repeated happy path.
+- Decision: Each 20-minute endurance checkpoint now uses three secret-derived testnet actors. It performs varied MDBS buys and atomic sells, initial brain purchases and 120% resales, rotating presets, reward claims, an oversized-sale rejection, and two concurrent authenticated requests while retaining the external-wallet-first public UI.
+- Files: `apps/web/app/api/testnet-acceptance/route.ts`, `tests/endurance-testnet.mjs`, `tests/network-policy.test.ts`.
+- Commands/tests: Network policy and production build must pass before the upgraded runner resumes. Browser checks cover 390px, 768px, and 1440px widths, both themes over alternating checkpoints, all three primary screens, 42 brain cells, decision history, console errors, and page-level overflow.
+- Result: Actor keys are derived only from the server-side endurance secret and are never returned or stored. The endpoint returns public actor addresses and transaction evidence. Real WalletConnect approval remains a human-wallet certification step; protocol behavior uses real chain-46630 transactions.
+- Follow-up: Complete the active two-hour run and audit its checkpoint ledger for all scenario classes.
+
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
 - Context: The fresh chain-46630 replica stack requires every user buy, user sell, and autonomous rebalance to use the same signed `SwapPlan[]` interface.
