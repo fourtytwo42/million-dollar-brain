@@ -234,6 +234,10 @@ When sources conflict, use this order:
   of MDBS, sold 25% atomically, claimed rewards, reconciled all four holding
   values exactly to NAV, and recorded zero browser errors. All local/testnet
   services and timers remained active and ports 3000/3001 returned HTTP 200.
+  Checkpoint 17 directly exercised the repaired boundary: it waited 52,923 ms
+  for the recorded cooldown, funded successfully without HTTP 429, purchased
+  piece 30, changed its preset, bought 125 USDG of MDBS, sold 25% atomically,
+  claimed rewards, reconciled NAV exactly, and recorded zero browser errors.
 
 ## Decisions
 
