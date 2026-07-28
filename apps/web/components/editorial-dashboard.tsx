@@ -581,7 +581,7 @@ export function EditorialDashboard({
                 : "Connect wallet"}
             </button>
           )}
-          {network?.faucetEnabled && (
+          {network?.mode === "local" && network.faucetEnabled && (
             <button className="primary-action" onClick={onFaucet}>
               Fund {walletSource === "built-in" ? "test wallet" : "wallet"}
             </button>
@@ -594,6 +594,7 @@ export function EditorialDashboard({
       )}
 
       {walletSource === "built-in" &&
+        network?.mode === "local" &&
         network?.builtInWalletEnabled &&
         account && (
           <div className="test-wallet-strip" role="status">
@@ -618,13 +619,6 @@ export function EditorialDashboard({
 
       {screen === "Brain" && (
         <div className="editorial-page">
-          <section className="screen-purpose" aria-label="About the Brain">
-            <span>YOU ARE HERE: THE STEERING LAYER</span>
-            <p>
-              Brain-piece owners choose preset moods. Every hour, all 42 choices
-              become one constrained brief for the AI.
-            </p>
-          </section>
           <section className="brain-pulse-strip" aria-label="Brain pulse">
             <div className="pulse-headline">
               <p className="section-kicker">⌁ BRAIN PULSE</p>

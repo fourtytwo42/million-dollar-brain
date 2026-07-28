@@ -145,6 +145,25 @@ test("testnet endurance funding covers an hourly action window", () => {
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
 });
 
+test("test-only wallet controls are visible locally but hidden on testnet", () => {
+  const dashboard = readFileSync(
+    "apps/web/components/editorial-dashboard.tsx",
+    "utf8",
+  );
+  const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
+  assert.match(
+    dashboard,
+    /network\?\.mode === "local" && network\.faucetEnabled/,
+  );
+  assert.match(
+    dashboard,
+    /walletSource === "built-in" &&\s*network\?\.mode === "local"/,
+  );
+  assert.doesNotMatch(dashboard, /YOU ARE HERE: THE STEERING LAYER/);
+  assert.match(endurance, /sessionStorage\.getItem\("mdb-test-wallet-46630"\)/);
+  assert.match(endurance, /page\.request\.post\(`\$\{baseUrl\}\/api\/faucet`/);
+});
+
 test("confirmed wallet actions survive temporary status refresh failures", () => {
   const dashboard = readFileSync(
     "apps/web/components/brain-dashboard.tsx",

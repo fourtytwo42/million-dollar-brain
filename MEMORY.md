@@ -4,16 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
-  exercising user actions every twenty minutes and repairing any failure before
-  resuming.
-- Last meaningful change: Checkpoint 19 exposed public-RPC replica lag between
-  a confirmed ERC-20 approval and the following brain purchase estimate. The
-  UI now retries only `ERC20InsufficientAllowance` failures after confirmed
-  approvals for up to sixty seconds. Seven wallet tests, the production build,
-  and checkpoint 20's complete approval-dependent buy flow pass.
-- Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
-  minutes through completion and repair any further failure before resuming.
+- Current task: Keep local-devnet testing controls available while presenting a
+  normal external-wallet interface on Robinhood Testnet.
+- Last meaningful change: The Fund test wallet button and Disposable test
+  wallet strip now render only in local mode. Testnet retains its session wallet
+  and faucet hooks for automation, while its visible interface offers Connect
+  wallet. The Brain steering-layer purpose banner was removed.
+- Next step: No active implementation task. The ten-hour endurance runner and
+  its twenty-minute watchdog were explicitly stopped by the user after
+  checkpoint 27; do not resume them without a new request.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -24,6 +23,9 @@ Durable project context lives here. Update this file whenever information should
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
   `3000`; their databases, state, manifests, timers, and wallet sessions are
   isolated.
+- Local devnet visibly exposes its disposable wallet and funding controls.
+  Robinhood Testnet hides those controls while retaining the same internal
+  session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
@@ -104,6 +106,7 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Verified the network-specific test-control presentation after the user stopped the endurance run. On local port 3000, in-app-browser UAT found exactly one `Fund test wallet` button and one `Disposable test wallet` strip. On testnet port 3001, both counts are zero while `Connect wallet` remains present. The removed `YOU ARE HERE: THE STEERING LAYER` banner is absent in both environments. Eleven network-policy tests, seven wallet tests, the Next.js production build, both web-service restarts, and HTTP 200 checks pass. Future testnet endurance funding uses the retained session-wallet key plus `/api/faucet` hook rather than visible controls.
 - 2026-07-12: Read `AGENTS.md` and `MEMORY.md`; identified stale project-specific memory and preserved the repository-local instruction logic.
 - 2026-07-12: Checked the workspace root; confirmed `AGENTS.md` and `MEMORY.md` are present and no `.git` directory is present at this level.
 - 2026-07-23: Reviewed Brainfart's live mind and documentation. Verified its core pattern is weighted, wallet-owned agent influence; its separate token does not fund or govern a portfolio.

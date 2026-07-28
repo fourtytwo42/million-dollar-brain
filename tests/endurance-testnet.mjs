@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { promisify } from "node:util";
 import { chromium } from "playwright";
+import { privateKeyToAccount } from "viem/accounts";
 
 const execFileAsync = promisify(execFile);
 const baseUrl = process.env.MDB_ENDURANCE_URL ?? "http://127.0.0.1:3001";
@@ -171,10 +172,21 @@ async function fundWallet(page, notBefore = 0) {
     );
     await sleep(waitMs);
   }
-  await page
-    .getByRole("button", { name: "Fund test wallet", exact: true })
-    .click();
-  await waitForMessage(page, "Test wallet funding completed.", 90_000);
+  const privateKey = await page.evaluate(() =>
+    sessionStorage.getItem("mdb-test-wallet-46630"),
+  );
+  assert.ok(privateKey, "testnet endurance wallet hook is unavailable");
+  const address = privateKeyToAccount(privateKey).address;
+  const response = await page.request.post(`${baseUrl}/api/faucet`, {
+    data: { address },
+    timeout: 90_000,
+  });
+  assert.equal(
+    response.ok(),
+    true,
+    `testnet faucet hook returned HTTP ${response.status()}: ${await response.text()}`,
+  );
+  await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
   return { completed: true, cooldownWaitMs: waitMs };
 }
 
