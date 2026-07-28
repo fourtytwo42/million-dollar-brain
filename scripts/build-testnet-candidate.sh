@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"
 official_rpc="https://rpc.testnet.chain.robinhood.com"
 evidence="$repo_root/var/testnet-readiness/build-evidence.json"
+public_manifest="$repo_root/packages/contracts/deployments/testnet.json"
 export PATH="/home/hendo420/.local/node/bin:/home/hendo420/.foundry/bin:/usr/bin:/bin"
 
 [[ -r "$env_file" ]] || {
@@ -54,6 +55,7 @@ jq -n \
   --arg gitSha "$(git rev-parse HEAD)" \
   --arg rpc "$official_rpc" \
   --arg reownProjectIdHash "$(printf %s "$NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID" | sha256sum | awk '{print $1}')" \
+  --argjson publicManifestPresent "$([[ -e "$public_manifest" ]] && echo true || echo false)" \
   '{
     schemaVersion: 1,
     builtAt: $builtAt,
@@ -68,6 +70,7 @@ jq -n \
       noPrivateRpc: true,
       noLocalAnvilKey: true
     },
-    broadcastPerformed: false
+    publicManifestPresent: $publicManifestPresent,
+    broadcastPerformed: $publicManifestPresent
   }' >"$evidence"
 cat "$evidence"
