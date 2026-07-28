@@ -56,11 +56,17 @@ async function candidates() {
         symbol: string;
         price: string;
         observed_at: string;
+        retrieved_at: string;
+        collector_succeeded_at: string | null;
         source_hash: string;
       }>(
         `SELECT DISTINCT ON (symbol) symbol,
                 adjusted_midpoint::text AS price,
                 source_generated_at::text AS observed_at,
+                retrieved_at::text AS retrieved_at,
+                (SELECT last_succeeded_at::text
+                   FROM mdb_worker_state
+                  WHERE worker='market-collector') AS collector_succeeded_at,
                 source_hash
            FROM mdb_quote_observations
           WHERE symbol = ANY($1::text[])
@@ -77,7 +83,11 @@ async function candidates() {
   }
   const now = Date.now();
   const stocks = stockRows.map((row) => {
-    if (now - Date.parse(row.observed_at) > 120_000) {
+    const freshnessTimestamp =
+      networkConfig.mode === "testnet" && networkConfig.mockAssets
+        ? row.collector_succeeded_at
+        : row.observed_at;
+    if (!freshnessTimestamp || now - Date.parse(freshnessTimestamp) > 120_000) {
       throw new Error(`${row.symbol} quote is older than 120 seconds`);
     }
     const configured = stockAssets.find((asset) => asset.symbol === row.symbol);

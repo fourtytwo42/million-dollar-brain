@@ -6,14 +6,17 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Added the first production contract layer:
-  upgradeable asset qualification registry, Chainlink valuation adapter,
-  authorizer-bound 0x execution adapter, ERC-8056-shaped test replica, and
-  BasketVault V3 atomic swap plans, plus the dynamic DecisionContext V4 data
-  and research layer.
-- Next step: Build the fresh testnet V3 deployment, mainnet shadow/release
-  tooling, quote-plan APIs, and dynamic UI evidence.
-- Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
+- Last meaningful change: Deployed a fresh public-testnet V3 replica stack,
+  added one-transaction official-price publishing, wired signed swap-plan user
+  flows, and added a secret-gated acceptance hook without exposing disposable
+  wallet controls in the testnet UI.
+- Next step: Upgrade the testnet execution block-reference window for
+  Robinhood Chain's fast block cadence, complete atomic buy/sell plus
+  brain/claim acceptance, and verify an autonomous Ornith rebalance.
+- Blockers: Mainnet activation still requires paid redundant RPCs, canonical
+  Chainlink mappings, production 0x credentials, final roles/Safe addresses,
+  funded gas, an audit, legal approval, 72 hours of clean testnet evidence, and
+  30 consecutive mainnet-shadow qualification days.
 
 ## Current State
 
@@ -23,6 +26,14 @@ Durable project context lives here. Update this file whenever information should
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
   `3000`; their databases, state, manifests, timers, and wallet sessions are
   isolated.
+- Last verified 2026-07-28: the fresh schema-V3 public testnet deployment has
+  12 clearly labelled production-interface replicas, an upgradeable dynamic
+  registry, signed EIP-712 RFQ execution, and atomic pool entry/exit. The V3
+  basket is `0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B`; its atomic price
+  publisher is `0x7FB986BDcFC23bF419af83BE4bFE4efDBff7407d`.
+- `packages/contracts/deployments/testnet-v3.json` is the active, committed
+  public-testnet manifest. Never use `192.168.50.117`; it belongs to another
+  mainnet workload.
 - Local devnet visibly exposes its disposable wallet and funding controls.
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.

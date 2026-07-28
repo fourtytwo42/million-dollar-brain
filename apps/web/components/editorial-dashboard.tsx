@@ -129,6 +129,17 @@ type CycleRecord = {
 };
 
 export type EditorialData = {
+  assets: {
+    id: string;
+    symbol: string;
+    name: string;
+    address: `0x${string}`;
+    kind: string;
+    riskClass: string;
+    decimals: number;
+    maximumWeightBps: number;
+    robinhoodUid: string | null;
+  }[];
   nav: string;
   navPerShare: string;
   navChange24hBps: number | null;
@@ -251,6 +262,15 @@ const money = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+const moneyAtDecimals = (
+  value: string | bigint,
+  decimals: number,
+  minimumFractionDigits = 0,
+) =>
+  Number(formatUnits(BigInt(value), decimals)).toLocaleString(undefined, {
+    minimumFractionDigits,
+    maximumFractionDigits: 2,
+  });
 const usd = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -357,6 +377,10 @@ export function EditorialDashboard({
   );
   const [showGuide, setShowGuide] = useState(false);
   const [tradeSide, setTradeSide] = useState<"buy" | "sell">("buy");
+  const reserveDecimals =
+    data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
+  const reserveMoney = (value: string | bigint) =>
+    moneyAtDecimals(value, reserveDecimals);
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -731,7 +755,7 @@ export function EditorialDashboard({
                         ? "Unowned · initial sale to Creator DAO"
                         : `Owner ${short(selected.owner)}`}
                     </span>
-                    <span>Next price ${money(selected.price)}</span>
+                    <span>Next price ${reserveMoney(selected.price)}</span>
                     <small>
                       This piece is always for sale. Each completed purchase
                       raises its next price by 20%.
@@ -747,7 +771,7 @@ export function EditorialDashboard({
                       onClick={() => onBuy(selected)}
                     >
                       {selected.unowned ? "Buy piece" : "Buy next"} · $
-                      {money(selected.price)}
+                      {reserveMoney(selected.price)}
                     </button>
                   )}
                 </div>
@@ -767,7 +791,7 @@ export function EditorialDashboard({
                     <span>
                       <small>Claimable</small>
                       <strong>
-                        ${data ? money(data.rewards.pending) : "0"} USDG
+                        ${data ? reserveMoney(data.rewards.pending) : "0"} USDG
                       </strong>
                     </span>
                   </div>
@@ -784,7 +808,8 @@ export function EditorialDashboard({
                     }
                     onClick={onClaim}
                   >
-                    Claim ${data ? money(data.rewards.pending) : "0"} USDG
+                    Claim ${data ? reserveMoney(data.rewards.pending) : "0"}{" "}
+                    USDG
                   </button>
                 </section>
               </aside>
@@ -802,6 +827,8 @@ export function EditorialDashboard({
               <p className="page-explainer">
                 Buy MDBS with USDG to own a proportional share of the basket.
                 Sell MDBS to receive USDG based on the basket&apos;s live value.
+                {network?.mode === "testnet" &&
+                  " Testnet uses clearly labelled production-interface replicas priced from official mainnet market data."}
               </p>
             </div>
             <div className="title-actions">
@@ -969,7 +996,9 @@ export function EditorialDashboard({
                 <strong>
                   Balance{" "}
                   {data
-                    ? money(tradeSide === "buy" ? data.walletUsdg : data.shares)
+                    ? tradeSide === "buy"
+                      ? reserveMoney(data.walletUsdg)
+                      : money(data.shares)
                     : "0"}{" "}
                   {tradeSide === "buy" ? "USDG" : "MDBS"}
                 </strong>
@@ -994,7 +1023,18 @@ export function EditorialDashboard({
                     ))}
                     <button
                       onClick={() =>
-                        data && setAmount(inputAmount(BigInt(data.walletUsdg)))
+                        data &&
+                        setAmount(
+                          Number(
+                            formatUnits(
+                              BigInt(data.walletUsdg),
+                              reserveDecimals,
+                            ),
+                          ).toLocaleString("en-US", {
+                            useGrouping: false,
+                            maximumFractionDigits: 6,
+                          }),
+                        )
                       }
                     >
                       Max
@@ -1009,9 +1049,9 @@ export function EditorialDashboard({
                       <details key="buy-quote-details">
                         <summary>View quote details</summary>
                         <p>
-                          Buy fee ${money(data.previews.deposit.fee)} · $
-                          {money(data.previews.deposit.netInvestment)} enters
-                          the basket
+                          Buy fee ${reserveMoney(data.previews.deposit.fee)} · $
+                          {reserveMoney(data.previews.deposit.netInvestment)}{" "}
+                          enters the basket
                         </p>
                         <p>
                           MDBS NAV price ${usd(data.navPerShare)} · minimum
@@ -1075,16 +1115,19 @@ export function EditorialDashboard({
                   {data && BigInt(data.previews.redeem.shares) > 0n && (
                     <div className="compact-quote">
                       <span>YOU RECEIVE APPROXIMATELY</span>
-                      <strong>{money(data.previews.redeem.net)} USDG</strong>
+                      <strong>
+                        {reserveMoney(data.previews.redeem.net)} USDG
+                      </strong>
                       <details key="sell-quote-details">
                         <summary>View quote details</summary>
                         <p>
                           You sell {money(data.previews.redeem.shares)} MDBS ·
-                          current value ${money(data.previews.redeem.gross)}
+                          current value $
+                          {reserveMoney(data.previews.redeem.gross)}
                         </p>
                         <p>
-                          Sell fee ${money(data.previews.redeem.fee)} · minimum
-                          proceeds are 99% of this quote
+                          Sell fee ${reserveMoney(data.previews.redeem.fee)} ·
+                          minimum proceeds are 99% of this quote
                         </p>
                         <p>
                           Settlement is atomic: the complete sale succeeds in
@@ -1580,7 +1623,10 @@ export function EditorialDashboard({
                 >
                   <p>
                     <b>Allowlist checked</b>
-                    <span>USDG, NVDA, AAPL, ETHX only</span>
+                    <span>
+                      Qualified registry assets only · maximum nine risk
+                      positions
+                    </span>
                   </p>
                   <p>
                     <b>Reserve enforced</b>

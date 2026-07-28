@@ -98,6 +98,17 @@ type Data = {
     rewards: `0x${string}`;
     [key: string]: unknown;
   };
+  assets: {
+    id: string;
+    symbol: string;
+    name: string;
+    address: `0x${string}`;
+    kind: string;
+    riskClass: string;
+    decimals: number;
+    maximumWeightBps: number;
+    robinhoodUid: string | null;
+  }[];
   nav: string;
   navPerShare: string;
   navChange24hBps: number | null;
@@ -275,6 +286,10 @@ const money = (value: string | bigint) =>
   Number(formatUnits(BigInt(value), 18)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+const moneyAtDecimals = (value: string | bigint, decimals: number) =>
+  Number(formatUnits(BigInt(value), decimals)).toLocaleString(undefined, {
+    maximumFractionDigits: 2,
+  });
 const inputAmount = (value: bigint) =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", {
     useGrouping: false,
@@ -372,6 +387,13 @@ export function BrainDashboard() {
         sessionStorage.setItem(storageKey, saved);
         localStorage.removeItem("mdb-dev-private-key");
       }
+    }
+    const testWalletRequested =
+      data.network.mode === "local" ||
+      new URLSearchParams(window.location.search).get("testWallet") === "1";
+    if (!testWalletRequested) {
+      setKey(null);
+      return;
     }
     const generated = saved ?? generatePrivateKey();
     if (!saved) sessionStorage.setItem(storageKey, generated);
@@ -502,7 +524,9 @@ export function BrainDashboard() {
   }
   async function deposit() {
     if (!data) return;
-    const value = parseUnits(amount, 18);
+    const reserveDecimals =
+      data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
+    const value = parseUnits(amount, reserveDecimals);
     if (!value) throw new Error("Enter a USDG amount to spend.");
     if (value > BigInt(data.walletUsdg)) {
       throw new Error("You do not have enough USDG for this purchase.");
@@ -663,9 +687,11 @@ export function BrainDashboard() {
       ...receiptWaitPolicy,
     });
     const refreshed = await refreshAfterConfirmedAction();
+    const reserveDecimals =
+      data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
     setMessage(
       confirmedActionMessage(
-        `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`,
+        `Sale complete. You received approximately ${moneyAtDecimals(preview[2], reserveDecimals)} USDG for your MDBS.`,
         refreshed,
       ),
     );

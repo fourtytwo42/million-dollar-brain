@@ -142,6 +142,19 @@ contract MainnetEdgeTest is Test {
         assertFalse(registry.isActive(address(tokenOut)));
     }
 
+    function testExecutionBlockWindowIsGovernanceBounded() public {
+        adapter.setExecutionLimits(75, 600);
+        assertEq(adapter.maximumOracleDeviationBps(), 75);
+        assertEq(adapter.maximumBlockDelay(), 600);
+
+        vm.prank(makeAddr("outsider"));
+        vm.expectRevert();
+        adapter.setExecutionLimits(100, 600);
+
+        vm.expectRevert("unsafe block delay");
+        adapter.setExecutionLimits(100, 7_201);
+    }
+
     function testChainlinkFeedScalesAndHonorsRobinhoodPause() public {
         ParityAssetToken stock = new ParityAssetToken("Test Replica Apple", "trAAPL", keccak256("AAPL"), address(this));
         MockAggregator feed = new MockAggregator(8, 12_345_000_000);

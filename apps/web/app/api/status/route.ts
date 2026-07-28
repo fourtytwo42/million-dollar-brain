@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFileSync } from "node:fs";
 import { isAddress, parseUnits } from "viem";
-import { dashboard } from "@/lib/chain";
+import { dashboard, deployment, deploymentAssets } from "@/lib/chain";
 import { DATA_AVAILABILITY } from "@/lib/market-context";
 import { databaseHealth } from "@/lib/persistence";
 import {
@@ -17,9 +17,9 @@ import {
 import { localPriceSyncHealth } from "@/lib/market-price-sync";
 
 export const runtime = "nodejs";
-function tokenAmount(value: string) {
+function tokenAmount(value: string, decimals = 18) {
   try {
-    return parseUnits(value || "0", 18);
+    return parseUnits(value || "0", decimals);
   } catch {
     return 0n;
   }
@@ -50,6 +50,9 @@ export async function GET(request: NextRequest) {
     const address = request.nextUrl.searchParams.get("address");
     const deposit = request.nextUrl.searchParams.get("deposit") ?? "1000";
     const sell = request.nextUrl.searchParams.get("sell");
+    const reserveDecimals =
+      deploymentAssets(deployment()).find((asset) => asset.kind === "reserve")
+        ?.decimals ?? 18;
     const history = cycleHistory();
     const [
       current,
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
     ] = await Promise.all([
       dashboard(
         address && isAddress(address) ? address : undefined,
-        tokenAmount(deposit),
+        tokenAmount(deposit, reserveDecimals),
         sell == null ? undefined : tokenAmount(sell),
       ),
       databaseHealth(),

@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createPublicClient, http, isAddress, parseAbi } from "viem";
 
@@ -20,6 +26,12 @@ const evidencePath =
 const rpcUrl = process.env.MDB_MAINNET_SHADOW_RPC_URL ?? PUBLIC_RPC;
 const apiKey = process.env.ZEROX_API_KEY ?? "";
 const taker = process.env.MDB_MAINNET_SHADOW_TAKER ?? "";
+const chainlinkFeeds = JSON.parse(
+  process.env.MDB_MAINNET_CHAINLINK_FEEDS_JSON ?? "{}",
+);
+const chainlinkHeartbeatSeconds = Number(
+  process.env.MDB_MAINNET_CHAINLINK_HEARTBEAT_SECONDS ?? "3600",
+);
 
 if (process.env.MDB_MAINNET_BROADCAST === "true") {
   throw new Error("mainnet shadow refuses broadcast mode");
@@ -33,6 +45,10 @@ const tokenAbi = parseAbi([
   "function decimals() view returns (uint8)",
   "function uid() view returns (bytes32)",
   "function oraclePaused() view returns (bool)",
+]);
+const feedAbi = parseAbi([
+  "function decimals() view returns (uint8)",
+  "function latestRoundData() view returns (uint80 roundId,int256 answer,uint256 startedAt,uint256 updatedAt,uint80 answeredInRound)",
 ]);
 
 const hash = (value) =>
@@ -113,7 +129,7 @@ async function quotePair(asset, direction, priceUsd) {
   const buyToken = direction === "buy" ? asset.address : USDG;
   const sellAmount =
     direction === "buy"
-      ? 25_000n * 10n ** 18n
+      ? 25_000n * 10n ** 6n
       : ((25_000n * 10n ** BigInt(asset.decimals ?? 18)) /
           BigInt(Math.max(1, Math.round(priceUsd * 1e6)))) *
         1_000_000n;
@@ -159,6 +175,89 @@ async function quotePair(asset, direction, priceUsd) {
       reason: error instanceof Error ? error.message : "0x quote failed",
     };
   }
+}
+
+async function inspectFeed(asset) {
+  const feed = chainlinkFeeds[asset.symbol];
+  if (!isAddress(feed)) {
+    return {
+      symbol: asset.symbol,
+      valid: false,
+      reason: "Chainlink feed mapping not configured",
+    };
+  }
+  try {
+    const [decimals, round] = await Promise.all([
+      client.readContract({
+        address: feed,
+        abi: feedAbi,
+        functionName: "decimals",
+      }),
+      client.readContract({
+        address: feed,
+        abi: feedAbi,
+        functionName: "latestRoundData",
+      }),
+    ]);
+    const ageSeconds = Math.max(
+      0,
+      Math.floor(Date.now() / 1_000) - Number(round[3]),
+    );
+    const valid =
+      round[1] > 0n &&
+      round[3] > 0n &&
+      round[4] >= round[0] &&
+      ageSeconds <= chainlinkHeartbeatSeconds;
+    return {
+      symbol: asset.symbol,
+      feed,
+      decimals: Number(decimals),
+      roundId: round[0].toString(),
+      answer: round[1].toString(),
+      updatedAt: Number(round[3]),
+      ageSeconds,
+      valid,
+      reason: valid ? null : "invalid, incomplete, or stale Chainlink round",
+    };
+  } catch (error) {
+    return {
+      symbol: asset.symbol,
+      feed,
+      valid: false,
+      reason: error instanceof Error ? error.message : "feed read failed",
+    };
+  }
+}
+
+function priorDailyEvidence() {
+  if (!existsSync(evidencePath)) return [];
+  return readFileSync(evidencePath, "utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean)
+    .flatMap((line) => {
+      try {
+        return [JSON.parse(line)];
+      } catch {
+        return [];
+      }
+    });
+}
+
+function consecutivePassingDays(rows) {
+  const byDate = new Map();
+  for (const row of rows) {
+    const date = String(row.at ?? "").slice(0, 10);
+    if (date) byDate.set(date, Boolean(row.passed));
+  }
+  let cursor = new Date();
+  cursor.setUTCHours(0, 0, 0, 0);
+  let count = 0;
+  while (byDate.get(cursor.toISOString().slice(0, 10)) === true) {
+    count += 1;
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
+  }
+  return count;
 }
 
 async function parallelMap(items, concurrency, worker) {
@@ -259,6 +358,28 @@ for (const asset of inspected.filter(
     sell: await quotePair(asset, "sell", priceUsd),
   });
 }
+const feedEvidence = await parallelMap(
+  inspected.filter(
+    (asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG",
+  ),
+  6,
+  inspectFeed,
+);
+const currentQualificationPass =
+  inspected.every(
+    (asset) =>
+      asset.codePresent &&
+      (!asset.uid ||
+        asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase()),
+  ) &&
+  quoteEvidence.length > 0 &&
+  quoteEvidence.every((row) => row.buy.valid && row.sell.valid) &&
+  feedEvidence.length > 0 &&
+  feedEvidence.every((row) => row.valid);
+const qualificationDays = consecutivePassingDays([
+  ...priorDailyEvidence(),
+  { at: new Date().toISOString(), passed: currentQualificationPass },
+]);
 
 const result = {
   schemaVersion: 1,
@@ -272,6 +393,8 @@ const result = {
   canonicalAssetCount: inspected.length,
   assets: inspected,
   quoteEvidence,
+  feedEvidence,
+  qualificationDays,
   gates: {
     noSigningKey: true,
     canonicalIdentityChecked: inspected.every(
@@ -284,8 +407,9 @@ const result = {
     twoSidedQuotesValid:
       quoteEvidence.length > 0 &&
       quoteEvidence.every((row) => row.buy.valid && row.sell.valid),
-    chainlinkMappingsConfigured: false,
-    thirtyDailyPasses: false,
+    chainlinkMappingsConfigured:
+      feedEvidence.length > 0 && feedEvidence.every((row) => row.valid),
+    thirtyDailyPasses: qualificationDays >= 30,
   },
 };
 result.sourceHash = hash(result);
@@ -299,6 +423,8 @@ appendFileSync(
     at: result.completedAt,
     sourceHash: result.sourceHash,
     gates: result.gates,
+    passed: currentQualificationPass,
+    qualificationDays,
     canonicalAssetCount: result.canonicalAssetCount,
   })}\n`,
   { mode: 0o640 },

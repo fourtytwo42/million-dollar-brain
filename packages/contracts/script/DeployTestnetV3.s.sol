@@ -79,7 +79,7 @@ contract DeployTestnetV3 is Script {
                 new ERC1967Proxy(
                     address(new ZeroExExecutionAdapter()),
                     abi.encodeCall(
-                        ZeroExExecutionAdapter.initialize, (deployer, address(valuation), quoteAuthorizer, 100, 50)
+                        ZeroExExecutionAdapter.initialize, (deployer, address(valuation), quoteAuthorizer, 100, 600)
                     )
                 )
             )

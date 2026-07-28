@@ -12,10 +12,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 interface IExecutionValuation {
-    function quoteStatus(address token)
-        external
-        view
-        returns (uint256 priceWad, uint256 updatedAt, bool valid);
+    function quoteStatus(address token) external view returns (uint256 priceWad, uint256 updatedAt, bool valid);
 }
 
 /// @notice Validates an authorizer-bound 0x execution before making an allowlisted call.
@@ -66,12 +63,9 @@ contract ZeroExExecutionAdapter is
     event SelectorConfigured(bytes4 indexed selector, bool allowed);
     event TokenConfigured(address indexed token, bool allowed);
     event QuoteAuthorizerChanged(address indexed authorizer);
+    event ExecutionLimitsChanged(uint16 maximumDeviationBps, uint32 maximumBlockDelay);
     event SwapExecuted(
-        bytes32 indexed digest,
-        address indexed tokenIn,
-        address indexed tokenOut,
-        uint256 amountIn,
-        uint256 amountOut
+        bytes32 indexed digest, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut
     );
 
     function initialize(
@@ -95,20 +89,14 @@ contract ZeroExExecutionAdapter is
         maximumBlockDelay = blockDelay;
     }
 
-    function configureVenue(address target, address allowanceTarget, bool allowed)
-        external
-        onlyRole(VENUE_ADMIN_ROLE)
-    {
+    function configureVenue(address target, address allowanceTarget, bool allowed) external onlyRole(VENUE_ADMIN_ROLE) {
         require(target != address(0) && allowanceTarget != address(0), "zero venue");
         allowedTarget[target] = allowed;
         allowedAllowanceTarget[allowanceTarget] = allowed;
         emit VenueConfigured(target, allowanceTarget, allowed);
     }
 
-    function configureSelector(bytes4 selector, bool allowed)
-        external
-        onlyRole(VENUE_ADMIN_ROLE)
-    {
+    function configureSelector(bytes4 selector, bool allowed) external onlyRole(VENUE_ADMIN_ROLE) {
         require(selector != bytes4(0), "zero selector");
         allowedSelector[selector] = allowed;
         emit SelectorConfigured(selector, allowed);
@@ -124,6 +112,14 @@ contract ZeroExExecutionAdapter is
         require(authorizer != address(0), "zero authorizer");
         quoteAuthorizer = authorizer;
         emit QuoteAuthorizerChanged(authorizer);
+    }
+
+    function setExecutionLimits(uint16 maximumDeviationBps, uint32 blockDelay) external onlyRole(VENUE_ADMIN_ROLE) {
+        require(maximumDeviationBps <= 100, "unsafe deviation");
+        require(blockDelay > 0 && blockDelay <= 7_200, "unsafe block delay");
+        maximumOracleDeviationBps = maximumDeviationBps;
+        maximumBlockDelay = blockDelay;
+        emit ExecutionLimitsChanged(maximumDeviationBps, blockDelay);
     }
 
     function intentDigest(ExecutionIntent calldata intent) public view returns (bytes32) {
@@ -148,11 +144,12 @@ contract ZeroExExecutionAdapter is
         );
     }
 
-    function execute(
-        ExecutionIntent calldata intent,
-        bytes calldata executionData,
-        bytes calldata authorizerSignature
-    ) external onlyRole(VAULT_ROLE) nonReentrant returns (uint256 amountOut) {
+    function execute(ExecutionIntent calldata intent, bytes calldata executionData, bytes calldata authorizerSignature)
+        external
+        onlyRole(VAULT_ROLE)
+        nonReentrant
+        returns (uint256 amountOut)
+    {
         require(intent.vault == msg.sender && intent.recipient == msg.sender, "wrong vault");
         require(intent.tokenIn != intent.tokenOut && intent.amountIn > 0, "invalid pair");
         require(allowedToken[intent.tokenIn] && allowedToken[intent.tokenOut], "token not allowed");
@@ -163,16 +160,14 @@ contract ZeroExExecutionAdapter is
         require(keccak256(executionData) == intent.callDataHash, "calldata changed");
         require(block.timestamp <= intent.expiry, "quote expired");
         require(
-            block.number >= intent.referenceBlock
-                && block.number - intent.referenceBlock <= maximumBlockDelay,
+            block.number >= intent.referenceBlock && block.number - intent.referenceBlock <= maximumBlockDelay,
             "block reference expired"
         );
 
         bytes32 digest = intentDigest(intent);
         require(!usedIntent[digest], "intent already used");
         require(
-            SignatureChecker.isValidSignatureNow(quoteAuthorizer, digest, authorizerSignature),
-            "invalid authorizer"
+            SignatureChecker.isValidSignatureNow(quoteAuthorizer, digest, authorizerSignature), "invalid authorizer"
         );
         usedIntent[digest] = true;
 
@@ -198,12 +193,11 @@ contract ZeroExExecutionAdapter is
         emit SwapExecuted(digest, intent.tokenIn, intent.tokenOut, intent.amountIn, amountOut);
     }
 
-    function _withinOracleDeviation(
-        address tokenIn,
-        uint256 amountIn,
-        address tokenOut,
-        uint256 amountOut
-    ) private view returns (bool) {
+    function _withinOracleDeviation(address tokenIn, uint256 amountIn, address tokenOut, uint256 amountOut)
+        private
+        view
+        returns (bool)
+    {
         (uint256 priceIn,, bool validIn) = valuation.quoteStatus(tokenIn);
         (uint256 priceOut,, bool validOut) = valuation.quoteStatus(tokenOut);
         if (!validIn || !validOut || priceIn == 0 || priceOut == 0) return false;
