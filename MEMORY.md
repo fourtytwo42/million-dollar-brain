@@ -4,14 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Add one owner-selected portrait change per brain-piece
-  ownership, then upgrade and verify both local devnet and Robinhood Testnet.
-- Last meaningful change: Implemented the append-only contract state, exact
-  on-chain image-hash commitment, validated self-hosted WebP upload path, and
-  owner-only portrait picker. Contract tests and the production web build pass.
-- Next step: Commit and push the verified implementation, upgrade both active
-  BrainMarketplace proxies, restart the web apps, and complete live browser
-  UAT including the larger portrait and unclipped +2 mood.
+- Current task: Keep the mainnet-edge release advancing while the public
+  testnet and mainnet Coming Soon surfaces remain available.
+- Last meaningful change: Added and deployed one owner-selected portrait
+  change per brain-piece ownership on local devnet and Robinhood Testnet.
+  Exact image hashes are on-chain; validated WebP bytes remain self-hosted.
+- Next step: Keep the read-only mainnet shadow collecting qualification
+  evidence. Supply Chainlink mappings, 0x credentials, and official
+  capitalization/history evidence before the 30-consecutive-day qualification
+  clock can advance.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 30 consecutive mainnet-shadow
@@ -617,9 +618,9 @@ When sources conflict, use this order:
 - Context: Brain-piece purchasers need a collectible presentation right without allowing arbitrary content to steer Ornith.
 - Decision: Each completed purchase increments an on-chain ownership serial. The current owner may commit one nonzero portrait hash for that serial; a later 120% purchase grants the new owner one fresh change. The exact normalized 384-by-384 WebP is self-hosted only after its bytes match the committed keccak256 hash. Portrait data is never included in the AI prompt.
 - Files: `packages/contracts/src/BrainMarketplace.sol`, `apps/web/app/api/brain-image/[pieceId]/route.ts`, `apps/web/lib/portrait.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-map.tsx`.
-- Commands/tests: `npm run test:portrait` passed 2/2; `npm run test:contracts` passed 26/26; Next.js production build passed and includes the dynamic brain-image route.
-- Result: The upgrade preserves existing ownership and grants existing owners one first portrait change. The selected portrait is larger, clicking it opens a simple file picker, retrying the already committed image is supported, and the five mood buttons use equal-width columns so +2 is not clipped.
-- Follow-up: Upgrade the local and testnet BrainMarketplace proxies, restart both web apps, and complete live transaction plus visual UAT.
+- Commands/tests: `npm run test:portrait` passed 2/2; `npm run test:contracts` passed 26/26; Next.js production build passed and includes the dynamic brain-image route. UUPS upgrades completed on chains 31337 and 46630.
+- Result: Commit `f9aba60` is pushed. The local and testnet web apps, public testnet domain, cycle timers, and collectors are active. Live local-browser UAT funded a disposable wallet, bought piece 1, committed and uploaded a custom portrait, verified the map and 112-pixel inspector use the hash-keyed image, and rejected a second different portrait. The +2 mood is fully visible at 1920, 768, and 390 pixel widths with no page-level horizontal overflow. The only browser diagnostics were MetaMask extension warnings; no application console error was observed.
+- Follow-up: None for the portrait feature. Mainnet activation will inherit the implementation through the release manifest and still requires the existing external gates.
 
 ### 2026-07-27 - Live local valuation and user-facing performance
 
