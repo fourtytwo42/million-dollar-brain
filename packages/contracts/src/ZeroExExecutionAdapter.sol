@@ -159,10 +159,10 @@ contract ZeroExExecutionAdapter is
         require(allowedSelector[bytes4(executionData[0:4])], "selector not allowed");
         require(keccak256(executionData) == intent.callDataHash, "calldata changed");
         require(block.timestamp <= intent.expiry, "quote expired");
-        require(
-            block.number >= intent.referenceBlock && block.number - intent.referenceBlock <= maximumBlockDelay,
-            "block reference expired"
-        );
+        uint256 blockDistance = block.number >= intent.referenceBlock
+            ? block.number - intent.referenceBlock
+            : intent.referenceBlock - block.number;
+        require(blockDistance <= maximumBlockDelay, "block reference expired");
 
         bytes32 digest = intentDigest(intent);
         require(!usedIntent[digest], "intent already used");

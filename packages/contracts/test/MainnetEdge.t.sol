@@ -191,7 +191,9 @@ contract MainnetEdgeTest is Test {
             allowanceTarget: address(venue),
             callDataHash: keccak256(data),
             expiry: block.timestamp + 2 minutes,
-            referenceBlock: block.number,
+            // Public Robinhood RPC requests may briefly land on replicas a few
+            // blocks behind the replica used to authorize the quote.
+            referenceBlock: block.number + 10,
             nonce: 1
         });
         bytes32 digest = adapter.intentDigest(intent);
