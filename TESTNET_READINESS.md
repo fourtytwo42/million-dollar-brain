@@ -4,17 +4,21 @@
 
 MDB keeps local development and Robinhood Testnet isolated.
 
-| Environment       | Port | Chain | RPC                                       | State                  |
-| ----------------- | ---: | ----: | ----------------------------------------- | ---------------------- |
-| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable     |
-| Robinhood Testnet | 3001 | 46630 | `https://rpc.testnet.chain.robinhood.com` | Installed but disabled |
+| Environment       | Port | Chain | RPC                                       | State               |
+| ----------------- | ---: | ----: | ----------------------------------------- | ------------------- |
+| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable  |
+| Robinhood Testnet | 3001 | 46630 | `https://rpc.testnet.chain.robinhood.com` | V3 live and enabled |
 
 The official Robinhood endpoint is used for both server and browser testnet
 traffic. The shared Robyn LAN node is not an MDB dependency. A hosted provider
 will be considered only after measured rate limits or reliability failures.
 
-No public-testnet contracts have been broadcast. Testnet services remain
-disabled until a valid `packages/contracts/deployments/testnet.json` exists.
+The archived V2 mock release has been replaced by the committed
+`packages/contracts/deployments/testnet-v3.json`. It contains 12 clearly
+labelled production-interface replicas, not canonical Stock Tokens. The V3
+web, collector, and hourly cycle services are active and isolated from local.
+The 72-hour endurance runner uses hidden automation hooks; the visible testnet
+UI remains external-wallet-first.
 
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
 across the pinned wallet and Next.js dependency graph. The available aggregate
@@ -27,8 +31,8 @@ accept each advisory before a real-value release.
 - External EIP-6963 and WalletConnect wallets are supported through wagmi,
   RainbowKit, TanStack Query, viem, and MDB's Reown project.
 - A connected external wallet always takes precedence.
-- Local and testnet builds retain a session-scoped disposable wallet for
-  testing without an extension.
+- Local visibly exposes a disposable wallet. Testnet retains the connector for
+  authorized automation but does not expose funding or disposable-wallet UI.
 - Mainnet runtime validation prohibits disposable wallets, faucets, and mock
   assets.
 - Browser bundles receive only the public RPC and browser-safe runtime config.
@@ -41,16 +45,15 @@ repository with owner-only permissions. Its public address is:
 
 `0x4365543D9e895bb48835CEcedf0903E8770A3A63`
 
-It is intentionally separate from Robyn. Fund this address with Robinhood
-Testnet ETH before a future authorized deployment. Never commit the keystore
-password or decrypted key.
+It is intentionally separate from Robyn and funded the authorized V3 replica
+deployment. Never commit the keystore password or decrypted key.
 
 ## Safe verification
 
-Run the isolated chain-46630 rehearsal:
+Run V3 acceptance:
 
 ```bash
-scripts/rehearse-testnet.sh
+scripts/run-testnet-acceptance.sh
 ```
 
 Build a testnet candidate without broadcasting:
@@ -68,9 +71,9 @@ scripts/verify-testnet-readiness.sh
 Evidence is written under `var/testnet-readiness/` and is not a deployment
 manifest.
 
-## Future broadcast
+## Current deployment and future broadcast
 
-`scripts/deploy-testnet.sh` refuses to run unless all of these are true:
+`scripts/deploy-testnet-v3.sh` refuses to run unless all of these are true:
 
 - `MDB_TESTNET_BROADCAST=true` is set after explicit user authorization.
 - The official RPC reports chain ID `46630`.
@@ -86,11 +89,11 @@ Do not run it during local or rehearsal work.
 If a testnet build or service fails:
 
 1. Leave the local port-3000 services running.
-2. Keep all `mdb-testnet-*` units disabled.
+2. Preserve the isolated testnet units and stop only the failing service.
 3. Inspect `/etc/mdb/testnet.env` without printing secret values.
-4. Re-run the isolated rehearsal and candidate build.
-5. Do not create or hand-edit `testnet.json`; only an authorized deployment may
-   generate it.
+4. Re-run V3 acceptance.
+5. Do not create or hand-edit `testnet-v3.json`; only the authorized deployment
+   tooling may generate it.
 
 If the public RPC is rate-limited, record HTTP status, request rate, and time
 window before changing providers. A provider change must update both server and

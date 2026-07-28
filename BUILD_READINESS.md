@@ -9,7 +9,12 @@ The native VM release implements the complete catalog-v3 collection: 42 named ER
 
 The frontend implements an accessible interactive 42-path SVG Brain marketplace with one continuous anatomically traced lateral-brain silhouette, 42 individually generated roster-v4 portraits, roving keyboard navigation, map zoom, a searchable mobile list, character-led Brain Pulse, and a complete selected-piece right rail. Roster v4 contains 10 diverse humans and 32 creatures, machines, supernatural beings, or sentient objects without changing economic catalog v3. Completed cycles persist deterministic Brain Drama and support client-generated recap cards plus prefilled X, Farcaster, and Telegram sharing. Cerebrum, cerebellum, and brainstem metadata guide portrait placement without producing separate blob outlines. Both editorial light and dark modes are validated against live normative screenshots.
 
-The Anvil universe intentionally uses four mocks: USDG, NVDA, AAPL, and ETHX. Robinhood Chain asset discovery, canonical live manifests, production oracle/DEX adapters, full ten-position risk limits, multisig/timelock administration, observability, legal review, and independent audits remain release gates rather than unfinished local-product interactions.
+The Anvil universe intentionally retains its four legacy mocks for fast,
+deterministic regression tests. The isolated V3 Robinhood Testnet environment
+uses 12 production-interface replicas, while mainnet shadow inspects canonical
+assets without signing or broadcasting. Production Chainlink mappings, 0x
+credentials, multisig/timelock administration, 72-hour and 30-day evidence,
+legal review, and independent audits remain release gates.
 
 ## 1. Purpose
 

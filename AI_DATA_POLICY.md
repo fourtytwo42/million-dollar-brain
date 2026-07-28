@@ -18,7 +18,8 @@ Ornith cannot add an asset, browse for a token contract, choose a data source, c
 The hourly decision package contains:
 
 - USDG as the required reserve asset.
-- No more than 24 active risk assets.
+- No fixed ceiling on qualified candidates; no more than nine risk positions
+  may receive weight alongside USDG.
 - No more than 10 non-zero target positions including USDG.
 
 The candidate universe is synchronized daily from Robinhood's free canonical Stock Token metadata and official Robinhood Chain contract registry. Discovery does not equal approval.
@@ -50,7 +51,12 @@ The exact launch contracts are selected immediately before deployment from the t
 
 No paid market-data provider, news API, search engine, social feed, or AI research service is required by the MVP.
 
-The runtime builds official stock history locally. A one-minute collector stores multiplier-adjusted Robinhood observations for executable NVDA/AAPL and reference-only SPY/QQQ/SOXX, then derives candles and versioned features in PostgreSQL. No unofficial historical backfill is allowed. Every metric carries coverage and remains unavailable until its specified official-history window matures. Raw candles remain outside the model prompt.
+The runtime builds official history locally for every registered candidate and
+the configured reference-only benchmarks. A one-minute collector stores
+multiplier-adjusted Robinhood observations, then derives candles and versioned
+features in PostgreSQL. No unofficial historical backfill is allowed. Every
+metric carries coverage and remains unavailable until its official-history
+window matures. Raw candles remain outside the model prompt.
 
 Robinhood Stock Token quotes describe the underlying asset and are not multiplier-adjusted. Supported Chainlink Stock Token feeds are already multiplier-adjusted. The price adapter records this semantic difference and must not apply the ERC-8056 multiplier twice.
 
@@ -126,9 +132,13 @@ Every field includes or inherits:
 
 Ornith also receives the current basket, protocol limits, complete brain, previous targets, previous execution result, and recent deposits and redemptions.
 
-## 6. No-browsing policy
+## 6. Bounded structured research policy
 
-Ornith has no browser, search, arbitrary HTTP, or tool-calling access during allocation.
+Ornith has no browser, search, or arbitrary HTTP access. It may request one
+orchestrated research round for at most 16 registered asset identities.
+Requests are validated against the registry and return only immutable
+structured evidence from approved official, on-chain, portfolio, and 0x
+sources.
 
 This prevents:
 
@@ -138,7 +148,8 @@ This prevents:
 - Decisions based on rumors, social posts, or unattributed claims.
 - Unbounded latency and context growth.
 
-News, social sentiment, user-supplied URLs, and prose research are excluded from the MVP.
+News, social sentiment, user-supplied URLs, arbitrary contracts, and prose
+research remain excluded.
 
 ## 7. How the brain changes data use
 

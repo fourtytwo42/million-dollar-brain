@@ -33,6 +33,17 @@ const chainlinkFeeds = JSON.parse(
 const chainlinkHeartbeatSeconds = Number(
   process.env.MDB_MAINNET_CHAINLINK_HEARTBEAT_SECONDS ?? "3600",
 );
+const capitalizationEvidence = JSON.parse(
+  process.env.MDB_MAINNET_CAPITALIZATION_EVIDENCE_JSON ?? "{}",
+);
+const historyEvidence = JSON.parse(
+  process.env.MDB_MAINNET_HISTORY_EVIDENCE_JSON ?? "{}",
+);
+const CAPITALIZATION_MINIMUM_USD = 100_000_000;
+const IMPACT_NOTIONAL_USD = 25_000;
+const DEPTH_NOTIONAL_USD = 250_000;
+const MAXIMUM_IMPACT_BPS = 100;
+const MAXIMUM_CAPITALIZATION_EVIDENCE_AGE_SECONDS = 172_800;
 
 if (process.env.MDB_MAINNET_BROADCAST === "true") {
   throw new Error("mainnet shadow refuses broadcast mode");
@@ -142,7 +153,7 @@ async function inspectTokens(assets) {
   return rows;
 }
 
-async function quotePair(asset, direction, priceUsd) {
+async function quotePair(asset, direction, priceUsd, notionalUsd) {
   if (!apiKey) return { valid: false, reason: "ZEROX_API_KEY not configured" };
   if (!isAddress(taker)) {
     return { valid: false, reason: "MDB_MAINNET_SHADOW_TAKER not configured" };
@@ -151,8 +162,8 @@ async function quotePair(asset, direction, priceUsd) {
   const buyToken = direction === "buy" ? asset.address : USDG;
   const sellAmount =
     direction === "buy"
-      ? 25_000n * 10n ** 6n
-      : ((25_000n * 10n ** BigInt(asset.decimals ?? 18)) /
+      ? BigInt(notionalUsd) * 10n ** 6n
+      : ((BigInt(notionalUsd) * 10n ** BigInt(asset.decimals ?? 18)) /
           BigInt(Math.max(1, Math.round(priceUsd * 1e6)))) *
         1_000_000n;
   const parameters = new URLSearchParams({
@@ -177,11 +188,23 @@ async function quotePair(asset, direction, priceUsd) {
       BigInt(quote.buyAmount ?? 0) > 0n &&
       typeof quote.transaction?.data === "string" &&
       quote.transaction.data.startsWith("0x");
+    const realizedUsd =
+      direction === "buy"
+        ? (Number(quote.buyAmount ?? 0) / 10 ** Number(asset.decimals ?? 18)) *
+          priceUsd
+        : Number(quote.buyAmount ?? 0) / 1e6;
+    const impactBps = Math.max(
+      0,
+      Math.round(((notionalUsd - realizedUsd) / notionalUsd) * 10_000),
+    );
     return {
       valid,
       direction,
+      notionalUsd,
       sellAmount: quote.sellAmount ?? null,
       buyAmount: quote.buyAmount ?? null,
+      realizedUsd,
+      impactBps,
       blockNumber: quote.blockNumber ?? null,
       target: target ?? null,
       allowanceTarget,
@@ -200,7 +223,16 @@ async function quotePair(asset, direction, priceUsd) {
 }
 
 async function inspectFeed(asset) {
-  const feed = chainlinkFeeds[asset.symbol];
+  const configuredFeed = chainlinkFeeds[asset.symbol];
+  const feed =
+    typeof configuredFeed === "string"
+      ? configuredFeed
+      : configuredFeed?.address;
+  const maximumAgeSeconds =
+    typeof configuredFeed === "object" &&
+    Number.isFinite(Number(configuredFeed?.maximumAgeSeconds))
+      ? Number(configuredFeed.maximumAgeSeconds)
+      : chainlinkHeartbeatSeconds;
   if (!isAddress(feed)) {
     return {
       symbol: asset.symbol,
@@ -229,7 +261,7 @@ async function inspectFeed(asset) {
       round[1] > 0n &&
       round[3] > 0n &&
       round[4] >= round[0] &&
-      ageSeconds <= chainlinkHeartbeatSeconds;
+      ageSeconds <= maximumAgeSeconds;
     return {
       symbol: asset.symbol,
       feed,
@@ -238,6 +270,7 @@ async function inspectFeed(asset) {
       answer: round[1].toString(),
       updatedAt: Number(round[3]),
       ageSeconds,
+      maximumAgeSeconds,
       valid,
       reason: valid ? null : "invalid, incomplete, or stale Chainlink round",
     };
@@ -249,6 +282,77 @@ async function inspectFeed(asset) {
       reason: error instanceof Error ? error.message : "feed read failed",
     };
   }
+}
+
+function classifyAsset(asset) {
+  if (asset.symbol === "WETH") return "crypto";
+  if (/\b(ETF|FUND|TRUST)\b/i.test(asset.name)) return "fund";
+  return "stock";
+}
+
+function inspectCapitalization(asset) {
+  const evidence = capitalizationEvidence[asset.symbol];
+  const expectedKind = classifyAsset(asset);
+  const observedAt = Date.parse(evidence?.observedAt ?? "");
+  const ageSeconds = Number.isFinite(observedAt)
+    ? Math.max(0, Math.floor((Date.now() - observedAt) / 1_000))
+    : null;
+  const valueUsd = Number(evidence?.valueUsd);
+  const sourceHashValid = /^[a-f0-9]{64}$/i.test(evidence?.sourceHash ?? "");
+  const sourceValid =
+    typeof evidence?.source === "string" &&
+    /^https:\/\/(www\.sec\.gov|data\.sec\.gov|[^/]*robinhood\.com|[^/]*chainlink\.com|[^/]*coinbase\.com)\//i.test(
+      evidence.source,
+    );
+  const kindValid =
+    evidence?.kind === expectedKind ||
+    (expectedKind === "fund" && evidence?.kind === "etf");
+  const supplyAdapterValid =
+    expectedKind !== "crypto" || evidence?.supplyAdapterApproved === true;
+  const valid =
+    Number.isFinite(valueUsd) &&
+    valueUsd >= CAPITALIZATION_MINIMUM_USD &&
+    ageSeconds !== null &&
+    ageSeconds <= MAXIMUM_CAPITALIZATION_EVIDENCE_AGE_SECONDS &&
+    sourceHashValid &&
+    sourceValid &&
+    kindValid &&
+    supplyAdapterValid;
+  return {
+    kind: expectedKind,
+    metric: expectedKind === "fund" ? "aum" : "circulatingMarketCap",
+    valueUsd: Number.isFinite(valueUsd) ? valueUsd : null,
+    observedAt: evidence?.observedAt ?? null,
+    ageSeconds,
+    source: evidence?.source ?? null,
+    sourceHash: evidence?.sourceHash ?? null,
+    supplyAdapterApproved: evidence?.supplyAdapterApproved === true,
+    valid,
+    reason: valid
+      ? null
+      : "missing, stale, unapproved, or sub-$100M capitalization evidence",
+  };
+}
+
+function inspectHistory(asset) {
+  const evidence = historyEvidence[asset.symbol];
+  const valid =
+    Number(evidence?.days) >= 30 &&
+    Number(evidence?.coverageBps) >= 9_000 &&
+    /^[a-f0-9]{64}$/i.test(evidence?.sourceHash ?? "");
+  return {
+    days: Number.isFinite(Number(evidence?.days))
+      ? Number(evidence.days)
+      : null,
+    coverageBps: Number.isFinite(Number(evidence?.coverageBps))
+      ? Number(evidence.coverageBps)
+      : null,
+    sourceHash: evidence?.sourceHash ?? null,
+    valid,
+    reason: valid
+      ? null
+      : "30 days of sufficiently complete official history are not available",
+  };
 }
 
 function priorDailyEvidence() {
@@ -350,6 +454,7 @@ const nominated = new Set(
     .filter(Boolean),
 );
 const quoteEvidence = [];
+const marketEvidence = [];
 for (const asset of inspected.filter(
   (candidate) => nominated.has(candidate.symbol) && candidate.symbol !== "USDG",
 )) {
@@ -369,15 +474,31 @@ for (const asset of inspected.filter(
   if (!priceUsd || priceUsd <= 0) {
     quoteEvidence.push({
       symbol: asset.symbol,
-      buy: { valid: false, reason: "official token price unavailable" },
-      sell: { valid: false, reason: "official token price unavailable" },
+      impactBuy: { valid: false, reason: "official token price unavailable" },
+      impactSell: { valid: false, reason: "official token price unavailable" },
+      depthBuy: { valid: false, reason: "official token price unavailable" },
+      depthSell: { valid: false, reason: "official token price unavailable" },
+    });
+    marketEvidence.push({
+      symbol: asset.symbol,
+      capitalization: inspectCapitalization(asset),
+      history: inspectHistory(asset),
+      officialPriceUsd: null,
     });
     continue;
   }
   quoteEvidence.push({
     symbol: asset.symbol,
-    buy: await quotePair(asset, "buy", priceUsd),
-    sell: await quotePair(asset, "sell", priceUsd),
+    impactBuy: await quotePair(asset, "buy", priceUsd, IMPACT_NOTIONAL_USD),
+    impactSell: await quotePair(asset, "sell", priceUsd, IMPACT_NOTIONAL_USD),
+    depthBuy: await quotePair(asset, "buy", priceUsd, DEPTH_NOTIONAL_USD),
+    depthSell: await quotePair(asset, "sell", priceUsd, DEPTH_NOTIONAL_USD),
+  });
+  marketEvidence.push({
+    symbol: asset.symbol,
+    capitalization: inspectCapitalization(asset),
+    history: inspectHistory(asset),
+    officialPriceUsd: priceUsd,
   });
 }
 const feedEvidence = await parallelMap(
@@ -387,21 +508,75 @@ const feedEvidence = await parallelMap(
   6,
   inspectFeed,
 );
-const currentQualificationPass =
-  inspected.every(
-    (asset) =>
+const priorEvidence = priorDailyEvidence();
+const qualification = inspected
+  .filter((asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG")
+  .map((asset) => {
+    const quote = quoteEvidence.find((row) => row.symbol === asset.symbol);
+    const feed = feedEvidence.find((row) => row.symbol === asset.symbol);
+    const market = marketEvidence.find((row) => row.symbol === asset.symbol);
+    const tradingAvailable =
+      asset.symbol === "WETH" ||
+      Object.values(asset.tradingCapabilities ?? {}).some(
+        (session) =>
+          session?.whole === "TRADING_STATUS_TRADABLE" ||
+          session?.fractional === "TRADING_STATUS_TRADABLE",
+      );
+    const identityValid =
       asset.codePresent &&
       (!asset.uid ||
-        asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase()),
-  ) &&
-  quoteEvidence.length > 0 &&
-  quoteEvidence.every((row) => row.buy.valid && row.sell.valid) &&
-  feedEvidence.length > 0 &&
-  feedEvidence.every((row) => row.valid);
-const qualificationDays = consecutivePassingDays([
-  ...priorDailyEvidence(),
-  { at: new Date().toISOString(), passed: currentQualificationPass },
-]);
+        asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase());
+    const noCorporateActionTransition =
+      !asset.pendingMultiplier ||
+      Number(asset.pendingMultiplier) === Number(asset.currentMultiplier);
+    const impactValid =
+      quote?.impactBuy?.valid === true &&
+      quote?.impactSell?.valid === true &&
+      quote.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
+      quote.impactSell.impactBps <= MAXIMUM_IMPACT_BPS;
+    const depthValid =
+      quote?.depthBuy?.valid === true && quote?.depthSell?.valid === true;
+    const passed =
+      identityValid &&
+      asset.oraclePaused !== true &&
+      tradingAvailable &&
+      noCorporateActionTransition &&
+      feed?.valid === true &&
+      impactValid &&
+      depthValid &&
+      market?.capitalization?.valid === true &&
+      market?.history?.valid === true;
+    const assetId = `${CHAIN_ID}:${asset.address.toLowerCase()}`;
+    const qualificationDays = consecutivePassingDays([
+      ...priorEvidence
+        .flatMap((row) => row.assets ?? [])
+        .filter((row) => row.assetId === assetId),
+      { at: new Date().toISOString(), passed },
+    ]);
+    return {
+      assetId,
+      symbol: asset.symbol,
+      passed,
+      qualificationDays,
+      checks: {
+        identityValid,
+        oracleActive: asset.oraclePaused !== true,
+        tradingAvailable,
+        noCorporateActionTransition,
+        feedValid: feed?.valid === true,
+        impactValid,
+        depthValid,
+        capitalizationValid: market?.capitalization?.valid === true,
+        historyValid: market?.history?.valid === true,
+      },
+    };
+  });
+const currentQualificationPass =
+  qualification.length > 0 && qualification.every((row) => row.passed);
+const qualificationDays =
+  qualification.length > 0
+    ? Math.min(...qualification.map((row) => row.qualificationDays))
+    : 0;
 
 const result = {
   schemaVersion: 1,
@@ -416,6 +591,8 @@ const result = {
   assets: inspected,
   quoteEvidence,
   feedEvidence,
+  marketEvidence,
+  qualification,
   qualificationDays,
   gates: {
     noSigningKey: true,
@@ -428,7 +605,15 @@ const result = {
     zeroExConfigured: Boolean(apiKey),
     twoSidedQuotesValid:
       quoteEvidence.length > 0 &&
-      quoteEvidence.every((row) => row.buy.valid && row.sell.valid),
+      quoteEvidence.every(
+        (row) =>
+          row.impactBuy.valid &&
+          row.impactSell.valid &&
+          row.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
+          row.impactSell.impactBps <= MAXIMUM_IMPACT_BPS &&
+          row.depthBuy.valid &&
+          row.depthSell.valid,
+      ),
     chainlinkMappingsConfigured:
       feedEvidence.length > 0 && feedEvidence.every((row) => row.valid),
     thirtyDailyPasses: qualificationDays >= 30,
@@ -448,6 +633,12 @@ appendFileSync(
     passed: currentQualificationPass,
     qualificationDays,
     canonicalAssetCount: result.canonicalAssetCount,
+    assets: qualification.map((row) => ({
+      assetId: row.assetId,
+      symbol: row.symbol,
+      passed: row.passed,
+      qualificationDays: row.qualificationDays,
+    })),
   })}\n`,
   { mode: 0o640 },
 );

@@ -324,11 +324,18 @@ A compact decision package should look conceptually like:
 
 The model sees every active asset as an option. It does not search Robinhood Chain or invent candidates.
 
-For the MVP, the decision universe contains USDG plus no more than 24 active risk assets. Ornith may assign non-zero weight to no more than 10 assets including USDG. Candidates are synchronized daily from Robinhood's canonical metadata, but become active only after their contracts, price sources, on-chain liquidity, data completeness, permissions, and legal eligibility are validated.
+The decision universe contains every qualified registry asset; it has no fixed
+candidate-count ceiling. Ornith may assign non-zero weight to no more than nine
+risk assets plus USDG. Candidates are synchronized from canonical metadata but
+become active only after 30 consecutive qualification passes and an explicit
+committed manifest plus on-chain registry update.
 
 Each active asset is accompanied by a structured dossier containing its identity, registry tags, trade permissions, basket position, price, returns, volatility, drawdown, trend metrics, liquidity, spread, price impact, correlation, applicable SEC-derived fundamentals, corporate-action status, source timestamps, formula versions, and validity flags.
 
-All external input comes from free structured feeds. All derived metrics are calculated by versioned protocol code. Ornith does not browse, retrieve news, call tools, or receive AI-generated research.
+All external input comes from structured approved feeds. All derived metrics
+are calculated by versioned protocol code. Ornith does not browse or retrieve
+news. It may request one bounded research round for up to 16 registered assets;
+the orchestrator returns only recorded official/on-chain evidence.
 
 ## 9. What the AI returns
 
@@ -419,7 +426,8 @@ Pausing an asset removes it from future purchases. The risk controller determine
 4. Asset and sector options are `Underweight / Neutral / Overweight`.
 5. A new owner inherits the piece's current setting and may change it after ownership settles.
 6. The creator-controlled risk-administrator role initially controls listing and pausing. It is separate from the model, keeper, executor, and vault-withdrawal roles and must migrate to a multisig before real-value deployment.
-7. Ornith receives USDG plus up to 24 active risk assets and may hold at most 10 total positions.
+7. Ornith receives every qualified asset in the compact directory and may hold
+   at most nine risk positions plus USDG.
 8. Only free structured feeds and deterministically calculated metrics are used.
 9. If an asset is disabled, the registry explicitly marks it `sell_only`, `hold_only`, or `frozen`; the deterministic risk controller applies that state.
 10. The complete source and calculation policy is defined in `AI_DATA_POLICY.md`.

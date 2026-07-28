@@ -2,10 +2,14 @@
 
 ## Product Requirements Document
 
-**Version:** 1.0
-**Status:** Build-ready MVP baseline; internal product and architecture decisions locked
-**Date:** 2026-07-25  
-**Implementation status:** A working local Anvil application, upgradeable contracts, autonomous Ornith cycle, market collector, disposable and external wallet layers, and isolated Robinhood chain-46630 rehearsal exist on the application VM. No public-testnet or mainnet deployment and no real-value activation have occurred.
+**Version:** 1.1
+**Status:** Mainnet-edge engineering candidate; real-value activation disabled
+**Date:** 2026-07-28
+**Implementation status:** Local Anvil remains usable. A fresh public
+chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
+RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
+A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
+broadcast mode. No mainnet deployment or real-value activation has occurred.
 
 ### Normative PRD set
 
@@ -451,11 +455,34 @@ The complete brain is supplied in two forms:
 
 The asset catalog is supplied from the on-chain Asset Registry and contains only active, approved assets. Dynamic market statistics are supplied by approved data adapters and included in the cycle input hash.
 
-For the MVP, Ornith receives USDG plus no more than 24 active risk assets and may return no more than 10 non-zero target positions including USDG. All external information comes from free structured Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED sources. Versioned protocol code calculates derived metrics. Ornith has no browser, search, arbitrary HTTP, tool-calling, news, social, or AI-curated research access during allocation.
+Ornith receives one compact fixed-schema row for every qualified asset; there
+is no fixed candidate-count ceiling. It receives full dossiers for current
+holdings and the deterministic top 64 assets, but may return no more than nine
+risk positions plus USDG. All external information comes from structured
+Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, FRED, Coinbase, portfolio,
+and validated 0x sources. Versioned protocol code calculates derived metrics.
 
-Every model request is stateless, contains one freshly built `DecisionContextV3`, has no conversation ID or prior messages, and is rejected before dispatch if the deterministic 32,000-token estimate is exceeded. Required stale portfolio, valuation, quote, halt, or execution state produces a Hold. Optional unavailable fields are omitted and every dependent brain piece is inactive. PostgreSQL stores the exact context, input and prompt hashes, model configuration, raw output, validated allocation, source manifest, pre/post snapshots, market observations, accounting state, decision outcomes, and execution receipt; archived data is audit/replay material and is never automatically copied into a later prompt.
+Every model request is stateless, contains one freshly built
+`DecisionContextV4`, has no conversation ID or prior messages, and is rejected
+before dispatch if the deterministic 96,000-token estimate is exceeded. The
+compact eligible directory has priority; if it cannot fit, the cycle holds and
+raises an alert. Ornith may request one bounded research round for at most 16
+registered asset identities. The orchestrator returns only recorded structured
+evidence and never arbitrary URLs, prose, user-selected contracts, or browsing.
+Required stale portfolio, valuation, quote, halt, or execution state produces
+a Hold. PostgreSQL stores both model calls, exact contexts, hashes, research,
+raw outputs, validated allocation, snapshots, observations, accounting,
+outcomes, and execution or simulation receipts.
 
-The native market collector samples official Robinhood quotes for executable NVDA/AAPL and reference-only SPY/QQQ/SOXX every minute. It applies the Stock Token multiplier, deduplicates source timestamps, builds retained one-minute, 15-minute, hourly, and daily candles, and calculates versioned returns, volatility, drawdown, momentum, mean reversion, spread, liquidity, execution cost, relative strength, correlation, and beta. Stock features mature only from post-activation official history; no third-party backfill is permitted. ETH-USD remains an official Coinbase reference series, and FRED remains optional until configured.
+The native market collector samples official Robinhood quotes for every
+registered candidate and configured reference-only benchmark. It applies the
+Stock Token multiplier, deduplicates source timestamps, builds retained
+one-minute, 15-minute, hourly, and daily candles, and calculates versioned
+returns, volatility, drawdown, momentum, mean reversion, spread, liquidity,
+execution cost, relative strength, correlation, and beta. Features mature only
+from post-activation official history; no third-party backfill is permitted.
+ETH-USD remains an official Coinbase reference series, and FRED remains
+optional until configured.
 
 On local Anvil only, each successful collector pass also synchronizes the mock
 valuation oracle and mock execution router to the same fresh official AAPL,
@@ -568,10 +595,10 @@ Execution uses allowlisted venue adapters rather than model-authored calldata. T
 
 The system is architected for standard ERC-20 assets and Robinhood Stock Tokens using ERC-8056. Every official Stock Token may be discovered and represented, but an asset cannot enter the active decision universe until its canonical contract, multiplier behavior, oracle, sequencer checks, liquidity, execution route, transfer behavior, permissions, and legal eligibility pass review.
 
-Initial hard limits for simulation:
+Initial hard limits:
 
 - Approved spot assets only.
-- Maximum 10 active positions.
+- Maximum nine risk positions plus USDG.
 - Maximum 20% in one asset.
 - Minimum 20% in the base stable asset.
 - Maximum 30% combined in high-volatility assets.
@@ -938,14 +965,17 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The automation server uses a registered native-ETH Keeper Wallet to submit scheduled decisions.
 - The Keeper Wallet is refueled and reimbursed from the isolated Automation Reserve and has no custody or administrative authority.
 - The AI receives the complete brain, approved assets, current basket, statistics, limits, and prior result.
-- The MVP decision universe is USDG plus at most 24 active risk assets; Ornith may hold at most 10 positions.
+- Ornith considers every qualified registry asset and may hold at most nine
+  risk positions plus USDG.
 - Candidates come from Robinhood's canonical metadata but require explicit risk-administrator approval.
 - The discoverable universe includes canonical Robinhood Stock Tokens and supported standard ERC-20s; discovery never grants trading approval.
 - Stock Token integration supports ERC-8056 multipliers and keeps raw balances, UI-scaled amounts, underlying quotes, and multiplier-adjusted Chainlink feeds distinct.
 - Venue adapters support safe expansion across validated AMM, RFQ or aggregator, propAMM, and order-book routes.
 - The MVP implements signed RFQ, Uniswap-compatible, and deterministic mock venue adapters; Rialto and Lighter are post-MVP adapters.
 - All agent information comes from free structured feeds or deterministic protocol calculations.
-- Ornith has no browsing, news, social, arbitrary HTTP, or AI-curated research access during allocation.
+- Ornith has no browsing, news, social, arbitrary HTTP, or user-directed
+  research. One bounded structured research round is permitted for at most 16
+  registered assets.
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
 - Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.

@@ -131,17 +131,25 @@ test("testnet transactions tolerate public-RPC nonce and receipt replica lag", (
   assert.doesNotMatch(collector, /publicClient\.waitForTransactionReceipt/);
 });
 
-test("testnet endurance funding covers an hourly action window", () => {
+test("testnet endurance uses the authenticated acceptance surface", () => {
   const faucet = readFileSync("apps/web/app/api/faucet/route.ts", "utf8");
+  const acceptance = readFileSync(
+    "apps/web/app/api/testnet-acceptance/route.ts",
+    "utf8",
+  );
   const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
   assert.match(faucet, /"250000000000000"/);
   assert.match(faucet, /"3000000000000000"/);
+  assert.match(endurance, /process\.env\.MDB_CYCLE_TOKEN/);
+  assert.match(endurance, /\/api\/testnet-acceptance/);
+  assert.match(endurance, /"x-mdb-cycle-token": token/);
+  assert.match(acceptance, /process\.env\.MDB_CYCLE_TOKEN/);
   assert.match(
-    endurance,
-    /checkpoint >= \(state\.nextFundingCheckpoint \?\? 0\)/,
+    acceptance,
+    /request\.headers\.get\("x-mdb-cycle-token"\) !== expected/,
   );
-  assert.match(endurance, /existing\.fundNextCheckpoint = true/);
-  assert.match(endurance, /state\.nextFundingCheckpoint = checkpoint \+ 3/);
+  assert.match(acceptance, /networkConfig\.mode !== "testnet"/);
+  assert.match(acceptance, /functionName: "redeemWithPlan"/);
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
 });
 
@@ -150,7 +158,10 @@ test("test-only wallet controls are visible locally but hidden on testnet", () =
     "apps/web/components/editorial-dashboard.tsx",
     "utf8",
   );
-  const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
+  const controller = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
   assert.match(
     dashboard,
     /network\?\.mode === "local" && network\.faucetEnabled/,
@@ -160,8 +171,8 @@ test("test-only wallet controls are visible locally but hidden on testnet", () =
     /walletSource === "built-in" &&\s*network\?\.mode === "local"/,
   );
   assert.doesNotMatch(dashboard, /YOU ARE HERE: THE STEERING LAYER/);
-  assert.match(endurance, /sessionStorage\.getItem\("mdb-test-wallet-46630"\)/);
-  assert.match(endurance, /page\.request\.post\(`\$\{baseUrl\}\/api\/faucet`/);
+  assert.match(controller, /`mdb-test-wallet-\$\{data\.network\.chainId\}`/);
+  assert.match(controller, /fetch\("\/api\/faucet"/);
 });
 
 test("confirmed wallet actions survive temporary status refresh failures", () => {

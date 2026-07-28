@@ -10,7 +10,6 @@ import {
 } from "node:fs/promises";
 import { promisify } from "node:util";
 import { chromium } from "playwright";
-import { privateKeyToAccount } from "viem/accounts";
 
 const execFileAsync = promisify(execFile);
 const baseUrl = process.env.MDB_ENDURANCE_URL ?? "http://127.0.0.1:3001";
@@ -19,12 +18,6 @@ const durationMs = Number(
 );
 const intervalMs = Number(
   process.env.MDB_ENDURANCE_INTERVAL_MS ?? 20 * 60 * 1000,
-);
-const faucetCooldownMs = Number(
-  process.env.MDB_ENDURANCE_FAUCET_COOLDOWN_MS ?? 60 * 60 * 1000,
-);
-const faucetCooldownBufferMs = Number(
-  process.env.MDB_ENDURANCE_FAUCET_COOLDOWN_BUFFER_MS ?? 5_000,
 );
 const stateDirectory =
   process.env.MDB_ENDURANCE_STATE_DIR ?? "var/testnet-v3-endurance";
@@ -72,8 +65,6 @@ async function loadOrCreateState() {
       existing.lastResumedAt = now;
       await atomicJson(statePath, existing);
     }
-    existing.fundNextCheckpoint = true;
-    await atomicJson(statePath, existing);
     return existing;
   }
   const created = {
@@ -87,8 +78,6 @@ async function loadOrCreateState() {
     failedAttempts: 0,
     lastCheckpoint: null,
     failureAt: null,
-    fundNextCheckpoint: true,
-    nextFundingCheckpoint: 0,
   };
   await atomicJson(statePath, created);
   return created;
@@ -188,32 +177,6 @@ async function dismissGuide(page) {
   if ((await guide.count()) === 1 && (await guide.isVisible())) {
     await guide.getByRole("button", { name: "Got it", exact: true }).click();
   }
-}
-
-async function fundWallet(page, notBefore = 0) {
-  const waitMs = Math.max(0, notBefore - Date.now());
-  if (waitMs > 0) {
-    console.log(
-      `Waiting ${waitMs}ms for the disposable wallet faucet cooldown.`,
-    );
-    await sleep(waitMs);
-  }
-  const privateKey = await page.evaluate(() =>
-    sessionStorage.getItem("mdb-test-wallet-46630"),
-  );
-  assert.ok(privateKey, "testnet endurance wallet hook is unavailable");
-  const address = privateKeyToAccount(privateKey).address;
-  const response = await page.request.post(`${baseUrl}/api/faucet`, {
-    data: { address },
-    timeout: 90_000,
-  });
-  assert.equal(
-    response.ok(),
-    true,
-    `testnet faucet hook returned HTTP ${response.status()}: ${await response.text()}`,
-  );
-  await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
-  return { completed: true, cooldownWaitMs: waitMs };
 }
 
 function presetAccessibleName(option) {
@@ -355,13 +318,7 @@ async function verifyUi(page, checkpoint) {
   assert.equal(await page.locator(".brain-cell").count(), 42);
 }
 
-async function runCheckpoint(
-  page,
-  checkpoint,
-  browserErrors,
-  shouldFund,
-  fundingNotBefore,
-) {
+async function runCheckpoint(page, checkpoint, browserErrors) {
   const startedAt = Date.now();
   await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
   await dismissGuide(page);
@@ -427,19 +384,11 @@ try {
     browserErrors.length = 0;
     const checkpoint = state.completedCheckpoints;
     try {
-      const result = await runCheckpoint(
-        page,
-        checkpoint,
-        browserErrors,
-        state.fundNextCheckpoint ||
-          checkpoint >= (state.nextFundingCheckpoint ?? 0),
-        state.fundNextCheckpoint ? 0 : (state.nextFundingAt ?? 0),
-      );
+      const result = await runCheckpoint(page, checkpoint, browserErrors);
       await appendFile(checkpointPath, `${JSON.stringify(result)}\n`);
       state.completedCheckpoints += 1;
       state.lastCheckpoint = result;
       state.lastFailure = null;
-      state.fundNextCheckpoint = false;
       state.nextCheckpointAt =
         state.startedAt + state.completedCheckpoints * state.intervalMs;
       state.failureAt = null;
@@ -461,7 +410,6 @@ try {
       };
       state.failedAttempts += 1;
       state.failureAt = Date.now();
-      state.fundNextCheckpoint = true;
       state.lastFailure = failure;
       await appendFile(checkpointPath, `${JSON.stringify(failure)}\n`);
       await atomicJson(statePath, state);

@@ -6,13 +6,14 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Verified the fresh public-testnet V3 stack through a
-  real DecisionContext V4 Ornith rebalance and a complete signed-plan
-  buy/sell/brain/claim acceptance run. Testnet collector and hourly cycle
-  timers are active and isolated from local.
-- Next step: Complete mainnet-shadow service installation, update the 72-hour
-  V3 endurance runner, run browser UAT, and start the time-gated evidence
-  windows.
+- Last meaningful change: Started the 72-hour public-testnet V3 endurance run
+  and installed the hourly read-only mainnet shadow. The shadow verifies all
+  canonical identities and records per-asset feed, capitalization/history,
+  $25K impact, $250K depth, and continuity gates.
+- Next step: Complete final contract/build/browser UAT and keep the endurance
+  and shadow evidence services running. Supply Chainlink mappings, 0x
+  credentials, and official capitalization/history evidence before the
+  30-consecutive-day qualification clock can advance.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, 72 hours of clean testnet evidence, and
@@ -156,6 +157,19 @@ When sources conflict, use this order:
   collector and cycle timers are active at second 30 and minute 32,
   respectively; local services remain active and separate. Eight asset-
   universe tests, five context tests, and the production build pass.
+- 2026-07-28: Started the 72-hour `mdb-endurance-testnet.service` against the
+  fresh V3 deployment. Checkpoint 0 completed with preset, approval, buy,
+  atomic sell, and claim transactions; NAV reconciled, the oracle was fresh,
+  no queued sale existed, all six local/testnet services and timers were
+  active, and Chromium reported no browser errors.
+- 2026-07-28: Installed and enabled the hourly read-only
+  `mdb-mainnet-shadow.timer`. It inspected 98 canonical chain-4663 assets in one
+  Multicall3 batch; callable token code and every Robinhood UID matched. The
+  runner rejects broadcast mode and signing keys, uses no MDB dependency on
+  `192.168.50.117`, and truthfully leaves qualification at zero until
+  Chainlink-supplied feed mappings, production 0x credentials, official
+  capitalization/AUM evidence, official-history coverage, $25K impact, and
+  $250K two-sided depth pass for every nominated asset.
 - 2026-07-28: Standardized visible USD-denominated NAV and oracle prices to exactly two decimal places. Replaced the four-decimal formatter and `$1.0000` fallback with the shared two-decimal USD formatter. Two portfolio-display tests, the Next.js production build, both live web-service restarts, and in-app-browser checks pass; the testnet header, Basket NAV card, performance chart label, and accessibility text all show `$1.00`.
 - 2026-07-28: Verified the network-specific test-control presentation after the user stopped the endurance run. On local port 3000, in-app-browser UAT found exactly one `Fund test wallet` button and one `Disposable test wallet` strip. On testnet port 3001, both counts are zero while `Connect wallet` remains present. The removed `YOU ARE HERE: THE STEERING LAYER` banner is absent in both environments. Eleven network-policy tests, seven wallet tests, the Next.js production build, both web-service restarts, and HTTP 200 checks pass. Future testnet endurance funding uses the retained session-wallet key plus `/api/faucet` hook rather than visible controls.
 - 2026-07-12: Read `AGENTS.md` and `MEMORY.md`; identified stale project-specific memory and preserved the repository-local instruction logic.
