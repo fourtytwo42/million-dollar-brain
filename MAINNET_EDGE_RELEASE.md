@@ -92,6 +92,15 @@ Engineering acceptance requires:
   preset changes, reward claims, rejected oversized exits, concurrent server
   requests, NAV reconciliation, autonomous-cycle freshness, and desktop,
   tablet, and mobile browser checks.
+- Completed 2026-07-28: seven checkpoints passed across the original two-hour
+  evidence clock. The ledger contains 15 user scenarios, 15 MDBS buys, 15
+  atomic sells, 15 preset changes, 15 reward claims, 12 brain purchases
+  (six initial and six 120% resales), 12 rejected oversized exits, eight
+  concurrent requests, 15 responsive-layout checks, and zero browser errors.
+  Two preserved checkpoint-3 attempts exposed and repaired an endurance
+  assertion that rejected a documented deterministic Hold even when a recent
+  successful Ornith cycle existed; the corrected checkpoint and every later
+  checkpoint passed. No protocol transaction was lost or queued.
 - Thirty consecutive passing mainnet-shadow qualification dates for every
   launch asset.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
@@ -113,8 +122,7 @@ The remaining inputs are intentionally not fabricated in the repository:
 - Production 0x API credentials and validated current venue contracts.
 - Final Safe/role addresses and funded mainnet gas wallet.
 - Stable production domain.
-- Completed two-hour testnet endurance and 30-day mainnet-shadow evidence
-  windows.
+- Thirty consecutive days of complete mainnet-shadow qualification evidence.
 - Independent audit and approved legal release path.
 
 No mainnet transaction or real-value activation is authorized by this

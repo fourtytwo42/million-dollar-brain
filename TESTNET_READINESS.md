@@ -27,6 +27,16 @@ rejected oversized exit, concurrent authenticated requests, NAV and oracle
 invariants, autonomous-cycle freshness, browser errors, and mobile/tablet/
 desktop overflow.
 
+The V3 endurance rehearsal completed on 2026-07-28 with seven passing
+checkpoints on the original two-hour clock. It exercised 15 user scenarios,
+including 15 MDBS buys and atomic sells, 12 brain purchases split evenly
+between initial sales and 120% resales, 15 presets and claims, 12 rejected
+oversized exits, eight concurrent requests, and 15 responsive checks with zero
+browser errors. Two preserved failed attempts were caused by an overly strict
+test assertion around a documented deterministic Hold; the harness was
+corrected, the checkpoint was rerun successfully, and the evidence clock was
+not reset. The completed endurance service is disabled.
+
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
 across the pinned wallet and Next.js dependency graph. The available aggregate
 fix requires breaking framework changes, so this rehearsal records the finding

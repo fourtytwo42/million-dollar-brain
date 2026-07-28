@@ -6,17 +6,17 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Accelerated only Robinhood Testnet AI decisions to
-  every 15 minutes and verified an immediate Ornith-directed on-chain
-  rebalance. Local and intended mainnet cadence remain hourly.
-- Next step: Complete final contract/build/browser UAT and keep the endurance
-  and shadow evidence services running. Supply Chainlink mappings, 0x
+- Last meaningful change: Completed and audited the two-hour Robinhood Testnet
+  V3 endurance rehearsal, including final in-app-browser UAT. Seven
+  checkpoints passed and the finished endurance service was disabled.
+- Next step: Keep the read-only mainnet shadow collecting qualification
+  evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
   30-consecutive-day qualification clock can advance.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
-  funded gas, an audit, legal approval, two hours of clean testnet evidence, and
-  30 consecutive mainnet-shadow qualification days.
+  funded gas, an audit, legal approval, and 30 consecutive mainnet-shadow
+  qualification days.
 
 ## Current State
 
@@ -641,7 +641,7 @@ build`; authenticated live `/api/collect-market`.
 - Files: `apps/web/app/api/testnet-acceptance/route.ts`, `tests/endurance-testnet.mjs`, `tests/network-policy.test.ts`.
 - Commands/tests: Network policy and production build must pass before the upgraded runner resumes. Browser checks cover 390px, 768px, and 1440px widths, both themes over alternating checkpoints, all three primary screens, 42 brain cells, decision history, console errors, and page-level overflow.
 - Result: Actor keys are derived only from the server-side endurance secret and are never returned or stored. The endpoint returns public actor addresses and transaction evidence. Real WalletConnect approval remains a human-wallet certification step; protocol behavior uses real chain-46630 transactions.
-- Follow-up: Complete the active two-hour run and audit its checkpoint ledger for all scenario classes.
+- Follow-up: Completed and audited; retain the ledger as release evidence.
 
 ### 2026-07-28 - Accelerated Testnet AI Cadence
 
@@ -659,7 +659,15 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: Scenario 9 completed an initial brain purchase, preset change, 250 USDG MDBS buy, 10% atomic sale, reward claim, and rejected oversized exit. Concurrent scenarios 10 and 11 completed 500/1000 USDG buys, 25%/50% atomic sales, an initial brain purchase, a 120% resale, preset changes, claims, and rejected oversized exits across three distinct addresses.
 - Result: All real chain-46630 user transactions and invariants passed. The latest model response was rejected because its weights did not total 10,000; the protocol held safely. A previous successful Ornith allocation remained within the 95-minute operational window.
 - Result: Corrected checkpoint 3 passed in 140 seconds with three distinct actors, one initial brain sale, two 120% resales, three MDBS buys, three atomic sells, three claims, three rejected oversized exits, mobile/tablet/desktop overflow checks, and zero browser errors.
-- Follow-up: Continue the two-hour clock and retain the original failed checkpoint as regression evidence.
+- Follow-up: Completed; both original failures remain in the ledger as regression evidence.
+
+### 2026-07-28 - Two-hour V3 Endurance Completed
+
+- Context: The production-shaped Robinhood Testnet V3 deployment required a real-use rehearsal covering user actions, AI cycles, accounting, responsive UI, and recovery.
+- Decision: Preserve the original evidence clock and both failed checkpoint-3 attempts. Those attempts identified a test-harness assertion that rejected a documented deterministic Hold despite a recent successful AI cycle; the harness fix was verified without hiding the failures or resetting the run.
+- Commands/tests: `mdb-endurance-testnet.service`, `var/testnet-v3-endurance/state.json`, `var/testnet-v3-endurance/checkpoints.jsonl`, live status/NAV reconciliation, six service/timer checks, operator-gas check, and final in-app-browser Brain/Basket/Decisions UAT.
+- Result: Seven checkpoints passed over the original two-hour clock. The ledger records 15 user scenarios, 15 buys, 15 atomic sells, 15 presets, 15 claims, 12 brain purchases (six initial and six 120% resales), 12 oversized-exit rejections, eight concurrent requests, 15 responsive checks, zero browser errors, fresh oracles, no queued sales, and exact NAV-to-holdings reconciliation. The latest audited Ornith cycle at `2026-07-28T19:48:21.235Z` executed transaction `0x2ea77ddf4fdbd26ee227fb3ea7be76dd1c9a95ce6c93d7f34cfe95ef4afecd77`. Final in-app-browser UAT found all three screens healthy, the 15-minute cadence visible, no horizontal overflow, and no console warnings or errors. Operator gas remained `0.00832928133 ETH`.
+- Follow-up: The completed endurance service is disabled. Keep testnet web, collector, and 15-minute AI timers active; continue read-only mainnet-shadow qualification and external release-gate work.
 
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
