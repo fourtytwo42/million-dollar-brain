@@ -6,6 +6,7 @@ env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"
 official_rpc="https://rpc.testnet.chain.robinhood.com"
 manifest="$repo_root/packages/contracts/deployments/testnet.json"
 minimum_balance_wei="${MDB_TESTNET_MINIMUM_BALANCE_WEI:-10000000000000000}"
+gas_estimate_multiplier="${MDB_TESTNET_GAS_ESTIMATE_MULTIPLIER:-150}"
 export PATH="/home/hendo420/.foundry/bin:/usr/bin:/bin"
 
 [[ "${MDB_TESTNET_BROADCAST:-false}" == "true" ]] || {
@@ -57,6 +58,7 @@ forge_args=(
   --keystore "$MDB_OPERATOR_KEYSTORE"
   --password-file "$MDB_OPERATOR_PASSWORD_FILE"
   --broadcast
+  --gas-estimate-multiplier "$gas_estimate_multiplier"
 )
 verify_requested="${MDB_TESTNET_VERIFY:-false}"
 if [[ "$verify_requested" == "true" ]]; then
