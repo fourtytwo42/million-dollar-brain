@@ -136,7 +136,22 @@ test("testnet endurance funding covers an hourly action window", () => {
   const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
   assert.match(faucet, /"250000000000000"/);
   assert.match(faucet, /"3000000000000000"/);
-  assert.match(endurance, /fundNextCheckpoint \|\| checkpoint % 3 === 0/);
+  assert.match(
+    endurance,
+    /checkpoint >= \(state\.nextFundingCheckpoint \?\? 0\)/,
+  );
   assert.match(endurance, /existing\.fundNextCheckpoint = true/);
+  assert.match(endurance, /state\.nextFundingCheckpoint = checkpoint \+ 3/);
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
+});
+
+test("confirmed wallet actions survive temporary status refresh failures", () => {
+  const dashboard = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
+  assert.match(dashboard, /async function refreshAfterConfirmedAction\(\)/);
+  assert.match(dashboard, /Date\.now\(\) \+ 90_000/);
+  assert.match(dashboard, /\(\) => refresh\(\)\.catch\(\(\) => undefined\)/);
+  assert.match(dashboard, /Live portfolio data is still refreshing\./);
 });

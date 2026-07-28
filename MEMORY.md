@@ -7,10 +7,11 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: Checkpoint 2 exposed insufficient disposable-wallet
-  gas after two complete action suites. Testnet top-ups now cover one hourly
-  three-checkpoint window, and the runner always funds a fresh disposable
-  wallet after process restart.
+- Last meaningful change: Checkpoints 3 and 4 exposed fixed-modulo faucet timing
+  and a confirmed-action/status-refresh race at an oracle freshness boundary.
+  Funding now advances three checkpoints from the last successful top-up,
+  oracle heartbeats start at 45 seconds, and confirmed wallet actions retry
+  status refresh without falsely reporting a completed transaction as failed.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -199,6 +200,23 @@ When sources conflict, use this order:
   38, selected `Signal First`, bought 150 USDG of MDBS, sold 25% atomically,
   claimed rewards, and passed all service, NAV, history, UI, and browser-error
   checks.
+- 2026-07-28: Endurance checkpoint 3 exposed a fixed-modulo funding edge after
+  a repaired checkpoint had already funded the same wallet less than one hour
+  earlier. The runner now records `nextFundingCheckpoint` and advances it three
+  checkpoints only after a successful top-up; process restarts still force one
+  fresh-wallet top-up. Checkpoint 4 verified that rolling schedule, funded the
+  new wallet, bought piece 40, selected `Take the Money`, bought 100 USDG of
+  MDBS, sold 25% atomically, claimed rewards, reconciled NAV exactly, and
+  recorded zero browser errors.
+- 2026-07-28: Checkpoint 4's first attempt also exposed a race where the faucet
+  transaction completed but its follow-up `/api/status` refresh crossed a mock
+  oracle staleness boundary and replaced the success notice with `stale price`.
+  Background polling no longer overwrites action notices, every confirmed
+  wallet action retries status refresh for up to 90 seconds, and the chain-46630
+  oracle heartbeat threshold moved from 60 to 45 seconds to leave headroom for
+  the minute collector's public-RPC confirmation time. Network and market tests,
+  full formatting, and the production build passed. The next scheduled
+  checkpoint remains the live verification for this final repair.
 
 ## Decisions
 

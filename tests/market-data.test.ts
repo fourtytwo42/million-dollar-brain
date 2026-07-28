@@ -71,9 +71,9 @@ test("local oracle sync ignores sub-basis-point noise", () => {
   assert.equal(changedByAtLeastOneBps(current, decimalWad("100.01")), true);
 });
 
-test("testnet oracle receives a freshness heartbeat after sixty seconds", () => {
-  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_059), false);
-  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_060), true);
+test("testnet oracle receives a freshness heartbeat before the next minute boundary", () => {
+  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_044), false);
+  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_045), true);
   assert.equal(needsOracleFreshnessRefresh(31337, 1_000, 2_000), false);
   assert.equal(needsOracleFreshnessRefresh(4663, 1_000, 2_000), false);
 });

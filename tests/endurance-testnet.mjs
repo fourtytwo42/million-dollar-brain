@@ -81,6 +81,7 @@ async function loadOrCreateState() {
     lastCheckpoint: null,
     failureAt: null,
     fundNextCheckpoint: true,
+    nextFundingCheckpoint: 0,
   };
   await atomicJson(statePath, created);
   return created;
@@ -161,6 +162,7 @@ async function fundWallet(page) {
     .getByRole("button", { name: "Fund test wallet", exact: true })
     .click();
   await waitForMessage(page, "Test wallet funding completed.", 90_000);
+  return { completed: true };
 }
 
 function presetAccessibleName(option) {
@@ -302,19 +304,14 @@ async function verifyUi(page, checkpoint) {
   assert.equal(await page.locator(".brain-cell").count(), 42);
 }
 
-async function runCheckpoint(
-  page,
-  checkpoint,
-  browserErrors,
-  fundNextCheckpoint,
-) {
+async function runCheckpoint(page, checkpoint, browserErrors, shouldFund) {
   const startedAt = Date.now();
   await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
   await dismissGuide(page);
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  if (fundNextCheckpoint || checkpoint % 3 === 0) await fundWallet(page);
+  const funding = shouldFund ? await fundWallet(page) : { skipped: true };
   const brain = await buyBrainPieceAndSetPreset(page, checkpoint, statusBefore);
   const basket = await buyAndSellMdbs(page, checkpoint);
   const rewards = await claimRewards(page);
@@ -350,7 +347,7 @@ async function runCheckpoint(
     latestCycleAt: statusAfter.latestCycle.at,
     latestCycleTxHash: statusAfter.latestCycle.txHash,
     services: servicesBefore,
-    actions: { brain, basket, rewards },
+    actions: { funding, brain, basket, rewards },
     browserErrors: [...browserErrors],
   };
 }
@@ -380,13 +377,17 @@ try {
         page,
         checkpoint,
         browserErrors,
-        state.fundNextCheckpoint,
+        state.fundNextCheckpoint ||
+          checkpoint >= (state.nextFundingCheckpoint ?? 0),
       );
       await appendFile(checkpointPath, `${JSON.stringify(result)}\n`);
       state.completedCheckpoints += 1;
       state.lastCheckpoint = result;
       state.lastFailure = null;
       state.fundNextCheckpoint = false;
+      if (result.actions.funding.completed) {
+        state.nextFundingCheckpoint = checkpoint + 3;
+      }
       state.nextCheckpointAt =
         state.startedAt + state.completedCheckpoints * state.intervalMs;
       state.failureAt = null;

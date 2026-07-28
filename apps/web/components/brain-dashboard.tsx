@@ -276,6 +276,23 @@ export function BrainDashboard() {
         : current,
     );
   }
+  async function refreshAfterConfirmedAction() {
+    const deadline = Date.now() + 90_000;
+    while (Date.now() < deadline) {
+      try {
+        await refresh();
+        return true;
+      } catch {
+        await new Promise((resolve) => window.setTimeout(resolve, 2_000));
+      }
+    }
+    return false;
+  }
+  function confirmedActionMessage(message: string, refreshed: boolean) {
+    return refreshed
+      ? message
+      : `${message} Live portfolio data is still refreshing.`;
+  }
   useEffect(() => {
     refresh().catch((error) => setMessage(error.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -319,7 +336,7 @@ export function BrainDashboard() {
   useEffect(() => {
     const pollInterval = data?.network.mode === "testnet" ? 30_000 : 10_000;
     const timer = window.setInterval(
-      () => refresh().catch((error) => setMessage(error.message)),
+      () => refresh().catch(() => undefined),
       pollInterval,
     );
     return () => window.clearInterval(timer);
@@ -383,11 +400,14 @@ export function BrainDashboard() {
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body.error);
-    await refresh();
+    const refreshed = await refreshAfterConfirmedAction();
     setMessage(
-      data?.network.mode === "local"
-        ? "Wallet funded with 100,000 test USDG and 2 test ETH."
-        : "Test wallet funding completed.",
+      confirmedActionMessage(
+        data?.network.mode === "local"
+          ? "Wallet funded with 100,000 test USDG and 2 test ETH."
+          : "Test wallet funding completed.",
+        refreshed,
+      ),
     );
   }
   async function connectExternalWallet() {
@@ -456,9 +476,12 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    await refresh();
+    const refreshed = await refreshAfterConfirmedAction();
     setMessage(
-      `Purchase complete. You bought approximately ${money(preview[2])} MDBS, backed by your proportional share of the basket.`,
+      confirmedActionMessage(
+        `Purchase complete. You bought approximately ${money(preview[2])} MDBS, backed by your proportional share of the basket.`,
+        refreshed,
+      ),
     );
   }
   async function buy(piece: Piece) {
@@ -490,8 +513,13 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    await refresh();
-    setMessage(`Brain piece ${piece.id} is now yours.`);
+    const refreshed = await refreshAfterConfirmedAction();
+    setMessage(
+      confirmedActionMessage(
+        `Brain piece ${piece.id} is now yours.`,
+        refreshed,
+      ),
+    );
   }
   async function preset(piece: Piece, value: number) {
     if (!data) return;
@@ -506,9 +534,12 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    await refresh();
+    const refreshed = await refreshAfterConfirmedAction();
     setMessage(
-      `Piece ${piece.id} now sets ${piece.affinity} to ${piece.options[value].label}.`,
+      confirmedActionMessage(
+        `Piece ${piece.id} now sets ${piece.affinity} to ${piece.options[value].label}.`,
+        refreshed,
+      ),
     );
   }
   async function redeem() {
@@ -538,9 +569,12 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    await refresh();
+    const refreshed = await refreshAfterConfirmedAction();
     setMessage(
-      `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`,
+      confirmedActionMessage(
+        `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`,
+        refreshed,
+      ),
     );
   }
   async function claimRewards() {
@@ -563,8 +597,13 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    await refresh();
-    setMessage("Brain-owner rewards claimed to your development wallet.");
+    const refreshed = await refreshAfterConfirmedAction();
+    setMessage(
+      confirmedActionMessage(
+        "Brain-owner rewards claimed to your development wallet.",
+        refreshed,
+      ),
+    );
   }
   const owned =
     data?.pieces.filter(
