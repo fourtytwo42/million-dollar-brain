@@ -307,14 +307,15 @@ export function BrainDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account, amount, sellAmount]);
   useEffect(() => {
+    const pollInterval = data?.network.mode === "testnet" ? 30_000 : 10_000;
     const timer = window.setInterval(
       () => refresh().catch((error) => setMessage(error.message)),
-      10_000,
+      pollInterval,
     );
     return () => window.clearInterval(timer);
     // refresh intentionally captures the current wallet and preview amount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, amount, sellAmount]);
+  }, [account, amount, sellAmount, data?.network.mode]);
   useEffect(() => {
     if (!sellAmount && data && BigInt(data.shares) > 0n) {
       setSellAmount(inputAmount(BigInt(data.shares) / 4n));

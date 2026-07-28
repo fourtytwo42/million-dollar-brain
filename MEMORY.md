@@ -4,14 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Public Robinhood Testnet activation and reliability hardening
-  are complete.
-- Last meaningful change: The testnet collector now verifies state at explicit
-  receipt blocks with bounded public-RPC retries and keeps the oracle and router
-  identical during freshness heartbeats. The hourly testnet cycle runs at
-  minute 32, away from the minute collector.
-- Next step: Monitor public-RPC reliability and operator gas during normal use.
-  Use a stable domain when external mobile-wallet certification is desired.
+- Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
+  exercising user actions every twenty minutes and repairing any failure before
+  resuming.
+- Last meaningful change: Browser dashboard reads now use one canonical
+  Multicall3 request with bounded retries and a thirty-second testnet poll,
+  preventing the public RPC rate-limit errors caused by hundreds of individual
+  balance calls.
+- Next step: Install and arm `mdb-endurance-testnet.service`, verify its first
+  scheduled checkpoint, then monitor all checkpoints through completion.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -67,7 +68,8 @@ When sources conflict, use this order:
   `https://rpc.testnet.chain.robinhood.com` for both server and browser
   traffic. `mdb-web-testnet.service` serves port `3001`;
   `mdb-market-collector-testnet.timer` and `mdb-cycle-testnet.timer` are
-  enabled. Last verified 2026-07-27.
+  enabled. The former LAN testnet RPC at `192.168.50.117` is now mainnet and
+  must not be used by MDB testnet. Last verified 2026-07-28.
 
 ## Project Map
 
@@ -164,6 +166,16 @@ When sources conflict, use this order:
   `mode: "robinhood_testnet_mock"`, and executed the 20/30/25/25 allocation in
   transaction
   `0xd172622332672589c53c7cc13107261f9505ba418122512ba9757e9e9cb5d7c6`.
+- 2026-07-28: Replaced per-contract testnet dashboard reads with canonical
+  Multicall3 batching, bounded public-RPC retries, and a thirty-second testnet
+  poll. Twenty-four consecutive uncached account status requests all returned
+  HTTP 200 with 392 ms average and 571 ms maximum latency. The endurance-runner
+  smoke checkpoints exercised faucet funding, initial and resale brain-piece
+  purchases, a preset change, a 100 USDG MDBS buy, a 25% atomic MDBS sale, and a
+  reward claim;
+  verified six services and timers, exact NAV reconciliation, AI decision
+  history, Brain Drama, theme and crew interactions; and recorded no queued
+  redemption or browser error.
 
 ## Decisions
 
@@ -403,9 +415,10 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
-- 2026-07-27: MDB testnet uses the official public RPC until an observed rate
-  limit justifies another provider. The shared Robyn RPC remains untouched and
-  Robyn-only.
+- 2026-07-28: MDB testnet uses only the official public RPC. Public rate limits
+  are mitigated by Multicall3 batching, bounded retries, and reduced polling.
+  The LAN endpoint at `192.168.50.117` has become mainnet and is prohibited for
+  this testnet application; do not modify or depend on it.
 - 2026-07-27: Real-wallet support now uses pinned RainbowKit, wagmi, TanStack
   Query, viem, and MDB Reown project ID
   `5a4c41c8c461ca59724069d740760a2f`. External wallets take precedence over a

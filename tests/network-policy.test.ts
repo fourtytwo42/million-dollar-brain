@@ -92,3 +92,15 @@ test("testnet collector retries transient public-RPC failures", () => {
   assert.match(unit, /RestartSec=10/);
   assert.match(unit, /StartLimitBurst=4/);
 });
+
+test("testnet dashboard collapses reads through Multicall3", () => {
+  const chain = readFileSync("apps/web/lib/chain.ts", "utf8");
+  const dashboard = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
+  assert.match(chain, /0xca11bde05977b3631167028862be2a173976ca11/);
+  assert.match(chain, /publicClient\.multicall/);
+  assert.match(chain, /allowFailure: false/);
+  assert.match(dashboard, /data\?\.network\.mode === "testnet" \? 30_000/);
+});

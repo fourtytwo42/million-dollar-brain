@@ -29,9 +29,15 @@ export const chain = viemChain({
   ...publicNetworkConfig(networkConfig),
   browserRpcUrl: rpcUrl,
 });
+const MULTICALL3_ADDRESS =
+  "0xca11bde05977b3631167028862be2a173976ca11" as Address;
 export const publicClient = createPublicClient({
   chain,
-  transport: http(rpcUrl),
+  transport: http(rpcUrl, {
+    retryCount: 5,
+    retryDelay: 1_000,
+    timeout: 30_000,
+  }),
 });
 const operatorPrivateKey =
   process.env.MDB_OPERATOR_PRIVATE_KEY ??
@@ -46,12 +52,36 @@ export const admin = privateKeyToAccount(operatorPrivateKey as `0x${string}`);
 export const adminClient = createWalletClient({
   account: admin,
   chain,
-  transport: http(rpcUrl),
+  transport: http(rpcUrl, {
+    retryCount: 5,
+    retryDelay: 1_000,
+    timeout: 30_000,
+  }),
 });
 export function deployment(): Deployment {
   return JSON.parse(
     readFileSync(/* turbopackIgnore: true */ deploymentFile, "utf8"),
   ) as Deployment;
+}
+
+type DashboardContract = {
+  address: Address;
+  abi: readonly unknown[];
+  functionName: string;
+  args?: readonly unknown[];
+};
+
+async function dashboardReads(contracts: DashboardContract[]) {
+  if (networkConfig.mode === "testnet") {
+    return (await publicClient.multicall({
+      contracts,
+      allowFailure: false,
+      multicallAddress: MULTICALL3_ADDRESS,
+    } as never)) as unknown[];
+  }
+  return Promise.all(
+    contracts.map((contract) => publicClient.readContract(contract as never)),
+  ) as Promise<unknown[]>;
 }
 
 export async function dashboard(
@@ -60,219 +90,241 @@ export async function dashboard(
   requestedRedeem?: bigint,
 ) {
   const d = deployment();
-  const [
-    nav,
-    navPerShare,
-    supply,
-    usdgBalance,
-    nvdaBalance,
-    aaplBalance,
-    ethxBalance,
-    shares,
-    walletUsdg,
-    pendingRedemption,
-    catalogVersion,
-    catalogHash,
-    depositPreview,
-    latestBlock,
-  ] = await Promise.all([
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "totalAssetsUsd",
-    }),
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "navPerShareWad",
-    }),
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "totalSupply",
-    }),
-    publicClient.readContract({
-      address: d.usdg,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    }),
-    publicClient.readContract({
-      address: d.nvda,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    }),
-    publicClient.readContract({
-      address: d.aapl,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    }),
-    publicClient.readContract({
-      address: d.ethx,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    }),
-    address
-      ? publicClient.readContract({
-          address: d.basket,
-          abi: basketAbi,
-          functionName: "balanceOf",
-          args: [address],
-        })
-      : Promise.resolve(0n),
-    address
-      ? publicClient.readContract({
-          address: d.usdg,
-          abi: erc20Abi,
-          functionName: "balanceOf",
-          args: [address],
-        })
-      : Promise.resolve(0n),
-    address
-      ? publicClient.readContract({
-          address: d.basket,
-          abi: basketAbi,
-          functionName: "pendingRedemptionByAccount",
-          args: [address],
-        })
-      : Promise.resolve(0n),
-    publicClient.readContract({
-      address: d.brain,
-      abi: brainAbi,
-      functionName: "catalogVersion",
-    }),
-    publicClient.readContract({
-      address: d.brain,
-      abi: brainAbi,
-      functionName: "catalogHash",
-    }),
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "previewDeposit",
-      args: [grossDeposit],
-    }),
-    publicClient.getBlock(),
-  ]);
   const assetAddresses = {
     USDG: d.usdg,
     NVDA: d.nvda,
     AAPL: d.aapl,
     ETHX: d.ethx,
   } as const;
+  const contracts: DashboardContract[] = [
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "totalAssetsUsd",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "navPerShareWad",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "totalSupply",
+    },
+    {
+      address: d.usdg,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [d.basket],
+    },
+    {
+      address: d.nvda,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [d.basket],
+    },
+    {
+      address: d.aapl,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [d.basket],
+    },
+    {
+      address: d.ethx,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [d.basket],
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "catalogVersion",
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "catalogHash",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "previewDeposit",
+      args: [grossDeposit],
+    },
+  ];
+  if (address) {
+    contracts.push(
+      {
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "balanceOf",
+        args: [address],
+      },
+      {
+        address: d.usdg,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address],
+      },
+      {
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "pendingRedemptionByAccount",
+        args: [address],
+      },
+    );
+  }
+  for (const asset of Object.values(assetAddresses)) {
+    contracts.push(
+      {
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "assetValueUsd",
+        args: [asset],
+      },
+      {
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "currentWeightBps",
+        args: [asset],
+      },
+      {
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "oracleStatus",
+        args: [asset],
+      },
+    );
+  }
+  for (let pieceId = 1; pieceId <= 42; pieceId += 1) {
+    const id = BigInt(pieceId);
+    contracts.push(
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "ownerOf",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "currentPrice",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "selectedPreset",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "immutableWeight",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "isUnowned",
+        args: [id],
+      },
+    );
+  }
+
+  const [results, latestBlock] = await Promise.all([
+    dashboardReads(contracts),
+    publicClient.getBlock(),
+  ]);
+  let cursor = 0;
+  const nav = results[cursor++] as bigint;
+  const navPerShare = results[cursor++] as bigint;
+  const supply = results[cursor++] as bigint;
+  const usdgBalance = results[cursor++] as bigint;
+  const nvdaBalance = results[cursor++] as bigint;
+  const aaplBalance = results[cursor++] as bigint;
+  const ethxBalance = results[cursor++] as bigint;
+  const catalogVersion = results[cursor++] as number;
+  const catalogHash = results[cursor++] as `0x${string}`;
+  const depositPreview = results[cursor++] as readonly [bigint, bigint, bigint];
+  const shares = address ? (results[cursor++] as bigint) : 0n;
+  const walletUsdg = address ? (results[cursor++] as bigint) : 0n;
+  const pendingRedemption = address ? (results[cursor++] as bigint) : 0n;
+
+  const assetRows = Object.keys(assetAddresses).map((symbol) => {
+    const value = results[cursor++] as bigint;
+    const weightBps = results[cursor++] as number;
+    const oracle = results[cursor++] as readonly [bigint, bigint, boolean];
+    return { symbol, value, weightBps, oracle };
+  });
+  const pieces = Array.from({ length: 42 }, (_, index) => {
+    const owner = results[cursor++] as Address;
+    const price = results[cursor++] as bigint;
+    const preset = results[cursor++] as number;
+    const weight = results[cursor++] as number;
+    const unowned = results[cursor++] as boolean;
+    const definition = brainDefinition(index + 1);
+    return {
+      id: index + 1,
+      owner,
+      price: price.toString(),
+      preset: Number(preset),
+      weight: Number(weight),
+      unowned,
+      affinity: definition.affinity,
+      name: definition.name,
+      glyph: definition.glyph,
+      tagline: definition.tagline,
+      lore: definition.lore,
+      crew: definition.crew,
+      kind: definition.kind,
+      visual: definition.visual,
+      category: definition.category,
+      options: definition.options,
+      data: definition.data,
+      tags: definition.tags ?? [],
+    };
+  });
+  if (cursor !== results.length) {
+    throw new Error("dashboard multicall result length mismatch");
+  }
+
   const redeemShares =
     requestedRedeem == null
       ? shares / 2n
       : requestedRedeem > shares
         ? shares
         : requestedRedeem;
-  const [assetRows, redeemPreview] = await Promise.all([
-    Promise.all(
-      Object.entries(assetAddresses).map(async ([symbol, asset]) => {
-        const [value, weightBps, oracle] = await Promise.all([
-          publicClient.readContract({
-            address: d.basket,
-            abi: basketAbi,
-            functionName: "assetValueUsd",
-            args: [asset],
-          }),
-          publicClient.readContract({
-            address: d.basket,
-            abi: basketAbi,
-            functionName: "currentWeightBps",
-            args: [asset],
-          }),
-          publicClient.readContract({
-            address: d.basket,
-            abi: basketAbi,
-            functionName: "oracleStatus",
-            args: [asset],
-          }),
-        ]);
-        return { symbol, value, weightBps, oracle };
-      }),
-    ),
-    publicClient.readContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "previewRedeem",
-      args: [redeemShares],
-    }),
-  ]);
-  const pieces = await Promise.all(
-    Array.from({ length: 42 }, async (_, i) => {
-      const id = BigInt(i + 1);
-      const [owner, price, preset, weight, unowned] = await Promise.all([
-        publicClient.readContract({
-          address: d.brain,
-          abi: brainAbi,
-          functionName: "ownerOf",
-          args: [id],
-        }),
-        publicClient.readContract({
-          address: d.brain,
-          abi: brainAbi,
-          functionName: "currentPrice",
-          args: [id],
-        }),
-        publicClient.readContract({
-          address: d.brain,
-          abi: brainAbi,
-          functionName: "selectedPreset",
-          args: [id],
-        }),
-        publicClient.readContract({
-          address: d.brain,
-          abi: brainAbi,
-          functionName: "immutableWeight",
-          args: [id],
-        }),
-        publicClient.readContract({
-          address: d.brain,
-          abi: brainAbi,
-          functionName: "isUnowned",
-          args: [id],
-        }),
-      ]);
-      const definition = brainDefinition(i + 1);
-      return {
-        id: i + 1,
-        owner,
-        price: price.toString(),
-        preset: Number(preset),
-        weight: Number(weight),
-        unowned,
-        affinity: definition.affinity,
-        name: definition.name,
-        glyph: definition.glyph,
-        tagline: definition.tagline,
-        lore: definition.lore,
-        crew: definition.crew,
-        kind: definition.kind,
-        visual: definition.visual,
-        category: definition.category,
-        options: definition.options,
-        data: definition.data,
-        tags: definition.tags ?? [],
-      };
-    }),
-  );
   const ownedPieceIds = address
     ? pieces
         .filter((piece) => piece.owner.toLowerCase() === address.toLowerCase())
         .map((piece) => BigInt(piece.id))
     : [];
-  const pendingRewards = address
-    ? await publicClient.readContract({
-        address: d.rewards,
-        abi: rewardAbi,
-        functionName: "pendingRewards",
-        args: [address, ownedPieceIds],
-      })
-    : 0n;
+  const followupContracts: DashboardContract[] = [
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "previewRedeem",
+      args: [redeemShares],
+    },
+  ];
+  if (address) {
+    followupContracts.push({
+      address: d.rewards,
+      abi: rewardAbi,
+      functionName: "pendingRewards",
+      args: [address, ownedPieceIds],
+    });
+  }
+  const followupResults = await dashboardReads(followupContracts);
+  const redeemPreview = followupResults[0] as readonly [
+    bigint,
+    bigint,
+    bigint,
+    boolean,
+  ];
+  const pendingRewards = address ? (followupResults[1] as bigint) : 0n;
   const assetValues = Object.fromEntries(
     assetRows.map((row) => [row.symbol, row.value.toString()]),
   );
