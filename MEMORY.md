@@ -10,8 +10,8 @@ Durable project context lives here. Update this file whenever information should
 - Last meaningful change: Checkpoint 19 exposed public-RPC replica lag between
   a confirmed ERC-20 approval and the following brain purchase estimate. The
   UI now retries only `ERC20InsufficientAllowance` failures after confirmed
-  approvals for up to sixty seconds. Focused wallet tests and the production
-  build pass; the next endurance checkpoint will provide live flow verification.
+  approvals for up to sixty seconds. Seven wallet tests, the production build,
+  and checkpoint 20's complete approval-dependent buy flow pass.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -260,8 +260,11 @@ When sources conflict, use this order:
   only this approval-propagation error for up to sixty seconds, and both MDBS
   buys and brain-piece purchases use it after a confirmed approval. Unrelated
   contract failures still surface immediately. Seven wallet tests, focused
-  Prettier, TypeScript, and the production build pass. Live endurance
-  verification remains scheduled for checkpoint 20.
+  Prettier, TypeScript, and the production build pass. Checkpoint 20 then
+  funded a fresh wallet, approved and purchased piece 33, selected
+  `Light Metals`, approved and bought 100 USDG of MDBS, sold 25% atomically,
+  claimed rewards, reconciled NAV exactly, and recorded zero browser errors or
+  allowance failures.
 
 ## Decisions
 
