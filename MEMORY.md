@@ -4,12 +4,12 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Implement the approved mainnet-edge dynamic asset, execution,
-  real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Rebranded the product-facing application as `42
-  Braincells` with the tagline `The internet's last 42 braincells manage an
-  on-chain portfolio.` Deployed MDBS/MDBP symbols and contract identities are
-  unchanged.
+- Current task: Keep the mainnet-edge release advancing while the public
+  testnet and mainnet Coming Soon surfaces remain available.
+- Last meaningful change: Replaced the temporary Quick Tunnel with a named
+  Cloudflare Tunnel. `https://42braincells.com` serves the mainnet Coming Soon
+  page and `https://testnet.42braincells.com` serves the live Robinhood
+  Testnet application.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -27,6 +27,11 @@ Durable project context lives here. Update this file whenever information should
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
   `3000`; their databases, state, manifests, timers, and wallet sessions are
   isolated.
+- Last verified 2026-07-28: the public testnet is available at
+  `https://testnet.42braincells.com`. The apex
+  `https://42braincells.com` is a separate static mainnet Coming Soon page
+  served on VM loopback port `3002`. Both are routed through the named
+  `42braincells.com` Cloudflare Tunnel with a fail-closed HTTP 404 catch-all.
 - Last verified 2026-07-28: the fresh schema-V3 public testnet deployment has
   12 clearly labelled production-interface replicas, an upgradeable dynamic
   registry, signed EIP-712 RFQ execution, and atomic pool entry/exit. The V3
@@ -78,7 +83,13 @@ When sources conflict, use this order:
 - GitHub repository: `fourtytwo42/million-dollar-brain`.
 - GPU45 model appliance: `192.168.50.189`; primary live model ID `ornith-1.0-35b-Q5_K_M-688b8d0a`.
 - Development is native on the VM with no Docker. Foundry/Anvil, Node.js 24, PostgreSQL, Caddy, and `systemd` are the locked runtime direction.
-- `cloudflared` 2026.7.3 is installed from Cloudflare's official amd64 package. `mdb-cloudflared.service` runs a temporary Quick Tunnel to `http://127.0.0.1:3000`; the random `trycloudflare.com` hostname is read from its journal and may change after tunnel recreation.
+- `cloudflared` 2026.7.3 is installed from Cloudflare's official amd64 package.
+  `mdb-cloudflared.service` runs the remotely managed named
+  `42braincells.com` tunnel using an owner-restricted token file outside Git.
+  Cloudflare routes the apex to `http://localhost:3002`, the testnet hostname
+  to `http://localhost:3001`, and unmatched hostnames to `http_status:404`.
+  `mdb-coming-soon.service` serves the apex page and both units are enabled at
+  boot. Last verified 2026-07-28.
 - Robinhood Testnet uses the official public RPC
   `https://rpc.testnet.chain.robinhood.com` for both server and browser
   traffic. `mdb-web-testnet.service` serves port `3001`;
@@ -118,6 +129,17 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Published the 42 Braincells domain split through a named
+  Cloudflare Tunnel. `https://42braincells.com` returns the branded mainnet
+  Coming Soon page with a testnet CTA; `https://testnet.42braincells.com`
+  returns the live 42 Braincells application. Public DNS A/AAAA records, TLS,
+  HTTP 200 responses, Cloudflare routing, the fail-closed catch-all, local
+  origin health, responsive testnet rendering, and browser console state were
+  verified. `mdb-cloudflared`, `mdb-coming-soon`, `mdb-web-testnet`, and
+  `mdb-web` are active; the tunnel has four QUIC connections and accepted the
+  two-route remote configuration. The tunnel credential is stored only in
+  `/etc/mdb/cloudflared-token` with `cloudflared:cloudflared` ownership and
+  mode `0600`.
 - 2026-07-28: Rebranded the product-facing web application from MillionDollar
   Brain to 42 Braincells. Updated the header, accessible home label, browser
   metadata, WalletConnect application metadata, local chain display name,

@@ -1,0 +1,28 @@
+[Unit]
+Description=42 Braincells mainnet coming-soon origin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hendo420
+Group=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+Environment=COMING_SOON_HOST=127.0.0.1
+Environment=COMING_SOON_PORT=3002
+ExecStart=/home/hendo420/.local/node-v24.18.0-linux-x64/bin/node scripts/coming-soon-server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,14 +1,27 @@
 [Unit]
-Description=MillionDollar Brain temporary TryCloudflare demo tunnel
+Description=42 Braincells named Cloudflare Tunnel
 Wants=network-online.target
-After=network-online.target mdb-web.service
+After=network-online.target mdb-web-testnet.service mdb-coming-soon.service
+Requires=mdb-coming-soon.service
 
 [Service]
-Type=simple
-User=hendo420
-ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:3000
-Restart=always
+Type=notify
+User=cloudflared
+Group=cloudflared
+ExecStart=/usr/bin/cloudflared tunnel --no-autoupdate run --token-file /etc/mdb/cloudflared-token
+Restart=on-failure
 RestartSec=5
+TimeoutStartSec=0
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
 
 [Install]
 WantedBy=multi-user.target
