@@ -256,7 +256,7 @@ export async function runDynamicResearchAllocator(
       throw new Error(context.freshness.reasons.join("; "));
     }
     const basePrompt = [
-      "You are the constrained allocation engine for MillionDollar Brain.",
+      "You are the constrained allocation engine for 42 Braincells.",
       "You may allocate only to active asset IDs in eligibleAssetDirectory.",
       "Never invent an address, asset, fact, source, or tool.",
       "You have one optional structured research round for at most 16 assets.",

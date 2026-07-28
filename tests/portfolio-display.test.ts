@@ -47,6 +47,29 @@ test("basket chart assigns a distinct visible color slot to every possible holdi
   assert.equal(basketChartColor(10), colors[0]);
 });
 
+test("product-facing surfaces use the 42 Braincells brand and tagline", () => {
+  const layout = readFileSync("apps/web/app/layout.tsx", "utf8");
+  const dashboard = readFileSync(
+    "apps/web/components/editorial-dashboard.tsx",
+    "utf8",
+  );
+  const brainMap = readFileSync("apps/web/components/brain-map.tsx", "utf8");
+  const wallet = readFileSync(
+    "apps/web/components/wallet-provider.tsx",
+    "utf8",
+  );
+  const surfaces = `${layout}\n${dashboard}\n${brainMap}\n${wallet}`;
+
+  assert.match(layout, /title: "42 Braincells"/);
+  assert.match(dashboard, /aria-label="42 Braincells home"/);
+  assert.match(dashboard, />BRAINCELLS</);
+  assert.match(
+    surfaces,
+    /The internet(?:&apos;|')s last 42 braincells manage an on-chain portfolio\./,
+  );
+  assert.doesNotMatch(surfaces, /MillionDollar Brain/i);
+});
+
 test("visible USD values use the exact two-decimal formatter", () => {
   const dashboard = readFileSync(
     "apps/web/components/editorial-dashboard.tsx",

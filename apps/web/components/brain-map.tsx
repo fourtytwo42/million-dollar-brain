@@ -146,8 +146,8 @@ export function BrainMap({
           <p className="section-kicker">THE 42</p>
           <strong>Explore the community brain</strong>
           <p className="brain-map-explainer">
-            Click a character to see what it controls, its current preset, and
-            who can change it.
+            The internet&apos;s last 42 braincells manage an on-chain portfolio.
+            Click a character to see what it controls.
           </p>
         </div>
       </div>

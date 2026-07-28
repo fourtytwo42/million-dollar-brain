@@ -1,4 +1,4 @@
-# MillionDollar Brain
+# 42 Braincells
 
 ## Product Requirements Document
 
@@ -32,7 +32,9 @@ If an older concept note conflicts with this PRD set, this PRD set controls. `PR
 
 ## 1. Product summary
 
-MillionDollar Brain is a community-steered portfolio protocol on Robinhood Chain.
+**The internet's last 42 braincells manage an on-chain portfolio.**
+
+42 Braincells is a community-steered portfolio protocol on Robinhood Chain.
 
 Users deposit an approved base asset into a basket and receive transferable basket shares priced from net asset value. A constrained AI reviews the portfolio on a schedule, initially hourly, and proposes the basket's target holdings for the next hour. Deterministic contracts enforce asset, risk, turnover, liquidity, oracle, and execution restrictions before any trade occurs.
 

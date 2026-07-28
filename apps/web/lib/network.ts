@@ -82,7 +82,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
   schemaVersion: 1,
   local: {
     chainId: 31337,
-    chainName: "MillionDollar Brain Devnet",
+    chainName: "42 Braincells Devnet",
     networkLabel: "Local devnet",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     browserRpcUrl: "http://192.168.50.135:8545",

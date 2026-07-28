@@ -6,9 +6,10 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Replaced the Basket pie chart's four-symbol color
-  lookup with ten explicit high-contrast palette slots, covering USDG plus the
-  protocol maximum of nine simultaneous risk positions in both themes.
+- Last meaningful change: Rebranded the product-facing application as `42
+  Braincells` with the tagline `The internet's last 42 braincells manage an
+  on-chain portfolio.` Deployed MDBS/MDBP symbols and contract identities are
+  unchanged.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -20,7 +21,7 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
-- MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
+- 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
 - A parallel valueless mock deployment is live on Robinhood Testnet chain
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
@@ -117,6 +118,15 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Rebranded the product-facing web application from MillionDollar
+  Brain to 42 Braincells. Updated the header, accessible home label, browser
+  metadata, WalletConnect application metadata, local chain display name,
+  Brain tagline, decision-card branding and filename, allocator identity,
+  fallback dashboard, README, and PRD title/summary. Deployed MDBS/MDBP token
+  symbols, contract identities, paths, databases, and service names remain
+  unchanged. Branding and network-policy tests, TypeScript, Prettier,
+  production build, desktop/mobile light/dark UAT, all three primary screens,
+  and browser console checks pass.
 - 2026-07-28: Fixed dynamically registered Basket assets rendering with an
   unresolved near-white chart color. The pie and legend now share ten explicit
   light/dark palette slots. Live testnet holds nine assets and browser

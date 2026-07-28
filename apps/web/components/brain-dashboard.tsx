@@ -808,9 +808,7 @@ export function BrainDashboard() {
           <div className="brand">
             <span className="mark">42</span>
             <span>
-              MILLIONDOLLAR
-              <br />
-              <b>BRAIN</b>
+              <b>BRAINCELLS</b>
             </span>
           </div>
           <div className="header-actions">

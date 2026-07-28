@@ -558,10 +558,10 @@ export function EditorialDashboard({
         <button
           className="editorial-brand"
           onClick={() => setScreen("Brain")}
-          aria-label="MillionDollar Brain home"
+          aria-label="42 Braincells home"
         >
           <span className="brain-mark">42</span>
-          <span>MILLIONDOLLAR BRAIN</span>
+          <span>BRAINCELLS</span>
         </button>
         <nav aria-label="Primary navigation">
           {(["Brain", "Basket", "Decisions"] as const).map((item) => (
@@ -1717,7 +1717,7 @@ async function renderDecisionCard(
   context.fillRect(0, 0, canvas.width, 76);
   context.fillStyle = "#f0eadc";
   context.font = "700 26px Georgia";
-  context.fillText("MILLIONDOLLAR BRAIN", 42, 48);
+  context.fillText("42 BRAINCELLS", 42, 48);
   context.fillStyle = "#b54455";
   context.font = "700 18px monospace";
   context.fillText("LOCAL DEVNET · BRAIN DRAMA", 820, 46);
@@ -1765,7 +1765,7 @@ async function renderDecisionCard(
   const url = canvas.toDataURL("image/png");
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `milliondollar-brain-${cycle.txHash?.slice(2, 10) ?? "hold"}.png`;
+  anchor.download = `42-braincells-${cycle.txHash?.slice(2, 10) ?? "hold"}.png`;
   anchor.click();
 }
 

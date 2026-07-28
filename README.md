@@ -1,6 +1,8 @@
-# MillionDollar Brain
+# 42 Braincells
 
-MillionDollar Brain is a proposed DeFi basket protocol for Robinhood Chain. Basket-share holders deposit and redeem against a managed portfolio, while owners of 42 always-for-sale brain-piece NFTs steer a constrained hourly AI allocation through closed, auditable presets.
+**The internet's last 42 braincells manage an on-chain portfolio.**
+
+42 Braincells is a proposed DeFi basket protocol for Robinhood Chain. Basket-share holders buy and sell proportional exposure to a managed portfolio, while owners of 42 always-for-sale brain-piece NFTs steer a constrained scheduled AI allocation through closed, auditable presets.
 
 ## Current status
 

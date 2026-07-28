@@ -2,9 +2,9 @@ import "./globals.css";
 import { WalletProvider } from "@/components/wallet-provider";
 
 export const metadata = {
-  title: "MillionDollar Brain",
+  title: "42 Braincells",
   description:
-    "A local-devnet autonomous basket directed by a constrained AI brain.",
+    "The internet's last 42 braincells manage an on-chain portfolio.",
 };
 
 export default function RootLayout({

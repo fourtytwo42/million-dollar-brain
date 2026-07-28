@@ -42,7 +42,7 @@ const metaMaskInjectedWallet: typeof metaMaskWallet = (options) => {
 
 const local = defineChain({
   id: 31337,
-  name: "MillionDollar Brain Devnet",
+  name: "42 Braincells Devnet",
   nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   rpcUrls: { default: { http: ["http://192.168.50.135:8545"] } },
   testnet: true,
@@ -70,8 +70,9 @@ function makeConfig() {
       ? "http://192.168.50.135:3000"
       : window.location.origin;
   return getDefaultConfig({
-    appName: "MillionDollar Brain",
-    appDescription: "A community-steered autonomous basket.",
+    appName: "42 Braincells",
+    appDescription:
+      "The internet's last 42 braincells manage an on-chain portfolio.",
     appUrl,
     projectId,
     chains: [local, robinhoodTestnet],
