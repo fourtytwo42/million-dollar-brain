@@ -23,6 +23,7 @@ import {
   type PortfolioAccountingV1,
 } from "./portfolio-accounting";
 import { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
+import { networkConfig } from "./network";
 export { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 
 export type SourceStamp = {
@@ -146,7 +147,7 @@ export type CycleOutcomeV1 = {
 export type DecisionContextV3 = {
   schemaVersion: 3;
   generatedAt: string;
-  mode: "local_devnet_simulation";
+  mode: "local_devnet_simulation" | "robinhood_testnet_mock";
   tokenBudget: {
     maximumInputTokens: 32_000;
     detailedCycleLimit: 12;
@@ -590,7 +591,10 @@ export async function buildDecisionContext(
   const partial = {
     schemaVersion: 3 as const,
     generatedAt,
-    mode: "local_devnet_simulation" as const,
+    mode:
+      networkConfig.mode === "testnet"
+        ? ("robinhood_testnet_mock" as const)
+        : ("local_devnet_simulation" as const),
     tokenBudget: {
       maximumInputTokens: 32_000 as const,
       detailedCycleLimit: 12 as const,

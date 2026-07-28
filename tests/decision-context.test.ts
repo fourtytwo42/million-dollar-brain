@@ -18,6 +18,12 @@ test("stable decision serialization is deterministic across object key order", (
   assert.equal(first, second);
 });
 
+test("decision evidence distinguishes local devnet from testnet mocks", () => {
+  const source = readFileSync("apps/web/lib/decision-context.ts", "utf8");
+  assert.match(source, /networkConfig\.mode === "testnet"/);
+  assert.match(source, /robinhood_testnet_mock/);
+});
+
 test("candle formulas produce returns, volatility, and drawdown from observations", () => {
   const candles = Array.from({ length: 31 }, (_, hour) => ({
     time: hour * 3_600,
