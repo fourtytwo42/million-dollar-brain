@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import {
   allocationSummary,
@@ -8,6 +8,7 @@ import {
   positiveAllocationEntries,
   positiveBalanceSymbols,
 } from "../lib/portfolio-display";
+import { portraitUrl } from "../lib/portrait";
 import { BrainMap } from "./brain-map";
 
 type BrainOption = {
@@ -21,6 +22,9 @@ export type EditorialPiece = {
   unowned: boolean;
   price: string;
   preset: number;
+  portraitHash: string;
+  ownershipSerial: number;
+  portraitChangeAvailable: boolean;
   weight: number;
   affinity: string;
   name: string;
@@ -335,6 +339,7 @@ export function EditorialDashboard({
   onRedeem,
   onBuy,
   onPreset,
+  onPortrait,
   onClaim,
 }: {
   data: EditorialData | null;
@@ -371,6 +376,7 @@ export function EditorialDashboard({
   onRedeem: () => void;
   onBuy: (piece: EditorialPiece) => void;
   onPreset: (piece: EditorialPiece, preset: number) => void;
+  onPortrait: (piece: EditorialPiece, file: File) => void;
   onClaim: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
@@ -379,6 +385,7 @@ export function EditorialDashboard({
   );
   const [showGuide, setShowGuide] = useState(false);
   const [tradeSide, setTradeSide] = useState<"buy" | "sell">("buy");
+  const portraitInputRef = useRef<HTMLInputElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
   const reserveMoney = (value: string | bigint) =>
@@ -681,13 +688,39 @@ export function EditorialDashboard({
                 aria-label={`Selected brain piece: ${selected.name}`}
               >
                 <div className="piece-ledger-head">
-                  <span className="detail-portrait">
+                  <button
+                    type="button"
+                    className="detail-portrait portrait-change-button"
+                    disabled={!mine}
+                    aria-label={
+                      mine
+                        ? selected.portraitChangeAvailable
+                          ? `Replace ${selected.name}'s portrait`
+                          : "Re-upload the portrait already committed on chain"
+                        : "Only the current owner can replace this portrait"
+                    }
+                    onClick={() => portraitInputRef.current?.click()}
+                  >
                     <img
-                      src={`/brain-art/v4/piece-${String(selected.id).padStart(2, "0")}.webp`}
-                      alt=""
-                      aria-hidden="true"
+                      src={portraitUrl(selected)}
+                      alt={`${selected.name} portrait`}
                     />
-                  </span>
+                    {mine && selected.portraitChangeAvailable && (
+                      <span className="portrait-change-hint">Change once</span>
+                    )}
+                  </button>
+                  <input
+                    ref={portraitInputRef}
+                    className="sr-only"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={!mine}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) onPortrait(selected, file);
+                    }}
+                  />
                   <div>
                     <p className="section-kicker">
                       PIECE {String(selected.id).padStart(2, "0")} ·{" "}
@@ -701,6 +734,13 @@ export function EditorialDashboard({
                     <p className="character-form">
                       {selected.kind} · {selected.visual}
                     </p>
+                    {mine && (
+                      <p className="portrait-change-status">
+                        {selected.portraitChangeAvailable
+                          ? "Click the portrait to replace it. One change per ownership."
+                          : "Portrait change used. The next purchaser gets one new change."}
+                      </p>
+                    )}
                   </div>
                   <span
                     className={

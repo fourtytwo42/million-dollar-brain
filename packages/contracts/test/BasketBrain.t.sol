@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Test} from "forge-std/Test.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MockToken} from "../src/MockToken.sol";
-import {MockRouter} from "../src/MockRouter.sol";
-import {MockValuationOracle} from "../src/MockValuationOracle.sol";
-import {RewardDistributor} from "../src/RewardDistributor.sol";
-import {CreatorVault} from "../src/CreatorVault.sol";
-import {BrainMarketplace} from "../src/BrainMarketplace.sol";
-import {BasketVault} from "../src/BasketVault.sol";
+import { Test } from "forge-std/Test.sol";
+import { Vm } from "forge-std/Vm.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockToken } from "../src/MockToken.sol";
+import { MockRouter } from "../src/MockRouter.sol";
+import { MockValuationOracle } from "../src/MockValuationOracle.sol";
+import { RewardDistributor } from "../src/RewardDistributor.sol";
+import { CreatorVault } from "../src/CreatorVault.sol";
+import { BrainMarketplace } from "../src/BrainMarketplace.sol";
+import { BasketVault } from "../src/BasketVault.sol";
 
 contract BasketBrainTest is Test {
     address internal admin = makeAddr("admin");
@@ -68,7 +68,8 @@ contract BasketBrainTest is Test {
         creatorVault = CreatorVault(
             address(
                 new ERC1967Proxy(
-                    address(creatorVaultImpl), abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
+                    address(creatorVaultImpl),
+                    abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
                 )
             )
         );
@@ -78,7 +79,8 @@ contract BasketBrainTest is Test {
                 new ERC1967Proxy(
                     address(rewardImpl),
                     abi.encodeCall(
-                        RewardDistributor.initialize, (admin, address(usdg), rewardWeights, address(creatorVault))
+                        RewardDistributor.initialize,
+                        (admin, address(usdg), rewardWeights, address(creatorVault))
                     )
                 )
             )
@@ -203,7 +205,8 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("event-cycle"));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 signature = keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
+        bytes32 signature =
+            keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
         uint256 tradeEvents;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length > 0 && logs[i].topics[0] == signature) {
@@ -379,6 +382,54 @@ contract BasketBrainTest is Test {
         vm.stopPrank();
         assertGt(usdg.balanceOf(alice), aliceBefore);
         assertEq(brain.ownerOf(1), bob);
+    }
+
+    function testBrainOwnerCanChangePortraitOncePerOwnership() public {
+        bytes32 alicePortrait = keccak256("alice portrait");
+        bytes32 bobPortrait = keccak256("bob portrait");
+
+        assertFalse(brain.canChangePortrait(1, alice));
+        vm.prank(alice);
+        vm.expectRevert("not owner");
+        brain.setPortrait(1, alicePortrait);
+
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        assertEq(brain.ownershipSerial(1), 1);
+        assertTrue(brain.canChangePortrait(1, alice));
+        vm.expectRevert("empty portrait");
+        brain.setPortrait(1, bytes32(0));
+        brain.setPortrait(1, alicePortrait);
+        assertEq(brain.portraitHash(1), alicePortrait);
+        assertFalse(brain.canChangePortrait(1, alice));
+        vm.expectRevert("portrait already changed");
+        brain.setPortrait(1, keccak256("second alice portrait"));
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        assertEq(brain.ownershipSerial(1), 2);
+        assertEq(brain.portraitHash(1), alicePortrait);
+        assertTrue(brain.canChangePortrait(1, bob));
+        brain.setPortrait(1, bobPortrait);
+        assertEq(brain.portraitHash(1), bobPortrait);
+        assertFalse(brain.canChangePortrait(1, bob));
+        vm.stopPrank();
+    }
+
+    function testExistingOwnerCanChangePortraitAfterImplementationUpgrade() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        // A proxy upgraded from the previous implementation has zero in all
+        // appended portrait slots. Its current owner must still receive one use.
+        assertEq(brain.ownershipSerial(1), 1);
+        assertEq(brain.portraitChangeSerialPlusOne(1), 0);
+        assertTrue(brain.canChangePortrait(1, alice));
     }
 
     function testCurrentBrainOwnerCanClaimBasketFees() public {

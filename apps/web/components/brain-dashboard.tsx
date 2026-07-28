@@ -8,6 +8,7 @@ import {
   defineChain,
   formatUnits,
   http,
+  keccak256,
   parseUnits,
 } from "viem";
 import {
@@ -23,6 +24,7 @@ import {
 } from "wagmi";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 import { retryApprovalDependentWrite } from "@/lib/approval-retry";
+import { preparePortrait } from "@/lib/portrait";
 import { EditorialDashboard } from "./editorial-dashboard";
 
 type BrainOption = {
@@ -36,6 +38,9 @@ type Piece = {
   unowned: boolean;
   price: string;
   preset: number;
+  portraitHash: string;
+  ownershipSerial: number;
+  portraitChangeAvailable: boolean;
   weight: number;
   affinity: string;
   name: string;
@@ -654,6 +659,66 @@ export function BrainDashboard() {
       ),
     );
   }
+  async function changePortrait(piece: Piece, sourceFile: File) {
+    if (!data) return;
+    setMessage("Preparing a square 384 × 384 portrait…");
+    const portrait = await preparePortrait(sourceFile);
+    const bytes = new Uint8Array(await portrait.arrayBuffer());
+    const hash = keccak256(bytes);
+    const alreadyCommitted =
+      hash.toLowerCase() === piece.portraitHash.toLowerCase();
+
+    if (!piece.portraitChangeAvailable && !alreadyCommitted) {
+      throw new Error(
+        "This ownership has already used its one portrait change. The next purchaser receives a new change.",
+      );
+    }
+
+    const { wallet, publicClient } = clients();
+    if (!alreadyCommitted) {
+      setMessage("Confirm the one-time portrait change in your wallet…");
+      const tx = await wallet.writeContract({
+        address: data.deployment.brain,
+        abi: brainAbi,
+        functionName: "setPortrait",
+        args: [BigInt(piece.id), hash],
+      });
+      await publicClient.waitForTransactionReceipt({
+        hash: tx,
+        ...receiptWaitPolicy,
+      });
+    }
+
+    setMessage("Saving the committed portrait to 42 Braincells…");
+    const form = new FormData();
+    form.set("portrait", portrait);
+    let uploadError = "portrait upload failed";
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const response = await fetch(`/api/brain-image/${piece.id}`, {
+        method: "POST",
+        body: form,
+      });
+      if (response.ok) {
+        const refreshed = await refreshAfterConfirmedAction();
+        setMessage(
+          confirmedActionMessage(
+            `Piece ${piece.id} now uses your custom portrait. This ownership's one portrait change has been used.`,
+            refreshed,
+          ),
+        );
+        return;
+      }
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      uploadError = payload?.error ?? uploadError;
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
+    await refreshAfterConfirmedAction();
+    throw new Error(
+      `The portrait is committed on chain, but its image upload failed: ${uploadError}. Click the portrait and choose the same file to retry.`,
+    );
+  }
   async function redeem() {
     if (!data || BigInt(data.shares) === 0n) return;
     const { wallet, publicClient } = clients();
@@ -790,6 +855,11 @@ export function BrainDashboard() {
         }
         onPreset={(piece, value) =>
           preset(piece, value).catch((error) =>
+            setMessage(error.shortMessage ?? error.message),
+          )
+        }
+        onPortrait={(piece, file) =>
+          changePortrait(piece, file).catch((error) =>
             setMessage(error.shortMessage ?? error.message),
           )
         }

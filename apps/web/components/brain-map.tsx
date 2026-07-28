@@ -8,6 +8,7 @@ import {
   BRAIN_SILHOUETTE_PATH,
   type BrainDirection,
 } from "../lib/brain-presentation";
+import { portraitUrl } from "../lib/portrait";
 
 type MapPiece = {
   id: number;
@@ -19,6 +20,9 @@ type MapPiece = {
   unowned: boolean;
   price: string;
   weight: number;
+  portraitHash: string;
+  ownershipSerial: number;
+  portraitChangeAvailable: boolean;
   options: readonly { label: string; value: number }[];
 };
 
@@ -30,10 +34,6 @@ type BrainMapProps = {
   onHover?: (pieceId: number | null) => void;
   onZoomChange?: (zoom: number) => void;
 };
-
-function portraitPath(pieceId: number) {
-  return `/brain-art/v4/piece-${String(pieceId).padStart(2, "0")}.webp`;
-}
 
 function shortOwner(owner: string) {
   return owner && owner !== "0x0000000000000000000000000000000000000000"
@@ -270,7 +270,7 @@ export function BrainMap({
                       <path className="segment-fill" d={presentation.path} />
                       <image
                         className="piece-portrait"
-                        href={portraitPath(piece.id)}
+                        href={portraitUrl(piece)}
                         x={presentation.portrait.x}
                         y={presentation.portrait.y}
                         width={presentation.portrait.width}
@@ -358,7 +358,7 @@ export function BrainMap({
                 className={selectedId === piece.id ? "selected" : ""}
                 onClick={() => onSelect(piece.id)}
               >
-                <img src={portraitPath(piece.id)} alt="" />
+                <img src={portraitUrl(piece)} alt="" />
                 <span>
                   <b>{piece.name}</b>
                   <small>

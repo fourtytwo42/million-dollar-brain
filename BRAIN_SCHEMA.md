@@ -44,7 +44,26 @@ Every piece has:
 }
 ```
 
-On-chain state stores IDs, weights, ownership, selections, and versions. Each option has protocol-authored metadata and a content hash so the exact meaning supplied to the model is auditable.
+On-chain state stores IDs, weights, ownership, selections, and versions. Each
+option has protocol-authored metadata and a content hash so the exact meaning
+supplied to the model is auditable.
+
+Each piece also stores presentation-only portrait state:
+
+```json
+{
+  "portrait_hash": "0x...",
+  "ownership_serial": 3,
+  "portrait_change_serial_plus_one": 4
+}
+```
+
+The current owner may commit one nonzero portrait hash while
+`portrait_change_serial_plus_one != ownership_serial + 1`. Every completed
+purchase increments `ownership_serial`, which grants the purchaser one new
+portrait change. The portrait hash and hosted image are never included in the
+AI prompt; only the immutable character, affinity, preset, and canonical
+instruction influence allocation.
 
 ## 3. MVP weight tiers
 

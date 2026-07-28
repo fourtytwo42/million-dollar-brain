@@ -4,16 +4,14 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Keep the mainnet-edge release advancing while the public
-  testnet and mainnet Coming Soon surfaces remain available.
-- Last meaningful change: Replaced the temporary Quick Tunnel with a named
-  Cloudflare Tunnel. `https://42braincells.com` serves the mainnet Coming Soon
-  page and `https://testnet.42braincells.com` serves the live Robinhood
-  Testnet application.
-- Next step: Keep the read-only mainnet shadow collecting qualification
-  evidence. Supply Chainlink mappings, 0x
-  credentials, and official capitalization/history evidence before the
-  30-consecutive-day qualification clock can advance.
+- Current task: Add one owner-selected portrait change per brain-piece
+  ownership, then upgrade and verify both local devnet and Robinhood Testnet.
+- Last meaningful change: Implemented the append-only contract state, exact
+  on-chain image-hash commitment, validated self-hosted WebP upload path, and
+  owner-only portrait picker. Contract tests and the production web build pass.
+- Next step: Commit and push the verified implementation, upgrade both active
+  BrainMarketplace proxies, restart the web apps, and complete live browser
+  UAT including the larger portrait and unclipped +2 mood.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 30 consecutive mainnet-shadow
@@ -120,7 +118,7 @@ When sources conflict, use this order:
 - Portfolio review is scheduled, initially hourly, and independent of user actions. A scheduler or permissionless keeper submits signed AI proposals and is funded or reimbursed from the creator DAO's existing fee share.
 - Deposits, redemptions, brain purchases, setting changes, claims, and governance remain available on-chain at any time. Each user pays only their own action gas and does not trigger the AI cycle.
 - Scheduled proposals use a brain-state snapshot. Brain changes after that snapshot affect the next cycle, while execution always rechecks current holdings, prices, liquidity, risk limits, and slippage.
-- Every brain piece has an immutable affinity, immutable weight, and closed protocol-defined option list. Owners may select an option on-chain but cannot submit text, links, images, instructions, or arbitrary prompt content.
+- Every brain piece has an immutable affinity, immutable weight, and closed protocol-defined option list. Owners may select an option on-chain but cannot submit text, links, instructions, or arbitrary prompt content. A separately isolated presentation feature permits the current owner to commit one portrait hash per ownership; portrait bytes never enter the AI context.
 - The AI is a constrained hourly allocator. Each cycle receives the entire canonical brain, approved asset universe and statistics, current basket and performance state, previous decision, and operating limits, then returns schema-validated target weights for the next hour.
 - The model may run through OpenRouter or the user's local appliance behind one provider adapter. Provider, exact model, configuration, prompt version, input hash, and output hash must be recorded for every cycle.
 - Invalid, stale, late, unavailable, or unsafe model results fail closed and keep the current portfolio. Models never receive keys or direct execution authority.
@@ -613,6 +611,15 @@ When sources conflict, use this order:
 - 2026-07-26: Temporarily aligned and clipped the generated raster brain to the original mosaic mask. This fit-only approach was superseded the same day by the authored three-region anatomical SVG because the original global mask still read as a blob.
 - 2026-07-12: Reset stale project-specific memory while retaining the durable memory-management logic.
 - 2026-07-23: Produced the initial MillionDollar Brain product brief without building or deploying anything.
+
+### 2026-07-28 - One Portrait Change Per Ownership
+
+- Context: Brain-piece purchasers need a collectible presentation right without allowing arbitrary content to steer Ornith.
+- Decision: Each completed purchase increments an on-chain ownership serial. The current owner may commit one nonzero portrait hash for that serial; a later 120% purchase grants the new owner one fresh change. The exact normalized 384-by-384 WebP is self-hosted only after its bytes match the committed keccak256 hash. Portrait data is never included in the AI prompt.
+- Files: `packages/contracts/src/BrainMarketplace.sol`, `apps/web/app/api/brain-image/[pieceId]/route.ts`, `apps/web/lib/portrait.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/components/brain-map.tsx`.
+- Commands/tests: `npm run test:portrait` passed 2/2; `npm run test:contracts` passed 26/26; Next.js production build passed and includes the dynamic brain-image route.
+- Result: The upgrade preserves existing ownership and grants existing owners one first portrait change. The selected portrait is larger, clicking it opens a simple file picker, retrying the already committed image is supported, and the five mood buttons use equal-width columns so +2 is not clipped.
+- Follow-up: Upgrade the local and testnet BrainMarketplace proxies, restart both web apps, and complete live transaction plus visual UAT.
 
 ### 2026-07-27 - Live local valuation and user-facing performance
 

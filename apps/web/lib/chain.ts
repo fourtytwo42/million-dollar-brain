@@ -359,6 +359,24 @@ export async function dashboard(
         functionName: "isUnowned",
         args: [id],
       },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "portraitHash",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "ownershipSerial",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "portraitChangeSerialPlusOne",
+        args: [id],
+      },
     );
   }
 
@@ -395,6 +413,9 @@ export async function dashboard(
     const preset = results[cursor++] as number;
     const weight = results[cursor++] as number;
     const unowned = results[cursor++] as boolean;
+    const portraitHash = results[cursor++] as `0x${string}`;
+    const ownershipSerial = Number(results[cursor++] as bigint);
+    const portraitChangeSerialPlusOne = Number(results[cursor++] as bigint);
     const definition = brainDefinition(index + 1);
     return {
       id: index + 1,
@@ -403,6 +424,10 @@ export async function dashboard(
       preset: Number(preset),
       weight: Number(weight),
       unowned,
+      portraitHash,
+      ownershipSerial,
+      portraitChangeAvailable:
+        !unowned && portraitChangeSerialPlusOne !== ownershipSerial + 1,
       affinity: definition.affinity,
       name: definition.name,
       glyph: definition.glyph,

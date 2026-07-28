@@ -323,6 +323,37 @@ export const brainAbi = [
   },
   {
     type: "function",
+    name: "portraitHash",
+    stateMutability: "view",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "ownershipSerial",
+    stateMutability: "view",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "portraitChangeSerialPlusOne",
+    stateMutability: "view",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [{ type: "uint64" }],
+  },
+  {
+    type: "function",
+    name: "canChangePortrait",
+    stateMutability: "view",
+    inputs: [
+      { name: "pieceId", type: "uint256" },
+      { name: "account", type: "address" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
     name: "buy",
     stateMutability: "nonpayable",
     inputs: [
@@ -341,6 +372,27 @@ export const brainAbi = [
       { name: "preset", type: "uint8" },
     ],
     outputs: [],
+  },
+  {
+    type: "function",
+    name: "setPortrait",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "pieceId", type: "uint256" },
+      { name: "newPortraitHash", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "event",
+    name: "PortraitChanged",
+    anonymous: false,
+    inputs: [
+      { name: "pieceId", type: "uint256", indexed: true },
+      { name: "owner", type: "address", indexed: true },
+      { name: "ownershipSerial", type: "uint64", indexed: true },
+      { name: "portraitHash", type: "bytes32", indexed: false },
+    ],
   },
 ] as const;
 

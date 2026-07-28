@@ -1,18 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ERC721Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    ERC721Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface IRewardDistributor {
     function setOwner(uint256 pieceId, address newOwner) external;
     function fund(uint256 amount) external;
 }
 
-contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgradeable, ERC721Upgradeable {
+contract BrainMarketplace is
+    Initializable,
+    UUPSUpgradeable,
+    AccessControlUpgradeable,
+    ERC721Upgradeable
+{
     uint256 public constant PIECE_COUNT = 42;
     uint256 public constant BPS = 10_000;
     uint256 public constant NEXT_PRICE_BPS = 12_000;
@@ -26,9 +37,25 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
     mapping(uint256 => uint8) public selectedPreset;
     mapping(uint256 => uint16) public immutableWeight;
     mapping(uint256 => bytes32) public affinityId;
+    // Appended storage for the one-portrait-change-per-ownership feature.
+    mapping(uint256 => bytes32) public portraitHash;
+    mapping(uint256 => uint64) public ownershipSerial;
+    mapping(uint256 => uint64) public portraitChangeSerialPlusOne;
 
-    event PiecePurchased(uint256 indexed pieceId, address indexed buyer, address indexed seller, uint256 paid, uint256 nextPrice);
+    event PiecePurchased(
+        uint256 indexed pieceId,
+        address indexed buyer,
+        address indexed seller,
+        uint256 paid,
+        uint256 nextPrice
+    );
     event PresetChanged(uint256 indexed pieceId, uint8 preset, address indexed owner);
+    event PortraitChanged(
+        uint256 indexed pieceId,
+        address indexed owner,
+        uint64 indexed ownershipSerial,
+        bytes32 portraitHash
+    );
 
     function initialize(
         address admin,
@@ -52,7 +79,9 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
         catalogVersion = catalogVersion_;
         catalogHash = catalogHash_;
         uint256 totalWeight;
-        for (uint256 i; i < PIECE_COUNT; ++i) totalWeight += weights[i];
+        for (uint256 i; i < PIECE_COUNT; ++i) {
+            totalWeight += weights[i];
+        }
         require(totalWeight == BPS, "weights total");
         for (uint256 i; i < PIECE_COUNT; ++i) {
             uint256 id = i + 1;
@@ -99,6 +128,7 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
         }
 
         settledPrice[pieceId] = paid;
+        ownershipSerial[pieceId] += 1;
         _transfer(seller, msg.sender, pieceId);
         rewardDistributor.setOwner(pieceId, msg.sender);
         emit PiecePurchased(pieceId, msg.sender, seller, paid, currentPrice(pieceId));
@@ -110,6 +140,25 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
         require(preset <= 4, "invalid preset");
         selectedPreset[pieceId] = preset;
         emit PresetChanged(pieceId, preset, msg.sender);
+    }
+
+    function canChangePortrait(uint256 pieceId, address account) public view returns (bool) {
+        _validPiece(pieceId);
+        if (account == address(0) || ownerOf(pieceId) != account || account == address(this)) {
+            return false;
+        }
+        return portraitChangeSerialPlusOne[pieceId] != ownershipSerial[pieceId] + 1;
+    }
+
+    function setPortrait(uint256 pieceId, bytes32 newPortraitHash) external {
+        _validPiece(pieceId);
+        require(ownerOf(pieceId) == msg.sender, "not owner");
+        require(newPortraitHash != bytes32(0), "empty portrait");
+        require(canChangePortrait(pieceId, msg.sender), "portrait already changed");
+
+        portraitHash[pieceId] = newPortraitHash;
+        portraitChangeSerialPlusOne[pieceId] = ownershipSerial[pieceId] + 1;
+        emit PortraitChanged(pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash);
     }
 
     function _validPiece(uint256 pieceId) private pure {
@@ -133,5 +182,5 @@ contract BrainMarketplace is Initializable, UUPSUpgradeable, AccessControlUpgrad
         return super.supportsInterface(interfaceId);
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

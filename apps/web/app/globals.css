@@ -1256,11 +1256,13 @@ footer {
 }
 .mood-ledger {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   border: 1px solid var(--border);
 }
 .mood-ledger button {
+  box-sizing: border-box;
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 5px;
   align-items: flex-start;
@@ -1268,7 +1270,8 @@ footer {
   color: var(--text);
   border-radius: 0;
   border-right: 1px solid var(--border);
-  padding: 10px;
+  overflow: hidden;
+  padding: 10px 7px;
   min-height: 66px;
   font-size: 10px;
 }
@@ -2537,13 +2540,50 @@ footer {
   padding: 16px;
 }
 .piece-inspector .detail-portrait {
-  width: 60px;
-  height: 60px;
-  border-radius: 5px;
+  width: 104px;
+  height: 104px;
+  border-radius: 7px;
 }
 .piece-inspector .detail-portrait img {
-  width: 66px;
-  height: 66px;
+  width: 112px;
+  height: 112px;
+}
+.portrait-change-button {
+  position: relative;
+  appearance: none;
+  padding: 0;
+  color: var(--text);
+  cursor: pointer;
+}
+.portrait-change-button:not(:disabled):hover,
+.portrait-change-button:not(:disabled):focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+.portrait-change-button:disabled {
+  cursor: default;
+}
+.portrait-change-hint {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  left: 5px;
+  padding: 4px 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--primary);
+  font:
+    700 8px/1 "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+.piece-ledger-head .portrait-change-status {
+  margin-top: 5px;
+  color: var(--primary);
+  font-size: 10px;
+  line-height: 1.35;
 }
 .current-mood {
   display: flex;
@@ -3105,6 +3145,14 @@ footer {
   }
   .piece-ledger-head {
     grid-template-columns: auto minmax(0, 1fr);
+  }
+  .piece-inspector .detail-portrait {
+    width: 84px;
+    height: 84px;
+  }
+  .piece-inspector .detail-portrait img {
+    width: 90px;
+    height: 90px;
   }
   .piece-ledger-head > .status-active,
   .piece-ledger-head > .status-inactive {

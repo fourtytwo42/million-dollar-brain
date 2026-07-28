@@ -272,12 +272,31 @@ Owners may:
 
 Owners may not:
 
-- Enter text, links, images, instructions, prompts, or contract addresses.
+- Enter text, links, instructions, prompts, or contract addresses into the AI
+  steering context.
 - Select an option not defined for that piece.
 - Change the piece's affinity or weight.
 - Override the asset registry or hard risk controls.
 
 A change made after the current AI snapshot affects the next scheduled cycle.
+
+### 8.2.1 Owner portrait change
+
+- Each purchaser receives one portrait change for that ownership period.
+- The owner may use it at any time after purchase; it is not part of the buy
+  transaction.
+- The application center-crops the chosen PNG, JPEG, or WebP to a 384-by-384
+  WebP, commits its exact content hash on-chain, and self-hosts the matching
+  bytes.
+- The contract accepts one nonzero portrait hash per ownership serial. A second
+  different hash reverts.
+- A completed always-for-sale purchase advances the ownership serial and gives
+  the new purchaser one new portrait change. The existing portrait remains
+  visible until that purchaser changes it.
+- Portraits are presentation only. They never enter the allocator prompt,
+  change affinity, alter influence, grant asset permissions, or affect fees.
+- The UI validates file type and size. The image service stores bytes only when
+  their hash equals the piece's current on-chain commitment.
 
 ### 8.3 Initial brain-piece purchase
 
@@ -827,7 +846,19 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 5. Registry records the new selection and brain version.
 6. The change applies to the next cycle snapshot and does not trigger an immediate rebalance.
 
-### 17.7 Claim brain-owner rewards
+### 17.7 Change a brain portrait
+
+1. Owner selects their piece and clicks its portrait.
+2. Owner chooses a PNG, JPEG, or WebP.
+3. Application previews and normalizes it to a square 384-by-384 WebP.
+4. Owner confirms the one-time on-chain portrait-hash transaction and pays gas.
+5. After confirmation, the application uploads only the exact hash-matching
+   bytes to self-hosted storage.
+6. The map and inspector switch to the cache-safe custom portrait URL.
+7. Further different portrait changes revert until another purchaser buys the
+   piece at its increased price.
+
+### 17.8 Claim brain-owner rewards
 
 1. Owner opens the Account drawer.
 2. Application shows USDG rewards accrued across all owned and previously owned pieces.
@@ -835,7 +866,7 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 4. Reward Distributor checkpoints accounting and transfers the claimable USDG.
 5. Claim event appears in personal history and protocol Activity.
 
-### 17.8 Redeem basket shares
+### 17.9 Redeem basket shares
 
 1. User chooses a share amount or percentage.
 2. Application shows gross NAV value, the locked 1% redemption fee, the fee split, expected net value, price freshness, gas, and atomic settlement protection.
@@ -845,7 +876,7 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 6. The proportional underlying sales, share burn, fee routing, and USDG payment all complete in the same transaction.
 7. If any step cannot complete safely, the transaction reverts and the user keeps their MDBS.
 
-### 17.9 Missed or failed AI cycle
+### 17.10 Missed or failed AI cycle
 
 1. System detects an unavailable model, invalid response, stale data, insufficient keeper gas, rejected proposal, or unsafe execution.
 2. No unapproved trade occurs and the current allocation remains in place.
