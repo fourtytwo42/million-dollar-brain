@@ -51,6 +51,7 @@ balance="$(cast balance "$deployer" --rpc-url "$official_rpc")"
 
 cd "$repo_root/packages/contracts"
 forge_args=(
+  script
   script/DeployTestnet.s.sol:DeployTestnet
   --rpc-url "$official_rpc"
   --keystore "$MDB_OPERATOR_KEYSTORE"
