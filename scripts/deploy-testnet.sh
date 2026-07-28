@@ -50,17 +50,57 @@ balance="$(cast balance "$deployer" --rpc-url "$official_rpc")"
 }
 
 cd "$repo_root/packages/contracts"
+forge_args=(
+  script/DeployTestnet.s.sol:DeployTestnet
+  --rpc-url "$official_rpc"
+  --keystore "$MDB_OPERATOR_KEYSTORE"
+  --password-file "$MDB_OPERATOR_PASSWORD_FILE"
+  --broadcast
+)
+verify_requested="${MDB_TESTNET_VERIFY:-false}"
+if [[ "$verify_requested" == "true" ]]; then
+  forge_args+=(--verify)
+fi
 MDB_DEPLOYER_ADDRESS="$deployer" \
 MDB_DEPLOYMENT_OUTPUT="./deployments/testnet.json" \
-  forge script script/DeployTestnet.s.sol:DeployTestnet \
-  --rpc-url "$official_rpc" \
-  --keystore "$MDB_OPERATOR_KEYSTORE" \
-  --password-file "$MDB_OPERATOR_PASSWORD_FILE" \
-  --broadcast \
-  --verify
+  forge "${forge_args[@]}"
 
 jq -e \
   '.schemaVersion == 1 and .environment == "robinhood-testnet" and
    .chainId == 46630 and .mockOnly == true and .automaticFreshness == false' \
   "$manifest" >/dev/null
+
+for key in usdg nvda aapl ethx router oracle rewards creatorVault brain basket; do
+  address="$(jq -er --arg key "$key" '.[$key]' "$manifest")"
+  [[ "$(cast code "$address" --rpc-url "$official_rpc")" != "0x" ]] || {
+    echo "Deployment validation failed: $key has no runtime code at $address" >&2
+    exit 1
+  }
+done
+
+evidence="$repo_root/var/testnet-readiness/public-deployment.json"
+mkdir -p "$(dirname "$evidence")"
+ending_balance="$(cast balance "$deployer" --rpc-url "$official_rpc")"
+jq -n \
+  --arg deployedAt "$(date -u +%FT%TZ)" \
+  --arg gitSha "$head_sha" \
+  --arg deployer "$deployer" \
+  --arg manifestHash "$(sha256sum "$manifest" | awk '{print $1}')" \
+  --arg startingBalanceWei "$balance" \
+  --arg endingBalanceWei "$ending_balance" \
+  --arg verifyRequested "$verify_requested" \
+  '{
+    schemaVersion: 1,
+    deployedAt: $deployedAt,
+    gitSha: $gitSha,
+    chainId: 46630,
+    publicRpc: "https://rpc.testnet.chain.robinhood.com",
+    deployer: $deployer,
+    manifestHash: $manifestHash,
+    startingBalanceWei: $startingBalanceWei,
+    endingBalanceWei: $endingBalanceWei,
+    runtimeCodeValidated: true,
+    sourceVerificationRequested: ($verifyRequested == "true")
+  }' >"$evidence"
 echo "Robinhood Testnet manifest written to $manifest"
+cat "$evidence"
