@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAddress, parseEther, parseUnits } from "viem";
-import { adminClient, deployment, mintAbi, publicClient } from "@/lib/chain";
+import {
+  adminClient,
+  deployment,
+  mintAbi,
+  publicClient,
+  waitForReliableTransactionReceipt,
+} from "@/lib/chain";
 import { networkConfig } from "@/lib/network";
 import { withAdminTransactionLock } from "@/lib/admin-transaction-lock";
 
@@ -109,14 +115,14 @@ export async function POST(request: NextRequest) {
         to: address,
         value: nativeAmount,
       });
-      await publicClient.waitForTransactionReceipt({ hash: nativeHash });
+      await waitForReliableTransactionReceipt(nativeHash);
       const tokenHash = await adminClient.writeContract({
         address: d.usdg,
         abi: mintAbi,
         functionName: "mint",
         args: [address, parseUnits("100000", 18)],
       });
-      await publicClient.waitForTransactionReceipt({ hash: tokenHash });
+      await waitForReliableTransactionReceipt(tokenHash);
       return { ethHash: nativeHash, usdgHash: tokenHash };
     });
     dailyNativeWei += nativeAmount;

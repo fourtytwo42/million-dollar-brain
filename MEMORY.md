@@ -7,12 +7,13 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: Browser dashboard reads now use one canonical
-  Multicall3 request with bounded retries and a thirty-second testnet poll,
-  preventing the public RPC rate-limit errors caused by hundreds of individual
-  balance calls.
-- Next step: Install and arm `mdb-endurance-testnet.service`, verify its first
-  scheduled checkpoint, then monitor all checkpoints through completion.
+- Last meaningful change: Endurance checkpoint 1 exposed public-RPC replica
+  lag in operator nonce and transaction-receipt reads. Operator and disposable
+  wallets now use nonce managers, and every transaction receipt wait disables
+  replacement detection while retaining bounded retries and a three-minute
+  timeout.
+- Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
+  minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -176,6 +177,17 @@ When sources conflict, use this order:
   verified six services and timers, exact NAV reconciliation, AI decision
   history, Brain Drama, theme and crew interactions; and recorded no queued
   redemption or browser error.
+- 2026-07-28: Endurance checkpoint 1 passed its complete user flow but exposed
+  a collector nonce-too-low error and a false missing-receipt result from
+  inconsistent public-RPC replicas. The supposedly missing transaction was
+  confirmed successfully mined. `apps/web/lib/chain.ts` now gives the operator
+  a Viem nonce manager and centralizes replica-safe receipt polling with
+  replacement detection disabled; the disposable browser wallet uses the same
+  nonce policy and every browser receipt wait uses the replica-safe policy.
+  Network, wallet, and market tests, full formatting, and the production build
+  passed. Two forced collector cycles beyond separate freshness boundaries
+  then completed multiple consecutive price writes without a nonce, receipt,
+  rate-limit, or verification error.
 
 ## Decisions
 

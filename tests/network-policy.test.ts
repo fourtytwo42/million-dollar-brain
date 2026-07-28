@@ -104,3 +104,29 @@ test("testnet dashboard collapses reads through Multicall3", () => {
   assert.match(chain, /allowFailure: false/);
   assert.match(dashboard, /data\?\.network\.mode === "testnet" \? 30_000/);
 });
+
+test("testnet transactions tolerate public-RPC nonce and receipt replica lag", () => {
+  const chain = readFileSync("apps/web/lib/chain.ts", "utf8");
+  const dashboard = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
+  const collector = readFileSync("apps/web/lib/market-price-sync.ts", "utf8");
+  assert.match(
+    chain,
+    /privateKeyToAccount\(operatorPrivateKey as `0x\$\{string\}`, \{\s*nonceManager,/s,
+  );
+  assert.match(chain, /checkReplacement: false/);
+  assert.match(chain, /retryCount: 20/);
+  assert.match(chain, /timeout: 180_000/);
+  assert.match(dashboard, /privateKeyToAccount\(key, \{ nonceManager \}\)/);
+  assert.match(
+    dashboard,
+    /const receiptWaitPolicy = \{\s*checkReplacement: false/s,
+  );
+  assert.equal(
+    [...dashboard.matchAll(/waitForTransactionReceipt\(\{/g)].length,
+    [...dashboard.matchAll(/\.\.\.receiptWaitPolicy/g)].length,
+  );
+  assert.doesNotMatch(collector, /publicClient\.waitForTransactionReceipt/);
+});

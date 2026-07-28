@@ -10,7 +10,11 @@ import {
   http,
   parseUnits,
 } from "viem";
-import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import {
+  generatePrivateKey,
+  nonceManager,
+  privateKeyToAccount,
+} from "viem/accounts";
 import {
   useAccount,
   useDisconnect,
@@ -215,6 +219,12 @@ const inputAmount = (value: bigint) =>
     useGrouping: false,
     maximumFractionDigits: 6,
   });
+const receiptWaitPolicy = {
+  checkReplacement: false,
+  retryCount: 20,
+  retryDelay: 1_000,
+  timeout: 180_000,
+} as const;
 
 export function BrainDashboard() {
   const [data, setData] = useState<Data | null>(null);
@@ -236,7 +246,7 @@ export function BrainDashboard() {
   const { switchChainAsync } = useSwitchChain();
   const { openConnectModal } = useConnectModal();
   const builtInAccount = useMemo(
-    () => (key ? privateKeyToAccount(key) : null),
+    () => (key ? privateKeyToAccount(key, { nonceManager }) : null),
     [key],
   );
   const account = useMemo(
@@ -430,7 +440,10 @@ export function BrainDashboard() {
       functionName: "approve",
       args: [data.deployment.basket, value],
     });
-    await publicClient.waitForTransactionReceipt({ hash: approve });
+    await publicClient.waitForTransactionReceipt({
+      hash: approve,
+      ...receiptWaitPolicy,
+    });
     setMessage("Buying MDBS and adding your funds to the basket…");
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const tx = await wallet.writeContract({
@@ -439,7 +452,10 @@ export function BrainDashboard() {
       functionName: "deposit",
       args: [value, (preview[2] * 99n) / 100n, deadline],
     });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
     await refresh();
     setMessage(
       `Purchase complete. You bought approximately ${money(preview[2])} MDBS, backed by your proportional share of the basket.`,
@@ -456,7 +472,10 @@ export function BrainDashboard() {
       functionName: "approve",
       args: [data.deployment.brain, cost],
     });
-    await publicClient.waitForTransactionReceipt({ hash: approve });
+    await publicClient.waitForTransactionReceipt({
+      hash: approve,
+      ...receiptWaitPolicy,
+    });
     const tx = await wallet.writeContract({
       address: data.deployment.brain,
       abi: brainAbi,
@@ -467,7 +486,10 @@ export function BrainDashboard() {
         BigInt(Math.floor(Date.now() / 1000) + 3600),
       ],
     });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
     await refresh();
     setMessage(`Brain piece ${piece.id} is now yours.`);
   }
@@ -480,7 +502,10 @@ export function BrainDashboard() {
       functionName: "setPreset",
       args: [BigInt(piece.id), value],
     });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
     await refresh();
     setMessage(
       `Piece ${piece.id} now sets ${piece.affinity} to ${piece.options[value].label}.`,
@@ -509,7 +534,10 @@ export function BrainDashboard() {
       functionName: "redeem",
       args: [shares, minimumNet, deadline],
     });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
     await refresh();
     setMessage(
       `Sale complete. You received approximately ${money(preview[2])} USDG for your MDBS.`,
@@ -531,7 +559,10 @@ export function BrainDashboard() {
       functionName: "claim",
       args: [pieceIds],
     });
-    await publicClient.waitForTransactionReceipt({ hash: tx });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
     await refresh();
     setMessage("Brain-owner rewards claimed to your development wallet.");
   }

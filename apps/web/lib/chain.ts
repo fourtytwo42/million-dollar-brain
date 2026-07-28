@@ -5,8 +5,9 @@ import {
   http,
   parseAbi,
   type Address,
+  type Hash,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { nonceManager, privateKeyToAccount } from "viem/accounts";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "./abi";
 import { brainDefinition } from "./brain-catalog";
 import { networkConfig, publicNetworkConfig, viemChain } from "./network";
@@ -48,7 +49,9 @@ const operatorPrivateKey =
 if (!operatorPrivateKey) {
   throw new Error(`MDB operator signer is required for ${networkConfig.mode}`);
 }
-export const admin = privateKeyToAccount(operatorPrivateKey as `0x${string}`);
+export const admin = privateKeyToAccount(operatorPrivateKey as `0x${string}`, {
+  nonceManager,
+});
 export const adminClient = createWalletClient({
   account: admin,
   chain,
@@ -58,6 +61,15 @@ export const adminClient = createWalletClient({
     timeout: 30_000,
   }),
 });
+export function waitForReliableTransactionReceipt(hash: Hash) {
+  return publicClient.waitForTransactionReceipt({
+    hash,
+    checkReplacement: false,
+    retryCount: 20,
+    retryDelay: 1_000,
+    timeout: 180_000,
+  });
+}
 export function deployment(): Deployment {
   return JSON.parse(
     readFileSync(/* turbopackIgnore: true */ deploymentFile, "utf8"),

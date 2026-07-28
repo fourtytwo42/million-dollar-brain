@@ -1,5 +1,10 @@
 import { keccak256, parseAbi, stringToHex, type Address } from "viem";
-import { adminClient, deployment, publicClient } from "./chain";
+import {
+  adminClient,
+  deployment,
+  publicClient,
+  waitForReliableTransactionReceipt,
+} from "./chain";
 import { coinbaseEthTicker } from "./market-sources";
 import { withDatabase } from "./persistence";
 import {
@@ -182,9 +187,7 @@ async function syncLocalMarketPricesUnlocked() {
             functionName: "setPrice",
             args: [candidate.token, candidate.priceWad],
           });
-          const receipt = await publicClient.waitForTransactionReceipt({
-            hash: oracleTxHash,
-          });
+          const receipt = await waitForReliableTransactionReceipt(oracleTxHash);
           verificationBlock = receipt.blockNumber;
         }
         try {
@@ -195,9 +198,8 @@ async function syncLocalMarketPricesUnlocked() {
               functionName: "setPrice",
               args: [candidate.token, candidate.priceWad],
             });
-            const receipt = await publicClient.waitForTransactionReceipt({
-              hash: routerTxHash,
-            });
+            const receipt =
+              await waitForReliableTransactionReceipt(routerTxHash);
             verificationBlock =
               verificationBlock === undefined ||
               receipt.blockNumber > verificationBlock
@@ -236,9 +238,7 @@ async function syncLocalMarketPricesUnlocked() {
               functionName: "setPrice",
               args: [candidate.token, oraclePrice[0]],
             });
-            await publicClient.waitForTransactionReceipt({
-              hash: oracleRollback,
-            });
+            await waitForReliableTransactionReceipt(oracleRollback);
           }
           if (routerTxHash) {
             const routerRollback = await adminClient.writeContract({
@@ -247,9 +247,7 @@ async function syncLocalMarketPricesUnlocked() {
               functionName: "setPrice",
               args: [candidate.token, routerPrice],
             });
-            await publicClient.waitForTransactionReceipt({
-              hash: routerRollback,
-            });
+            await waitForReliableTransactionReceipt(routerRollback);
           }
           throw error;
         }

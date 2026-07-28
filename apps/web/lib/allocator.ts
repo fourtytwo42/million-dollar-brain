@@ -2,7 +2,13 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { keccak256, stringToHex } from "viem";
 import { basketAbi } from "./abi";
 import { withAdminTransactionLock } from "./admin-transaction-lock";
-import { adminClient, dashboard, deployment, publicClient } from "./chain";
+import {
+  adminClient,
+  dashboard,
+  deployment,
+  publicClient,
+  waitForReliableTransactionReceipt,
+} from "./chain";
 import { buildDecisionContext } from "./decision-context";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
 import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
@@ -245,7 +251,7 @@ export async function runCycle() {
   const memeRecap = generateMemeRecap(brain, decision.allocation);
   let hash: `0x${string}` | null = null;
   let receipt: Awaited<
-    ReturnType<typeof publicClient.waitForTransactionReceipt>
+    ReturnType<typeof waitForReliableTransactionReceipt>
   > | null = null;
   if (decision.source === "ai") {
     const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
@@ -262,9 +268,7 @@ export async function runCycle() {
       });
       return {
         hash: transactionHash,
-        receipt: await publicClient.waitForTransactionReceipt({
-          hash: transactionHash,
-        }),
+        receipt: await waitForReliableTransactionReceipt(transactionHash),
       };
     }));
   }
