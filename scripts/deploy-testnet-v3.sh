@@ -44,7 +44,7 @@ head_sha="$(git rev-parse HEAD)"
 
 deployer="$(cast wallet address --keystore "$MDB_OPERATOR_KEYSTORE" \
   --password-file "$MDB_OPERATOR_PASSWORD_FILE")"
-[[ "${MDB_DEPLOYER_ADDRESS:-}" == "$deployer" ]] || {
+[[ -z "${MDB_DEPLOYER_ADDRESS:-}" || "$MDB_DEPLOYER_ADDRESS" == "$deployer" ]] || {
   echo "Configured deployer does not match the encrypted keystore." >&2
   exit 1
 }
