@@ -643,6 +643,14 @@ build`; authenticated live `/api/collect-market`.
 - Result: Actor keys are derived only from the server-side endurance secret and are never returned or stored. The endpoint returns public actor addresses and transaction evidence. Real WalletConnect approval remains a human-wallet certification step; protocol behavior uses real chain-46630 transactions.
 - Follow-up: Complete the active two-hour run and audit its checkpoint ledger for all scenario classes.
 
+### 2026-07-28 - First Multi-user Rehearsal Findings
+
+- Context: The first live multi-user run exposed a missing `transfer` entry in the shared browser/server ERC-20 ABI, then showed the endurance assertion incorrectly treated every deterministic AI fallback as an application failure.
+- Decision: Added the standard ERC-20 transfer ABI. Endurance now accepts a documented deterministic hold only when a successful AI cycle also exists within the 95-minute freshness window; this preserves fail-closed model validation without disguising prolonged AI failure.
+- Commands/tests: Scenario 9 completed an initial brain purchase, preset change, 250 USDG MDBS buy, 10% atomic sale, reward claim, and rejected oversized exit. Concurrent scenarios 10 and 11 completed 500/1000 USDG buys, 25%/50% atomic sales, an initial brain purchase, a 120% resale, preset changes, claims, and rejected oversized exits across three distinct addresses.
+- Result: All real chain-46630 user transactions and invariants passed. The latest model response was rejected because its weights did not total 10,000; the protocol held safely. A previous successful Ornith allocation remained within the 95-minute operational window.
+- Follow-up: Resume checkpoint 3 with the corrected assertion and retain the original failed checkpoint as regression evidence.
+
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
 - Context: The fresh chain-46630 replica stack requires every user buy, user sell, and autonomous rebalance to use the same signed `SwapPlan[]` interface.

@@ -114,14 +114,34 @@ async function getHealthyStatus(page) {
       assert.ok(BigInt(status.nav) > 0n);
       assert.ok(BigInt(status.navPerShare) > 0n);
       assert.ok(status.latestCycle);
-      assert.equal(status.latestCycle.source, "ai");
+      assert.ok(
+        status.latestCycle.source === "ai" ||
+          status.latestCycle.source === "fallback",
+        `unsupported cycle source: ${status.latestCycle.source}`,
+      );
+      if (status.latestCycle.source === "fallback") {
+        assert.match(
+          status.latestCycle.rationale,
+          /^Deterministic hold:/,
+          "fallback cycle must explain the deterministic rejection",
+        );
+      }
       assert.equal(
         status.latestCycle.decisionContext.mode,
         "robinhood_testnet_replica",
       );
+      const recentCycles = [
+        status.latestCycle,
+        ...(status.latestCycle.decisionContext.recentCycles ?? []),
+      ];
+      const recentAiCycle = recentCycles.find(
+        (cycle) =>
+          cycle.source === "ai" &&
+          Date.now() - Date.parse(cycle.at) < 95 * 60 * 1000,
+      );
       assert.ok(
-        Date.now() - Date.parse(status.latestCycle.at) < 95 * 60 * 1000,
-        "latest autonomous cycle is older than 95 minutes",
+        recentAiCycle,
+        "no successful autonomous AI cycle was recorded in the last 95 minutes",
       );
       return status;
     } catch (error) {
