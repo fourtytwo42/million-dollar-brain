@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(diname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
 manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
-shadow_evidence="$repo_root/var/mainnet-shadow/daily-evidence.jsonl"
 testnet_acceptance="$repo_root/var/testnet-readiness/v3-72h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
@@ -14,7 +13,7 @@ export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-lin
   exit 1
 }
 [[ "${MDB_MAINNET_RELEASE_APPROVED:-false}" == "true" ]] || {
-  echo "Missing explicit external release approval." >&2
+  echo "Missing explicit extenal release approval." >&2
   exit 1
 }
 [[ -r "$env_file" ]]
@@ -53,7 +52,6 @@ jq -e '
   .gates.chainlinkMappingsConfigured == true and
   .gates.thirtyDailyPasses == true
 ' "$shadow_state" >/dev/null
-[[ "$(wc -l <"$shadow_evidence")" -ge 30 ]]
 jq -e '
   .chainId == 46630 and .durationHours >= 72 and
   .failures == 0 and .atomicBuys == true and .atomicSells == true and

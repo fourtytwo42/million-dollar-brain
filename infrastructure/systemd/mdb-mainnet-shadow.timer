@@ -1,9 +1,9 @@
 [Unit]
-Description=Run MillionDollar Brain mainnet shadow hourly
+Description=Run MillionDollar Brain mainnet shadow at minute 47 each hou
 
 [Timer]
-OnCalendar=hourly
-RandomizedDelaySec=5m
+OnCalendar=*-*-* *:47:00
+AccuracySec=1s
 Persistent=true
 Unit=mdb-mainnet-shadow.service
 

@@ -1,10 +1,10 @@
 [Unit]
-Description=MillionDollar Brain ten-hour Robinhood Testnet endurance run
+Description=MillionDollar Brain 72-hour Robinhood Testnet V3 endurance run
 After=network-online.target mdb-web-testnet.service
 Wants=network-online.target
 Requires=mdb-web-testnet.service
-ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet.json
-ConditionPathExists=/home/hendo420/projects/million-dollar-brain/var/testnet-endurance/armed
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet-v3.json
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/var/testnet-v3-endurance/armed
 
 [Service]
 Type=simple
@@ -12,12 +12,13 @@ User=hendo420
 Group=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
 Environment=HOME=/home/hendo420
-Environment=PATH=/home/hendo420/.local/node/bin:/usr/bin:/bin
+EnvironmentFile=/etc/mdb/testnet.env
+Environment=PATH=/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin
 Environment=MDB_ENDURANCE_URL=http://127.0.0.1:3001
-Environment=MDB_ENDURANCE_DURATION_MS=36000000
+Environment=MDB_ENDURANCE_DURATION_MS=259200000
 Environment=MDB_ENDURANCE_INTERVAL_MS=1200000
-Environment=MDB_ENDURANCE_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var/testnet-endurance
-ExecStart=/home/hendo420/.local/node/bin/node tests/endurance-testnet.mjs
+Environment=MDB_ENDURANCE_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var/testnet-v3-endurance
+ExecStart=/home/hendo420/.local/node-v24.18.0-linux-x64/bin/node tests/endurance-testnet.mjs
 Restart=on-failure
 RestartSec=30
 TimeoutStopSec=20

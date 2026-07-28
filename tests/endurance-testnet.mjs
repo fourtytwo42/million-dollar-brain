@@ -15,7 +15,7 @@ import { privateKeyToAccount } from "viem/accounts";
 const execFileAsync = promisify(execFile);
 const baseUrl = process.env.MDB_ENDURANCE_URL ?? "http://127.0.0.1:3001";
 const durationMs = Number(
-  process.env.MDB_ENDURANCE_DURATION_MS ?? 10 * 60 * 60 * 1000,
+  process.env.MDB_ENDURANCE_DURATION_MS ?? 72 * 60 * 60 * 1000,
 );
 const intervalMs = Number(
   process.env.MDB_ENDURANCE_INTERVAL_MS ?? 20 * 60 * 1000,
@@ -27,7 +27,7 @@ const faucetCooldownBufferMs = Number(
   process.env.MDB_ENDURANCE_FAUCET_COOLDOWN_BUFFER_MS ?? 5_000,
 );
 const stateDirectory =
-  process.env.MDB_ENDURANCE_STATE_DIR ?? "var/testnet-endurance";
+  process.env.MDB_ENDURANCE_STATE_DIR ?? "var/testnet-v3-endurance";
 const singleCheckpoint = process.env.MDB_ENDURANCE_SINGLE_CHECKPOINT === "true";
 const statePath = `${stateDirectory}/state.json`;
 const checkpointPath = `${stateDirectory}/checkpoints.jsonl`;
@@ -118,7 +118,7 @@ async function getHealthyStatus(page) {
       assert.equal(status.latestCycle.source, "ai");
       assert.equal(
         status.latestCycle.decisionContext.mode,
-        "robinhood_testnet_mock",
+        "robinhood_testnet_replica",
       );
       assert.ok(
         Date.now() - Date.parse(status.latestCycle.at) < 95 * 60 * 1000,
@@ -131,6 +131,32 @@ async function getHealthyStatus(page) {
     }
   }
   throw lastError;
+}
+
+async function runAcceptance(page) {
+  const token = process.env.MDB_CYCLE_TOKEN;
+  assert.ok(token, "MDB_CYCLE_TOKEN is unavailable to the endurance runner");
+  const response = await page.request.post(
+    `${baseUrl}/api/testnet-acceptance`,
+    {
+      headers: { "x-mdb-cycle-token": token },
+      timeout: 180_000,
+    },
+  );
+  const body = await response.json();
+  assert.equal(
+    response.ok(),
+    true,
+    `testnet acceptance returned HTTP ${response.status()}: ${JSON.stringify(body)}`,
+  );
+  assert.equal(body.ok, true);
+  assert.equal(body.assertions?.noQueuedSale, true);
+  assert.equal(body.assertions?.oracleFresh, true);
+  assert.ok(body.transactions?.buy);
+  assert.ok(body.transactions?.sell);
+  assert.ok(body.transactions?.preset);
+  assert.ok(body.transactions?.claim);
+  return body;
 }
 
 async function verifyServices() {
@@ -303,7 +329,7 @@ async function verifyUi(page, checkpoint) {
     })
     .waitFor({ state: "visible", timeout: 30_000 });
   assert.ok((await page.getByTestId("decision-history-item").count()) > 0);
-  await page.getByText("Data behind this decision").waitFor({
+  await page.getByText("Market data and pricing", { exact: true }).waitFor({
     state: "visible",
     timeout: 30_000,
   });
@@ -342,12 +368,7 @@ async function runCheckpoint(
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  const funding = shouldFund
-    ? await fundWallet(page, fundingNotBefore)
-    : { skipped: true };
-  const brain = await buyBrainPieceAndSetPreset(page, checkpoint, statusBefore);
-  const basket = await buyAndSellMdbs(page, checkpoint);
-  const rewards = await claimRewards(page);
+  const acceptance = await runAcceptance(page);
   await verifyUi(page, checkpoint);
 
   const statusAfter = await getHealthyStatus(page);
@@ -359,7 +380,7 @@ async function runCheckpoint(
   assert.equal(pricedNav, BigInt(statusAfter.nav));
   assert.equal(browserErrors.length, 0, browserErrors.join(" | "));
 
-  if (checkpoint === 0 || checkpoint === 15 || checkpoint === 30) {
+  if (checkpoint === 0 || checkpoint === 108 || checkpoint === 216) {
     await page.screenshot({
       path: `${stateDirectory}/checkpoint-${String(checkpoint).padStart(2, "0")}.png`,
       fullPage: true,
@@ -380,7 +401,7 @@ async function runCheckpoint(
     latestCycleAt: statusAfter.latestCycle.at,
     latestCycleTxHash: statusAfter.latestCycle.txHash,
     services: servicesBefore,
-    actions: { funding, brain, basket, rewards },
+    actions: acceptance,
     browserErrors: [...browserErrors],
   };
 }
@@ -419,11 +440,6 @@ try {
       state.lastCheckpoint = result;
       state.lastFailure = null;
       state.fundNextCheckpoint = false;
-      if (result.actions.funding.completed) {
-        state.nextFundingCheckpoint = checkpoint + 3;
-        state.nextFundingAt =
-          Date.now() + faucetCooldownMs + faucetCooldownBufferMs;
-      }
       state.nextCheckpointAt =
         state.startedAt + state.completedCheckpoints * state.intervalMs;
       state.failureAt = null;
@@ -463,12 +479,18 @@ try {
   state.completedAt = Date.now();
   await atomicJson(statePath, state);
   await atomicJson(summaryPath, {
+    chainId: 46630,
     status: "completed",
     startedAt: new Date(state.startedAt).toISOString(),
     completedAt: new Date(state.completedAt).toISOString(),
     activeDurationMs: state.completedAt - state.startedAt,
+    durationHours: (state.completedAt - state.startedAt) / 3_600_000,
     completedCheckpoints: state.completedCheckpoints,
+    failures: state.failedAttempts,
     failedAttempts: state.failedAttempts,
+    atomicBuys: Boolean(state.lastCheckpoint?.actions?.transactions?.buy),
+    atomicSells: Boolean(state.lastCheckpoint?.actions?.transactions?.sell),
+    autonomousCycles: Boolean(state.lastCheckpoint?.latestCycleTxHash),
     lastCheckpoint: state.lastCheckpoint,
   });
   await unlink(armedPath).catch(() => {});

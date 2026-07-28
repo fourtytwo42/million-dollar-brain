@@ -14,6 +14,7 @@ const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_ASSETS = "https://api.robinhood.com/rhj/assets";
 const ROBINHOOD_PRICE = "https://api.robinhood.com/rhj/prices";
 const ZERO_EX_QUOTE = "https://api.0x.org/swap/allowance-holder/quote";
+const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
 const repoRoot = resolve(import.meta.dirname, "..");
@@ -68,56 +69,77 @@ async function json(url, init) {
   return JSON.parse(text);
 }
 
-async function inspectToken(asset) {
-  const code = await client.getCode({ address: asset.address });
-  const result = {
+async function inspectTokens(assets) {
+  const rows = assets.map((asset) => ({
     ...asset,
-    codePresent: Boolean(code && code !== "0x"),
+    codePresent: false,
     decimals: null,
     onchainUid: null,
     oraclePaused: null,
     errors: [],
-  };
-  if (!result.codePresent) {
-    result.errors.push("no runtime code");
-    return result;
-  }
-  try {
-    result.decimals = Number(
-      await client.readContract({
+  }));
+  const calls = [];
+  for (const [index, asset] of assets.entries()) {
+    calls.push({
+      index,
+      field: "decimals",
+      contract: {
         address: asset.address,
         abi: tokenAbi,
         functionName: "decimals",
-      }),
-    );
-  } catch {
-    result.errors.push("decimals unavailable");
-  }
-  if (asset.uid) {
-    try {
-      result.onchainUid = await client.readContract({
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "uid",
+      },
+    });
+    if (asset.uid) {
+      calls.push({
+        index,
+        field: "uid",
+        contract: {
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "uid",
+        },
       });
-      if (result.onchainUid.toLowerCase() !== asset.uid.toLowerCase()) {
-        result.errors.push("uid mismatch");
+      calls.push({
+        index,
+        field: "oraclePaused",
+        contract: {
+          address: asset.address,
+          abi: tokenAbi,
+          functionName: "oraclePaused",
+        },
+      });
+    }
+  }
+  const results = await client.multicall({
+    allowFailure: true,
+    batchSize: 100_000,
+    contracts: calls.map((call) => call.contract),
+    multicallAddress: MULTICALL3,
+  });
+  for (const [callIndex, call] of calls.entries()) {
+    const result = results[callIndex];
+    const row = rows[call.index];
+    if (result.status === "failure") {
+      row.errors.push(`${call.field} unavailable`);
+      continue;
+    }
+    row.codePresent = true;
+    if (call.field === "decimals") {
+      row.decimals = Number(result.result);
+    } else if (call.field === "uid") {
+      row.onchainUid = result.result;
+      if (row.onchainUid.toLowerCase() !== row.uid.toLowerCase()) {
+        row.errors.push("uid mismatch");
       }
-    } catch {
-      result.errors.push("uid unavailable");
-    }
-    try {
-      result.oraclePaused = await client.readContract({
-        address: asset.address,
-        abi: tokenAbi,
-        functionName: "oraclePaused",
-      });
-      if (result.oraclePaused) result.errors.push("oracle paused");
-    } catch {
-      result.errors.push("oraclePaused unavailable");
+    } else {
+      row.oraclePaused = result.result;
+      if (row.oraclePaused) row.errors.push("oracle paused");
     }
   }
-  return result;
+  for (const row of rows) {
+    if (!row.codePresent) row.errors.unshift("no callable runtime code");
+  }
+  return rows;
 }
 
 async function quotePair(asset, direction, priceUsd) {
@@ -320,7 +342,7 @@ const canonicalAssets = [
   },
   ...stockAssets,
 ];
-const inspected = await parallelMap(canonicalAssets, 6, inspectToken);
+const inspected = await inspectTokens(canonicalAssets);
 const nominated = new Set(
   (process.env.MDB_MAINNET_SHADOW_SYMBOLS ?? "AAPL,NVDA,MSFT,SPY,QQQ,SOXX,WETH")
     .split(",")
