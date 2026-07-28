@@ -4,22 +4,23 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Prepare parallel Robinhood Testnet readiness without
-  broadcasting, add real-wallet support, and preserve the built-in disposable
-  test wallet.
-- Last meaningful change: Runtime network configuration, RainbowKit/wagmi
-  wallet support, encrypted testnet signer, isolated chain-46630 rehearsal,
-  separate native systemd environments, and no-broadcast release tooling are
-  implemented. Testnet uses Robinhood's official public RPC for both server and
-  browser traffic.
-- Next step: Fund the testnet operator and obtain explicit authorization only
-  when the user is ready to broadcast. Do not deploy from the current task.
+- Current task: Public Robinhood Testnet activation is complete.
+- Last meaningful change: The complete mock protocol is deployed on chain
+  46630, the isolated testnet app is live on port 3001, official-price
+  collection and hourly Ornith cycles are enabled, and disposable plus
+  WalletConnect wallet flows passed live browser UAT.
+- Next step: Monitor public-RPC reliability and operator gas. Use a stable
+  domain when external mobile-wallet certification is desired.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
 
 - MillionDollar Brain is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
+- A parallel valueless mock deployment is live on Robinhood Testnet chain
+  `46630`. The testnet app runs on port `3001` while local Anvil remains on
+  `3000`; their databases, state, manifests, timers, and wallet sessions are
+  isolated.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
@@ -61,6 +62,11 @@ When sources conflict, use this order:
 - GPU45 model appliance: `192.168.50.189`; primary live model ID `ornith-1.0-35b-Q5_K_M-688b8d0a`.
 - Development is native on the VM with no Docker. Foundry/Anvil, Node.js 24, PostgreSQL, Caddy, and `systemd` are the locked runtime direction.
 - `cloudflared` 2026.7.3 is installed from Cloudflare's official amd64 package. `mdb-cloudflared.service` runs a temporary Quick Tunnel to `http://127.0.0.1:3000`; the random `trycloudflare.com` hostname is read from its journal and may change after tunnel recreation.
+- Robinhood Testnet uses the official public RPC
+  `https://rpc.testnet.chain.robinhood.com` for both server and browser
+  traffic. `mdb-web-testnet.service` serves port `3001`;
+  `mdb-market-collector-testnet.timer` and `mdb-cycle-testnet.timer` are
+  enabled. Last verified 2026-07-27.
 
 ## Project Map
 
@@ -124,6 +130,27 @@ When sources conflict, use this order:
 - 2026-07-27: Upgraded the live BasketVault UUPS proxy to atomic-only MDBS sales in transaction `0xaabb1430a26488e22473497b4709cad695078ccb6170751463748b5d31d19c37`. Pre/post state matched exactly: NAV `24588033990218702047742`, supply `24588033990218702085339`, NAV/share `999999999999999998`, and queue counters both `25`, proving no outstanding request. The old request entry point now reverts with `queued exits disabled`. Sixteen Foundry tests plus 256 fuzz runs, Prettier, production build, full Chromium economic/autonomous UAT, and final in-app-browser inspection pass. The live Sell panel shows 25%, 50%, 75%, and Max, explains atomic settlement in collapsed details, and exposes no queue state. A refresh-message race found by UAT was also fixed so successful buy/sell receipts remain visible.
 - 2026-07-27: Replaced Basket's horizontal holdings bars with an accessible value-weighted donut chart. The chart includes only positively held assets and uses distinct light/dark palette slices; its adjacent legend preserves exact current weight, USD value, and latest Ornith target, and stacks below the chart on mobile. Prettier, production build, full Chromium economic/autonomous UAT, positive-only slice assertions, and live in-app-browser light/dark visual review pass.
 - 2026-07-27: Replaced Basket's reference-only and raw observation-count cards with MDBS price history, time-weighted returns, total/realized/unrealized P&L, and cash-flow separation. The Decisions audit panel now owns official source, current on-chain price, and coverage details. The chain-31337 collector synchronizes and verifies matching mock oracle/router prices from Robinhood AAPL/NVDA and Coinbase ETH-USD. Live proof kept supply at `26667033990218702090051`, moved NAV/share from `999999999999999998` to `996709512611462297`, and produced non-zero P&L. Seven market tests, four context tests, two display tests, sixteen Foundry tests plus 256 fuzz runs, Prettier, production build, complete Chromium economic/autonomous UAT, and final in-app-browser review pass.
+- 2026-07-27: Deployed the complete valueless mock stack to Robinhood Testnet
+  chain `46630`. All ten manifest addresses have runtime code and the oracle
+  has automatic freshness disabled. One underestimated oracle-configuration
+  transaction ran out of gas; the single missing call was repaired in
+  transaction
+  `0x720cdc31e76324a04a66ce17db2501873a3f196265f5e8b98a36445d2d542389`,
+  and future broadcasts use a 150% gas-estimation multiplier.
+- 2026-07-27: Live testnet UAT funded a session wallet, bought 1,000 USDG of
+  MDBS into an exact 20/30/25/25 pool, sold 25% atomically with no queued
+  request, purchased piece 42, selected `Macro Feast`, accrued and claimed
+  brain-owner fees, and rendered a WalletConnect QR. Operator transactions are
+  serialized to prevent nonce races, failed faucet attempts refund their rate
+  reservation, and the collector can recover stale prices.
+- 2026-07-27: The final corrected Ornith cycle recorded
+  `mode: "robinhood_testnet_mock"`, `source: "ai"`, fresh required inputs, and
+  executed 20% USDG, 30% NVDA, 25% AAPL, and 25% ETHX in transaction
+  `0x88438880a7d00ee673a7ab32a155575ea0d35264907112eaa4681d34893c548f`.
+  Decisions shows both testnet cycles and their execution evidence. Sixteen
+  Foundry tests, all focused TypeScript suites, full Prettier, production
+  build, live local/testnet status, WalletConnect QR, and zero browser console
+  errors passed.
 
 ## Decisions
 
@@ -363,26 +390,20 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
-- 2026-07-27: MDB testnet uses
-  `https://rpc.testnet.chain.robinhood.com` for both server and browser traffic
-  until an observed rate limit justifies another provider. The shared Robyn RPC
-  node remains Robyn-only; `.135` is blocked and `.250` was reverified on chain
-  `46630`.
+- 2026-07-27: MDB testnet uses the official public RPC until an observed rate
+  limit justifies another provider. The shared Robyn RPC remains untouched and
+  Robyn-only.
 - 2026-07-27: Real-wallet support now uses pinned RainbowKit, wagmi, TanStack
   Query, viem, and MDB Reown project ID
   `5a4c41c8c461ca59724069d740760a2f`. External wallets take precedence over a
   session-scoped disposable test wallet. Mainnet policy disables built-in
   wallets and faucets. The MDB-specific encrypted testnet signer public address
   is `0x4365543D9e895bb48835CEcedf0903E8770A3A63`; its secret material is stored
-  outside the repository. Testnet systemd units and database are separate and
-  disabled until a verified public deployment manifest exists.
-- 2026-07-27: The isolated chain-46630 rehearsal deployed the complete mock
-  stack, disabled automatic oracle freshness, minted proportional MDBS shares,
-  redeemed atomically with no queued state, and failed closed on a stale
-  required price. It recorded `broadcastPerformed: false`. Release scripts
-  require the official public RPC, clean pushed source, encrypted signer,
-  funded balance, and explicit `MDB_TESTNET_BROADCAST=true`; no public-testnet
-  broadcast is authorized.
+  outside the repository. Testnet systemd units, database, state, and deployment
+  manifest are active and separate from local.
+- 2026-07-27: The public chain-46630 deployment is mock-only and valueless.
+  Testnet services are active. A further public deployment or any real-value
+  activation requires a new explicit authorization.
 - 2026-07-27: Final local Chromium UAT passed the full economic, autonomous,
   responsive, and dark-mode flow. In-app Browser UAT verified the session-only
   disposable wallet, EIP-6963/RainbowKit wallet list, WalletConnect QR,
@@ -407,7 +428,9 @@ build`; authenticated live `/api/collect-market`.
 - Read `AGENTS.md` and `MEMORY.md` before making future changes in this workspace.
 - Update `MEMORY.md` after durable discoveries, decisions, fixes, verification results, blocked work, and handoffs.
 - Never store secrets, tokens, passwords, private keys, or sensitive personal data in `MEMORY.md`.
-- Local implementation and simulated transactions are authorized; do not deploy publicly or activate real funds without explicit authorization and all release gates.
+- Local and the current mock Robinhood Testnet deployment are authorized. Do
+  not perform another public deployment or activate real funds without explicit
+  authorization and all release gates.
 - The AI may propose allocations, but deterministic code must constrain and execute them.
 - Never allow the agent to trade arbitrary discovered contracts.
 - All protocol contracts are upgradeable.
