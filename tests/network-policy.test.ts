@@ -138,6 +138,10 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
     "utf8",
   );
   const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
+  const enduranceUnit = readFileSync(
+    "infrastructure/systemd/mdb-endurance-testnet.service",
+    "utf8",
+  );
   assert.match(faucet, /"250000000000000"/);
   assert.match(faucet, /"3000000000000000"/);
   assert.match(endurance, /process\.env\.MDB_CYCLE_TOKEN/);
@@ -151,6 +155,9 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.match(acceptance, /networkConfig\.mode !== "testnet"/);
   assert.match(acceptance, /functionName: "redeemWithPlan"/);
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
+  assert.match(endurance, /2 \* 60 \* 60 \* 1000/);
+  assert.match(endurance, /existing\.startedAt \+ durationMs/);
+  assert.match(enduranceUnit, /MDB_ENDURANCE_DURATION_MS=7200000/);
 });
 
 test("test-only wallet controls are visible locally but hidden on testnet", () => {

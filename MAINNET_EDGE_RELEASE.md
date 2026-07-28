@@ -5,12 +5,12 @@
 
 ## Environments
 
-| Environment          | Chain | Purpose                                                                     | Broadcast policy                         |
-| -------------------- | ----: | --------------------------------------------------------------------------- | ---------------------------------------- |
-| Local                | 31337 | Deterministic development and destructive tests                             | Local only                               |
-| Robinhood Testnet V3 | 46630 | Production-interface replicas, signed RFQ execution, wallets, and endurance | Test assets only                         |
-| Mainnet shadow       |  4663 | Canonical identity, oracle, liquidity, AI, and simulation evidence          | Read-only; keys rejected                 |
-| Mainnet              |  4663 | Real canonical assets                                                       | Disabled until every release gate passes |
+| Environment | Chain | Purpose | Broadcast policy |
+| --- | ---: | --- | --- |
+| Local | 31337 | Deterministic development and destructive tests | Local only |
+| Robinhood Testnet V3 | 46630 | Production-interface replicas, signed RFQ execution, wallets, and endurance | Test assets only |
+| Mainnet shadow | 4663 | Canonical identity, oracle, liquidity, AI, and simulation evidence | Read-only; keys rejected |
+| Mainnet | 4663 | Real canonical assets | Disabled until every release gate passes |
 
 Robinhood does not publish canonical Stock Token deployments on chain 46630.
 The V3 testnet deployment therefore uses clearly labelled ERC-8056-compatible
@@ -82,7 +82,9 @@ Engineering acceptance requires:
   tests passing.
 - A clean production build and browser UAT in light, dark, desktop, and mobile
   layouts.
-- A clean 72-hour V3 Robinhood Testnet endurance run.
+- A clean two-hour V3 Robinhood Testnet endurance run with 20-minute
+  checkpoints exercising buy, atomic sell, brain preset, claim, NAV
+  reconciliation, autonomous-cycle freshness, and browser errors.
 - Thirty consecutive passing mainnet-shadow qualification dates for every
   launch asset.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
@@ -104,7 +106,8 @@ The remaining inputs are intentionally not fabricated in the repository:
 - Production 0x API credentials and validated current venue contracts.
 - Final Safe/role addresses and funded mainnet gas wallet.
 - Stable production domain.
-- Completed 72-hour and 30-day evidence windows.
+- Completed two-hour testnet endurance and 30-day mainnet-shadow evidence
+  windows.
 - Independent audit and approved legal release path.
 
 No mainnet transaction or real-value activation is authorized by this

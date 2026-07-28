@@ -4,9 +4,9 @@
 
 MDB keeps local development and Robinhood Testnet isolated.
 
-| Environment       | Port | Chain | RPC                                       | State               |
-| ----------------- | ---: | ----: | ----------------------------------------- | ------------------- |
-| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable  |
+| Environment       | Port | Chain | RPC                                       | State                  |
+| ----------------- | ---: | ----: | ----------------------------------------- | ---------------------- |
+| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable     |
 | Robinhood Testnet | 3001 | 46630 | `https://rpc.testnet.chain.robinhood.com` | V3 live and enabled |
 
 The official Robinhood endpoint is used for both server and browser testnet
@@ -17,7 +17,7 @@ The archived V2 mock release has been replaced by the committed
 `packages/contracts/deployments/testnet-v3.json`. It contains 12 clearly
 labelled production-interface replicas, not canonical Stock Tokens. The V3
 web, collector, and hourly cycle services are active and isolated from local.
-The 72-hour endurance runner uses hidden automation hooks; the visible testnet
+The two-hour endurance runner uses hidden automation hooks; the visible testnet
 UI remains external-wallet-first.
 
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)

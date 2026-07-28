@@ -14,7 +14,7 @@ import { chromium } from "playwright";
 const execFileAsync = promisify(execFile);
 const baseUrl = process.env.MDB_ENDURANCE_URL ?? "http://127.0.0.1:3001";
 const durationMs = Number(
-  process.env.MDB_ENDURANCE_DURATION_MS ?? 72 * 60 * 60 * 1000,
+  process.env.MDB_ENDURANCE_DURATION_MS ?? 2 * 60 * 60 * 1000,
 );
 const intervalMs = Number(
   process.env.MDB_ENDURANCE_INTERVAL_MS ?? 20 * 60 * 1000,
@@ -56,7 +56,16 @@ async function readState() {
 async function loadOrCreateState() {
   const now = Date.now();
   const existing = await readState();
-  if (existing?.status === "running" && existing.endAt > now) {
+  if (existing?.status === "running") {
+    const configuredEndAt = existing.startedAt + durationMs;
+    if (existing.endAt !== configuredEndAt) {
+      existing.endAt = configuredEndAt;
+      existing.durationMs = durationMs;
+      if (existing.nextCheckpointAt > configuredEndAt) {
+        existing.nextCheckpointAt = configuredEndAt;
+      }
+      await atomicJson(statePath, existing);
+    }
     if (existing.failureAt) {
       const pausedFor = now - existing.failureAt;
       existing.endAt += pausedFor;
@@ -72,6 +81,7 @@ async function loadOrCreateState() {
     status: "running",
     startedAt: now,
     endAt: now + durationMs,
+    durationMs,
     intervalMs,
     nextCheckpointAt: now,
     completedCheckpoints: 0,

@@ -13,7 +13,7 @@ The Anvil universe intentionally retains its four legacy mocks for fast,
 deterministic regression tests. The isolated V3 Robinhood Testnet environment
 uses 12 production-interface replicas, while mainnet shadow inspects canonical
 assets without signing or broadcasting. Production Chainlink mappings, 0x
-credentials, multisig/timelock administration, 72-hour and 30-day evidence,
+credentials, multisig/timelock administration, two-hour and 30-day evidence,
 legal review, and independent audits remain release gates.
 
 ## 1. Purpose

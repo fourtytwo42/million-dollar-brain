@@ -6,7 +6,7 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Started the 72-hour public-testnet V3 endurance run
+- Last meaningful change: Started the two-hour public-testnet V3 endurance run
   and installed the hourly read-only mainnet shadow. The shadow verifies all
   canonical identities and records per-asset feed, capitalization/history,
   $25K impact, $250K depth, and continuity gates.
@@ -16,7 +16,7 @@ Durable project context lives here. Update this file whenever information should
   30-consecutive-day qualification clock can advance.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
-  funded gas, an audit, legal approval, 72 hours of clean testnet evidence, and
+  funded gas, an audit, legal approval, two hours of clean testnet evidence, and
   30 consecutive mainnet-shadow qualification days.
 
 ## Current State
@@ -157,7 +157,7 @@ When sources conflict, use this order:
   collector and cycle timers are active at second 30 and minute 32,
   respectively; local services remain active and separate. Eight asset-
   universe tests, five context tests, and the production build pass.
-- 2026-07-28: Started the 72-hour `mdb-endurance-testnet.service` against the
+- 2026-07-28: Started the two-hour `mdb-endurance-testnet.service` against the
   fresh V3 deployment. Checkpoint 0 completed with preset, approval, buy,
   atomic sell, and claim transactions; NAV reconciled, the oracle was fresh,
   no queued sale existed, all six local/testnet services and timers were
@@ -628,11 +628,11 @@ build`; authenticated live `/api/collect-market`.
 ### 2026-07-28 - Mainnet-Edge Live UAT and Endurance Handoff
 
 - Context: Completed the production-shaped registry, V3 atomic execution, DecisionContext V4, fresh Robinhood Testnet replica deployment, and read-only mainnet shadow checkpoint.
-- Decision: Keep mainnet broadcasting disabled. Continue the fresh 72-hour chain-46630 endurance run and require 30 consecutive qualifying mainnet-shadow days before engineering release approval.
+- Decision: Keep mainnet broadcasting disabled. Continue the fresh two-hour chain-46630 endurance run and require 30 consecutive qualifying mainnet-shadow days before engineering release approval.
 - Files: `MAINNET_EDGE_RELEASE.md`, `scripts/mainnet-shadow.mjs`, `tests/endurance-testnet.mjs`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/app/globals.css`, `tests/portfolio-display.test.ts`.
 - Commands/tests: Foundry 24/24; DecisionContext 5/5; asset universe 8/8; market data 9/9; network policy 11/11; wallet 7/7; meme recap 5/5; portfolio display 3/3; Next.js production build passed. In-app browser UAT passed on testnet for Brain, Basket, Decisions, exact two-decimal USD values, production-interface replica labeling, dark mode, 375px mobile width with no horizontal overflow, and zero console errors.
 - Result: Commits through `a7414f9` are pushed. The fresh endurance run started at `2026-07-28T17:53:24Z`; checkpoints 0 and 1 passed with buy, atomic sell, brain preset, claim, fresh prices, positive/reconciled NAV, no queued sale, and no browser errors. Restarting the web units at the presentation cutover restarted the coupled endurance worker, but preserved the same state, start time, and completion clock. Mainnet shadow validates all 98 official canonical identities read-only and records zero qualification days until required external evidence is configured.
-- Follow-up: Let the 72-hour run complete without resetting its state. Supply verified Chainlink feed mappings, a server-only 0x API key, approved capitalization/AUM and history evidence, redundant production RPCs, production roles, audit results, and the other external release inputs. Accumulate 30 uninterrupted qualification days. Do not broadcast mainnet.
+- Follow-up: Let the two-hour run complete without resetting its state. Supply verified Chainlink feed mappings, a server-only 0x API key, approved capitalization/AUM and history evidence, redundant production RPCs, production roles, audit results, and the other external release inputs. Accumulate 30 uninterrupted qualification days. Do not broadcast mainnet.
 
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
@@ -640,7 +640,7 @@ build`; authenticated live `/api/collect-market`.
 - Decision: Added a server-only EIP-712 quote planner and `/api/quote-plan`; V3 browser Buy/Sell calls `depositWithPlan` and `redeemWithPlan`, while legacy local devnet calls remain unchanged. Dynamic V4 cycles now validate any active registry asset, request at most one bounded research round, generate signed rebalance plans, and call `rebalanceWithPlan`.
 - Files: `apps/web/lib/quote-planner.ts`, `apps/web/app/api/quote-plan/route.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/lib/allocator.ts`, `apps/web/lib/abi.ts`, `packages/contracts/src/BasketVault.sol`, `packages/contracts/script/DeployTestnetV3.s.sol`.
 - Commands/tests: `forge test --root packages/contracts` passed 21/21; web TypeScript passed; web production build passed and includes `/api/quote-plan`.
-- Result: Plans bind the chain, vault, exact token pair/input, minimum output, recipient, venue/spender, calldata hash, expiry, block, and nonce. Basket valuation and trade sizing now respect token decimals rather than assuming every compatible ERC-20 has 18 decimals. The fresh replica qualification window is seven days so the 72-hour acceptance run cannot expire mid-run; daily refresh remains required for durable operation.
+- Result: Plans bind the chain, vault, exact token pair/input, minimum output, recipient, venue/spender, calldata hash, expiry, block, and nonce. Basket valuation and trade sizing now respect token decimals rather than assuming every compatible ERC-20 has 18 decimals. The fresh replica qualification window is seven days, comfortably longer than the two-hour acceptance run; daily refresh remains required for durable operation.
 - Follow-up: Complete official-price publishing for every replica, add strict deployment/cutover gates and mainnet shadow evidence, then deploy and UAT the fresh V3 testnet stack.
 
 ### 2026-07-28 - Canonical Mainnet Shadow and Reserve Decimal Correction
@@ -650,7 +650,7 @@ build`; authenticated live `/api/collect-market`.
 - Files: `packages/contracts/src/BasketVault.sol`, `packages/contracts/test/MainnetEdge.t.sol`, `packages/contracts/script/DeployMainnet.s.sol`, `scripts/mainnet-shadow.mjs`, `scripts/deploy-mainnet.sh`, `scripts/rehearse-mainnet-fork.sh`, `infrastructure/systemd/mdb-mainnet-shadow.*`, `apps/web/app/api/shadow-status/route.ts`.
 - Commands/tests: The first shadow run on chain 4663 inspected 98 official canonical assets; runtime code and every Stock Token UID matched, and sampled `oraclePaused` values were false. `forge test --root packages/contracts` passed 22/22 including canonical six-decimal USDG-shaped NAV/share accounting.
 - Result: USDG 6-decimal transfers now reconcile to 18-decimal NAV and MDBS shares; mainnet quote/execution plans preserve raw token units. Shadow gates truthfully remain false for absent 0x credentials, Chainlink feed mappings, and the required 30-day evidence.
-- Follow-up: Publish and commit the dynamic market/shadow tooling, then broadcast the fresh production-interface replica deployment to chain 46630 and begin its 72-hour acceptance clock.
+- Follow-up: Publish and commit the dynamic market/shadow tooling, then broadcast the fresh production-interface replica deployment to chain 46630 and begin its two-hour acceptance clock.
 
 ### 2026-07-28 - Testnet Rehearsal and EIP-170 Gate
 

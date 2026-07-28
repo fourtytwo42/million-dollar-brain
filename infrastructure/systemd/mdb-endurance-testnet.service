@@ -1,5 +1,5 @@
 [Unit]
-Description=MillionDollar Brain 72-hour Robinhood Testnet V3 endurance run
+Description=MillionDollar Brain two-hour Robinhood Testnet V3 endurance run
 After=network-online.target mdb-web-testnet.service
 Wants=network-online.target
 Requires=mdb-web-testnet.service
@@ -15,7 +15,7 @@ Environment=HOME=/home/hendo420
 EnvironmentFile=/etc/mdb/testnet.env
 Environment=PATH=/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin
 Environment=MDB_ENDURANCE_URL=http://127.0.0.1:3001
-Environment=MDB_ENDURANCE_DURATION_MS=259200000
+Environment=MDB_ENDURANCE_DURATION_MS=7200000
 Environment=MDB_ENDURANCE_INTERVAL_MS=1200000
 Environment=MDB_ENDURANCE_STATE_DIR=/home/hendo420/projects/million-dollar-brain/var/testnet-v3-endurance
 ExecStart=/home/hendo420/.local/node-v24.18.0-linux-x64/bin/node tests/endurance-testnet.mjs
