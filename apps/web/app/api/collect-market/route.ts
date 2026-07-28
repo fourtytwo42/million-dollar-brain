@@ -19,7 +19,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   try {
-    const before = await dashboard();
+    // Collection must be able to recover a deliberately fail-closed oracle.
+    // The pre-sync dashboard adds useful chain metadata when prices are fresh,
+    // but official quote collection does not depend on it.
+    const before = await dashboard().catch(() => undefined);
     const market = await collectOfficialMarketData(before);
     const priceSync = await syncLocalMarketPrices();
     const ledger = await syncVaultLedger();
