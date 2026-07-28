@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "depositWithPlan",
+        gas: 6_000_000n,
         args: [
           gross,
           (depositPreview[2] * 99n) / 100n,
@@ -135,6 +136,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "redeemWithPlan",
+        gas: 6_000_000n,
         args: [
           sellShares,
           (redeemPreview[2] * 99n) / 100n,

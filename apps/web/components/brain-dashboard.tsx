@@ -566,6 +566,7 @@ export function BrainDashboard() {
         address: data.deployment.basket,
         abi: basketAbi,
         functionName: quote ? "depositWithPlan" : "deposit",
+        gas: quote && data.network.mode === "testnet" ? 6_000_000n : undefined,
         args: quote
           ? [
               value,
@@ -673,6 +674,7 @@ export function BrainDashboard() {
       address: data.deployment.basket,
       abi: basketAbi,
       functionName: quote ? "redeemWithPlan" : "redeem",
+      gas: quote && data.network.mode === "testnet" ? 6_000_000n : undefined,
       args: quote
         ? [
             shares,
