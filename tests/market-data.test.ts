@@ -8,6 +8,7 @@ import {
 import {
   changedByAtLeastOneBps,
   decimalWad,
+  needsOracleFreshnessRefresh,
 } from "../apps/web/lib/price-sync-math.ts";
 
 function candles(count: number, minutes = 1) {
@@ -67,6 +68,13 @@ test("local oracle sync ignores sub-basis-point noise", () => {
   const current = decimalWad("100");
   assert.equal(changedByAtLeastOneBps(current, decimalWad("100.009")), false);
   assert.equal(changedByAtLeastOneBps(current, decimalWad("100.01")), true);
+});
+
+test("testnet oracle receives a freshness heartbeat after sixty seconds", () => {
+  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_059), false);
+  assert.equal(needsOracleFreshnessRefresh(46630, 1_000, 1_060), true);
+  assert.equal(needsOracleFreshnessRefresh(31337, 1_000, 2_000), false);
+  assert.equal(needsOracleFreshnessRefresh(4663, 1_000, 2_000), false);
 });
 
 test("V3 context remains stateless, bounded, and excludes raw candles", () => {

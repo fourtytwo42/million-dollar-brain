@@ -219,7 +219,7 @@ const inputAmount = (value: bigint) =>
 export function BrainDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [key, setKey] = useState<`0x${string}` | null>(null);
-  const [message, setMessage] = useState("Connecting to local devnet…");
+  const [message, setMessage] = useState("Connecting to network…");
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [sellAmount, setSellAmount] = useState("");
@@ -261,7 +261,7 @@ export function BrainDashboard() {
     if (!response.ok) throw new Error(body.error ?? "Network unavailable");
     setData(body);
     setMessage((current) =>
-      current === "Connecting to local devnet…"
+      current === "Connecting to network…"
         ? `${body.network.networkLabel} connected.`
         : current,
     );

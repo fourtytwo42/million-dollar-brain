@@ -1614,7 +1614,13 @@ export function EditorialDashboard({
       )}
 
       <footer className="editorial-footer">
-        <span>Local Anvil simulation · no real funds</span>
+        <span>
+          {network?.mode === "testnet"
+            ? `${network.networkLabel} mock deployment · no real funds`
+            : network?.mode === "mainnet"
+              ? `${network.networkLabel} · live network`
+              : "Local Anvil simulation · no real funds"}
+        </span>
         <span>
           Decision cadence: 60 minutes · Catalog v{data?.catalog.version ?? "—"}{" "}
           · Character roster v4

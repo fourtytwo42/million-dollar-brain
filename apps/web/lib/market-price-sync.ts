@@ -2,7 +2,11 @@ import { keccak256, parseAbi, stringToHex, type Address } from "viem";
 import { adminClient, deployment, publicClient } from "./chain";
 import { coinbaseEthTicker } from "./market-sources";
 import { withDatabase } from "./persistence";
-import { changedByAtLeastOneBps, decimalWad } from "./price-sync-math";
+import {
+  changedByAtLeastOneBps,
+  decimalWad,
+  needsOracleFreshnessRefresh,
+} from "./price-sync-math";
 import { networkConfig } from "./network";
 import { withAdminTransactionLock } from "./admin-transaction-lock";
 
@@ -143,28 +147,46 @@ async function syncLocalMarketPricesUnlocked() {
           args: [candidate.token],
         }),
       ]);
-      const shouldUpdate =
+      const oracleNeedsPriceUpdate = changedByAtLeastOneBps(
+        oraclePrice[0],
+        candidate.priceWad,
+      );
+      const routerNeedsPriceUpdate =
         oraclePrice[0] !== routerPrice ||
-        changedByAtLeastOneBps(oraclePrice[0], candidate.priceWad) ||
         changedByAtLeastOneBps(routerPrice, candidate.priceWad);
+      const oracleNeedsFreshnessRefresh = needsOracleFreshnessRefresh(
+        chainId,
+        Number(oraclePrice[1]),
+        Math.floor(Date.now() / 1000),
+      );
+      const shouldUpdate =
+        oracleNeedsPriceUpdate ||
+        routerNeedsPriceUpdate ||
+        oracleNeedsFreshnessRefresh;
       let oracleTxHash: `0x${string}` | null = null;
       let routerTxHash: `0x${string}` | null = null;
       if (shouldUpdate) {
-        oracleTxHash = await adminClient.writeContract({
-          address: d.oracle,
-          abi: oracleAbi,
-          functionName: "setPrice",
-          args: [candidate.token, candidate.priceWad],
-        });
-        await publicClient.waitForTransactionReceipt({ hash: oracleTxHash });
-        try {
-          routerTxHash = await adminClient.writeContract({
-            address: d.router,
-            abi: routerPriceAbi,
+        if (oracleNeedsPriceUpdate || oracleNeedsFreshnessRefresh) {
+          oracleTxHash = await adminClient.writeContract({
+            address: d.oracle,
+            abi: oracleAbi,
             functionName: "setPrice",
             args: [candidate.token, candidate.priceWad],
           });
-          await publicClient.waitForTransactionReceipt({ hash: routerTxHash });
+          await publicClient.waitForTransactionReceipt({ hash: oracleTxHash });
+        }
+        try {
+          if (routerNeedsPriceUpdate) {
+            routerTxHash = await adminClient.writeContract({
+              address: d.router,
+              abi: routerPriceAbi,
+              functionName: "setPrice",
+              args: [candidate.token, candidate.priceWad],
+            });
+            await publicClient.waitForTransactionReceipt({
+              hash: routerTxHash,
+            });
+          }
           const [verifiedOracle, verifiedRouter] = await Promise.all([
             publicClient.readContract({
               address: d.oracle,
@@ -186,24 +208,28 @@ async function syncLocalMarketPricesUnlocked() {
             throw new Error(`${candidate.symbol} price verification failed`);
           }
         } catch (error) {
-          const oracleRollback = await adminClient.writeContract({
-            address: d.oracle,
-            abi: oracleAbi,
-            functionName: "setPrice",
-            args: [candidate.token, oraclePrice[0]],
-          });
-          await publicClient.waitForTransactionReceipt({
-            hash: oracleRollback,
-          });
-          const routerRollback = await adminClient.writeContract({
-            address: d.router,
-            abi: routerPriceAbi,
-            functionName: "setPrice",
-            args: [candidate.token, routerPrice],
-          });
-          await publicClient.waitForTransactionReceipt({
-            hash: routerRollback,
-          });
+          if (oracleTxHash) {
+            const oracleRollback = await adminClient.writeContract({
+              address: d.oracle,
+              abi: oracleAbi,
+              functionName: "setPrice",
+              args: [candidate.token, oraclePrice[0]],
+            });
+            await publicClient.waitForTransactionReceipt({
+              hash: oracleRollback,
+            });
+          }
+          if (routerTxHash) {
+            const routerRollback = await adminClient.writeContract({
+              address: d.router,
+              abi: routerPriceAbi,
+              functionName: "setPrice",
+              args: [candidate.token, routerPrice],
+            });
+            await publicClient.waitForTransactionReceipt({
+              hash: routerRollback,
+            });
+          }
           throw error;
         }
         updated.push(candidate.symbol);

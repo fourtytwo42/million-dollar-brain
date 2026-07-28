@@ -14,3 +14,14 @@ export function changedByAtLeastOneBps(current: bigint, next: bigint) {
   const difference = current > next ? current - next : next - current;
   return difference * 10_000n >= current;
 }
+
+export function needsOracleFreshnessRefresh(
+  chainId: number,
+  updatedAt: number,
+  nowSeconds: number,
+  refreshAfterSeconds = 60,
+) {
+  return (
+    chainId === 46630 && nowSeconds - updatedAt >= refreshAfterSeconds
+  );
+}
