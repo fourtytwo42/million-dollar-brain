@@ -62,6 +62,7 @@ MDB_QUOTE_AUTHORIZER="$deployer" \
     --keystore "$MDB_OPERATOR_KEYSTORE" \
     --password-file "$MDB_OPERATOR_PASSWORD_FILE" \
     --broadcast \
+    --slow \
     --gas-estimate-multiplier "$gas_estimate_multiplier"
 
 cd "$repo_root"
