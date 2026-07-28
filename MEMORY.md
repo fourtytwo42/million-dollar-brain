@@ -7,12 +7,12 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: Checkpoint 13 exposed that a three-checkpoint funding
-  interval can begin a few seconds before the previous faucet request's exact
-  one-hour cooldown expires. The runner now records the successful funding
-  timestamp and waits through the remaining cooldown plus a five-second buffer
-  before a scheduled top-up. A process restart still funds its new disposable
-  wallet immediately. Checkpoint 14 passed the repaired runner's complete flow.
+- Last meaningful change: The checkpoint 18 environment audit found that an
+  unattended restart had returned local Anvil at block zero while the old
+  deployment manifest remained. Local contracts were restored, Anvil now
+  persists state every five seconds, and two controlled restarts proved the
+  same block and contract bytecode reload without redeployment. Testnet
+  checkpoint 18 itself passed its complete user flow.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -238,6 +238,20 @@ When sources conflict, use this order:
   for the recorded cooldown, funded successfully without HTTP 429, purchased
   piece 30, changed its preset, bought 125 USDG of MDBS, sold 25% atomically,
   claimed rewards, reconciled NAV exactly, and recorded zero browser errors.
+- 2026-07-28: The checkpoint 18 cross-environment audit found local Anvil had
+  restarted at block zero during unattended host maintenance while the prior
+  deployment manifest and still-active one-shot deploy state remained. This
+  made local collector and cycle calls fail with zero-data contract reads even
+  though their timers and web service were active. The local mock stack was
+  redeployed, `ops/mdb-anvil.service` now uses
+  `var/local-anvil/state.json` with a five-second state interval, and deploy
+  units no longer bind their one-shot lifecycle to an Anvil restart. Two
+  controlled Anvil restarts preserved the exact block and BasketVault bytecode;
+  the local status and collector returned HTTP 200, all local timers recovered,
+  and no failed systemd units remained. Testnet checkpoint 18 independently
+  purchased piece 31, selected `Digital-Rock Maxi`, bought 150 USDG of MDBS,
+  sold 25% atomically, claimed rewards, reconciled NAV exactly, and recorded
+  zero browser errors.
 
 ## Decisions
 

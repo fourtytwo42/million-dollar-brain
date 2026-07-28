@@ -1,7 +1,6 @@
 [Unit]
 Description=Deploy MillionDollar Brain contracts to local Anvil devnet
 After=mdb-anvil.service
-Requires=mdb-anvil.service
 Before=mdb-web.service
 
 [Service]

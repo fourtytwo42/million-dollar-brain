@@ -6,7 +6,8 @@ After=network.target
 Type=simple
 User=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
-ExecStart=/home/hendo420/.foundry/bin/anvil --host 0.0.0.0 --port 8545 --chain-id 31337
+ExecStartPre=/usr/bin/mkdir -p /home/hendo420/projects/million-dollar-brain/var/local-anvil
+ExecStart=/home/hendo420/.foundry/bin/anvil --host 0.0.0.0 --port 8545 --chain-id 31337 --state /home/hendo420/projects/million-dollar-brain/var/local-anvil/state.json --state-interval 5
 Restart=always
 RestartSec=3
 
