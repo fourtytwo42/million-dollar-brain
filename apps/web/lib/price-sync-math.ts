@@ -21,7 +21,5 @@ export function needsOracleFreshnessRefresh(
   nowSeconds: number,
   refreshAfterSeconds = 60,
 ) {
-  return (
-    chainId === 46630 && nowSeconds - updatedAt >= refreshAfterSeconds
-  );
+  return chainId === 46630 && nowSeconds - updatedAt >= refreshAfterSeconds;
 }
