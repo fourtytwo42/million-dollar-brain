@@ -26,6 +26,20 @@ const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ??
   "5a4c41c8c461ca59724069d740760a2f";
 
+// RainbowKit's dedicated MetaMask SDK connector can leave its extension
+// transport stuck after disconnecting and immediately reconnecting. Keep the
+// MetaMask branding while using the same EIP-1193 injected-provider path that
+// reliably reopens the installed extension.
+const metaMaskInjectedWallet: typeof metaMaskWallet = (options) => {
+  const branded = metaMaskWallet(options);
+  const injected = injectedWallet();
+  return {
+    ...branded,
+    createConnector: injected.createConnector,
+    installed: injected.installed ?? branded.installed,
+  };
+};
+
 const local = defineChain({
   id: 31337,
   name: "MillionDollar Brain Devnet",
@@ -75,7 +89,7 @@ function makeConfig() {
       {
         groupName: "Popular wallets",
         wallets: [
-          metaMaskWallet,
+          metaMaskInjectedWallet,
           rabbyWallet,
           coinbaseWallet,
           rainbowWallet,

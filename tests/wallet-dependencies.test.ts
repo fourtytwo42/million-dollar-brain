@@ -26,3 +26,27 @@ test("wallet framework versions remain explicitly pinned", () => {
   assert.equal(web?.wagmi, "2.19.5");
   assert.equal(web?.viem, "2.55.8");
 });
+
+test("MetaMask reconnect uses the injected provider and exact connector", () => {
+  const provider = readFileSync(
+    "apps/web/components/wallet-provider.tsx",
+    "utf8",
+  );
+  const dashboard = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
+  assert.match(
+    provider,
+    /const metaMaskInjectedWallet:[\s\S]*createConnector: injected\.createConnector/,
+  );
+  assert.match(provider, /wallets: \[\s*metaMaskInjectedWallet,/);
+  assert.match(
+    dashboard,
+    /disconnectAsync\(\{ connector: external\.connector \}\)/,
+  );
+  assert.match(
+    dashboard,
+    /External wallet disconnected\. Choose Connect wallet to reconnect\./,
+  );
+});

@@ -499,9 +499,13 @@ export function BrainDashboard() {
     openConnectModal();
   }
   async function disconnectExternalWallet() {
-    await disconnectAsync();
+    if (!external.connector)
+      throw new Error("The connected wallet is not ready to disconnect.");
+    await disconnectAsync({ connector: external.connector });
     setMessage(
-      "External wallet disconnected. Disposable test wallet is active.",
+      data?.network.mode === "local"
+        ? "External wallet disconnected. Disposable test wallet is active."
+        : "External wallet disconnected. Choose Connect wallet to reconnect.",
     );
   }
   async function switchExternalWallet() {

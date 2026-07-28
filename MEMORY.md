@@ -6,9 +6,11 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Completed and audited the two-hour Robinhood Testnet
-  V3 endurance rehearsal, including final in-app-browser UAT. Seven
-  checkpoints passed and the finished endurance service was disabled.
+- Last meaningful change: Fixed the Chrome MetaMask disconnect/reconnect path
+  by preserving RainbowKit's MetaMask presentation while routing the installed
+  extension through the reliable injected EIP-1193 connector. Disconnect now
+  targets the active connector and testnet no longer claims that its hidden
+  disposable wallet is active.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -117,6 +119,15 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Reproduced the MetaMask reconnect defect in the user's Chrome:
+  the dedicated MetaMask SDK connector remained on `Opening MetaMask...` and
+  created no extension request after disconnect, while the generic injected
+  connector immediately opened MetaMask. Replaced the MetaMask connector with
+  an injected EIP-1193 connector that retains MetaMask branding, made
+  disconnect connector-specific, and corrected the testnet disconnect message.
+  TypeScript, Prettier, two production builds, live HTTP checks, and Chrome
+  connect/disconnect/reconnect UAT pass. The final MetaMask button is shown as
+  installed and opens a fresh extension connection request.
 - 2026-07-28: Started the approved mainnet-edge implementation. Added
   `AssetRegistry`, `ChainlinkValuationAdapter`, `ZeroExExecutionAdapter`, and
   `ParityAssetToken`. The registry enforces 30-day, $100M market-cap/AUM and
