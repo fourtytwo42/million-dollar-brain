@@ -29,6 +29,9 @@ import {
   syncVaultLedger,
 } from "./portfolio-accounting";
 import { buildTestnetRebalancePlans, reviveSwapPlans } from "./quote-planner";
+import { collectOfficialMarketData } from "./market-history";
+import { syncLocalMarketPrices } from "./market-price-sync";
+import { networkConfig } from "./network";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -359,6 +362,10 @@ function serializable<T>(value: T): T {
 export async function runCycle() {
   const d = deployment();
   const redemptionTxHash: `0x${string}` | null = null;
+  if (d.schemaVersion === 3 && networkConfig.mode === "testnet") {
+    await collectOfficialMarketData();
+    await syncLocalMarketPrices();
+  }
   await syncVaultLedger();
   const state = await dashboard();
   const market = await buildDecisionContext(state);
@@ -491,6 +498,10 @@ export async function runCycle() {
     ReturnType<typeof waitForReliableTransactionReceipt>
   > | null = null;
   if (decision.source === "ai") {
+    if (dynamicMode && networkConfig.mode === "testnet") {
+      await collectOfficialMarketData();
+      await syncLocalMarketPrices();
+    }
     const cycleHash = keccak256(
       stringToHex(`${market.inputHash}:${decision.promptHash}`),
     );
@@ -501,6 +512,7 @@ export async function runCycle() {
           address: d.basket,
           abi: basketAbi,
           functionName: "rebalanceWithPlan",
+          gas: networkConfig.mode === "testnet" ? 8_000_000n : undefined,
           args: [
             quote.targetAssets,
             quote.weights,
