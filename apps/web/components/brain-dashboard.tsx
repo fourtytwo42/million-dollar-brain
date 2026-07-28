@@ -22,6 +22,7 @@ import {
   useWalletClient,
 } from "wagmi";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
+import { retryApprovalDependentWrite } from "@/lib/approval-retry";
 import { EditorialDashboard } from "./editorial-dashboard";
 
 type BrainOption = {
@@ -466,12 +467,14 @@ export function BrainDashboard() {
     });
     setMessage("Buying MDBS and adding your funds to the basket…");
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
-    const tx = await wallet.writeContract({
-      address: data.deployment.basket,
-      abi: basketAbi,
-      functionName: "deposit",
-      args: [value, (preview[2] * 99n) / 100n, deadline],
-    });
+    const tx = await retryApprovalDependentWrite(() =>
+      wallet.writeContract({
+        address: data.deployment.basket,
+        abi: basketAbi,
+        functionName: "deposit",
+        args: [value, (preview[2] * 99n) / 100n, deadline],
+      }),
+    );
     await publicClient.waitForTransactionReceipt({
       hash: tx,
       ...receiptWaitPolicy,
@@ -499,16 +502,18 @@ export function BrainDashboard() {
       hash: approve,
       ...receiptWaitPolicy,
     });
-    const tx = await wallet.writeContract({
-      address: data.deployment.brain,
-      abi: brainAbi,
-      functionName: "buy",
-      args: [
-        BigInt(piece.id),
-        cost,
-        BigInt(Math.floor(Date.now() / 1000) + 3600),
-      ],
-    });
+    const tx = await retryApprovalDependentWrite(() =>
+      wallet.writeContract({
+        address: data.deployment.brain,
+        abi: brainAbi,
+        functionName: "buy",
+        args: [
+          BigInt(piece.id),
+          cost,
+          BigInt(Math.floor(Date.now() / 1000) + 3600),
+        ],
+      }),
+    );
     await publicClient.waitForTransactionReceipt({
       hash: tx,
       ...receiptWaitPolicy,

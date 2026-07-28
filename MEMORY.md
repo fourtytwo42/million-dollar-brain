@@ -7,12 +7,11 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: The checkpoint 18 environment audit found that an
-  unattended restart had returned local Anvil at block zero while the old
-  deployment manifest remained. Local contracts were restored, Anvil now
-  persists state every five seconds, and two controlled restarts proved the
-  same block and contract bytecode reload without redeployment. Testnet
-  checkpoint 18 itself passed its complete user flow.
+- Last meaningful change: Checkpoint 19 exposed public-RPC replica lag between
+  a confirmed ERC-20 approval and the following brain purchase estimate. The
+  UI now retries only `ERC20InsufficientAllowance` failures after confirmed
+  approvals for up to sixty seconds. Focused wallet tests and the production
+  build pass; the next endurance checkpoint will provide live flow verification.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -252,6 +251,17 @@ When sources conflict, use this order:
   purchased piece 31, selected `Digital-Rock Maxi`, bought 150 USDG of MDBS,
   sold 25% atomically, claimed rewards, reconciled NAV exactly, and recorded
   zero browser errors.
+- 2026-07-28: Endurance checkpoint 19's first attempt confirmed its USDG
+  approval, then a lagging public-RPC replica estimated the immediately
+  following brain purchase against the older allowance and returned
+  `ERC20InsufficientAllowance` selector `0xfb8f41b2`. The immutable failure
+  evidence records the exact revert; automatic restart then passed checkpoint
+  19 and all subsequent checks. `apps/web/lib/approval-retry.ts` now retries
+  only this approval-propagation error for up to sixty seconds, and both MDBS
+  buys and brain-piece purchases use it after a confirmed approval. Unrelated
+  contract failures still surface immediately. Seven wallet tests, focused
+  Prettier, TypeScript, and the production build pass. Live endurance
+  verification remains scheduled for checkpoint 20.
 
 ## Decisions
 
