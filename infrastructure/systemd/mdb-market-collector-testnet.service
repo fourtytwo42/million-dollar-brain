@@ -2,8 +2,12 @@
 Description=Collect official MillionDollar Brain market observations (testnet)
 After=mdb-web-testnet.service
 ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet.json
+StartLimitIntervalSec=120
+StartLimitBurst=4
 
 [Service]
 Type=oneshot
 EnvironmentFile=/etc/mdb/testnet.env
 ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 50 -H "x-mdb-collector-token:${MDB_COLLECTOR_TOKEN}" -X POST http://127.0.0.1:3001/api/collect-market
+Restart=on-failure
+RestartSec=10

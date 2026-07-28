@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   publicNetworkConfig,
@@ -80,4 +81,14 @@ test("mainnet cannot enable disposable wallets, faucets, or mocks", () => {
       }),
     /Mainnet cannot enable built-in wallets or faucets/,
   );
+});
+
+test("testnet collector retries transient public-RPC failures", () => {
+  const unit = readFileSync(
+    "infrastructure/systemd/mdb-market-collector-testnet.service",
+    "utf8",
+  );
+  assert.match(unit, /Restart=on-failure/);
+  assert.match(unit, /RestartSec=10/);
+  assert.match(unit, /StartLimitBurst=4/);
 });

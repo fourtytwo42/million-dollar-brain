@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       outcomes,
     });
   } catch (error) {
+    console.error("Market collector failed", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "collector failed" },
       { status: 500 },
