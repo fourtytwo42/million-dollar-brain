@@ -66,7 +66,15 @@ test("Brain summary and responsive controls stay compact and actionable", () => 
   assert.doesNotMatch(pulse, /label="Latest result"/);
   assert.doesNotMatch(pulse, /label="Next cycle"/);
   assert.match(dashboard, /className="editorial-page brain-page"/);
-  assert.match(styles, /\.brain-page \{[\s\S]*height: calc\(/);
+  assert.match(
+    styles,
+    /\.brain-map-viewport \{[\s\S]*max-height: none;[\s\S]*overflow: clip;/,
+  );
+  assert.doesNotMatch(styles, /\.brain-page \{[\s\S]{0,300}height: calc\(/);
+  assert.doesNotMatch(
+    styles,
+    /\.brain-page \.piece-inspector \{[\s\S]{0,120}overflow-y: auto/,
+  );
   assert.match(
     styles,
     /@media \(max-width: 720px\)[\s\S]*\.market-strip \{[\s\S]*display: grid/,

@@ -6,10 +6,10 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Simplified Brain Pulse to the headline and strongest
-  preferences, made the desktop Brain page fit a 1366-by-768 viewport without
-  page scrolling, and repaired tablet/mobile navigation, wallet controls,
-  Map/List access, and preset layout.
+- Last meaningful change: Removed the Brain map and selected-piece inspector's
+  internal scroll regions. Both panels now expand to their full content and the
+  browser page provides the only scrolling at desktop, tablet, and mobile
+  sizes.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -118,6 +118,13 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Corrected the compact Brain layout after user review. The map and
+  selected-piece inspector no longer have internal scrollbars; both expand to
+  full content and the page scrolls naturally. Live 1366-by-768, 768-by-1024,
+  and 390-by-844 measurements confirm neither panel is internally scrollable
+  and no breakpoint has horizontal page overflow. Focused UI tests,
+  TypeScript, production build, HTTP verification, and browser console checks
+  pass.
 - 2026-07-28: Removed redundant Data, Latest result, and Next cycle cells from
   Brain Pulse while retaining its headline and strongest preferences. Desktop
   Brain content now uses the available viewport with an internally scrolling

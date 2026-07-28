@@ -2289,9 +2289,8 @@ footer {
 }
 .brain-map-viewport {
   max-width: 100%;
-  max-height: 575px;
-  overflow: auto;
-  overscroll-behavior: contain;
+  max-height: none;
+  overflow: clip;
   border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
   background: var(--surface-subtle);
 }
@@ -2824,62 +2823,18 @@ footer {
   }
 }
 @media (min-width: 1151px) {
-  .editorial-app {
-    --brain-banner-height: 0px;
-    --brain-wallet-strip-height: 0px;
-  }
-  .editorial-app:has(.editorial-banner) {
-    --brain-banner-height: 36px;
-  }
-  .editorial-app:has(.test-wallet-strip) {
-    --brain-wallet-strip-height: 42px;
-  }
   .editorial-header {
     height: 68px;
   }
   .brain-page {
-    display: flex;
-    height: calc(
-      100svh - 112px - var(--brain-banner-height) -
-        var(--brain-wallet-strip-height)
-    );
-    min-height: 590px;
-    flex-direction: column;
     padding: 12px 20px 14px;
   }
   .brain-page .brain-pulse-strip {
-    flex: 0 0 auto;
     margin-bottom: 10px;
   }
   .brain-page .pulse-headline,
   .brain-page .brain-pulse-strip .pulse-row {
     padding: 10px 14px;
-  }
-  .brain-page .brain-primary-grid {
-    min-height: 0;
-    flex: 1;
-    align-items: stretch;
-    overflow: hidden;
-  }
-  .brain-page .brain-map-wrap,
-  .brain-page .piece-inspector {
-    height: 100%;
-    min-height: 0;
-  }
-  .brain-page .brain-map-panel {
-    display: flex;
-    min-height: 0;
-    flex: 1;
-    flex-direction: column;
-  }
-  .brain-page .brain-map-viewport {
-    min-height: 260px;
-    max-height: none;
-    flex: 1;
-  }
-  .brain-page .piece-inspector {
-    overflow-y: auto;
-    scrollbar-gutter: stable;
   }
   .brain-page .piece-ledger-head h2 {
     font-size: 22px;
@@ -3124,9 +3079,6 @@ footer {
   .brain-piece-list small {
     color: var(--text-muted);
     font-size: 9px;
-  }
-  .brain-map-viewport {
-    max-height: 445px;
   }
   .brain-piece-tooltip {
     width: 175px;
