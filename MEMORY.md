@@ -6,11 +6,10 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Fixed the Chrome MetaMask disconnect/reconnect path
-  by preserving RainbowKit's MetaMask presentation while routing the installed
-  extension through the reliable injected EIP-1193 connector. Disconnect now
-  targets the active connector and testnet no longer claims that its hidden
-  disposable wallet is active.
+- Last meaningful change: Simplified Brain Pulse to the headline and strongest
+  preferences, made the desktop Brain page fit a 1366-by-768 viewport without
+  page scrolling, and repaired tablet/mobile navigation, wallet controls,
+  Map/List access, and preset layout.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -119,6 +118,16 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Removed redundant Data, Latest result, and Next cycle cells from
+  Brain Pulse while retaining its headline and strongest preferences. Desktop
+  Brain content now uses the available viewport with an internally scrolling
+  inspector; a 1366-by-768 live test has no horizontal or vertical page
+  overflow. Tablet keeps a side-by-side map and inspector at 1024 pixels,
+  switches to Map/List below 901 pixels, and no longer overlaps its utility
+  row. Mobile exposes NAV, theme, and wallet controls, uses a two-column preset
+  selector, and has no horizontal overflow. Focused UI tests, TypeScript,
+  Prettier, three production builds, live light/dark screenshots, and
+  390-by-844, 768-by-1024, 1024-by-768, and 1366-by-768 browser UAT pass.
 - 2026-07-28: Reproduced the MetaMask reconnect defect in the user's Chrome:
   the dedicated MetaMask SDK connector remained on `Opening MetaMask...` and
   created no extension request after disconnect, while the generic injected

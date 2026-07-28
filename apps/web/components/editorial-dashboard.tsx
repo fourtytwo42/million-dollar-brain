@@ -585,8 +585,8 @@ export function EditorialDashboard({
           <span className="share-price">
             MDBS NAV price ${data ? usd(data.navPerShare) : "1.00"}
           </span>
-          <span className="healthy">● System healthy</span>
-          <span>
+          <span className="market-health healthy">● System healthy</span>
+          <span className="market-next-decision">
             Next decision <b>{countdownText}</b>
           </span>
           <button className="theme-control" onClick={onToggleTheme}>
@@ -643,7 +643,7 @@ export function EditorialDashboard({
       )}
 
       {screen === "Brain" && (
-        <div className="editorial-page">
+        <div className="editorial-page brain-page">
           <section className="brain-pulse-strip" aria-label="Brain pulse">
             <div className="pulse-headline">
               <p className="section-kicker">⌁ BRAIN PULSE</p>
@@ -663,16 +663,6 @@ export function EditorialDashboard({
                   .join(", ") || "Neutral starting brain"
               }
             />
-            <PulseRow
-              label="Data"
-              value={`${data?.latestCycle?.brain?.activePieces ?? 0} active · ${data?.latestCycle?.brain?.inactivePieces ?? 0} inactive`}
-            />
-            <PulseRow
-              label="Latest result"
-              value={data?.latestCycle ? "REBALANCE" : "AWAITING CYCLE"}
-              strong
-            />
-            <PulseRow label="Next cycle" value={countdownText} strong />
           </section>
 
           <section className="brain-primary-grid">
