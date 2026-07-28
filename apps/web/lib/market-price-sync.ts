@@ -6,6 +6,7 @@ import {
   changedByAtLeastOneBps,
   decimalWad,
   needsOracleFreshnessRefresh,
+  retryRpcConsistency,
 } from "./price-sync-math";
 import { networkConfig } from "./network";
 import { withAdminTransactionLock } from "./admin-transaction-lock";
@@ -128,52 +129,63 @@ async function syncLocalMarketPricesUnlocked() {
   );
   try {
     const d = deployment();
-    if (!d.oracle) throw new Error("local valuation oracle is not configured");
+    const oracle = d.oracle;
+    if (!oracle) throw new Error("local valuation oracle is not configured");
     const prices = await candidates();
     const updated: string[] = [];
     const unchanged: string[] = [];
     for (const candidate of prices) {
-      const [oraclePrice, routerPrice] = await Promise.all([
-        publicClient.readContract({
-          address: d.oracle,
-          abi: oracleAbi,
-          functionName: "prices",
-          args: [candidate.token],
-        }),
-        publicClient.readContract({
-          address: d.router,
-          abi: routerPriceAbi,
-          functionName: "priceWad",
-          args: [candidate.token],
-        }),
-      ]);
+      const stateBlock = await publicClient.getBlockNumber();
+      const [oraclePrice, routerPrice] = await retryRpcConsistency(() =>
+        Promise.all([
+          publicClient.readContract({
+            address: oracle,
+            abi: oracleAbi,
+            functionName: "prices",
+            args: [candidate.token],
+            blockNumber: stateBlock,
+          }),
+          publicClient.readContract({
+            address: d.router,
+            abi: routerPriceAbi,
+            functionName: "priceWad",
+            args: [candidate.token],
+            blockNumber: stateBlock,
+          }),
+        ]),
+      );
       const oracleNeedsPriceUpdate = changedByAtLeastOneBps(
         oraclePrice[0],
         candidate.priceWad,
       );
-      const routerNeedsPriceUpdate =
-        oraclePrice[0] !== routerPrice ||
-        changedByAtLeastOneBps(routerPrice, candidate.priceWad);
       const oracleNeedsFreshnessRefresh = needsOracleFreshnessRefresh(
         chainId,
         Number(oraclePrice[1]),
         Math.floor(Date.now() / 1000),
       );
+      const routerNeedsPriceUpdate =
+        oraclePrice[0] !== routerPrice ||
+        changedByAtLeastOneBps(routerPrice, candidate.priceWad) ||
+        (oracleNeedsFreshnessRefresh && routerPrice !== candidate.priceWad);
       const shouldUpdate =
         oracleNeedsPriceUpdate ||
         routerNeedsPriceUpdate ||
         oracleNeedsFreshnessRefresh;
       let oracleTxHash: `0x${string}` | null = null;
       let routerTxHash: `0x${string}` | null = null;
+      let verificationBlock: bigint | undefined;
       if (shouldUpdate) {
         if (oracleNeedsPriceUpdate || oracleNeedsFreshnessRefresh) {
           oracleTxHash = await adminClient.writeContract({
-            address: d.oracle,
+            address: oracle,
             abi: oracleAbi,
             functionName: "setPrice",
             args: [candidate.token, candidate.priceWad],
           });
-          await publicClient.waitForTransactionReceipt({ hash: oracleTxHash });
+          const receipt = await publicClient.waitForTransactionReceipt({
+            hash: oracleTxHash,
+          });
+          verificationBlock = receipt.blockNumber;
         }
         try {
           if (routerNeedsPriceUpdate) {
@@ -183,34 +195,43 @@ async function syncLocalMarketPricesUnlocked() {
               functionName: "setPrice",
               args: [candidate.token, candidate.priceWad],
             });
-            await publicClient.waitForTransactionReceipt({
+            const receipt = await publicClient.waitForTransactionReceipt({
               hash: routerTxHash,
             });
+            verificationBlock =
+              verificationBlock === undefined ||
+              receipt.blockNumber > verificationBlock
+                ? receipt.blockNumber
+                : verificationBlock;
           }
-          const [verifiedOracle, verifiedRouter] = await Promise.all([
-            publicClient.readContract({
-              address: d.oracle,
-              abi: oracleAbi,
-              functionName: "prices",
-              args: [candidate.token],
-            }),
-            publicClient.readContract({
-              address: d.router,
-              abi: routerPriceAbi,
-              functionName: "priceWad",
-              args: [candidate.token],
-            }),
-          ]);
-          if (
-            verifiedOracle[0] !== candidate.priceWad ||
-            verifiedRouter !== candidate.priceWad
-          ) {
-            throw new Error(`${candidate.symbol} price verification failed`);
-          }
+          await retryRpcConsistency(async () => {
+            const [verifiedOracle, verifiedRouter] = await Promise.all([
+              publicClient.readContract({
+                address: oracle,
+                abi: oracleAbi,
+                functionName: "prices",
+                args: [candidate.token],
+                blockNumber: verificationBlock,
+              }),
+              publicClient.readContract({
+                address: d.router,
+                abi: routerPriceAbi,
+                functionName: "priceWad",
+                args: [candidate.token],
+                blockNumber: verificationBlock,
+              }),
+            ]);
+            if (
+              verifiedOracle[0] !== candidate.priceWad ||
+              verifiedRouter !== candidate.priceWad
+            ) {
+              throw new Error(`${candidate.symbol} price verification failed`);
+            }
+          });
         } catch (error) {
           if (oracleTxHash) {
             const oracleRollback = await adminClient.writeContract({
-              address: d.oracle,
+              address: oracle,
               abi: oracleAbi,
               functionName: "setPrice",
               args: [candidate.token, oraclePrice[0]],

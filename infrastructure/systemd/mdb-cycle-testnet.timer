@@ -1,8 +1,8 @@
 [Unit]
-Description=Run MillionDollar Brain testnet cycle at half past each hour
+Description=Run MillionDollar Brain testnet cycle at minute 32 each hour
 
 [Timer]
-OnCalendar=*-*-* *:30:00
+OnCalendar=*-*-* *:32:00
 Persistent=true
 AccuracySec=1s
 Unit=mdb-cycle-testnet.service

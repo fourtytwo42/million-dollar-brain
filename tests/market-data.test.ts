@@ -9,6 +9,7 @@ import {
   changedByAtLeastOneBps,
   decimalWad,
   needsOracleFreshnessRefresh,
+  retryRpcConsistency,
 } from "../apps/web/lib/price-sync-math.ts";
 
 function candles(count: number, minutes = 1) {
@@ -77,6 +78,31 @@ test("testnet oracle receives a freshness heartbeat after sixty seconds", () => 
   assert.equal(needsOracleFreshnessRefresh(4663, 1_000, 2_000), false);
 });
 
+test("public RPC verification retries temporary replica lag", async () => {
+  let attempts = 0;
+  const result = await retryRpcConsistency(
+    async () => {
+      attempts += 1;
+      if (attempts < 3) throw new Error("replica is behind");
+      return "confirmed";
+    },
+    4,
+    0,
+  );
+  assert.equal(result, "confirmed");
+  assert.equal(attempts, 3);
+  await assert.rejects(
+    retryRpcConsistency(
+      async () => {
+        throw new Error("still behind");
+      },
+      2,
+      0,
+    ),
+    /still behind/,
+  );
+});
+
 test("V3 context remains stateless, bounded, and excludes raw candles", () => {
   const allocator = readFileSync("apps/web/lib/allocator.ts", "utf8");
   const context = readFileSync("apps/web/lib/decision-context.ts", "utf8");
@@ -106,4 +132,8 @@ test("collector synchronizes the local oracle and execution router", () => {
   assert.match(sync, /Coinbase Exchange ETH-USD ticker/);
   assert.match(sync, /verifiedOracle\[0\] !== candidate\.priceWad/);
   assert.match(sync, /verifiedRouter !== candidate\.priceWad/);
+  assert.match(
+    sync,
+    /oracleNeedsFreshnessRefresh && routerPrice !== candidate\.priceWad/,
+  );
 });

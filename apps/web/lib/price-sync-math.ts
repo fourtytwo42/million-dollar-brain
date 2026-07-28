@@ -23,3 +23,22 @@ export function needsOracleFreshnessRefresh(
 ) {
   return chainId === 46630 && nowSeconds - updatedAt >= refreshAfterSeconds;
 }
+
+export async function retryRpcConsistency<T>(
+  operation: () => Promise<T>,
+  attempts = 10,
+  delayMs = 500,
+) {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError;
+}

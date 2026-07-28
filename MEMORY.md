@@ -4,13 +4,14 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Public Robinhood Testnet activation is complete.
-- Last meaningful change: The complete mock protocol is deployed on chain
-  46630, the isolated testnet app is live on port 3001, official-price
-  collection and hourly Ornith cycles are enabled, and disposable plus
-  WalletConnect wallet flows passed live browser UAT.
-- Next step: Monitor public-RPC reliability and operator gas. Use a stable
-  domain when external mobile-wallet certification is desired.
+- Current task: Public Robinhood Testnet activation and reliability hardening
+  are complete.
+- Last meaningful change: The testnet collector now verifies state at explicit
+  receipt blocks with bounded public-RPC retries and keeps the oracle and router
+  identical during freshness heartbeats. The hourly testnet cycle runs at
+  minute 32, away from the minute collector.
+- Next step: Monitor public-RPC reliability and operator gas during normal use.
+  Use a stable domain when external mobile-wallet certification is desired.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -151,6 +152,14 @@ When sources conflict, use this order:
   Foundry tests, all focused TypeScript suites, full Prettier, production
   build, live local/testnet status, WalletConnect QR, and zero browser console
   errors passed.
+- 2026-07-27: Hardened the testnet price collector after public-RPC replicas
+  briefly returned inconsistent latest-state reads. Initial oracle/router reads
+  now use one explicit block, post-transaction verification uses the receipt
+  block with bounded retries, and freshness heartbeats update both contracts
+  even for sub-basis-point price movement. The testnet AI timer moved from
+  minute 30 to minute 32 to avoid collector overlap. Market tests, production
+  build, all focused TypeScript suites, sixteen Foundry tests, and consecutive
+  unattended collector runs passed; `/api/status` remained HTTP 200.
 
 ## Decisions
 
