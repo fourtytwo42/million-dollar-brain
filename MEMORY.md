@@ -215,8 +215,12 @@ When sources conflict, use this order:
   wallet action retries status refresh for up to 90 seconds, and the chain-46630
   oracle heartbeat threshold moved from 60 to 45 seconds to leave headroom for
   the minute collector's public-RPC confirmation time. Network and market tests,
-  full formatting, and the production build passed. The next scheduled
-  checkpoint remains the live verification for this final repair.
+  full formatting, and the production build passed. Checkpoint 5 then verified
+  the repaired path under its normal schedule: the wallet funded without a
+  stale-price interruption, piece 41 was purchased and set to
+  `Three References`, 125 USDG of MDBS was bought, 25% was sold atomically,
+  rewards were claimed, NAV reconciled exactly, and browser errors remained
+  empty.
 
 ## Decisions
 
