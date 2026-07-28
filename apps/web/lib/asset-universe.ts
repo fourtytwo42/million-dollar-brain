@@ -59,6 +59,15 @@ export type CompactAssetV1 = {
 
 export type DynamicAllocation = Record<string, number>;
 
+export type DynamicOracleState = {
+  fresh: boolean;
+  chainTimestamp?: number;
+  assets: Record<
+    string,
+    { priceUsdWad: string; updatedAt: number; valid: boolean }
+  >;
+};
+
 export const ASSET_POLICY = {
   minimumMarketCapOrAumUsdWad: 100_000_000n * 10n ** 18n,
   minimumExecutableDepthUsdWad: 250_000n * 10n ** 18n,
@@ -73,6 +82,43 @@ export const ASSET_POLICY = {
   maximumDetailedAssets: 64,
   maximumResearchAssets: 16,
 } as const;
+
+export function assessDynamicFreshness(
+  records: Pick<AssetRecordV1, "active" | "id" | "symbol">[],
+  detailedAssets: {
+    id?: string;
+    symbol: string;
+    identity: { permissions: { halted: boolean } };
+  }[],
+  oracle: DynamicOracleState,
+  nowSeconds = oracle.chainTimestamp ?? Math.floor(Date.now() / 1_000),
+) {
+  const reasons: string[] = [];
+  if (!oracle.fresh) reasons.push("required on-chain valuation is stale");
+  for (const record of records.filter((candidate) => candidate.active)) {
+    const observation = oracle.assets[record.symbol];
+    if (!observation?.valid) {
+      reasons.push(`${record.symbol} valuation is invalid`);
+      continue;
+    }
+    if (
+      observation.updatedAt <= 0 ||
+      Math.max(0, nowSeconds - observation.updatedAt) > 120
+    ) {
+      reasons.push(`${record.symbol} valuation is stale`);
+    }
+    const dossier = detailedAssets.find((asset) => asset.id === record.id);
+    if (dossier?.identity.permissions.halted) {
+      reasons.push(`${record.symbol} trading is halted`);
+    }
+  }
+  return {
+    requiredStateFresh: oracle.fresh,
+    requiredQuotesFresh: reasons.length === 0,
+    holdRequired: reasons.length > 0,
+    reasons,
+  };
+}
 
 export function canonicalAssetId(chainId: number, address: string) {
   if (!Number.isSafeInteger(chainId) || chainId <= 0 || !isAddress(address)) {

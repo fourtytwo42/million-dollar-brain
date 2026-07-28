@@ -3,6 +3,7 @@ import test from "node:test";
 import type { Address } from "viem";
 import {
   ASSET_POLICY,
+  assessDynamicFreshness,
   canonicalAssetId,
   compileUniverseContext,
   qualificationStatus,
@@ -17,6 +18,79 @@ import {
 
 const address = (value: number) =>
   `0x${value.toString(16).padStart(40, "0")}` as Address;
+
+test("V4 freshness follows the dynamic manifest rather than legacy ETHX", () => {
+  const records = [
+    {
+      id: "46630:0x0000000000000000000000000000000000000001",
+      symbol: "USDG",
+      active: true,
+    },
+    {
+      id: "46630:0x0000000000000000000000000000000000000002",
+      symbol: "WETH",
+      active: true,
+    },
+  ];
+  const detailed = records.map((record) => ({
+    id: record.id,
+    symbol: record.symbol,
+    identity: {
+      permissions: { buy: true, sell: true, halted: false },
+    },
+  }));
+  const freshness = assessDynamicFreshness(records, detailed, {
+    fresh: true,
+    chainTimestamp: 1_000,
+    assets: {
+      USDG: {
+        priceUsdWad: "1000000000000000000",
+        updatedAt: 950,
+        valid: true,
+      },
+      WETH: {
+        priceUsdWad: "3000000000000000000000",
+        updatedAt: 950,
+        valid: true,
+      },
+    },
+  });
+  assert.equal(freshness.holdRequired, false);
+  assert.deepEqual(freshness.reasons, []);
+});
+
+test("V4 freshness fails closed for a stale registered asset", () => {
+  const record = {
+    id: "46630:0x0000000000000000000000000000000000000002",
+    symbol: "WETH",
+    active: true,
+  };
+  const freshness = assessDynamicFreshness(
+    [record],
+    [
+      {
+        id: record.id,
+        symbol: record.symbol,
+        identity: {
+          permissions: { buy: true, sell: true, halted: false },
+        },
+      },
+    ],
+    {
+      fresh: true,
+      chainTimestamp: 1_000,
+      assets: {
+        WETH: {
+          priceUsdWad: "3000000000000000000000",
+          updatedAt: 800,
+          valid: true,
+        },
+      },
+    },
+  );
+  assert.equal(freshness.holdRequired, true);
+  assert.deepEqual(freshness.reasons, ["WETH valuation is stale"]);
+});
 
 function asset(
   value: number,

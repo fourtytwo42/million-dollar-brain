@@ -26,6 +26,7 @@ import { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 import { networkConfig } from "./network";
 import {
   ASSET_POLICY,
+  assessDynamicFreshness,
   canonicalAssetId,
   compileUniverseContext,
   type AssetRecordV1,
@@ -248,6 +249,7 @@ type DashboardState = {
   currentWeightsBps: Record<string, number>;
   oracle: {
     fresh: boolean;
+    chainTimestamp?: number;
     assets: Record<
       string,
       { priceUsdWad: string; updatedAt: number; valid: boolean }
@@ -873,21 +875,25 @@ export async function buildDecisionContext(
         maximumWeightBps: asset.maximumWeightBps,
       };
     });
-  const detailedLegacy = base.assets.map((asset) => {
+  const detailedLegacy = base.assets.flatMap((asset) => {
     const record = assetRecords.find(
-      (candidate) => candidate.symbol === asset.symbol,
+      (candidate) =>
+        candidate.symbol === asset.symbol &&
+        candidate.address.toLowerCase() ===
+          asset.identity.contract.toLowerCase(),
     );
-    return {
-      ...asset,
-      id:
-        record?.id ??
-        canonicalAssetId(networkConfig.chainId, asset.identity.contract),
-      coverageScoreBps:
-        asset.provenance.filter((stamp) => stamp.valid).length * 1_000,
-      diversificationScoreBps:
-        asset.identity.assetClass === "stable" ? 0 : 5_000,
-      stabilityScoreBps: asset.quote.oracleValid ? 10_000 : 0,
-    };
+    if (!record) return [];
+    return [
+      {
+        ...asset,
+        id: record.id,
+        coverageScoreBps:
+          asset.provenance.filter((stamp) => stamp.valid).length * 1_000,
+        diversificationScoreBps:
+          asset.identity.assetClass === "stable" ? 0 : 5_000,
+        stabilityScoreBps: asset.quote.oracleValid ? 10_000 : 0,
+      },
+    ];
   });
   const legacySymbols = new Set(detailedLegacy.map((asset) => asset.symbol));
   const detailedDynamic = assetRecords
@@ -975,6 +981,11 @@ export async function buildDecisionContext(
     });
   const detailed = [...detailedLegacy, ...detailedDynamic];
   const universe = compileUniverseContext(eligibleAssetDirectory, detailed);
+  const dynamicFreshness = assessDynamicFreshness(
+    assetRecords,
+    detailed,
+    state.oracle,
+  );
   const reserve = assetRecords.find(
     (asset) => asset.active && asset.kind === "reserve",
   );
@@ -1010,10 +1021,10 @@ export async function buildDecisionContext(
       unrestrictedWeb: false as const,
     },
     freshness: {
-      ...base.freshness,
-      holdRequired: base.freshness.holdRequired || universe.holdRequired,
+      ...dynamicFreshness,
+      holdRequired: dynamicFreshness.holdRequired || universe.holdRequired,
       reasons: [
-        ...base.freshness.reasons,
+        ...dynamicFreshness.reasons,
         ...(universe.holdReason ? [universe.holdReason] : []),
       ],
     },
