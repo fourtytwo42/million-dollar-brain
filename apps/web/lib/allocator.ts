@@ -28,6 +28,7 @@ import {
   persistAccountingSnapshot,
   syncVaultLedger,
 } from "./portfolio-accounting";
+import { buildTestnetRebalancePlans, reviveSwapPlans } from "./quote-planner";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -411,29 +412,109 @@ export async function runCycle() {
     aggregateEffects: { tagPreferenceBps },
     decisionContext: market,
   };
-  const fallback = holdAllocation(
+  const dynamicMode = d.schemaVersion === 3 && Boolean(d.assets?.length);
+  const dynamicFallback = Object.fromEntries(
+    market.assetRecords
+      .filter((asset) => asset.active)
+      .map((asset) => [asset.id, state.currentWeightsBps[asset.symbol] ?? 0]),
+  );
+  const dynamicFallbackTotal = Object.values(dynamicFallback).reduce(
+    (sum, weight) => sum + weight,
+    0,
+  );
+  if (dynamicMode && dynamicFallbackTotal !== 10_000) {
+    for (const id of Object.keys(dynamicFallback)) dynamicFallback[id] = 0;
+    dynamicFallback[market.reserveAssetId] = 10_000;
+  }
+  const legacyFallback = holdAllocation(
     state.currentWeightsBps,
     market.previousTarget,
   );
-  const decision = await askAllocator(
-    allocatorContext,
-    fallback,
-    market.freshness.holdRequired
-      ? market.freshness.reasons.join("; ")
-      : undefined,
-  );
+  const dynamicDecision = dynamicMode
+    ? await runDynamicResearchAllocator(market, dynamicFallback)
+    : null;
+  const legacyDecision = dynamicMode
+    ? null
+    : await askAllocator(
+        allocatorContext,
+        legacyFallback,
+        market.freshness.holdRequired
+          ? market.freshness.reasons.join("; ")
+          : undefined,
+      );
+  const allocationById = dynamicDecision?.allocationById ?? null;
+  const allocation: Record<string, number> = dynamicDecision
+    ? Object.fromEntries(
+        market.assetRecords
+          .filter((asset) => asset.active)
+          .map((asset) => [
+            asset.symbol,
+            dynamicDecision.allocationById[asset.id] ?? 0,
+          ]),
+      )
+    : (legacyDecision?.allocation ?? legacyFallback);
+  const decision = {
+    allocation,
+    allocationById,
+    rationale:
+      dynamicDecision?.rationale ??
+      legacyDecision?.rationale ??
+      "Deterministic hold.",
+    source:
+      dynamicDecision?.source ??
+      legacyDecision?.source ??
+      ("fallback" as const),
+    rawOutput:
+      dynamicDecision?.rawOutputs.join("\n\n") ??
+      legacyDecision?.rawOutput ??
+      "",
+    promptHash:
+      dynamicDecision?.promptHashes.at(-1) ??
+      legacyDecision?.promptHash ??
+      market.inputHash,
+    promptHashes: dynamicDecision?.promptHashes ?? [
+      legacyDecision?.promptHash ?? market.inputHash,
+    ],
+    researchResults: dynamicDecision?.researchResults ?? [],
+    modelConfig: dynamicDecision?.modelConfig ??
+      legacyDecision?.modelConfig ?? {
+        provider: "none",
+        model: "deterministic-hold",
+        temperature: 0,
+        maximumOutputTokens: 0,
+        stateless: true as const,
+      },
+  };
   const memeRecap = generateMemeRecap(brain, decision.allocation);
   let hash: `0x${string}` | null = null;
   let receipt: Awaited<
     ReturnType<typeof waitForReliableTransactionReceipt>
   > | null = null;
   if (decision.source === "ai") {
-    const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
-    const weights = allowed.map((symbol) => decision.allocation[symbol]);
     const cycleHash = keccak256(
       stringToHex(`${market.inputHash}:${decision.promptHash}`),
     );
     ({ hash, receipt } = await withAdminTransactionLock(async () => {
+      if (dynamicMode && decision.allocationById) {
+        const quote = await buildTestnetRebalancePlans(decision.allocationById);
+        const transactionHash = await adminClient.writeContract({
+          address: d.basket,
+          abi: basketAbi,
+          functionName: "rebalanceWithPlan",
+          args: [
+            quote.targetAssets,
+            quote.weights,
+            cycleHash,
+            reviveSwapPlans(quote.plans),
+          ],
+        });
+        return {
+          hash: transactionHash,
+          receipt: await waitForReliableTransactionReceipt(transactionHash),
+        };
+      }
+      const targets = [d.usdg, d.nvda, d.aapl, d.ethx];
+      const weights = allowed.map((symbol) => decision.allocation[symbol]);
       const transactionHash = await adminClient.writeContract({
         address: d.basket,
         abi: basketAbi,
@@ -450,22 +531,32 @@ export async function runCycle() {
   await syncVaultLedger();
   const accountingAfter = await buildPortfolioAccounting(stateAfter);
   const block = receipt?.blockNumber ?? (await publicClient.getBlockNumber());
+  const recordedSymbols = [
+    ...new Set([
+      ...Object.keys(state.holdings),
+      ...Object.keys(stateAfter.holdings),
+    ]),
+  ];
   const tradeOutcomes = Object.fromEntries(
-    allowed.map((symbol) => [
+    recordedSymbols.map((symbol) => [
       symbol,
       {
-        beforeUnitsWad: state.holdings[symbol],
-        afterUnitsWad: stateAfter.holdings[symbol],
+        beforeUnitsWad: state.holdings[symbol] ?? "0",
+        afterUnitsWad: stateAfter.holdings[symbol] ?? "0",
         deltaUnitsWad: (
-          BigInt(stateAfter.holdings[symbol]) - BigInt(state.holdings[symbol])
+          BigInt(stateAfter.holdings[symbol] ?? "0") -
+          BigInt(state.holdings[symbol] ?? "0")
         ).toString(),
       },
     ]),
   );
+  const reserveSymbol =
+    d.assets?.find((asset) => asset.kind === "reserve")?.symbol ?? "USDG";
   const record = {
-    schemaVersion: 3,
+    schemaVersion: dynamicMode ? 4 : 3,
     at: new Date().toISOString(),
     allocation: decision.allocation,
+    allocationById: decision.allocationById,
     rationale: decision.rationale,
     source: decision.source,
     characterRosterVersion: CHARACTER_ROSTER_VERSION,
@@ -476,6 +567,8 @@ export async function runCycle() {
     executionStatus: hash ? "executed" : "held",
     inputHash: market.inputHash,
     promptHash: decision.promptHash,
+    promptHashes: decision.promptHashes,
+    researchResults: decision.researchResults,
     modelConfig: decision.modelConfig,
     sourceManifest: market.sourceManifest,
     contextFreshness: market.freshness,
@@ -486,7 +579,7 @@ export async function runCycle() {
       navUsdWad: stateAfter.nav,
       navPerShareWad: stateAfter.navPerShare,
       supplyWad: stateAfter.supply,
-      reserveUsdWad: stateAfter.holdings.USDG,
+      reserveUsdWad: stateAfter.holdings[reserveSymbol] ?? "0",
       holdings: stateAfter.holdings,
       holdingValuesUsdWad: stateAfter.holdingValues,
       weightsBps: stateAfter.currentWeightsBps,

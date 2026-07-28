@@ -18,6 +18,31 @@ export const erc20Abi = [
   },
 ] as const;
 
+const executionIntentComponents = [
+  { name: "vault", type: "address" },
+  { name: "tokenIn", type: "address" },
+  { name: "tokenOut", type: "address" },
+  { name: "amountIn", type: "uint256" },
+  { name: "minimumAmountOut", type: "uint256" },
+  { name: "recipient", type: "address" },
+  { name: "target", type: "address" },
+  { name: "allowanceTarget", type: "address" },
+  { name: "callDataHash", type: "bytes32" },
+  { name: "expiry", type: "uint256" },
+  { name: "referenceBlock", type: "uint256" },
+  { name: "nonce", type: "uint256" },
+] as const;
+
+const swapPlanComponents = [
+  {
+    name: "intent",
+    type: "tuple",
+    components: executionIntentComponents,
+  },
+  { name: "executionData", type: "bytes" },
+  { name: "authorizerSignature", type: "bytes" },
+] as const;
+
 export const basketAbi = [
   {
     type: "function",
@@ -126,6 +151,30 @@ export const basketAbi = [
   },
   {
     type: "function",
+    name: "depositWithPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "grossAmount", type: "uint256" },
+      { name: "minimumShares", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+      { name: "plans", type: "tuple[]", components: swapPlanComponents },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "redeemWithPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "shares", type: "uint256" },
+      { name: "minimumNet", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+      { name: "plans", type: "tuple[]", components: swapPlanComponents },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "canRedeemImmediately",
     stateMutability: "view",
     inputs: [
@@ -188,6 +237,18 @@ export const basketAbi = [
       { name: "targetAssets", type: "address[]" },
       { name: "weights", type: "uint16[]" },
       { name: "cycleHash", type: "bytes32" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "rebalanceWithPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "targetAssets", type: "address[]" },
+      { name: "weights", type: "uint16[]" },
+      { name: "cycleHash", type: "bytes32" },
+      { name: "plans", type: "tuple[]", components: swapPlanComponents },
     ],
     outputs: [],
   },

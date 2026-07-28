@@ -47,6 +47,9 @@ export type Deployment = LegacyDeployment & {
   environment?: string;
   chainId?: number;
   assets?: DeploymentAsset[];
+  assetRegistry?: Address;
+  executionAdapter?: Address;
+  quoteAuthorizer?: Address;
   contracts?: {
     router?: Address;
     oracle?: Address;
@@ -126,6 +129,8 @@ export function normalizeDeployment(raw: Record<string, unknown>): Deployment {
       reserve?.address,
     router: raw.router ?? contracts?.router ?? contracts?.executionAdapter,
     oracle: raw.oracle ?? contracts?.oracle ?? contracts?.valuation,
+    assetRegistry: raw.assetRegistry ?? contracts?.assetRegistry,
+    executionAdapter: raw.executionAdapter ?? contracts?.executionAdapter,
     rewards: raw.rewards ?? contracts?.rewards,
     creatorVault: raw.creatorVault ?? contracts?.creatorVault,
     brain: raw.brain ?? contracts?.brain,

@@ -90,7 +90,14 @@ type Data = {
     faucetLanOnly: boolean;
     mockAssets: boolean;
   };
-  deployment: Record<string, `0x${string}`>;
+  deployment: {
+    schemaVersion?: number;
+    basket: `0x${string}`;
+    usdg: `0x${string}`;
+    brain: `0x${string}`;
+    rewards: `0x${string}`;
+    [key: string]: unknown;
+  };
   nav: string;
   navPerShare: string;
   navChange24hBps: number | null;
@@ -209,6 +216,59 @@ type Data = {
     }[];
   };
 };
+
+type QuotePlanResponse = {
+  expiresAt: number;
+  plans: {
+    intent: {
+      vault: `0x${string}`;
+      tokenIn: `0x${string}`;
+      tokenOut: `0x${string}`;
+      amountIn: string;
+      minimumAmountOut: string;
+      recipient: `0x${string}`;
+      target: `0x${string}`;
+      allowanceTarget: `0x${string}`;
+      callDataHash: `0x${string}`;
+      expiry: string;
+      referenceBlock: string;
+      nonce: string;
+    };
+    executionData: `0x${string}`;
+    authorizerSignature: `0x${string}`;
+  }[];
+};
+
+function reviveClientSwapPlans(response: QuotePlanResponse) {
+  return response.plans.map((plan) => ({
+    intent: {
+      ...plan.intent,
+      amountIn: BigInt(plan.intent.amountIn),
+      minimumAmountOut: BigInt(plan.intent.minimumAmountOut),
+      expiry: BigInt(plan.intent.expiry),
+      referenceBlock: BigInt(plan.intent.referenceBlock),
+      nonce: BigInt(plan.intent.nonce),
+    },
+    executionData: plan.executionData,
+    authorizerSignature: plan.authorizerSignature,
+  }));
+}
+
+async function requestQuotePlan(action: "deposit" | "redeem", amount: bigint) {
+  const response = await fetch("/api/quote-plan", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action, amount: amount.toString() }),
+  });
+  const body = (await response.json()) as QuotePlanResponse & {
+    error?: string;
+  };
+  if (!response.ok) {
+    throw new Error(body.error ?? "Unable to build an atomic basket quote.");
+  }
+  return body;
+}
+
 const short = (value: string) =>
   value ? `${value.slice(0, 6)}...${value.slice(-4)}` : "";
 const money = (value: string | bigint) =>
@@ -465,14 +525,31 @@ export function BrainDashboard() {
       hash: approve,
       ...receiptWaitPolicy,
     });
-    setMessage("Buying MDBS and adding your funds to the basket…");
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const quote =
+      data.deployment.schemaVersion === 3
+        ? await requestQuotePlan("deposit", value)
+        : null;
+    setMessage(
+      quote
+        ? "Buying MDBS and atomically purchasing your share of the basket…"
+        : "Buying MDBS and adding your funds to the basket…",
+    );
+    const deadline = BigInt(
+      quote?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
+    );
     const tx = await retryApprovalDependentWrite(() =>
       wallet.writeContract({
         address: data.deployment.basket,
         abi: basketAbi,
-        functionName: "deposit",
-        args: [value, (preview[2] * 99n) / 100n, deadline],
+        functionName: quote ? "depositWithPlan" : "deposit",
+        args: quote
+          ? [
+              value,
+              (preview[2] * 99n) / 100n,
+              deadline,
+              reviveClientSwapPlans(quote),
+            ]
+          : [value, (preview[2] * 99n) / 100n, deadline],
       }),
     );
     await publicClient.waitForTransactionReceipt({
@@ -564,11 +641,22 @@ export function BrainDashboard() {
       args: [shares],
     });
     const minimumNet = (preview[2] * 99n) / 100n;
+    const quote =
+      data.deployment.schemaVersion === 3
+        ? await requestQuotePlan("redeem", shares)
+        : null;
     const tx = await wallet.writeContract({
       address: data.deployment.basket,
       abi: basketAbi,
-      functionName: "redeem",
-      args: [shares, minimumNet, deadline],
+      functionName: quote ? "redeemWithPlan" : "redeem",
+      args: quote
+        ? [
+            shares,
+            minimumNet,
+            BigInt(quote.expiresAt),
+            reviveClientSwapPlans(quote),
+          ]
+        : [shares, minimumNet, deadline],
     });
     await publicClient.waitForTransactionReceipt({
       hash: tx,

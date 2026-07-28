@@ -583,3 +583,11 @@ build`; authenticated live `/api/collect-market`.
 ## Archive
 
 - No archived entries yet.
+### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
+
+- Context: The fresh chain-46630 replica stack requires every user buy, user sell, and autonomous rebalance to use the same signed `SwapPlan[]` interface.
+- Decision: Added a server-only EIP-712 quote planner and `/api/quote-plan`; V3 browser Buy/Sell calls `depositWithPlan` and `redeemWithPlan`, while legacy local devnet calls remain unchanged. Dynamic V4 cycles now validate any active registry asset, request at most one bounded research round, generate signed rebalance plans, and call `rebalanceWithPlan`.
+- Files: `apps/web/lib/quote-planner.ts`, `apps/web/app/api/quote-plan/route.ts`, `apps/web/components/brain-dashboard.tsx`, `apps/web/lib/allocator.ts`, `apps/web/lib/abi.ts`, `packages/contracts/src/BasketVault.sol`, `packages/contracts/script/DeployTestnetV3.s.sol`.
+- Commands/tests: `forge test --root packages/contracts` passed 21/21; web TypeScript passed; web production build passed and includes `/api/quote-plan`.
+- Result: Plans bind the chain, vault, exact token pair/input, minimum output, recipient, venue/spender, calldata hash, expiry, block, and nonce. Basket valuation and trade sizing now respect token decimals rather than assuming every compatible ERC-20 has 18 decimals. The fresh replica qualification window is seven days so the 72-hour acceptance run cannot expire mid-run; daily refresh remains required for durable operation.
+- Follow-up: Complete official-price publishing for every replica, add strict deployment/cutover gates and mainnet shadow evidence, then deploy and UAT the fresh V3 testnet stack.
