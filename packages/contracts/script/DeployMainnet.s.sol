@@ -72,7 +72,7 @@ contract DeployMainnet is Script {
         execution.configureVenue(zeroExTarget, zeroExAllowanceTarget, true);
         execution.configureSelector(zeroExSelector, true);
         execution.configureToken(CANONICAL_USDG, true);
-        valuation.configureFeed(CANONICAL_USDG, usdgFeed, uint32(usdgHeartbeat), address(0));
+        valuation.configureFeed(CANONICAL_USDG, usdgFeed, uint32(usdgHeartbeat), false, true);
 
         for (uint256 i; i < riskAssets.length; ++i) {
             address token = riskAssets[i];
@@ -94,7 +94,7 @@ contract DeployMainnet is Script {
                     active: false
                 })
             );
-            valuation.configureFeed(token, feeds[i], uint32(heartbeats[i]), isWeth ? address(0) : token);
+            valuation.configureFeed(token, feeds[i], uint32(heartbeats[i]), !isWeth, true);
             execution.configureToken(token, true);
         }
 

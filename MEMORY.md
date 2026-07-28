@@ -599,3 +599,10 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: The first shadow run on chain 4663 inspected 98 official canonical assets; runtime code and every Stock Token UID matched, and sampled `oraclePaused` values were false. `forge test --root packages/contracts` passed 22/22 including canonical six-decimal USDG-shaped NAV/share accounting.
 - Result: USDG 6-decimal transfers now reconcile to 18-decimal NAV and MDBS shares; mainnet quote/execution plans preserve raw token units. Shadow gates truthfully remain false for absent 0x credentials, Chainlink feed mappings, and the required 30-day evidence.
 - Follow-up: Publish and commit the dynamic market/shadow tooling, then broadcast the fresh production-interface replica deployment to chain 46630 and begin its 72-hour acceptance clock.
+### 2026-07-28 - Testnet Rehearsal and EIP-170 Gate
+
+- Context: A no-broadcast rehearsal against Robinhood Testnet simulated the complete fresh V3 deployment.
+- Decision: Set the production Foundry optimizer profile to one run and permanently reduce the already-disabled queue ABI to custom-error stubs. Non-interface risk constants became internal; no storage layout or active economics changed.
+- Commands/tests: Public chain-46630 rehearsal estimated 72,477,317 gas and 0.001449546412477317 ETH. The first build found `BasketVault` at 25,151 runtime bytes; the corrected build is 24,309 bytes, 267 bytes below EIP-170. The operator had about 0.0129492027 test ETH before broadcast.
+- Result: The hard code-size release gate is cleared. No V3 testnet transaction was broadcast during the rehearsal.
+- Follow-up: Run all 22 contract tests, commit/push the exact optimizer and bytecode change, then broadcast the already-authorized fresh V3 deployment with `--slow` to tolerate public-RPC replica lag.

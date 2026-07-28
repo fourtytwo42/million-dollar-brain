@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { Test } from "forge-std/Test.sol";
-import { Vm } from "forge-std/Vm.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { MockToken } from "../src/MockToken.sol";
-import { MockRouter } from "../src/MockRouter.sol";
-import { MockValuationOracle } from "../src/MockValuationOracle.sol";
-import { RewardDistributor } from "../src/RewardDistributor.sol";
-import { CreatorVault } from "../src/CreatorVault.sol";
-import { BrainMarketplace } from "../src/BrainMarketplace.sol";
-import { BasketVault } from "../src/BasketVault.sol";
+import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MockToken} from "../src/MockToken.sol";
+import {MockRouter} from "../src/MockRouter.sol";
+import {MockValuationOracle} from "../src/MockValuationOracle.sol";
+import {RewardDistributor} from "../src/RewardDistributor.sol";
+import {CreatorVault} from "../src/CreatorVault.sol";
+import {BrainMarketplace} from "../src/BrainMarketplace.sol";
+import {BasketVault} from "../src/BasketVault.sol";
 
 contract BasketBrainTest is Test {
     address internal admin = makeAddr("admin");
@@ -68,8 +68,7 @@ contract BasketBrainTest is Test {
         creatorVault = CreatorVault(
             address(
                 new ERC1967Proxy(
-                    address(creatorVaultImpl),
-                    abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
+                    address(creatorVaultImpl), abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
                 )
             )
         );
@@ -79,8 +78,7 @@ contract BasketBrainTest is Test {
                 new ERC1967Proxy(
                     address(rewardImpl),
                     abi.encodeCall(
-                        RewardDistributor.initialize,
-                        (admin, address(usdg), rewardWeights, address(creatorVault))
+                        RewardDistributor.initialize, (admin, address(usdg), rewardWeights, address(creatorVault))
                     )
                 )
             )
@@ -205,8 +203,7 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("event-cycle"));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 signature =
-            keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
+        bytes32 signature = keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
         uint256 tradeEvents;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length > 0 && logs[i].topics[0] == signature) {
@@ -462,11 +459,11 @@ contract BasketBrainTest is Test {
 
     function testQueuedRedemptionsAreDisabled() public {
         vm.prank(alice);
-        vm.expectRevert("queued exits disabled");
+        vm.expectRevert(BasketVault.QueuedExitsDisabled.selector);
         basket.requestRedemption(100e18, 1, block.timestamp + 1 hours);
 
         vm.prank(admin);
-        vm.expectRevert("queued exits disabled");
+        vm.expectRevert(BasketVault.QueuedExitsDisabled.selector);
         basket.processRedemptions(10);
     }
 
@@ -478,9 +475,9 @@ contract BasketBrainTest is Test {
         basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
         vm.expectRevert("minimum redemption");
         basket.redeem(5e18, 1, block.timestamp + 1 hours);
-        vm.expectRevert("queued exits disabled");
+        vm.expectRevert(BasketVault.QueuedExitsDisabled.selector);
         basket.requestRedemption(5e18, 1, block.timestamp + 1 hours);
-        vm.expectRevert("queued exits disabled");
+        vm.expectRevert(BasketVault.QueuedExitsDisabled.selector);
         basket.requestRedemption(100e18, 1, block.timestamp - 1);
         vm.stopPrank();
     }

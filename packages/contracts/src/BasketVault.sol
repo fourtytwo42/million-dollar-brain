@@ -56,23 +56,21 @@ contract BasketVault is
     AccessControlUpgradeable,
     ReentrancyGuardUpgradeable
 {
+    error QueuedExitsDisabled();
+
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     uint256 public constant BPS = 10_000;
     uint256 public constant FEE_BPS = 100;
     uint256 public constant BRAIN_FEE_SHARE_BPS = 5_000;
     uint256 public constant CREATOR_FEE_SHARE_BPS = 4_000;
     uint256 public constant MIN_USDG_BPS = 2_000;
-    uint256 public constant MAX_QUEUE_SETTLEMENT_BPS = 500;
-    // Retained in the ABI for upgrade compatibility. Redemptions are now
-    // atomic at every size and no longer use this legacy queue threshold.
-    uint256 public constant MAX_IMMEDIATE_REDEMPTION_BPS = 100;
     uint256 public constant MIN_REDEMPTION_VALUE = 10e18;
     uint256 public constant TVL_CAP = 100_000e18;
     uint256 public constant WALLET_VALUE_CAP = 25_000e18;
-    uint256 public constant DUST_BPS = 1;
-    uint256 public constant MAX_RISK_POSITIONS = 9;
-    uint256 public constant MAX_ASSET_WEIGHT_BPS = 2_000;
-    uint256 public constant MAX_HIGH_VOLATILITY_BPS = 3_000;
+    uint256 internal constant DUST_BPS = 1;
+    uint256 internal constant MAX_RISK_POSITIONS = 9;
+    uint256 internal constant MAX_ASSET_WEIGHT_BPS = 2_000;
+    uint256 internal constant MAX_HIGH_VOLATILITY_BPS = 3_000;
 
     struct RedemptionRequest {
         address account;
@@ -404,31 +402,16 @@ contract BasketVault is
         return _reserveToUsdWad(gross) >= MIN_REDEMPTION_VALUE && immediate;
     }
 
-    function requestRedemption(uint256 shares, uint256 minimumNet, uint256 deadline)
-        external
-        returns (uint256 requestId)
-    {
-        shares;
-        minimumNet;
-        deadline;
-        requestId;
-        revert("queued exits disabled");
+    function requestRedemption(uint256, uint256, uint256) external pure returns (uint256) {
+        revert QueuedExitsDisabled();
     }
 
-    function cancelRedemption(uint256 requestId) external nonReentrant {
-        RedemptionRequest storage request = redemptionRequests[requestId];
-        require(request.pending && request.account == msg.sender, "not pending owner");
-        uint256 shares = request.shares;
-        request.pending = false;
-        pendingRedemptionByAccount[msg.sender] = 0;
-        _transfer(address(this), msg.sender, shares);
-        emit RedemptionCancelled(requestId, msg.sender, shares);
+    function cancelRedemption(uint256) external pure {
+        revert QueuedExitsDisabled();
     }
 
-    function processRedemptions(uint256 maximumRequests) external onlyRole(KEEPER_ROLE) returns (uint256 settled) {
-        maximumRequests;
-        settled;
-        revert("queued exits disabled");
+    function processRedemptions(uint256) external pure returns (uint256) {
+        revert QueuedExitsDisabled();
     }
 
     function rebalance(address[] calldata targetAssets, uint16[] calldata weights, bytes32 cycleHash)
