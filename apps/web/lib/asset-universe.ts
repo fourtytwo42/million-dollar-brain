@@ -127,6 +127,15 @@ export function canonicalAssetId(chainId: number, address: string) {
   return `${chainId}:${address.toLowerCase()}`;
 }
 
+export function normalizeAssetId(value: string) {
+  const separator = value.indexOf(":");
+  if (separator <= 0 || separator === value.length - 1) {
+    throw new Error(`invalid asset id: ${value}`);
+  }
+  const chainId = Number(value.slice(0, separator));
+  return canonicalAssetId(chainId, value.slice(separator + 1));
+}
+
 export function qualificationStatus(
   asset: Pick<
     AssetRecordV1,
@@ -240,12 +249,27 @@ export function validateDynamicAllocation(
   );
   if (!eligible.has(reserveId)) throw new Error("reserve is not active");
   const source = value as Record<string, unknown>;
-  for (const key of Object.keys(source)) {
-    if (!eligible.has(key))
+  const normalizedSource = new Map<string, unknown>();
+  for (const [key, weight] of Object.entries(source)) {
+    let normalized: string;
+    try {
+      normalized = normalizeAssetId(key);
+    } catch {
       throw new Error(`unknown or inactive asset: ${key}`);
+    }
+    if (normalizedSource.has(normalized)) {
+      throw new Error(`duplicate asset: ${normalized}`);
+    }
+    if (!eligible.has(normalized)) {
+      throw new Error(`unknown or inactive asset: ${key}`);
+    }
+    normalizedSource.set(normalized, weight);
   }
   const allocation = Object.fromEntries(
-    [...eligible.keys()].map((id) => [id, Number(source[id] ?? 0)]),
+    [...eligible.keys()].map((id) => [
+      id,
+      Number(normalizedSource.get(id) ?? 0),
+    ]),
   );
   let total = 0;
   let riskPositions = 0;

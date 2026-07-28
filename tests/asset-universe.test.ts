@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Address } from "viem";
+import { getAddress, type Address } from "viem";
 import {
   ASSET_POLICY,
   assessDynamicFreshness,
   canonicalAssetId,
   compileUniverseContext,
+  normalizeAssetId,
   qualificationStatus,
   validateAssetManifest,
   validateDynamicAllocation,
@@ -164,6 +165,30 @@ test("manifest identity is address and chain based rather than symbol based", ()
   assert.throws(
     () => validateAssetManifest([first, second], 4663),
     /duplicate/,
+  );
+});
+
+test("allocation canonicalizes checksum asset IDs and rejects aliases", () => {
+  const reserve = asset(1, "reserve", "reserve");
+  const risk = asset(0xabc, "stock", "standard");
+  const checksumRiskId = `${risk.chainId}:${getAddress(risk.address)}`;
+  assert.equal(normalizeAssetId(checksumRiskId), risk.id);
+  assert.deepEqual(
+    validateDynamicAllocation(
+      { [reserve.id]: 8_000, [checksumRiskId]: 2_000 },
+      [reserve, risk],
+      reserve.id,
+    ),
+    { [reserve.id]: 8_000, [risk.id]: 2_000 },
+  );
+  assert.throws(
+    () =>
+      validateDynamicAllocation(
+        { [risk.id]: 1_000, [checksumRiskId]: 1_000, [reserve.id]: 8_000 },
+        [reserve, risk],
+        reserve.id,
+      ),
+    /duplicate asset/,
   );
 });
 
