@@ -159,7 +159,11 @@ When sources conflict, use this order:
   even for sub-basis-point price movement. The testnet AI timer moved from
   minute 30 to minute 32 to avoid collector overlap. Market tests, production
   build, all focused TypeScript suites, sixteen Foundry tests, and consecutive
-  unattended collector runs passed; `/api/status` remained HTTP 200.
+  unattended collector runs passed; `/api/status` remained HTTP 200. A final
+  live Ornith cycle used fresh V3 context, recorded `source: "ai"` and
+  `mode: "robinhood_testnet_mock"`, and executed the 20/30/25/25 allocation in
+  transaction
+  `0xd172622332672589c53c7cc13107261f9505ba418122512ba9757e9e9cb5d7c6`.
 
 ## Decisions
 
