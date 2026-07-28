@@ -24,6 +24,9 @@ const routerPriceAbi = parseAbi([
   "function priceWad(address token) view returns (uint256)",
   "function setPrice(address token,uint256 priceWad)",
 ]);
+const publisherAbi = parseAbi([
+  "function publish(address[] tokens,uint256[] prices,bytes32 evidenceHash)",
+]);
 
 type PriceCandidate = {
   symbol: string;
@@ -161,6 +164,133 @@ async function syncLocalMarketPricesUnlocked() {
     const oracle = d.oracle;
     if (!oracle) throw new Error("local valuation oracle is not configured");
     const prices = await candidates();
+    if (d.pricePublisher) {
+      const stateBlock = await publicClient.getBlockNumber();
+      const previous = await Promise.all(
+        prices.map(async (candidate) => {
+          const [oraclePrice, routerPrice] = await retryRpcConsistency(() =>
+            Promise.all([
+              publicClient.readContract({
+                address: oracle,
+                abi: oracleAbi,
+                functionName: "prices",
+                args: [candidate.token],
+                blockNumber: stateBlock,
+              }),
+              publicClient.readContract({
+                address: d.router,
+                abi: routerPriceAbi,
+                functionName: "priceWad",
+                args: [candidate.token],
+                blockNumber: stateBlock,
+              }),
+            ]),
+          );
+          return { oraclePrice, routerPrice };
+        }),
+      );
+      const evidenceHash = hash(
+        prices.map((price) => ({
+          symbol: price.symbol,
+          priceWad: price.priceWad.toString(),
+          sourceHash: price.sourceHash,
+        })),
+      );
+      const publisherTxHash = await adminClient.writeContract({
+        address: d.pricePublisher,
+        abi: publisherAbi,
+        functionName: "publish",
+        args: [
+          prices.map((price) => price.token),
+          prices.map((price) => price.priceWad),
+          evidenceHash,
+        ],
+      });
+      const receipt = await waitForReliableTransactionReceipt(publisherTxHash);
+      await retryRpcConsistency(async () => {
+        const verified = await Promise.all(
+          prices.map((candidate) =>
+            Promise.all([
+              publicClient.readContract({
+                address: oracle,
+                abi: oracleAbi,
+                functionName: "prices",
+                args: [candidate.token],
+                blockNumber: receipt.blockNumber,
+              }),
+              publicClient.readContract({
+                address: d.router,
+                abi: routerPriceAbi,
+                functionName: "priceWad",
+                args: [candidate.token],
+                blockNumber: receipt.blockNumber,
+              }),
+            ]),
+          ),
+        );
+        verified.forEach(([oraclePrice, routerPrice], index) => {
+          if (
+            oraclePrice[0] !== prices[index].priceWad ||
+            routerPrice !== prices[index].priceWad
+          ) {
+            throw new Error(
+              `${prices[index].symbol} batch verification failed`,
+            );
+          }
+        });
+      });
+      await Promise.all(
+        prices.map((candidate, index) =>
+          withDatabase((client) =>
+            client.query(
+              `INSERT INTO mdb_price_syncs
+                (symbol,source,source_observed_at,price_wad,
+                 previous_oracle_price_wad,previous_router_price_wad,
+                 oracle_tx_hash,router_tx_hash,status,source_hash,details)
+               VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'updated',$9,$10)`,
+              [
+                candidate.symbol,
+                candidate.source,
+                candidate.sourceObservedAt,
+                candidate.priceWad.toString(),
+                previous[index].oraclePrice[0].toString(),
+                previous[index].routerPrice.toString(),
+                publisherTxHash,
+                publisherTxHash,
+                candidate.sourceHash,
+                JSON.stringify({
+                  chainId,
+                  batchPublisher: d.pricePublisher,
+                  evidenceHash,
+                }),
+              ],
+            ),
+          ),
+        ),
+      );
+      const details = {
+        updated: prices.map((price) => price.symbol),
+        unchanged: [] as string[],
+        durationMs: Date.now() - started,
+        publisherTxHash,
+        evidenceHash,
+        sources: prices.map((price) => ({
+          symbol: price.symbol,
+          source: price.source,
+          observedAt: price.sourceObservedAt,
+          priceWad: price.priceWad.toString(),
+        })),
+      };
+      await withDatabase((client) =>
+        client.query(
+          `UPDATE mdb_worker_state SET last_succeeded_at=now(),
+             last_error=null,duration_ms=$1,details=$2
+           WHERE worker='market-price-sync'`,
+          [Date.now() - started, JSON.stringify(details)],
+        ),
+      );
+      return { enabled: true, ...details };
+    }
     const updated: string[] = [];
     const unchanged: string[] = [];
     for (const candidate of prices) {

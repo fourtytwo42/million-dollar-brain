@@ -9,6 +9,7 @@ import {MockValuationOracle} from "../src/MockValuationOracle.sol";
 import {ParityAssetToken} from "../src/ParityAssetToken.sol";
 import {AssetRegistry} from "../src/AssetRegistry.sol";
 import {ZeroExExecutionAdapter} from "../src/ZeroExExecutionAdapter.sol";
+import {TestnetPricePublisher} from "../src/TestnetPricePublisher.sol";
 import {RewardDistributor} from "../src/RewardDistributor.sol";
 import {CreatorVault} from "../src/CreatorVault.sol";
 import {BrainMarketplace} from "../src/BrainMarketplace.sol";
@@ -62,6 +63,9 @@ contract DeployTestnetV3 is Script {
         }
         valuation.setAutomaticFreshness(false);
         usdg.mint(address(venue), 100_000_000e18);
+        TestnetPricePublisher pricePublisher = new TestnetPricePublisher(deployer, address(valuation), address(venue));
+        valuation.transferOwnership(address(pricePublisher));
+        venue.transferOwnership(address(pricePublisher));
 
         AssetRegistry registry = AssetRegistry(
             address(
@@ -192,6 +196,7 @@ contract DeployTestnetV3 is Script {
             valuation,
             registry,
             execution,
+            pricePublisher,
             rewards,
             creatorVault,
             brain,
@@ -298,6 +303,7 @@ contract DeployTestnetV3 is Script {
         MockValuationOracle valuation,
         AssetRegistry registry,
         ZeroExExecutionAdapter execution,
+        TestnetPricePublisher pricePublisher,
         RewardDistributor rewards,
         CreatorVault creatorVault,
         BrainMarketplace brain,
@@ -329,6 +335,7 @@ contract DeployTestnetV3 is Script {
         vm.serializeAddress(root, "oracle", address(valuation));
         vm.serializeAddress(root, "assetRegistry", address(registry));
         vm.serializeAddress(root, "executionAdapter", address(execution));
+        vm.serializeAddress(root, "pricePublisher", address(pricePublisher));
         vm.serializeAddress(root, "rewards", address(rewards));
         vm.serializeAddress(root, "creatorVault", address(creatorVault));
         vm.serializeAddress(root, "brain", address(brain));

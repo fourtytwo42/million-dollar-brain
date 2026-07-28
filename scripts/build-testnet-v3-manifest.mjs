@@ -28,7 +28,14 @@ const specs = [
   ["SPY", "Test Replica SPY ETF", "spy", "etf", "standard", 2_000],
   ["QQQ", "Test Replica QQQ ETF", "qqq", "etf", "standard", 2_000],
   ["SOXX", "Test Replica SOXX ETF", "soxx", "etf", "standard", 2_000],
-  ["WETH", "Test Replica Wrapped Ether", "weth", "crypto", "high_volatility", 2_000],
+  [
+    "WETH",
+    "Test Replica Wrapped Ether",
+    "weth",
+    "crypto",
+    "high_volatility",
+    2_000,
+  ],
 ];
 const assets = specs.map(
   ([symbol, name, field, kind, riskClass, maximumWeightBps]) => {
@@ -45,12 +52,8 @@ const assets = specs.map(
       riskClass,
       decimals: 18,
       maximumWeightBps,
-      robinhoodUid:
-        kind === "reserve"
-          ? null
-          : `TEST-REPLICA-${symbol}`,
-      canonicalSource:
-        "https://api.robinhood.com/rhj/assets",
+      robinhoodUid: kind === "reserve" ? null : `TEST-REPLICA-${symbol}`,
+      canonicalSource: "https://api.robinhood.com/rhj/assets",
       replica: true,
     };
   },
@@ -71,6 +74,7 @@ const manifest = {
     valuation: raw.oracle,
     assetRegistry: raw.assetRegistry,
     executionAdapter: raw.executionAdapter,
+    pricePublisher: raw.pricePublisher ?? null,
     rewards: raw.rewards,
     creatorVault: raw.creatorVault,
     brain: raw.brain,
