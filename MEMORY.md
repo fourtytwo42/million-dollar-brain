@@ -625,6 +625,15 @@ build`; authenticated live `/api/collect-market`.
 
 - No archived entries yet.
 
+### 2026-07-28 - Mainnet-Edge Live UAT and Endurance Handoff
+
+- Context: Completed the production-shaped registry, V3 atomic execution, DecisionContext V4, fresh Robinhood Testnet replica deployment, and read-only mainnet shadow checkpoint.
+- Decision: Keep mainnet broadcasting disabled. Continue the fresh 72-hour chain-46630 endurance run and require 30 consecutive qualifying mainnet-shadow days before engineering release approval.
+- Files: `MAINNET_EDGE_RELEASE.md`, `scripts/mainnet-shadow.mjs`, `tests/endurance-testnet.mjs`, `apps/web/components/editorial-dashboard.tsx`, `apps/web/app/globals.css`, `tests/portfolio-display.test.ts`.
+- Commands/tests: Foundry 24/24; DecisionContext 5/5; asset universe 8/8; market data 9/9; network policy 11/11; wallet 7/7; meme recap 5/5; portfolio display 3/3; Next.js production build passed. In-app browser UAT passed on testnet for Brain, Basket, Decisions, exact two-decimal USD values, production-interface replica labeling, dark mode, 375px mobile width with no horizontal overflow, and zero console errors.
+- Result: Commits through `a7414f9` are pushed. The fresh endurance run started at `2026-07-28T17:53:24Z`; checkpoints 0 and 1 passed with buy, atomic sell, brain preset, claim, fresh prices, positive/reconciled NAV, no queued sale, and no browser errors. Restarting the web units at the presentation cutover restarted the coupled endurance worker, but preserved the same state, start time, and completion clock. Mainnet shadow validates all 98 official canonical identities read-only and records zero qualification days until required external evidence is configured.
+- Follow-up: Let the 72-hour run complete without resetting its state. Supply verified Chainlink feed mappings, a server-only 0x API key, approved capitalization/AUM and history evidence, redundant production RPCs, production roles, audit results, and the other external release inputs. Accumulate 30 uninterrupted qualification days. Do not broadcast mainnet.
+
 ### 2026-07-28 - V3 Signed Quote Plans and Dynamic Atomic Cycle
 
 - Context: The fresh chain-46630 replica stack requires every user buy, user sell, and autonomous rebalance to use the same signed `SwapPlan[]` interface.
