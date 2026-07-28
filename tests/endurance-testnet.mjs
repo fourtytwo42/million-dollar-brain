@@ -19,6 +19,12 @@ const durationMs = Number(
 const intervalMs = Number(
   process.env.MDB_ENDURANCE_INTERVAL_MS ?? 20 * 60 * 1000,
 );
+const faucetCooldownMs = Number(
+  process.env.MDB_ENDURANCE_FAUCET_COOLDOWN_MS ?? 60 * 60 * 1000,
+);
+const faucetCooldownBufferMs = Number(
+  process.env.MDB_ENDURANCE_FAUCET_COOLDOWN_BUFFER_MS ?? 5_000,
+);
 const stateDirectory =
   process.env.MDB_ENDURANCE_STATE_DIR ?? "var/testnet-endurance";
 const singleCheckpoint = process.env.MDB_ENDURANCE_SINGLE_CHECKPOINT === "true";
@@ -157,12 +163,19 @@ async function dismissGuide(page) {
   }
 }
 
-async function fundWallet(page) {
+async function fundWallet(page, notBefore = 0) {
+  const waitMs = Math.max(0, notBefore - Date.now());
+  if (waitMs > 0) {
+    console.log(
+      `Waiting ${waitMs}ms for the disposable wallet faucet cooldown.`,
+    );
+    await sleep(waitMs);
+  }
   await page
     .getByRole("button", { name: "Fund test wallet", exact: true })
     .click();
   await waitForMessage(page, "Test wallet funding completed.", 90_000);
-  return { completed: true };
+  return { completed: true, cooldownWaitMs: waitMs };
 }
 
 function presetAccessibleName(option) {
@@ -304,14 +317,22 @@ async function verifyUi(page, checkpoint) {
   assert.equal(await page.locator(".brain-cell").count(), 42);
 }
 
-async function runCheckpoint(page, checkpoint, browserErrors, shouldFund) {
+async function runCheckpoint(
+  page,
+  checkpoint,
+  browserErrors,
+  shouldFund,
+  fundingNotBefore,
+) {
   const startedAt = Date.now();
   await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
   await dismissGuide(page);
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  const funding = shouldFund ? await fundWallet(page) : { skipped: true };
+  const funding = shouldFund
+    ? await fundWallet(page, fundingNotBefore)
+    : { skipped: true };
   const brain = await buyBrainPieceAndSetPreset(page, checkpoint, statusBefore);
   const basket = await buyAndSellMdbs(page, checkpoint);
   const rewards = await claimRewards(page);
@@ -379,6 +400,7 @@ try {
         browserErrors,
         state.fundNextCheckpoint ||
           checkpoint >= (state.nextFundingCheckpoint ?? 0),
+        state.fundNextCheckpoint ? 0 : (state.nextFundingAt ?? 0),
       );
       await appendFile(checkpointPath, `${JSON.stringify(result)}\n`);
       state.completedCheckpoints += 1;
@@ -387,6 +409,8 @@ try {
       state.fundNextCheckpoint = false;
       if (result.actions.funding.completed) {
         state.nextFundingCheckpoint = checkpoint + 3;
+        state.nextFundingAt =
+          Date.now() + faucetCooldownMs + faucetCooldownBufferMs;
       }
       state.nextCheckpointAt =
         state.startedAt + state.completedCheckpoints * state.intervalMs;

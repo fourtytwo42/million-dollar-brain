@@ -7,11 +7,12 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: Checkpoints 3 and 4 exposed fixed-modulo faucet timing
-  and a confirmed-action/status-refresh race at an oracle freshness boundary.
-  Funding now advances three checkpoints from the last successful top-up,
-  oracle heartbeats start at 45 seconds, and confirmed wallet actions retry
-  status refresh without falsely reporting a completed transaction as failed.
+- Last meaningful change: Checkpoint 13 exposed that a three-checkpoint funding
+  interval can begin a few seconds before the previous faucet request's exact
+  one-hour cooldown expires. The runner now records the successful funding
+  timestamp and waits through the remaining cooldown plus a five-second buffer
+  before a scheduled top-up. A process restart still funds its new disposable
+  wallet immediately. Checkpoint 14 passed the repaired runner's complete flow.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -221,6 +222,18 @@ When sources conflict, use this order:
   `Three References`, 125 USDG of MDBS was bought, 25% was sold atomically,
   rewards were claimed, NAV reconciled exactly, and browser errors remained
   empty.
+- 2026-07-28: Endurance checkpoint 13 began its scheduled top-up a few seconds
+  before the same disposable wallet's prior one-hour faucet cooldown had fully
+  elapsed. The immutable failed attempt records HTTP 429 and the visible
+  `Faucet limit reached` banner; the automatic fresh-wallet restart then passed
+  checkpoint 13. `tests/endurance-testnet.mjs` now persists `nextFundingAt`
+  after each successful top-up and waits until that timestamp plus a
+  five-second safety buffer for future scheduled top-ups, while restart funding
+  remains immediate. Node syntax, Prettier, and diff checks passed. Checkpoint
+  14 then funded, purchased piece 27, selected `Energy Detox`, bought 150 USDG
+  of MDBS, sold 25% atomically, claimed rewards, reconciled all four holding
+  values exactly to NAV, and recorded zero browser errors. All local/testnet
+  services and timers remained active and ports 3000/3001 returned HTTP 200.
 
 ## Decisions
 
