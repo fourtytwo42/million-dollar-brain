@@ -130,3 +130,13 @@ test("testnet transactions tolerate public-RPC nonce and receipt replica lag", (
   );
   assert.doesNotMatch(collector, /publicClient\.waitForTransactionReceipt/);
 });
+
+test("testnet endurance funding covers an hourly action window", () => {
+  const faucet = readFileSync("apps/web/app/api/faucet/route.ts", "utf8");
+  const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
+  assert.match(faucet, /"250000000000000"/);
+  assert.match(faucet, /"3000000000000000"/);
+  assert.match(endurance, /fundNextCheckpoint \|\| checkpoint % 3 === 0/);
+  assert.match(endurance, /existing\.fundNextCheckpoint = true/);
+  assert.match(endurance, /locator\("\.editorial-banner"\)/);
+});

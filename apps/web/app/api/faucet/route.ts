@@ -81,14 +81,14 @@ export async function POST(request: NextRequest) {
       networkConfig.mode === "local"
         ? parseEther("2")
         : BigInt(
-            process.env.MDB_TESTNET_FAUCET_NATIVE_WEI ?? "100000000000000",
+            process.env.MDB_TESTNET_FAUCET_NATIVE_WEI ?? "250000000000000",
           );
     if (Date.now() >= dailyResetAt) {
       dailyNativeWei = 0n;
       dailyResetAt = Date.now() + 24 * 60 * 60 * 1000;
     }
     const dailyCap = BigInt(
-      process.env.MDB_TESTNET_FAUCET_DAILY_CAP_WEI ?? "1000000000000000",
+      process.env.MDB_TESTNET_FAUCET_DAILY_CAP_WEI ?? "3000000000000000",
     );
     const reserve = BigInt(
       process.env.MDB_TESTNET_OPERATOR_RESERVE_WEI ?? "5000000000000000",

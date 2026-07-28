@@ -7,11 +7,10 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run the authorized ten-hour Robinhood Testnet endurance test,
   exercising user actions every twenty minutes and repairing any failure before
   resuming.
-- Last meaningful change: Endurance checkpoint 1 exposed public-RPC replica
-  lag in operator nonce and transaction-receipt reads. Operator and disposable
-  wallets now use nonce managers, and every transaction receipt wait disables
-  replacement detection while retaining bounded retries and a three-minute
-  timeout.
+- Last meaningful change: Checkpoint 2 exposed insufficient disposable-wallet
+  gas after two complete action suites. Testnet top-ups now cover one hourly
+  three-checkpoint window, and the runner always funds a fresh disposable
+  wallet after process restart.
 - Next step: Continue monitoring `mdb-endurance-testnet.service` every twenty
   minutes through completion and repair any further failure before resuming.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
@@ -188,6 +187,18 @@ When sources conflict, use this order:
   passed. Two forced collector cycles beyond separate freshness boundaries
   then completed multiple consecutive price writes without a nonce, receipt,
   rate-limit, or verification error.
+- 2026-07-28: Endurance checkpoint 2 initially failed because the original
+  0.0001 test ETH top-up was exhausted after two complete action suites; the
+  failure screenshot preserved the exact insufficient-balance banner. The
+  testnet faucet default is now 0.00025 ETH with a 0.003 ETH daily cap and the
+  unchanged 0.005 ETH operator reserve. The runner funds every third checkpoint
+  and after every process restart, clears repaired failure state only after a
+  pass, and records the visible banner on future failures. Two gas failures and
+  one deliberate repair-stop interruption remain in the immutable JSONL
+  evidence. The repaired checkpoint 2 then funded a fresh wallet, bought piece
+  38, selected `Signal First`, bought 150 USDG of MDBS, sold 25% atomically,
+  claimed rewards, and passed all service, NAV, history, UI, and browser-error
+  checks.
 
 ## Decisions
 

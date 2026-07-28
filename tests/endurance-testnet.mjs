@@ -65,6 +65,8 @@ async function loadOrCreateState() {
       existing.lastResumedAt = now;
       await atomicJson(statePath, existing);
     }
+    existing.fundNextCheckpoint = true;
+    await atomicJson(statePath, existing);
     return existing;
   }
   const created = {
@@ -78,6 +80,7 @@ async function loadOrCreateState() {
     failedAttempts: 0,
     lastCheckpoint: null,
     failureAt: null,
+    fundNextCheckpoint: true,
   };
   await atomicJson(statePath, created);
   return created;
@@ -299,14 +302,19 @@ async function verifyUi(page, checkpoint) {
   assert.equal(await page.locator(".brain-cell").count(), 42);
 }
 
-async function runCheckpoint(page, checkpoint, browserErrors) {
+async function runCheckpoint(
+  page,
+  checkpoint,
+  browserErrors,
+  fundNextCheckpoint,
+) {
   const startedAt = Date.now();
   await page.reload({ waitUntil: "networkidle", timeout: 60_000 });
   await dismissGuide(page);
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  if (checkpoint % 4 === 0) await fundWallet(page);
+  if (fundNextCheckpoint || checkpoint % 3 === 0) await fundWallet(page);
   const brain = await buyBrainPieceAndSetPreset(page, checkpoint, statusBefore);
   const basket = await buyAndSellMdbs(page, checkpoint);
   const rewards = await claimRewards(page);
@@ -368,10 +376,17 @@ try {
     browserErrors.length = 0;
     const checkpoint = state.completedCheckpoints;
     try {
-      const result = await runCheckpoint(page, checkpoint, browserErrors);
+      const result = await runCheckpoint(
+        page,
+        checkpoint,
+        browserErrors,
+        state.fundNextCheckpoint,
+      );
       await appendFile(checkpointPath, `${JSON.stringify(result)}\n`);
       state.completedCheckpoints += 1;
       state.lastCheckpoint = result;
+      state.lastFailure = null;
+      state.fundNextCheckpoint = false;
       state.nextCheckpointAt =
         state.startedAt + state.completedCheckpoints * state.intervalMs;
       state.failureAt = null;
@@ -385,10 +400,15 @@ try {
         checkpoint,
         failedAt: new Date().toISOString(),
         error: error instanceof Error ? error.stack : String(error),
+        visibleMessage: await page
+          .locator(".editorial-banner")
+          .textContent()
+          .catch(() => null),
         browserErrors: [...browserErrors],
       };
       state.failedAttempts += 1;
       state.failureAt = Date.now();
+      state.fundNextCheckpoint = true;
       state.lastFailure = failure;
       await appendFile(checkpointPath, `${JSON.stringify(failure)}\n`);
       await atomicJson(statePath, state);
