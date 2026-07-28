@@ -36,7 +36,11 @@ brain="$(jq -er '.contracts.brain // .brain' "$manifest")"
 chain_id="$(cast chain-id --rpc-url "$rpc")"
 if [[ "$mode" == "local" ]]; then
   [[ "$chain_id" == "31337" ]]
-  private_key="${MDB_DEV_PRIVATE_KEY:?MDB_DEV_PRIVATE_KEY is required}"
+  private_key="${MDB_DEV_PRIVATE_KEY:-${DEPLOYER_PRIVATE_KEY:-}}"
+  [[ -n "$private_key" ]] || {
+    echo "MDB_DEV_PRIVATE_KEY or DEPLOYER_PRIVATE_KEY is required." >&2
+    exit 1
+  }
   signer=(--private-key "$private_key")
 else
   [[ "$chain_id" == "46630" ]]
