@@ -11,6 +11,7 @@
     "test:meme": "node --experimental-strip-types --test tests/meme-recap.test.ts",
     "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
+    "test:asset-universe": "node --experimental-strip-types --test tests/asset-universe.test.ts",
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",
     "test:network": "node --experimental-strip-types --test tests/network-policy.test.ts",
     "test:wallet": "node --experimental-strip-types --test tests/wallet-dependencies.test.ts tests/admin-transaction-lock.test.ts tests/approval-retry.test.ts",

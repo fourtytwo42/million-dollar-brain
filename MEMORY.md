@@ -9,9 +9,10 @@ Durable project context lives here. Update this file whenever information should
 - Last meaningful change: Added the first production contract layer:
   upgradeable asset qualification registry, Chainlink valuation adapter,
   authorizer-bound 0x execution adapter, ERC-8056-shaped test replica, and
-  BasketVault V3 atomic swap plans.
-- Next step: Implement dynamic DecisionContext V4, qualification persistence,
-  fresh testnet deployment, mainnet shadow, and dynamic UI.
+  BasketVault V3 atomic swap plans, plus the dynamic DecisionContext V4 data
+  and research layer.
+- Next step: Build the fresh testnet V3 deployment, mainnet shadow/release
+  tooling, quote-plan APIs, and dynamic UI evidence.
 - Blockers: None for local use. FRED macro inputs remain intentionally inactive until a free API key is configured. Real-value activation remains gated on counsel, production integrations and credentials, dependency advisory remediation, multisig/timelock migration, a professional audit, and Robinhood Chain release manifests.
 
 ## Current State
@@ -121,6 +122,15 @@ When sources conflict, use this order:
   position, 20% per-asset, and 30% high-volatility caps are enforced through
   the registry. A full signed-plan deposit/redemption integration test and all
   existing contract tests pass: 21 total.
+- 2026-07-28: Implemented the dynamic asset/data checkpoint. Added address-and-
+  chain-based manifest normalization, official Robinhood mainnet discovery,
+  30-day qualification persistence, a full compact eligible directory,
+  deterministic top-64 detail, DecisionContext V4's 96K budget, and one
+  official/on-chain-only research round for up to 16 registered assets. Added
+  PostgreSQL schema v4 tables for qualification evidence, research, and
+  non-broadcast shadow simulations. Ten focused universe/context tests, all
+  existing market/network/wallet tests, TypeScript, and the Next.js production
+  build pass on the VM.
 - 2026-07-28: Standardized visible USD-denominated NAV and oracle prices to exactly two decimal places. Replaced the four-decimal formatter and `$1.0000` fallback with the shared two-decimal USD formatter. Two portfolio-display tests, the Next.js production build, both live web-service restarts, and in-app-browser checks pass; the testnet header, Basket NAV card, performance chart label, and accessibility text all show `$1.00`.
 - 2026-07-28: Verified the network-specific test-control presentation after the user stopped the endurance run. On local port 3000, in-app-browser UAT found exactly one `Fund test wallet` button and one `Disposable test wallet` strip. On testnet port 3001, both counts are zero while `Connect wallet` remains present. The removed `YOU ARE HERE: THE STEERING LAYER` banner is absent in both environments. Eleven network-policy tests, seven wallet tests, the Next.js production build, both web-service restarts, and HTTP 200 checks pass. Future testnet endurance funding uses the retained session-wallet key plus `/api/faucet` hook rather than visible controls.
 - 2026-07-12: Read `AGENTS.md` and `MEMORY.md`; identified stale project-specific memory and preserved the repository-local instruction logic.

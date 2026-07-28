@@ -11,8 +11,13 @@ import { nonceManager, privateKeyToAccount } from "viem/accounts";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "./abi";
 import { brainDefinition } from "./brain-catalog";
 import { networkConfig, publicNetworkConfig, viemChain } from "./network";
+import {
+  canonicalAssetId,
+  type AssetKind,
+  type RiskClass,
+} from "./asset-universe";
 
-export type Deployment = Record<
+type LegacyDeployment = Record<
   | "usdg"
   | "nvda"
   | "aapl"
@@ -24,6 +29,36 @@ export type Deployment = Record<
   | "basket",
   Address
 > & { oracle?: Address };
+
+export type DeploymentAsset = {
+  id: string;
+  symbol: string;
+  name: string;
+  address: Address;
+  kind: AssetKind;
+  riskClass: RiskClass;
+  decimals: number;
+  maximumWeightBps: number;
+  robinhoodUid: string | null;
+};
+
+export type Deployment = LegacyDeployment & {
+  schemaVersion?: number;
+  environment?: string;
+  chainId?: number;
+  assets?: DeploymentAsset[];
+  contracts?: {
+    router?: Address;
+    oracle?: Address;
+    valuation?: Address;
+    executionAdapter?: Address;
+    assetRegistry?: Address;
+    rewards: Address;
+    creatorVault: Address;
+    brain: Address;
+    basket: Address;
+  };
+};
 const rpcUrl = networkConfig.serverRpcUrl;
 const deploymentFile = networkConfig.deploymentFile;
 export const chain = viemChain({
@@ -70,10 +105,102 @@ export function waitForReliableTransactionReceipt(hash: Hash) {
     timeout: 180_000,
   });
 }
+export function normalizeDeployment(raw: Record<string, unknown>): Deployment {
+  const contracts = (raw.contracts ?? {}) as Deployment["contracts"];
+  const assets = Array.isArray(raw.assets)
+    ? (raw.assets as DeploymentAsset[])
+    : undefined;
+  const reserve = assets?.find((asset) => asset.kind === "reserve");
+  const bySymbol = new Map(
+    assets?.map((asset) => [asset.symbol, asset.address]),
+  );
+  const normalized = {
+    ...raw,
+    usdg: raw.usdg ?? reserve?.address,
+    nvda: raw.nvda ?? bySymbol.get("NVDA") ?? reserve?.address,
+    aapl: raw.aapl ?? bySymbol.get("AAPL") ?? reserve?.address,
+    ethx:
+      raw.ethx ??
+      bySymbol.get("ETHX") ??
+      bySymbol.get("WETH") ??
+      reserve?.address,
+    router: raw.router ?? contracts?.router ?? contracts?.executionAdapter,
+    oracle: raw.oracle ?? contracts?.oracle ?? contracts?.valuation,
+    rewards: raw.rewards ?? contracts?.rewards,
+    creatorVault: raw.creatorVault ?? contracts?.creatorVault,
+    brain: raw.brain ?? contracts?.brain,
+    basket: raw.basket ?? contracts?.basket,
+  } as Deployment;
+  for (const field of [
+    "usdg",
+    "router",
+    "rewards",
+    "creatorVault",
+    "brain",
+    "basket",
+  ] as const) {
+    if (!normalized[field]) throw new Error(`deployment missing ${field}`);
+  }
+  return normalized;
+}
+
+export function deploymentAssets(d: Deployment): DeploymentAsset[] {
+  if (d.assets?.length) return d.assets;
+  const chainId = d.chainId ?? networkConfig.chainId;
+  return [
+    {
+      id: canonicalAssetId(chainId, d.usdg),
+      symbol: "USDG",
+      name: "Global Dollar",
+      address: d.usdg,
+      kind: "reserve",
+      riskClass: "reserve",
+      decimals: 18,
+      maximumWeightBps: 10_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(chainId, d.nvda),
+      symbol: "NVDA",
+      name: "NVIDIA",
+      address: d.nvda,
+      kind: "stock",
+      riskClass: "standard",
+      decimals: 18,
+      maximumWeightBps: 5_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(chainId, d.aapl),
+      symbol: "AAPL",
+      name: "Apple",
+      address: d.aapl,
+      kind: "stock",
+      riskClass: "standard",
+      decimals: 18,
+      maximumWeightBps: 5_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(chainId, d.ethx),
+      symbol: "ETHX",
+      name: "Ether",
+      address: d.ethx,
+      kind: "crypto",
+      riskClass: "high_volatility",
+      decimals: 18,
+      maximumWeightBps: 5_000,
+      robinhoodUid: null,
+    },
+  ];
+}
+
 export function deployment(): Deployment {
-  return JSON.parse(
-    readFileSync(/* turbopackIgnore: true */ deploymentFile, "utf8"),
-  ) as Deployment;
+  return normalizeDeployment(
+    JSON.parse(
+      readFileSync(/* turbopackIgnore: true */ deploymentFile, "utf8"),
+    ) as Record<string, unknown>,
+  );
 }
 
 type DashboardContract = {
@@ -102,12 +229,12 @@ export async function dashboard(
   requestedRedeem?: bigint,
 ) {
   const d = deployment();
-  const assetAddresses = {
-    USDG: d.usdg,
-    NVDA: d.nvda,
-    AAPL: d.aapl,
-    ETHX: d.ethx,
-  } as const;
+  const assetManifest = deploymentAssets(d);
+  const reserve = assetManifest.find((asset) => asset.kind === "reserve");
+  if (!reserve) throw new Error("deployment has no reserve asset");
+  const assetAddresses = Object.fromEntries(
+    assetManifest.map((asset) => [asset.symbol, asset.address]),
+  ) as Record<string, Address>;
   const contracts: DashboardContract[] = [
     {
       address: d.basket,
@@ -124,30 +251,12 @@ export async function dashboard(
       abi: basketAbi,
       functionName: "totalSupply",
     },
-    {
-      address: d.usdg,
+    ...assetManifest.map((asset) => ({
+      address: asset.address,
       abi: erc20Abi,
       functionName: "balanceOf",
-      args: [d.basket],
-    },
-    {
-      address: d.nvda,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    },
-    {
-      address: d.aapl,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    },
-    {
-      address: d.ethx,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [d.basket],
-    },
+      args: [d.basket] as const,
+    })),
     {
       address: d.brain,
       abi: brainAbi,
@@ -174,7 +283,7 @@ export async function dashboard(
         args: [address],
       },
       {
-        address: d.usdg,
+        address: reserve.address,
         abi: erc20Abi,
         functionName: "balanceOf",
         args: [address],
@@ -253,10 +362,12 @@ export async function dashboard(
   const nav = results[cursor++] as bigint;
   const navPerShare = results[cursor++] as bigint;
   const supply = results[cursor++] as bigint;
-  const usdgBalance = results[cursor++] as bigint;
-  const nvdaBalance = results[cursor++] as bigint;
-  const aaplBalance = results[cursor++] as bigint;
-  const ethxBalance = results[cursor++] as bigint;
+  const balances = Object.fromEntries(
+    assetManifest.map((asset) => [
+      asset.symbol,
+      (results[cursor++] as bigint).toString(),
+    ]),
+  );
   const catalogVersion = results[cursor++] as number;
   const catalogHash = results[cursor++] as `0x${string}`;
   const depositPreview = results[cursor++] as readonly [bigint, bigint, bigint];
@@ -264,11 +375,11 @@ export async function dashboard(
   const walletUsdg = address ? (results[cursor++] as bigint) : 0n;
   const pendingRedemption = address ? (results[cursor++] as bigint) : 0n;
 
-  const assetRows = Object.keys(assetAddresses).map((symbol) => {
+  const assetRows = assetManifest.map((asset) => {
     const value = results[cursor++] as bigint;
     const weightBps = results[cursor++] as number;
     const oracle = results[cursor++] as readonly [bigint, bigint, boolean];
-    return { symbol, value, weightBps, oracle };
+    return { ...asset, value, weightBps, oracle };
   });
   const pieces = Array.from({ length: 42 }, (_, index) => {
     const owner = results[cursor++] as Address;
@@ -368,12 +479,8 @@ export async function dashboard(
     shares: shares.toString(),
     walletUsdg: walletUsdg.toString(),
     redemption: { pendingRequestId: pendingRedemption.toString() },
-    holdings: {
-      USDG: usdgBalance.toString(),
-      NVDA: nvdaBalance.toString(),
-      AAPL: aaplBalance.toString(),
-      ETHX: ethxBalance.toString(),
-    },
+    assets: assetManifest,
+    holdings: balances,
     holdingValues: assetValues,
     currentWeightsBps,
     oracle: {

@@ -18,10 +18,11 @@ test("stable decision serialization is deterministic across object key order", (
   assert.equal(first, second);
 });
 
-test("decision evidence distinguishes local devnet from testnet mocks", () => {
+test("decision evidence distinguishes local, testnet replica, and mainnet shadow", () => {
   const source = readFileSync("apps/web/lib/decision-context.ts", "utf8");
   assert.match(source, /networkConfig\.mode === "testnet"/);
-  assert.match(source, /robinhood_testnet_mock/);
+  assert.match(source, /robinhood_testnet_replica/);
+  assert.match(source, /robinhood_mainnet_shadow/);
 });
 
 test("candle formulas produce returns, volatility, and drawdown from observations", () => {
@@ -62,5 +63,10 @@ test("allocator remains stateless and context history is capped", () => {
   );
   assert.doesNotMatch(allocator, /conversation[_A-Za-z]*:/);
   assert.match(context, /\.slice\(-12\)/);
-  assert.match(context, /maximumInputTokens:\s*32_000/);
+  assert.match(context, /maximumInputTokens:\s*96_000/);
+  assert.match(allocator, /maximumInputTokens:\s*96_000/);
+  assert.match(allocator, /validateResearchRequests/);
+  assert.match(allocator, /No more research is allowed/);
+  assert.match(allocator, /persistResearchRound/);
+  assert.doesNotMatch(allocator, /conversation[_A-Za-z]*:/);
 });

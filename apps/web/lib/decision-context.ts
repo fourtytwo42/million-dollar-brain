@@ -24,6 +24,14 @@ import {
 } from "./portfolio-accounting";
 import { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 import { networkConfig } from "./network";
+import {
+  ASSET_POLICY,
+  canonicalAssetId,
+  compileUniverseContext,
+  type AssetRecordV1,
+  type CompactAssetV1,
+} from "./asset-universe.ts";
+import { loadAssetCandidates } from "./persistence";
 export { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
 
 export type SourceStamp = {
@@ -182,11 +190,56 @@ export type DecisionContextV3 = {
   inputHash: string;
 };
 
+export type DecisionContextV4 = Omit<
+  DecisionContextV3,
+  "schemaVersion" | "mode" | "tokenBudget" | "inputHash"
+> & {
+  schemaVersion: 4;
+  mode:
+    | "local_devnet_simulation"
+    | "robinhood_testnet_replica"
+    | "robinhood_mainnet_shadow";
+  tokenBudget: {
+    maximumInputTokens: 96_000;
+    detailedCycleLimit: 12;
+    detailedAssetLimit: 64;
+    estimatedTokens: number;
+    truncation: string[];
+  };
+  assetRecords: AssetRecordV1[];
+  eligibleAssetDirectory: CompactAssetV1[];
+  reserveAssetId: string;
+  researchPolicy: {
+    maximumRounds: 1;
+    maximumAssets: 16;
+    officialAndOnchainOnly: true;
+    unrestrictedWeb: false;
+  };
+  inputHash: string;
+};
+
 // Kept as a source-compatible alias while legacy persisted V2 records remain readable.
-export type DecisionContextV2 = DecisionContextV3;
+export type DecisionContextV2 = DecisionContextV3 | DecisionContextV4;
 
 type DashboardState = {
-  deployment: Record<string, Address>;
+  deployment: {
+    usdg: Address;
+    nvda: Address;
+    aapl: Address;
+    ethx: Address;
+    [key: string]: unknown;
+  };
+  assets?: {
+    id: string;
+    symbol: string;
+    name: string;
+    address: Address;
+    kind: "reserve" | "stock" | "etf" | "crypto" | "token";
+    riskClass: "reserve" | "standard" | "high_volatility";
+    decimals: number;
+    maximumWeightBps: number;
+    robinhoodUid: string | null;
+  }[];
   nav: string;
   navPerShare: string;
   supply: string;
@@ -274,7 +327,7 @@ function latestFactValue(
   return { value: fact?.val ?? null, filed: fact?.filed ?? null };
 }
 
-export async function buildDecisionContext(
+async function buildDecisionContextV3(
   state: DashboardState,
 ): Promise<DecisionContextV3> {
   const generatedAt = new Date().toISOString();
@@ -708,5 +761,177 @@ export async function buildDecisionContext(
     );
   }
   const inputHash = keccak256(stringToHex(stableDecisionJson(partial)));
+  return { ...partial, inputHash };
+}
+
+function legacyAssetRecords(state: DashboardState): AssetRecordV1[] {
+  const manifest = state.assets ?? [
+    {
+      id: canonicalAssetId(networkConfig.chainId, state.deployment.usdg),
+      symbol: "USDG",
+      name: "Global Dollar",
+      address: state.deployment.usdg,
+      kind: "reserve" as const,
+      riskClass: "reserve" as const,
+      decimals: 18,
+      maximumWeightBps: 10_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(networkConfig.chainId, state.deployment.nvda),
+      symbol: "NVDA",
+      name: "NVIDIA",
+      address: state.deployment.nvda,
+      kind: "stock" as const,
+      riskClass: "standard" as const,
+      decimals: 18,
+      maximumWeightBps: networkConfig.mode === "local" ? 5_000 : 2_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(networkConfig.chainId, state.deployment.aapl),
+      symbol: "AAPL",
+      name: "Apple",
+      address: state.deployment.aapl,
+      kind: "stock" as const,
+      riskClass: "standard" as const,
+      decimals: 18,
+      maximumWeightBps: networkConfig.mode === "local" ? 5_000 : 2_000,
+      robinhoodUid: null,
+    },
+    {
+      id: canonicalAssetId(networkConfig.chainId, state.deployment.ethx),
+      symbol: "ETHX",
+      name: "Ether",
+      address: state.deployment.ethx,
+      kind: "crypto" as const,
+      riskClass: "high_volatility" as const,
+      decimals: 18,
+      maximumWeightBps: networkConfig.mode === "local" ? 5_000 : 2_000,
+      robinhoodUid: null,
+    },
+  ];
+  return manifest.map((asset) => ({
+    ...asset,
+    chainId: networkConfig.chainId,
+    id: canonicalAssetId(networkConfig.chainId, asset.address),
+    tags: [asset.kind, "deployment_manifest"],
+    valuationAdapter:
+      typeof state.deployment.oracle === "string"
+        ? (state.deployment.oracle as Address)
+        : null,
+    executionAdapter:
+      typeof state.deployment.router === "string"
+        ? (state.deployment.router as Address)
+        : null,
+    circulatingSupplyAdapter:
+      asset.kind === "crypto" && networkConfig.mode !== "local"
+        ? ((state.deployment.circulatingSupplyAdapter as Address | undefined) ??
+          null)
+        : null,
+    canonicalSource:
+      networkConfig.mode === "local"
+        ? "local-development-manifest"
+        : "robinhood-testnet-replica-manifest",
+    qualification: null,
+    active: true,
+  }));
+}
+
+export async function buildDecisionContext(
+  state: DashboardState,
+): Promise<DecisionContextV4> {
+  const base = await buildDecisionContextV3(state);
+  const persisted = await loadAssetCandidates(
+    networkConfig.mode === "local" ? networkConfig.chainId : 4663,
+  );
+  const assetRecords = persisted.some((asset) => asset.active)
+    ? persisted
+    : legacyAssetRecords(state);
+  const dossierBySymbol = new Map(
+    base.assets.map((asset) => [asset.symbol, asset]),
+  );
+  const eligibleAssetDirectory: CompactAssetV1[] = assetRecords
+    .filter((asset) => asset.active)
+    .map((asset) => {
+      const dossier = dossierBySymbol.get(asset.symbol);
+      return {
+        id: asset.id,
+        symbol: asset.symbol,
+        kind: asset.kind,
+        riskClass: asset.riskClass,
+        tags: asset.tags,
+        weightBps: dossier?.portfolio.weightBps ?? 0,
+        return24hBps: dossier?.performance.return24hBps ?? null,
+        return7dBps: dossier?.performance.return7dBps ?? null,
+        volatility30dBps: dossier?.performance.volatility30dBps ?? null,
+        liquidityScoreBps: dossier?.execution.liquidityScoreBps ?? null,
+        spreadBps: dossier?.quote.spreadBps ?? null,
+        qualificationDays: asset.qualification?.consecutiveDays ?? 0,
+        maximumWeightBps: asset.maximumWeightBps,
+      };
+    });
+  const detailed = base.assets.map((asset) => {
+    const record = assetRecords.find(
+      (candidate) => candidate.symbol === asset.symbol,
+    );
+    return {
+      ...asset,
+      id:
+        record?.id ??
+        canonicalAssetId(networkConfig.chainId, asset.identity.contract),
+      coverageScoreBps:
+        asset.provenance.filter((stamp) => stamp.valid).length * 1_000,
+      diversificationScoreBps:
+        asset.identity.assetClass === "stable" ? 0 : 5_000,
+      stabilityScoreBps: asset.quote.oracleValid ? 10_000 : 0,
+    };
+  });
+  const universe = compileUniverseContext(eligibleAssetDirectory, detailed);
+  const reserve = assetRecords.find(
+    (asset) => asset.active && asset.kind === "reserve",
+  );
+  if (!reserve) throw new Error("eligible universe has no reserve asset");
+  const partial = {
+    ...base,
+    schemaVersion: 4 as const,
+    mode:
+      networkConfig.mode === "mainnet"
+        ? ("robinhood_mainnet_shadow" as const)
+        : networkConfig.mode === "testnet"
+          ? ("robinhood_testnet_replica" as const)
+          : ("local_devnet_simulation" as const),
+    tokenBudget: {
+      maximumInputTokens: ASSET_POLICY.maximumInputTokens,
+      detailedCycleLimit: 12 as const,
+      detailedAssetLimit: ASSET_POLICY.maximumDetailedAssets,
+      estimatedTokens: universe.estimatedTokens,
+      truncation: [
+        "compact directory retained before optional detail",
+        "detailed assets limited to deterministic top 64",
+        "cycle history limited to 12",
+      ],
+    },
+    assets: universe.detailedAssets,
+    assetRecords,
+    eligibleAssetDirectory,
+    reserveAssetId: reserve.id,
+    researchPolicy: {
+      maximumRounds: 1 as const,
+      maximumAssets: ASSET_POLICY.maximumResearchAssets,
+      officialAndOnchainOnly: true as const,
+      unrestrictedWeb: false as const,
+    },
+    freshness: {
+      ...base.freshness,
+      holdRequired: base.freshness.holdRequired || universe.holdRequired,
+      reasons: [
+        ...base.freshness.reasons,
+        ...(universe.holdReason ? [universe.holdReason] : []),
+      ],
+    },
+  };
+  const { inputHash: _legacyHash, ...hashable } = partial;
+  const inputHash = keccak256(stringToHex(stableDecisionJson(hashable)));
   return { ...partial, inputHash };
 }

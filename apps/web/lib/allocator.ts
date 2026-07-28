@@ -10,9 +10,19 @@ import {
   waitForReliableTransactionReceipt,
 } from "./chain";
 import { buildDecisionContext } from "./decision-context";
+import type { DecisionContextV4 } from "./decision-context";
+import {
+  validateDynamicAllocation,
+  type DynamicAllocation,
+} from "./asset-universe.ts";
+import {
+  buildStructuredResearchResults,
+  validateResearchRequests,
+  type ResearchResultV1,
+} from "./decision-research.ts";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
 import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
-import { persistCycle } from "./persistence";
+import { persistCycle, persistResearchRound } from "./persistence";
 import {
   buildPortfolioAccounting,
   persistAccountingSnapshot,
@@ -33,6 +43,23 @@ type Decision = {
     model: string;
     temperature: number;
     maximumOutputTokens: number;
+    stateless: true;
+  };
+};
+
+export type DynamicDecision = {
+  allocationById: DynamicAllocation;
+  rationale: string;
+  source: "ai" | "fallback";
+  rawOutputs: string[];
+  promptHashes: string[];
+  researchResults: ResearchResultV1[];
+  modelConfig: {
+    provider: string;
+    model: string;
+    temperature: number;
+    maximumOutputTokens: number;
+    maximumInputTokens: number;
     stateless: true;
   };
 };
@@ -168,6 +195,153 @@ async function askAllocator(
       source: "fallback",
       rawOutput: "",
       promptHash,
+      modelConfig,
+    };
+  }
+}
+
+async function requestModelJson(
+  provider: string,
+  model: string,
+  prompt: string,
+  maximumOutputTokens: number,
+) {
+  if (Math.ceil(prompt.length / 4) > 96_000) {
+    throw new Error("bounded prompt exceeds 96K input-token estimate");
+  }
+  const response = await fetch(`${provider}/chat/completions`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: maximumOutputTokens,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      stream: false,
+    }),
+    signal: AbortSignal.timeout(240_000),
+  });
+  if (!response.ok) throw new Error(`provider ${response.status}`);
+  const rawOutput = responseText(await response.json());
+  const match = rawOutput.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("model did not return JSON");
+  return { rawOutput, parsed: JSON.parse(match[0]) as Record<string, unknown> };
+}
+
+export async function runDynamicResearchAllocator(
+  context: DecisionContextV4,
+  fallback: DynamicAllocation,
+): Promise<DynamicDecision> {
+  const provider =
+    process.env.MDB_AI_BASE_URL ?? "http://192.168.50.189:30001/v1";
+  const model = process.env.MDB_AI_MODEL ?? "ornith-1.0-35b-Q5_K_M-688b8d0a";
+  const modelConfig = {
+    provider,
+    model,
+    temperature: 0.2,
+    maximumOutputTokens: 8_192,
+    maximumInputTokens: 96_000,
+    stateless: true as const,
+  };
+  const rawOutputs: string[] = [];
+  const promptHashes: string[] = [];
+  const researchResults: ResearchResultV1[] = [];
+  try {
+    if (context.freshness.holdRequired) {
+      throw new Error(context.freshness.reasons.join("; "));
+    }
+    const basePrompt = [
+      "You are the constrained allocation engine for MillionDollar Brain.",
+      "You may allocate only to active asset IDs in eligibleAssetDirectory.",
+      "Never invent an address, asset, fact, source, or tool.",
+      "You have one optional structured research round for at most 16 assets.",
+      'First return either {"kind":"research","requests":[{"assetId":"chain:address","topics":["identity"]}]}',
+      'or {"kind":"allocation","allocation":{"chain:address":integer}}.',
+      "Allocation weights total 10000, reserve is at least 2000, no risk asset exceeds its maximumWeightBps,",
+      "there are at most nine risk positions, and combined high-volatility weight is at most 3000.",
+      `DecisionContextV4: ${JSON.stringify(context)}`,
+    ].join(" ");
+    promptHashes.push(keccak256(stringToHex(basePrompt)));
+    const first = await requestModelJson(
+      provider,
+      model,
+      basePrompt,
+      modelConfig.maximumOutputTokens,
+    );
+    rawOutputs.push(first.rawOutput);
+    let proposed: unknown;
+    if (first.parsed.kind === "research") {
+      const requests = validateResearchRequests(
+        first.parsed.requests,
+        context.assetRecords,
+      );
+      const results = buildStructuredResearchResults(
+        requests,
+        context.assetRecords,
+        context.eligibleAssetDirectory,
+        context.assets as unknown as ({
+          id: string;
+        } & Record<string, unknown>)[],
+      );
+      researchResults.push(...results);
+      const researchHash = keccak256(
+        stringToHex(JSON.stringify({ requests, results })),
+      );
+      await persistResearchRound(
+        context.inputHash,
+        requests,
+        results,
+        researchHash,
+      );
+      const finalPrompt = [
+        "Return the final constrained allocation now.",
+        "No more research is allowed.",
+        'Return exactly {"kind":"allocation","allocation":{"chain:address":integer}}.',
+        `Immutable DecisionContextV4: ${JSON.stringify(context)}`,
+        `Recorded structured research: ${JSON.stringify(results)}`,
+      ].join(" ");
+      promptHashes.push(keccak256(stringToHex(finalPrompt)));
+      const second = await requestModelJson(
+        provider,
+        model,
+        finalPrompt,
+        modelConfig.maximumOutputTokens,
+      );
+      rawOutputs.push(second.rawOutput);
+      if (second.parsed.kind !== "allocation") {
+        throw new Error("second model pass did not return an allocation");
+      }
+      proposed = second.parsed.allocation;
+    } else if (first.parsed.kind === "allocation") {
+      proposed = first.parsed.allocation;
+    } else {
+      throw new Error("model returned neither research nor allocation");
+    }
+    return {
+      allocationById: validateDynamicAllocation(
+        proposed,
+        context.assetRecords,
+        context.reserveAssetId,
+      ),
+      rationale:
+        researchResults.length > 0
+          ? "Allocation proposed after one recorded structured research round."
+          : "Allocation proposed from the bounded DecisionContext V4.",
+      source: "ai",
+      rawOutputs,
+      promptHashes,
+      researchResults,
+      modelConfig,
+    };
+  } catch (error) {
+    return {
+      allocationById: fallback,
+      rationale: `Deterministic hold: ${error instanceof Error ? error.message : "allocator unavailable"}`,
+      source: "fallback",
+      rawOutputs,
+      promptHashes,
+      researchResults,
       modelConfig,
     };
   }

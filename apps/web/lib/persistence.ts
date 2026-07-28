@@ -1,4 +1,9 @@
 import { Pool, type PoolClient } from "pg";
+import type { AssetQualificationV1, AssetRecordV1 } from "./asset-universe.ts";
+import type {
+  ResearchRequestV1,
+  ResearchResultV1,
+} from "./decision-research.ts";
 
 type PersistedCycle = {
   inputHash: string;
@@ -193,7 +198,55 @@ async function ensureSchema(client: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS mdb_price_syncs_symbol_time_idx
       ON mdb_price_syncs (symbol, observed_at DESC);
-    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3)
+
+    CREATE TABLE IF NOT EXISTS mdb_asset_candidates_v4 (
+      asset_id text PRIMARY KEY,
+      chain_id integer NOT NULL,
+      token_address text NOT NULL,
+      symbol text NOT NULL,
+      robinhood_uid text,
+      kind text NOT NULL,
+      risk_class text NOT NULL,
+      active boolean NOT NULL DEFAULT false,
+      record jsonb NOT NULL,
+      manifest_hash text NOT NULL,
+      updated_at timestamptz NOT NULL,
+      UNIQUE(chain_id, token_address)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_asset_candidates_v4_active_idx
+      ON mdb_asset_candidates_v4 (chain_id, active, symbol);
+    CREATE TABLE IF NOT EXISTS mdb_asset_qualification_daily_v4 (
+      asset_id text NOT NULL REFERENCES mdb_asset_candidates_v4(asset_id) ON DELETE CASCADE,
+      observation_date date NOT NULL,
+      observed_at timestamptz NOT NULL,
+      qualification jsonb NOT NULL,
+      evidence_hash text NOT NULL,
+      passed boolean NOT NULL,
+      PRIMARY KEY (asset_id, observation_date)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_asset_qualification_daily_v4_latest_idx
+      ON mdb_asset_qualification_daily_v4 (asset_id, observed_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_decision_research_v4 (
+      input_hash text NOT NULL,
+      round integer NOT NULL CHECK (round = 1),
+      created_at timestamptz NOT NULL,
+      requests jsonb NOT NULL,
+      results jsonb NOT NULL,
+      research_hash text NOT NULL,
+      PRIMARY KEY (input_hash, round)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_shadow_simulations_v4 (
+      input_hash text PRIMARY KEY,
+      created_at timestamptz NOT NULL,
+      chain_id integer NOT NULL CHECK (chain_id = 4663),
+      block_number numeric NOT NULL,
+      allocation jsonb NOT NULL,
+      quote_bundle jsonb NOT NULL,
+      simulation_receipt jsonb NOT NULL,
+      broadcast boolean NOT NULL CHECK (broadcast = false),
+      evidence_hash text NOT NULL
+    );
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4)
       ON CONFLICT (version) DO NOTHING;
   `);
 }
@@ -316,4 +369,123 @@ export async function recentPortfolioSnapshots(limit = 32) {
   } catch {
     return [];
   }
+}
+
+export async function persistAssetCandidate(
+  asset: AssetRecordV1,
+  qualification: AssetQualificationV1,
+  manifestHash: string,
+  passed: boolean,
+) {
+  return withDatabase(async (client) => {
+    await client.query("BEGIN");
+    try {
+      await client.query(
+        `INSERT INTO mdb_asset_candidates_v4
+          (asset_id,chain_id,token_address,symbol,robinhood_uid,kind,risk_class,
+           active,record,manifest_hash,updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         ON CONFLICT(asset_id) DO UPDATE SET
+           symbol=excluded.symbol, robinhood_uid=excluded.robinhood_uid,
+           kind=excluded.kind, risk_class=excluded.risk_class,
+           active=excluded.active, record=excluded.record,
+           manifest_hash=excluded.manifest_hash, updated_at=excluded.updated_at`,
+        [
+          asset.id,
+          asset.chainId,
+          asset.address.toLowerCase(),
+          asset.symbol,
+          asset.robinhoodUid,
+          asset.kind,
+          asset.riskClass,
+          asset.active,
+          json(asset),
+          manifestHash,
+          qualification.observedAt,
+        ],
+      );
+      await client.query(
+        `INSERT INTO mdb_asset_qualification_daily_v4
+          (asset_id,observation_date,observed_at,qualification,evidence_hash,passed)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT(asset_id,observation_date) DO UPDATE SET
+           observed_at=excluded.observed_at, qualification=excluded.qualification,
+           evidence_hash=excluded.evidence_hash, passed=excluded.passed`,
+        [
+          asset.id,
+          qualification.observedAt.slice(0, 10),
+          qualification.observedAt,
+          json(qualification),
+          qualification.evidenceHash,
+          passed,
+        ],
+      );
+      await client.query("COMMIT");
+      return true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function loadAssetCandidates(chainId: number) {
+  return (
+    (await withDatabase(async (client) => {
+      const result = await client.query<{ record: AssetRecordV1 }>(
+        `SELECT record
+           FROM mdb_asset_candidates_v4
+          WHERE chain_id=$1
+          ORDER BY active DESC, symbol ASC, asset_id ASC`,
+        [chainId],
+      );
+      return result.rows.map((row) => row.record);
+    })) ?? []
+  );
+}
+
+export async function persistResearchRound(
+  inputHash: string,
+  requests: ResearchRequestV1[],
+  results: ResearchResultV1[],
+  researchHash: string,
+) {
+  return withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO mdb_decision_research_v4
+        (input_hash,round,created_at,requests,results,research_hash)
+       VALUES ($1,1,now(),$2,$3,$4)
+       ON CONFLICT(input_hash,round) DO NOTHING`,
+      [inputHash, json(requests), json(results), researchHash],
+    );
+    return true;
+  });
+}
+
+export async function persistShadowSimulation(input: {
+  inputHash: string;
+  blockNumber: string;
+  allocation: unknown;
+  quoteBundle: unknown;
+  simulationReceipt: unknown;
+  evidenceHash: string;
+}) {
+  return withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO mdb_shadow_simulations_v4
+        (input_hash,created_at,chain_id,block_number,allocation,quote_bundle,
+         simulation_receipt,broadcast,evidence_hash)
+       VALUES ($1,now(),4663,$2,$3,$4,$5,false,$6)
+       ON CONFLICT(input_hash) DO NOTHING`,
+      [
+        input.inputHash,
+        input.blockNumber,
+        json(input.allocation),
+        json(input.quoteBundle),
+        json(input.simulationReceipt),
+        input.evidenceHash,
+      ],
+    );
+    return true;
+  });
 }
