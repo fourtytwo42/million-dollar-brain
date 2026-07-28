@@ -114,7 +114,7 @@ export type RobinhoodQuote = {
   generatedAt: string;
 };
 
-export type RobinhoodSymbol = "NVDA" | "AAPL" | "SPY" | "QQQ" | "SOXX";
+export type RobinhoodSymbol = string;
 
 export async function robinhoodStockData(symbol: RobinhoodSymbol) {
   const [assets, quote, actions] = await Promise.all([

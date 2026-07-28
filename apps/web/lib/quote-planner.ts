@@ -101,6 +101,14 @@ function nonce(action: string, token: Address, amount: bigint, block: bigint) {
   );
 }
 
+function reserveToUsdWad(amount: bigint, decimals: number) {
+  return (amount * 10n ** 18n) / 10n ** BigInt(decimals);
+}
+
+function usdWadToReserve(amount: bigint, decimals: number) {
+  return (amount * 10n ** BigInt(decimals)) / 10n ** 18n;
+}
+
 export async function buildTestnetSwapPlans(
   action: "deposit" | "redeem",
   amount: bigint,
@@ -138,7 +146,10 @@ export async function buildTestnetSwapPlans(
       );
       if (price === 0n) throw new Error(`${asset.symbol} has no valid price`);
       const minimumOut =
-        (buyValue * 10n ** BigInt(asset.decimals) * 9_900n) / (price * 10_000n);
+        (reserveToUsdWad(buyValue, reserve.decimals) *
+          10n ** BigInt(asset.decimals) *
+          9_900n) /
+        (price * 10_000n);
       const executionData = encodeFunctionData({
         abi: mockVenueAbi,
         functionName: "buy",
@@ -182,7 +193,10 @@ export async function buildTestnetSwapPlans(
     const price = BigInt(state.oracle.assets[asset.symbol]?.priceUsdWad ?? "0");
     if (price === 0n) throw new Error(`${asset.symbol} has no valid price`);
     const expected = (tokenAmount * price) / 10n ** BigInt(asset.decimals);
-    const minimumOut = (expected * 9_900n) / 10_000n;
+    const minimumOut = usdWadToReserve(
+      (expected * 9_900n) / 10_000n,
+      reserve.decimals,
+    );
     const executionData = encodeFunctionData({
       abi: mockVenueAbi,
       functionName: "sell",
@@ -255,7 +269,10 @@ export async function buildTestnetRebalancePlans(
       ((currentValue - targetValue) * 10n ** BigInt(asset.decimals)) / price;
     if (tokenAmount === 0n) continue;
     const expected = (tokenAmount * price) / 10n ** BigInt(asset.decimals);
-    const minimumOut = (expected * 9_900n) / 10_000n;
+    const minimumOut = usdWadToReserve(
+      (expected * 9_900n) / 10_000n,
+      reserve.decimals,
+    );
     const executionData = encodeFunctionData({
       abi: mockVenueAbi,
       functionName: "sell",
@@ -285,6 +302,8 @@ export async function buildTestnetRebalancePlans(
     if (targetValue <= currentValue || targetValue - currentValue <= dust)
       continue;
     const buyValue = targetValue - currentValue;
+    const reserveIn = usdWadToReserve(buyValue, reserve.decimals);
+    if (reserveIn === 0n) continue;
     const price = BigInt(state.oracle.assets[asset.symbol]?.priceUsdWad ?? "0");
     if (price === 0n) throw new Error(`${asset.symbol} has no valid price`);
     const minimumOut =
@@ -292,13 +311,13 @@ export async function buildTestnetRebalancePlans(
     const executionData = encodeFunctionData({
       abi: mockVenueAbi,
       functionName: "buy",
-      args: [asset.address, buyValue, minimumOut],
+      args: [asset.address, reserveIn, minimumOut],
     });
     const intent: Intent = {
       vault: d.basket,
       tokenIn: reserve.address,
       tokenOut: asset.address,
-      amountIn: buyValue,
+      amountIn: reserveIn,
       minimumAmountOut: minimumOut,
       recipient: d.basket,
       target: d.router,
@@ -306,7 +325,7 @@ export async function buildTestnetRebalancePlans(
       callDataHash: keccak256(executionData),
       expiry,
       referenceBlock: block,
-      nonce: nonce("rebalance-buy", asset.address, buyValue, block),
+      nonce: nonce("rebalance-buy", asset.address, reserveIn, block),
     };
     plans.push(await signPlan(intent, executionData, d.executionAdapter));
   }

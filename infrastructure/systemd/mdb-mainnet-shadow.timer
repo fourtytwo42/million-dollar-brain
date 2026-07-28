@@ -1,0 +1,11 @@
+[Unit]
+Description=Run MillionDollar Brain mainnet shadow hourly
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5m
+Persistent=true
+Unit=mdb-mainnet-shadow.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=MillionDollar Brain read-only Robinhood mainnet shadow
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=hendo420
+Group=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/mainnet-shadow.env
+ExecStart=/home/hendo420/.local/node-v24.18.0-linux-x64/bin/node scripts/mainnet-shadow.mjs
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var/mainnet-shadow
+
+[Install]
+WantedBy=multi-user.target

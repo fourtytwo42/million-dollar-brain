@@ -35,23 +35,13 @@ contract MockAggregator {
         answeredInRound = roundId;
     }
 
-    function latestRoundData()
-        external
-        view
-        returns (uint80, int256, uint256, uint256, uint80)
-    {
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
         return (roundId, answer, startedAt, updatedAt, answeredInRound);
     }
 }
 
 contract MockZeroExTarget {
-    function swap(
-        address tokenIn,
-        address tokenOut,
-        uint256 amountIn,
-        uint256 amountOut,
-        address recipient
-    ) external {
+    function swap(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, address recipient) external {
         require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "pull");
         require(IERC20(tokenOut).transfer(recipient, amountOut), "send");
     }
@@ -93,8 +83,7 @@ contract MainnetEdgeTest is Test {
                 new ERC1967Proxy(
                     address(implementation),
                     abi.encodeCall(
-                        ZeroExExecutionAdapter.initialize,
-                        (address(this), address(oracle), authorizer, 100, 20)
+                        ZeroExExecutionAdapter.initialize, (address(this), address(oracle), authorizer, 100, 20)
                     )
                 )
             )
@@ -114,8 +103,7 @@ contract MainnetEdgeTest is Test {
         AssetRegistry registry = AssetRegistry(
             address(
                 new ERC1967Proxy(
-                    address(implementation),
-                    abi.encodeCall(AssetRegistry.initialize, (address(this), block.chainid))
+                    address(implementation), abi.encodeCall(AssetRegistry.initialize, (address(this), block.chainid))
                 )
             )
         );
@@ -155,17 +143,14 @@ contract MainnetEdgeTest is Test {
     }
 
     function testChainlinkFeedScalesAndHonorsRobinhoodPause() public {
-        ParityAssetToken stock =
-            new ParityAssetToken("Test Replica Apple", "trAAPL", keccak256("AAPL"), address(this));
+        ParityAssetToken stock = new ParityAssetToken("Test Replica Apple", "trAAPL", keccak256("AAPL"), address(this));
         MockAggregator feed = new MockAggregator(8, 12_345_000_000);
         ChainlinkValuationAdapter implementation = new ChainlinkValuationAdapter();
         ChainlinkValuationAdapter valuation = ChainlinkValuationAdapter(
             address(
                 new ERC1967Proxy(
                     address(implementation),
-                    abi.encodeCall(
-                        ChainlinkValuationAdapter.initialize, (address(this), address(0), 3_600)
-                    )
+                    abi.encodeCall(ChainlinkValuationAdapter.initialize, (address(this), address(0), 3_600))
                 )
             )
         );
@@ -180,8 +165,7 @@ contract MainnetEdgeTest is Test {
 
     function testSignedExecutionBindsCalldataAndPreventsReplay() public {
         bytes memory data = abi.encodeCall(
-            MockZeroExTarget.swap,
-            (address(tokenIn), address(tokenOut), 100e18, 100e18, address(adapter))
+            MockZeroExTarget.swap, (address(tokenIn), address(tokenOut), 100e18, 100e18, address(adapter))
         );
         ZeroExExecutionAdapter.ExecutionIntent memory intent = ZeroExExecutionAdapter.ExecutionIntent({
             vault: address(this),
@@ -208,12 +192,10 @@ contract MainnetEdgeTest is Test {
 
     function testSignedExecutionRejectsModifiedCalldata() public {
         bytes memory signedData = abi.encodeCall(
-            MockZeroExTarget.swap,
-            (address(tokenIn), address(tokenOut), 100e18, 100e18, address(adapter))
+            MockZeroExTarget.swap, (address(tokenIn), address(tokenOut), 100e18, 100e18, address(adapter))
         );
         bytes memory changedData = abi.encodeCall(
-            MockZeroExTarget.swap,
-            (address(tokenIn), address(tokenOut), 100e18, 101e18, address(adapter))
+            MockZeroExTarget.swap, (address(tokenIn), address(tokenOut), 100e18, 101e18, address(adapter))
         );
         ZeroExExecutionAdapter.ExecutionIntent memory intent = ZeroExExecutionAdapter.ExecutionIntent({
             vault: address(this),
@@ -313,56 +295,103 @@ contract MainnetEdgeTest is Test {
 
         uint256 depositBuy = 198e18;
         bytes memory buyData = abi.encodeCall(
-            MockZeroExTarget.swap,
-            (address(tokenIn), address(tokenOut), depositBuy, depositBuy, address(adapter))
+            MockZeroExTarget.swap, (address(tokenIn), address(tokenOut), depositBuy, depositBuy, address(adapter))
         );
         BasketVault.SwapPlan[] memory buyPlans = new BasketVault.SwapPlan[](1);
-        buyPlans[0] = _plan(
-            address(basket), address(tokenIn), address(tokenOut), depositBuy, buyData, 100
-        );
-        uint256 shares =
-            basket.depositWithPlan(1_000e18, 989e18, block.timestamp + 1 hours, buyPlans);
+        buyPlans[0] = _plan(address(basket), address(tokenIn), address(tokenOut), depositBuy, buyData, 100);
+        uint256 shares = basket.depositWithPlan(1_000e18, 989e18, block.timestamp + 1 hours, buyPlans);
         assertEq(shares, 990e18);
         assertEq(tokenOut.balanceOf(address(basket)), depositBuy);
 
         bytes memory sellData = abi.encodeCall(
-            MockZeroExTarget.swap,
-            (address(tokenOut), address(tokenIn), depositBuy, depositBuy, address(adapter))
+            MockZeroExTarget.swap, (address(tokenOut), address(tokenIn), depositBuy, depositBuy, address(adapter))
         );
         BasketVault.SwapPlan[] memory sellPlans = new BasketVault.SwapPlan[](1);
-        sellPlans[0] = _plan(
-            address(basket), address(tokenOut), address(tokenIn), depositBuy, sellData, 101
-        );
-        uint256 net =
-            basket.redeemWithPlan(shares, 979e18, block.timestamp + 1 hours, sellPlans);
+        sellPlans[0] = _plan(address(basket), address(tokenOut), address(tokenIn), depositBuy, sellData, 101);
+        uint256 net = basket.redeemWithPlan(shares, 979e18, block.timestamp + 1 hours, sellPlans);
         assertEq(net, 980_100_000_000_000_000_000);
         assertEq(basket.totalSupply(), 0);
         assertEq(tokenOut.balanceOf(address(basket)), 0);
     }
 
-    function _plan(
-        address vault,
-        address input,
-        address output,
-        uint256 amount,
-        bytes memory data,
-        uint256 nonce
-    ) private returns (BasketVault.SwapPlan memory plan) {
-        ZeroExExecutionAdapter.ExecutionIntent memory adapterIntent =
-            ZeroExExecutionAdapter.ExecutionIntent({
-                vault: vault,
-                tokenIn: input,
-                tokenOut: output,
-                amountIn: amount,
-                minimumAmountOut: (amount * 99) / 100,
-                recipient: vault,
-                target: address(venue),
-                allowanceTarget: address(venue),
-                callDataHash: keccak256(data),
-                expiry: block.timestamp + 2 minutes,
-                referenceBlock: block.number,
-                nonce: nonce
-            });
+    function testCanonicalSixDecimalReserveNormalizesNavAndShares() public {
+        MockToken reserve = new MockToken("Canonical USDG Shape", "USDG6", 6, address(this));
+        MockValuationOracle reserveOracle = new MockValuationOracle(address(this));
+        reserveOracle.setPrice(address(reserve), 1e18);
+        MockRewardFund rewards = new MockRewardFund(address(reserve));
+        AssetRegistry registry = AssetRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(new AssetRegistry()),
+                    abi.encodeCall(AssetRegistry.initialize, (address(this), block.chainid))
+                )
+            )
+        );
+        address[] memory noRiskAssets = new address[](0);
+        BasketVault basket = BasketVault(
+            address(
+                new ERC1967Proxy(
+                    address(new BasketVault()),
+                    abi.encodeCall(
+                        BasketVault.initialize,
+                        (
+                            address(this),
+                            address(reserve),
+                            address(venue),
+                            address(rewards),
+                            makeAddr("six-decimal-creator"),
+                            makeAddr("six-decimal-automation"),
+                            noRiskAssets
+                        )
+                    )
+                )
+            )
+        );
+        address[] memory targets = new address[](1);
+        uint16[] memory weights = new uint16[](1);
+        targets[0] = address(reserve);
+        weights[0] = 10_000;
+        basket.reinitializeV2(address(reserveOracle), 120, 100, targets, weights);
+        basket.reinitializeV3(address(registry), address(adapter));
+        reserve.mint(address(this), 1_000e6);
+        reserve.approve(address(basket), type(uint256).max);
+        BasketVault.SwapPlan[] memory noPlans = new BasketVault.SwapPlan[](0);
+
+        (uint256 fee, uint256 netContribution, uint256 expectedShares) = basket.previewDeposit(1_000e6);
+        assertEq(fee, 10e6);
+        assertEq(netContribution, 990e6);
+        assertEq(expectedShares, 990e18);
+        uint256 shares = basket.depositWithPlan(1_000e6, 990e18, block.timestamp + 1 hours, noPlans);
+        assertEq(shares, 990e18);
+        assertEq(basket.totalAssetsUsd(), 990e18);
+        assertEq(basket.navPerShareWad(), 1e18);
+
+        (uint256 gross,, uint256 previewNet,) = basket.previewRedeem(shares);
+        assertEq(gross, 990e6);
+        assertEq(previewNet, 980_100_000);
+        uint256 net = basket.redeemWithPlan(shares, previewNet, block.timestamp + 1 hours, noPlans);
+        assertEq(net, previewNet);
+        assertEq(basket.totalSupply(), 0);
+    }
+
+    function _plan(address vault, address input, address output, uint256 amount, bytes memory data, uint256 nonce)
+        private
+        returns (BasketVault.SwapPlan memory plan)
+    {
+        ZeroExExecutionAdapter.ExecutionIntent memory adapterIntent = ZeroExExecutionAdapter.ExecutionIntent({
+            vault: vault,
+            tokenIn: input,
+            tokenOut: output,
+            amountIn: amount,
+            minimumAmountOut: (amount * 99) / 100,
+            recipient: vault,
+            target: address(venue),
+            allowanceTarget: address(venue),
+            callDataHash: keccak256(data),
+            expiry: block.timestamp + 2 minutes,
+            referenceBlock: block.number,
+            nonce: nonce
+        });
         bytes32 digest = adapter.intentDigest(adapterIntent);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(authorizerKey, digest);
         plan = BasketVault.SwapPlan({

@@ -843,11 +843,13 @@ export async function buildDecisionContext(
 ): Promise<DecisionContextV4> {
   const base = await buildDecisionContextV3(state);
   const persisted = await loadAssetCandidates(
-    networkConfig.mode === "local" ? networkConfig.chainId : 4663,
+    networkConfig.mode === "mainnet" ? 4663 : networkConfig.chainId,
   );
-  const assetRecords = persisted.some((asset) => asset.active)
-    ? persisted
-    : legacyAssetRecords(state);
+  const manifestRecords = legacyAssetRecords(state);
+  const assetRecords =
+    networkConfig.mode === "mainnet" && persisted.some((asset) => asset.active)
+      ? persisted
+      : manifestRecords;
   const dossierBySymbol = new Map(
     base.assets.map((asset) => [asset.symbol, asset]),
   );
@@ -871,7 +873,7 @@ export async function buildDecisionContext(
         maximumWeightBps: asset.maximumWeightBps,
       };
     });
-  const detailed = base.assets.map((asset) => {
+  const detailedLegacy = base.assets.map((asset) => {
     const record = assetRecords.find(
       (candidate) => candidate.symbol === asset.symbol,
     );
@@ -887,6 +889,91 @@ export async function buildDecisionContext(
       stabilityScoreBps: asset.quote.oracleValid ? 10_000 : 0,
     };
   });
+  const legacySymbols = new Set(detailedLegacy.map((asset) => asset.symbol));
+  const detailedDynamic = assetRecords
+    .filter((record) => record.active && !legacySymbols.has(record.symbol))
+    .map((record) => {
+      const oracle = state.oracle.assets[record.symbol];
+      return {
+        id: record.id,
+        symbol: record.symbol,
+        identity: {
+          contract: record.address,
+          robinhoodUid: record.robinhoodUid,
+          assetClass:
+            record.kind === "reserve"
+              ? ("stable" as const)
+              : record.kind === "crypto" || record.kind === "token"
+                ? ("crypto" as const)
+                : ("equity" as const),
+          tags: record.tags,
+          executable: true as const,
+          permissions: {
+            buy: record.active && Boolean(oracle?.valid),
+            sell: record.active && Boolean(oracle?.valid),
+            halted: !record.active,
+          },
+        },
+        portfolio: {
+          balanceWad: state.holdings[record.symbol] ?? "0",
+          valueUsdWad: state.holdingValues[record.symbol] ?? "0",
+          weightBps: state.currentWeightsBps[record.symbol] ?? 0,
+          costBasisUsdWad: null,
+          realizedPnlUsdWad: null,
+          unrealizedPnlUsdWad: null,
+        },
+        quote: {
+          bidUsd: null,
+          askUsd: null,
+          midpointUsd: oracle
+            ? Number(BigInt(oracle.priceUsdWad)) / 1e18
+            : null,
+          spreadBps: null,
+          volume24h: null,
+          priceAgeSeconds: oracle
+            ? Math.max(0, Math.floor(Date.now() / 1_000) - oracle.updatedAt)
+            : null,
+          oraclePriceUsdWad: oracle?.priceUsdWad ?? "0",
+          oracleTimestamp: oracle?.updatedAt ?? 0,
+          oracleValid: oracle?.valid ?? false,
+        },
+        performance: {
+          return1hBps: null,
+          return24hBps: null,
+          return7dBps: null,
+          return30dBps: null,
+          volatility30dBps: null,
+          maximumDrawdownBps: null,
+          trend: null,
+          momentumBps: null,
+          meanReversionBps: null,
+          correlationToBasket: null,
+        },
+        execution: {
+          liquidityScoreBps: record.qualification?.liquidityValid
+            ? 10_000
+            : null,
+          estimatedPriceImpactBps: record.qualification?.buyImpactBps ?? null,
+          estimatedExecutionCostBps: record.qualification?.buyImpactBps ?? null,
+        },
+        fundamentals: {
+          marketCapUsd: record.qualification?.marketCapOrAumUsdWad
+            ? Number(BigInt(record.qualification.marketCapOrAumUsdWad)) / 1e18
+            : null,
+          revenueUsd: null,
+          netIncomeUsd: null,
+          assetsUsd: null,
+          liabilitiesUsd: null,
+          filingDate: null,
+          corporateActions: [],
+        },
+        provenance: [],
+        coverageScoreBps: 0,
+        diversificationScoreBps: record.kind === "reserve" ? 0 : 5_000,
+        stabilityScoreBps: oracle?.valid ? 10_000 : 0,
+      };
+    });
+  const detailed = [...detailedLegacy, ...detailedDynamic];
   const universe = compileUniverseContext(eligibleAssetDirectory, detailed);
   const reserve = assetRecords.find(
     (asset) => asset.active && asset.kind === "reserve",

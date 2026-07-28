@@ -26,7 +26,7 @@ const routerPriceAbi = parseAbi([
 ]);
 
 type PriceCandidate = {
-  symbol: "NVDA" | "AAPL" | "ETHX";
+  symbol: string;
   token: Address;
   priceWad: bigint;
   source: string;
@@ -40,10 +40,17 @@ function hash(value: unknown) {
 
 async function candidates() {
   const d = deployment();
+  const stockAssets = d.assets?.filter(
+    (asset) => asset.kind === "stock" || asset.kind === "etf",
+  ) ?? [
+    { symbol: "NVDA", address: d.nvda },
+    { symbol: "AAPL", address: d.aapl },
+  ];
+  const stockSymbols = stockAssets.map((asset) => asset.symbol);
   const stockRows =
     (await withDatabase(async (client) => {
       const result = await client.query<{
-        symbol: "NVDA" | "AAPL";
+        symbol: string;
         price: string;
         observed_at: string;
         source_hash: string;
@@ -53,23 +60,28 @@ async function candidates() {
                 source_generated_at::text AS observed_at,
                 source_hash
            FROM mdb_quote_observations
-          WHERE symbol IN ('NVDA','AAPL')
+          WHERE symbol = ANY($1::text[])
             AND valid=true AND halted=false
           ORDER BY symbol,source_generated_at DESC`,
+        [stockSymbols],
       );
       return result.rows;
     })) ?? [];
-  if (stockRows.length !== 2) {
-    throw new Error("fresh NVDA and AAPL observations are required");
+  if (stockRows.length !== stockAssets.length) {
+    throw new Error(
+      `fresh official observations required for ${stockSymbols.join(", ")}`,
+    );
   }
   const now = Date.now();
   const stocks = stockRows.map((row) => {
     if (now - Date.parse(row.observed_at) > 120_000) {
       throw new Error(`${row.symbol} quote is older than 120 seconds`);
     }
+    const configured = stockAssets.find((asset) => asset.symbol === row.symbol);
+    if (!configured) throw new Error(`${row.symbol} is not in the manifest`);
     return {
       symbol: row.symbol,
-      token: row.symbol === "NVDA" ? d.nvda : d.aapl,
+      token: configured.address,
       priceWad: decimalWad(row.price),
       source: "Robinhood Stock Token API",
       sourceObservedAt: new Date(row.observed_at).toISOString(),
@@ -85,16 +97,28 @@ async function candidates() {
   if (now - Date.parse(eth.value.time) > 120_000) {
     throw new Error("ETH-USD ticker is older than 120 seconds");
   }
+  const ethValue = eth.value;
+  const cryptoAssets = d.assets?.filter((asset) => asset.kind === "crypto") ?? [
+    { symbol: "ETHX", address: d.ethx },
+  ];
+  if (cryptoAssets.some((asset) => !["WETH", "ETHX"].includes(asset.symbol))) {
+    throw new Error(
+      "no approved official price source for a configured crypto asset",
+    );
+  }
   return [
     ...stocks,
-    {
-      symbol: "ETHX",
-      token: d.ethx,
-      priceWad: decimalWad(eth.value.price),
-      source: "Coinbase Exchange ETH-USD ticker",
-      sourceObservedAt: new Date(eth.value.time).toISOString(),
-      sourceHash: hash(eth.value),
-    } satisfies PriceCandidate,
+    ...cryptoAssets.map(
+      (asset) =>
+        ({
+          symbol: asset.symbol,
+          token: asset.address,
+          priceWad: decimalWad(ethValue.price),
+          source: "Coinbase Exchange ETH-USD ticker",
+          sourceObservedAt: new Date(ethValue.time).toISOString(),
+          sourceHash: hash(ethValue),
+        }) satisfies PriceCandidate,
+    ),
   ];
 }
 

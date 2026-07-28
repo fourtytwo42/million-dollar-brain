@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { keccak256, stringToHex } from "viem";
 import { stableDecisionJson } from "./decision-math.ts";
 import {
@@ -12,6 +13,38 @@ export const REFERENCE_STOCKS = ["SPY", "QQQ", "SOXX"] as const;
 export const REFERENCE_UNIVERSE = ["SPY", "QQQ", "SOXX", "ETH-USD"] as const;
 export type TrackedStock = RobinhoodSymbol;
 export type MarketInterval = "1m" | "15m" | "1h" | "1d";
+
+function configuredManifestAssets() {
+  const path = process.env.MDB_DEPLOYMENT_FILE;
+  if (!path) return [];
+  try {
+    return (
+      (
+        JSON.parse(readFileSync(path, "utf8")) as {
+          assets?: { symbol: string; kind: string }[];
+        }
+      ).assets ?? []
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function configuredStockUniverse() {
+  const configured = configuredManifestAssets()
+    .filter((asset) => asset.kind === "stock" || asset.kind === "etf")
+    .map((asset) => asset.symbol);
+  if (configured.length) return [...new Set(configured)].sort();
+  return [...new Set([...EXECUTABLE_STOCKS, ...REFERENCE_STOCKS])].sort();
+}
+
+export function executableStockUniverse() {
+  const configured = configuredManifestAssets()
+    .filter((asset) => asset.kind === "stock" || asset.kind === "etf")
+    .map((asset) => asset.symbol);
+  if (configured.length) return new Set(configured);
+  return new Set<string>(EXECUTABLE_STOCKS);
+}
 
 type CollectorState = {
   blockNumber?: string;
@@ -297,7 +330,8 @@ async function aggregateCandles(client: {
 export async function collectOfficialMarketData(state?: CollectorState) {
   const started = Date.now();
   const observedAt = new Date().toISOString();
-  const stocks = [...EXECUTABLE_STOCKS, ...REFERENCE_STOCKS];
+  const stocks = configuredStockUniverse();
+  const executableStocks = executableStockUniverse();
   const [fetched, ethHistory] = await Promise.all([
     Promise.all(
       stocks.map(
@@ -339,9 +373,7 @@ export async function collectOfficialMarketData(state?: CollectorState) {
         const adjustedMidpoint = midpoint * multiplier;
         const spreadBps =
           midpoint > 0 ? Math.round(((ask - bid) / midpoint) * 10_000) : 0;
-        const role = (EXECUTABLE_STOCKS as readonly string[]).includes(symbol)
-          ? "executable"
-          : "reference";
+        const role = executableStocks.has(symbol) ? "executable" : "reference";
         const assetHash = hash(asset);
         await client.query(
           `INSERT INTO mdb_asset_registry
@@ -607,10 +639,7 @@ export async function readMarketHistory(
   interval: MarketInterval,
   rangeDays: number,
 ) {
-  const allowed = [
-    ...EXECUTABLE_STOCKS,
-    ...REFERENCE_STOCKS,
-  ] as readonly string[];
+  const allowed = configuredStockUniverse();
   if (!allowed.includes(symbol)) throw new Error("symbol is not allowlisted");
   if (!["1m", "15m", "1h", "1d"].includes(interval)) {
     throw new Error("unsupported interval");
