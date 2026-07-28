@@ -143,6 +143,7 @@ contract MainnetEdgeTest is Test {
     }
 
     function testExecutionBlockWindowIsGovernanceBounded() public {
+        assertEq(adapter.currentReferenceBlock(), block.number);
         adapter.setExecutionLimits(75, 600);
         assertEq(adapter.maximumOracleDeviationBps(), 75);
         assertEq(adapter.maximumBlockDelay(), 600);
@@ -153,6 +154,12 @@ contract MainnetEdgeTest is Test {
 
         vm.expectRevert("unsafe block delay");
         adapter.setExecutionLimits(100, 7_201);
+    }
+
+    function testRobinhoodReferenceBlockUsesArbSysL2Number() public {
+        vm.chainId(46_630);
+        vm.mockCall(address(100), abi.encodeWithSignature("arbBlockNumber()"), abi.encode(uint256(94_563_430)));
+        assertEq(adapter.currentReferenceBlock(), 94_563_430);
     }
 
     function testChainlinkFeedScalesAndHonorsRobinhoodPause() public {

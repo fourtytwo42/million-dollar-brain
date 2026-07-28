@@ -29,6 +29,9 @@ contract ZeroExExecutionAdapter is
     bytes32 public constant VENUE_ADMIN_ROLE = keccak256("VENUE_ADMIN_ROLE");
     bytes32 public constant VAULT_ROLE = keccak256("VAULT_ROLE");
     uint256 public constant BPS = 10_000;
+    address private constant ARBSYS = address(100);
+    uint256 private constant ROBINHOOD_MAINNET_CHAIN_ID = 4_663;
+    uint256 private constant ROBINHOOD_TESTNET_CHAIN_ID = 46_630;
     bytes32 public constant EXECUTION_INTENT_TYPEHASH = keccak256(
         "ExecutionIntent(address vault,address tokenIn,address tokenOut,uint256 amountIn,uint256 minimumAmountOut,address recipient,address target,address allowanceTarget,bytes32 callDataHash,uint256 expiry,uint256 referenceBlock,uint256 nonce)"
     );
@@ -122,6 +125,15 @@ contract ZeroExExecutionAdapter is
         emit ExecutionLimitsChanged(maximumDeviationBps, blockDelay);
     }
 
+    function currentReferenceBlock() public view returns (uint256) {
+        if (block.chainid == ROBINHOOD_MAINNET_CHAIN_ID || block.chainid == ROBINHOOD_TESTNET_CHAIN_ID) {
+            (bool ok, bytes memory result) = ARBSYS.staticcall(abi.encodeWithSignature("arbBlockNumber()"));
+            require(ok && result.length >= 32, "ArbSys unavailable");
+            return abi.decode(result, (uint256));
+        }
+        return block.number;
+    }
+
     function intentDigest(ExecutionIntent calldata intent) public view returns (bytes32) {
         return _hashTypedDataV4(
             keccak256(
@@ -159,9 +171,10 @@ contract ZeroExExecutionAdapter is
         require(allowedSelector[bytes4(executionData[0:4])], "selector not allowed");
         require(keccak256(executionData) == intent.callDataHash, "calldata changed");
         require(block.timestamp <= intent.expiry, "quote expired");
-        uint256 blockDistance = block.number >= intent.referenceBlock
-            ? block.number - intent.referenceBlock
-            : intent.referenceBlock - block.number;
+        uint256 referenceBlock = currentReferenceBlock();
+        uint256 blockDistance = referenceBlock >= intent.referenceBlock
+            ? referenceBlock - intent.referenceBlock
+            : intent.referenceBlock - referenceBlock;
         require(blockDistance <= maximumBlockDelay, "block reference expired");
 
         bytes32 digest = intentDigest(intent);
