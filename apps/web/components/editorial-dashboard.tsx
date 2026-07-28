@@ -342,6 +342,7 @@ export function EditorialDashboard({
     mode: "local" | "testnet" | "mainnet";
     chainId: number;
     networkLabel: string;
+    decisionCadenceMinutes: number;
     builtInWalletEnabled: boolean;
     faucetEnabled: boolean;
   } | null;
@@ -1660,8 +1661,8 @@ export function EditorialDashboard({
               : "Local Anvil simulation · no real funds"}
         </span>
         <span>
-          Decision cadence: 60 minutes · Catalog v{data?.catalog.version ?? "—"}{" "}
-          · Character roster v4
+          Decision cadence: {network?.decisionCadenceMinutes ?? 60} minutes ·
+          Catalog v{data?.catalog.version ?? "—"} · Character roster v4
         </span>
       </footer>
     </main>

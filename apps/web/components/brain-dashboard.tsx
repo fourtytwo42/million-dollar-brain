@@ -85,6 +85,7 @@ type Data = {
     browserRpcUrl: string;
     explorerUrl: string;
     confirmations: number;
+    decisionCadenceMinutes: number;
     builtInWalletEnabled: boolean;
     faucetEnabled: boolean;
     faucetLanOnly: boolean;
@@ -833,7 +834,7 @@ export function BrainDashboard() {
             </h1>
             <p className="lede">
               Forty-two on-chain brain pieces become bounded AI context. The
-              agent can only rebalance this local test basket once per hourly
+              agent can only rebalance this local test basket once per scheduled
               cycle.
             </p>
           </div>

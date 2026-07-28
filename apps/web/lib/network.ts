@@ -12,6 +12,7 @@ export type MdbPublicNetworkConfig = {
   browserRpcUrl: string;
   explorerUrl: string;
   confirmations: number;
+  decisionCadenceMinutes: number;
   builtInWalletEnabled: boolean;
   faucetEnabled: boolean;
   faucetLanOnly: boolean;
@@ -28,6 +29,12 @@ export type MdbServerNetworkConfig = MdbPublicNetworkConfig & {
 export function validateNetworkConfig(
   resolved: MdbServerNetworkConfig,
 ): MdbServerNetworkConfig {
+  if (
+    !Number.isInteger(resolved.decisionCadenceMinutes) ||
+    resolved.decisionCadenceMinutes < 1
+  ) {
+    throw new Error("Decision cadence must be a positive whole number");
+  }
   if (
     resolved.mode === "mainnet" &&
     (resolved.builtInWalletEnabled || resolved.faucetEnabled)
@@ -82,6 +89,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     serverRpcUrl: "http://127.0.0.1:8545",
     explorerUrl: "",
     confirmations: 1,
+    decisionCadenceMinutes: 60,
     builtInWalletEnabled: true,
     faucetEnabled: true,
     faucetLanOnly: false,
@@ -100,6 +108,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     serverRpcUrl: "https://rpc.testnet.chain.robinhood.com",
     explorerUrl: "https://explorer.testnet.chain.robinhood.com",
     confirmations: 3,
+    decisionCadenceMinutes: 15,
     builtInWalletEnabled: true,
     faucetEnabled: true,
     faucetLanOnly: true,
@@ -118,6 +127,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     serverRpcUrl: "https://rpc.mainnet.chain.robinhood.com",
     explorerUrl: "https://robinhoodchain.blockscout.com",
     confirmations: 12,
+    decisionCadenceMinutes: 60,
     builtInWalletEnabled: false,
     faucetEnabled: false,
     faucetLanOnly: true,

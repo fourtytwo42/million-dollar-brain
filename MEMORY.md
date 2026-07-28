@@ -154,8 +154,9 @@ When sources conflict, use this order:
   A subsequent acceptance run changed a brain preset, bought MDBS, sold MDBS
   atomically, and claimed rewards; all assertions passed with no queued sale,
   a fresh oracle, positive NAV/supply, and eight risk positions. Testnet
-  collector and cycle timers are active at second 30 and minute 32,
-  respectively; local services remain active and separate. Eight asset-
+  collector and cycle timers are active at second 30 and every 15 minutes
+  (`:02`, `:17`, `:32`, `:47`), respectively; local services remain active and
+  separate. Eight asset-
   universe tests, five context tests, and the production build pass.
 - 2026-07-28: Started the two-hour `mdb-endurance-testnet.service` against the
   fresh V3 deployment. Checkpoint 0 completed with preset, approval, buy,
@@ -642,6 +643,15 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: Network policy and production build must pass before the upgraded runner resumes. Browser checks cover 390px, 768px, and 1440px widths, both themes over alternating checkpoints, all three primary screens, 42 brain cells, decision history, console errors, and page-level overflow.
 - Result: Actor keys are derived only from the server-side endurance secret and are never returned or stored. The endpoint returns public actor addresses and transaction evidence. Real WalletConnect approval remains a human-wallet certification step; protocol behavior uses real chain-46630 transactions.
 - Follow-up: Complete the active two-hour run and audit its checkpoint ledger for all scenario classes.
+
+### 2026-07-28 - Accelerated Testnet AI Cadence
+
+- Context: Active endurance testing needed more autonomous decisions and rebalances within the two-hour evidence window.
+- Decision: Robinhood Testnet runs its AI cycle every 15 minutes at `:02`, `:17`, `:32`, and `:47`. Local devnet and the intended mainnet cadence remain hourly.
+- Files: `apps/web/lib/network.ts`, `config/networks.json`, `apps/web/components/editorial-dashboard.tsx`, `infrastructure/systemd/mdb-cycle-testnet.timer`, `tests/network-policy.test.ts`.
+- Commands/tests: Network policy test, production build, live systemd timer inspection, and a live testnet cycle.
+- Result: The public runtime config and UI report the real network-specific cadence; invalid cadence values fail runtime validation.
+- Follow-up: Keep the accelerated cadence limited to testnet testing and restore 60 minutes if the test workload no longer needs it.
 
 ### 2026-07-28 - First Multi-user Rehearsal Findings
 

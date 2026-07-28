@@ -22,6 +22,7 @@ function testnetConfig(
     serverRpcUrl: officialTestnetRpc,
     explorerUrl: "https://explorer.testnet.chain.robinhood.com",
     confirmations: 3,
+    decisionCadenceMinutes: 15,
     builtInWalletEnabled: true,
     faucetEnabled: true,
     faucetLanOnly: true,
@@ -38,6 +39,7 @@ test("testnet accepts the official public RPC for server and browser", () => {
   assert.equal(validated.chainId, 46630);
   assert.equal(validated.serverRpcUrl, officialTestnetRpc);
   assert.equal(validated.browserRpcUrl, officialTestnetRpc);
+  assert.equal(validated.decisionCadenceMinutes, 15);
 });
 
 test("testnet rejects a private server RPC", () => {
@@ -62,10 +64,18 @@ test("testnet rejects a private browser RPC", () => {
 
 test("public config never exposes server-only paths or database names", () => {
   const publicConfig = publicNetworkConfig(testnetConfig());
+  assert.equal(publicConfig.decisionCadenceMinutes, 15);
   assert.equal("serverRpcUrl" in publicConfig, false);
   assert.equal("deploymentFile" in publicConfig, false);
   assert.equal("stateDir" in publicConfig, false);
   assert.equal("databaseName" in publicConfig, false);
+});
+
+test("network cadence must be a positive whole number", () => {
+  assert.throws(
+    () => validateNetworkConfig(testnetConfig({ decisionCadenceMinutes: 0 })),
+    /Decision cadence must be a positive whole number/,
+  );
 });
 
 test("mainnet cannot enable disposable wallets, faucets, or mocks", () => {
@@ -91,6 +101,15 @@ test("testnet collector retries transient public-RPC failures", () => {
   assert.match(unit, /Restart=on-failure/);
   assert.match(unit, /RestartSec=10/);
   assert.match(unit, /StartLimitBurst=4/);
+});
+
+test("testnet AI cycle runs every 15 minutes", () => {
+  const timer = readFileSync(
+    "infrastructure/systemd/mdb-cycle-testnet.timer",
+    "utf8",
+  );
+  assert.match(timer, /every 15 minutes/);
+  assert.match(timer, /OnCalendar=\*-\*-\* \*:02,17,32,47:00/);
 });
 
 test("testnet dashboard collapses reads through Multicall3", () => {
