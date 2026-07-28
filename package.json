@@ -13,7 +13,7 @@
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",
     "test:network": "node --experimental-strip-types --test tests/network-policy.test.ts",
-    "test:wallet": "node --experimental-strip-types --test tests/wallet-dependencies.test.ts",
+    "test:wallet": "node --experimental-strip-types --test tests/wallet-dependencies.test.ts tests/admin-transaction-lock.test.ts",
     "format:check": "prettier --check .",
     "test:uat": "node tests/uat.mjs"
   },

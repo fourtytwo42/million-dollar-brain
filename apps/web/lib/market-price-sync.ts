@@ -4,6 +4,7 @@ import { coinbaseEthTicker } from "./market-sources";
 import { withDatabase } from "./persistence";
 import { changedByAtLeastOneBps, decimalWad } from "./price-sync-math";
 import { networkConfig } from "./network";
+import { withAdminTransactionLock } from "./admin-transaction-lock";
 
 const oracleAbi = parseAbi([
   "function prices(address token) view returns (uint256 priceWad,uint256 updatedAt,bool valid)",
@@ -87,7 +88,7 @@ async function candidates() {
   ];
 }
 
-export async function syncLocalMarketPrices() {
+async function syncLocalMarketPricesUnlocked() {
   if (process.env.MDB_LOCAL_PRICE_SYNC_ENABLED === "false") {
     return { enabled: false, updated: [], unchanged: [] };
   }
@@ -265,6 +266,10 @@ export async function syncLocalMarketPrices() {
     );
     throw error;
   }
+}
+
+export async function syncLocalMarketPrices() {
+  return withAdminTransactionLock(syncLocalMarketPricesUnlocked);
 }
 
 export async function localPriceSyncHealth() {

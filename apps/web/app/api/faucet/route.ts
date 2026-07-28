@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAddress, parseEther, parseUnits } from "viem";
 import { adminClient, deployment, mintAbi, publicClient } from "@/lib/chain";
 import { networkConfig } from "@/lib/network";
+import { withAdminTransactionLock } from "@/lib/admin-transaction-lock";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,13 @@ function takeRate(key: string, maximum: number, windowMs: number) {
   if (current.count >= maximum) return false;
   current.count += 1;
   return true;
+}
+
+function refundRate(key: string) {
+  const current = rates.get(key);
+  if (!current) return;
+  if (current.count <= 1) rates.delete(key);
+  else current.count -= 1;
 }
 
 export async function POST(request: NextRequest) {
@@ -49,14 +57,13 @@ export async function POST(request: NextRequest) {
     request.headers.get("x-real-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "direct";
-  if (
-    !takeRate(
-      `address:${networkConfig.chainId}:${address.toLowerCase()}`,
-      1,
-      60 * 60 * 1000,
-    ) ||
-    !takeRate(`ip:${networkConfig.chainId}:${forwarded}`, 5, 60 * 60 * 1000)
-  ) {
+  const addressRateKey = `address:${networkConfig.chainId}:${address.toLowerCase()}`;
+  const ipRateKey = `ip:${networkConfig.chainId}:${forwarded}`;
+  const addressRateTaken = takeRate(addressRateKey, 1, 60 * 60 * 1000);
+  const ipRateTaken =
+    addressRateTaken && takeRate(ipRateKey, 5, 60 * 60 * 1000);
+  if (!addressRateTaken || !ipRateTaken) {
+    if (addressRateTaken) refundRate(addressRateKey);
     return NextResponse.json(
       { error: "Faucet limit reached. Try again later." },
       { status: 429 },
@@ -97,20 +104,21 @@ export async function POST(request: NextRequest) {
         { status: 503 },
       );
     }
-    const ethHash = await adminClient.sendTransaction({
-      to: address,
-      value: nativeAmount,
+    const { ethHash, usdgHash } = await withAdminTransactionLock(async () => {
+      const nativeHash = await adminClient.sendTransaction({
+        to: address,
+        value: nativeAmount,
+      });
+      await publicClient.waitForTransactionReceipt({ hash: nativeHash });
+      const tokenHash = await adminClient.writeContract({
+        address: d.usdg,
+        abi: mintAbi,
+        functionName: "mint",
+        args: [address, parseUnits("100000", 18)],
+      });
+      await publicClient.waitForTransactionReceipt({ hash: tokenHash });
+      return { ethHash: nativeHash, usdgHash: tokenHash };
     });
-    const usdgHash = await adminClient.writeContract({
-      address: d.usdg,
-      abi: mintAbi,
-      functionName: "mint",
-      args: [address, parseUnits("100000", 18)],
-    });
-    await Promise.all([
-      publicClient.waitForTransactionReceipt({ hash: ethHash }),
-      publicClient.waitForTransactionReceipt({ hash: usdgHash }),
-    ]);
     dailyNativeWei += nativeAmount;
     return NextResponse.json({
       ok: true,
@@ -121,6 +129,8 @@ export async function POST(request: NextRequest) {
       network: networkConfig.networkLabel,
     });
   } catch (error) {
+    refundRate(addressRateKey);
+    refundRate(ipRateKey);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "faucet failed" },
       { status: 500 },

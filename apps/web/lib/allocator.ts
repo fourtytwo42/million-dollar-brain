@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import { keccak256, stringToHex } from "viem";
 import { basketAbi } from "./abi";
+import { withAdminTransactionLock } from "./admin-transaction-lock";
 import { adminClient, dashboard, deployment, publicClient } from "./chain";
 import { buildDecisionContext } from "./decision-context";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
@@ -252,13 +253,20 @@ export async function runCycle() {
     const cycleHash = keccak256(
       stringToHex(`${market.inputHash}:${decision.promptHash}`),
     );
-    hash = await adminClient.writeContract({
-      address: d.basket,
-      abi: basketAbi,
-      functionName: "rebalance",
-      args: [targets, weights, cycleHash],
-    });
-    receipt = await publicClient.waitForTransactionReceipt({ hash });
+    ({ hash, receipt } = await withAdminTransactionLock(async () => {
+      const transactionHash = await adminClient.writeContract({
+        address: d.basket,
+        abi: basketAbi,
+        functionName: "rebalance",
+        args: [targets, weights, cycleHash],
+      });
+      return {
+        hash: transactionHash,
+        receipt: await publicClient.waitForTransactionReceipt({
+          hash: transactionHash,
+        }),
+      };
+    }));
   }
   const stateAfter = await dashboard();
   await syncVaultLedger();
