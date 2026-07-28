@@ -6,10 +6,9 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement the approved mainnet-edge dynamic asset, execution,
   real-data testnet replica, and mainnet-shadow upgrade.
-- Last meaningful change: Removed the Brain map and selected-piece inspector's
-  internal scroll regions. Both panels now expand to their full content and the
-  browser page provides the only scrolling at desktop, tablet, and mobile
-  sizes.
+- Last meaningful change: Replaced the Basket pie chart's four-symbol color
+  lookup with ten explicit high-contrast palette slots, covering USDG plus the
+  protocol maximum of nine simultaneous risk positions in both themes.
 - Next step: Keep the read-only mainnet shadow collecting qualification
   evidence. Supply Chainlink mappings, 0x
   credentials, and official capitalization/history evidence before the
@@ -118,6 +117,12 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Fixed dynamically registered Basket assets rendering with an
+  unresolved near-white chart color. The pie and legend now share ten explicit
+  light/dark palette slots. Live testnet holds nine assets and browser
+  inspection confirms nine unique slice colors, exact legend matches, no
+  browser errors, and distinct brighter dark-mode equivalents. Portfolio
+  display tests, TypeScript, Prettier, and the production build pass.
 - 2026-07-28: Corrected the compact Brain layout after user review. The map and
   selected-piece inspector no longer have internal scrollbars; both expand to
   full content and the page scrolls naturally. Live 1366-by-768, 768-by-1024,

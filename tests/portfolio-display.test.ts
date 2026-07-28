@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   allocationSummary,
+  basketChartColor,
+  BASKET_CHART_COLOR_COUNT,
   positiveAllocationEntries,
   positiveBalanceSymbols,
 } from "../apps/web/lib/portfolio-display.ts";
@@ -33,6 +35,16 @@ test("decision allocations include only positive target weights", () => {
   ]);
   assert.equal(allocationSummary(allocation), "USDG 20% · AAPL 35%");
   assert.equal(allocationSummary({ USDG: 0 }), "No target positions");
+});
+
+test("basket chart assigns a distinct visible color slot to every possible holding", () => {
+  const colors = Array.from({ length: BASKET_CHART_COLOR_COUNT }, (_, index) =>
+    basketChartColor(index),
+  );
+  assert.equal(new Set(colors).size, BASKET_CHART_COLOR_COUNT);
+  assert.equal(colors[0], "var(--chart-asset-1)");
+  assert.equal(colors[9], "var(--chart-asset-10)");
+  assert.equal(basketChartColor(10), colors[0]);
 });
 
 test("visible USD values use the exact two-decimal formatter", () => {

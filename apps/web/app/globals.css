@@ -622,6 +622,16 @@ footer {
   --asset-nvda: #7a2634;
   --asset-aapl: #c18432;
   --asset-ethx: #4f6777;
+  --chart-asset-1: #315b49;
+  --chart-asset-2: #8b2f42;
+  --chart-asset-3: #b36a1f;
+  --chart-asset-4: #3f6f8f;
+  --chart-asset-5: #6f4c9b;
+  --chart-asset-6: #237d79;
+  --chart-asset-7: #b14836;
+  --chart-asset-8: #6f7c2c;
+  --chart-asset-9: #a34672;
+  --chart-asset-10: #2f5aa8;
   min-height: 100vh;
   background: var(--background);
   color: var(--text);
@@ -650,6 +660,16 @@ footer {
   --asset-nvda: #d16670;
   --asset-aapl: #d1a35a;
   --asset-ethx: #9aaebc;
+  --chart-asset-1: #8fb09a;
+  --chart-asset-2: #d16670;
+  --chart-asset-3: #d1a35a;
+  --chart-asset-4: #7fa7c1;
+  --chart-asset-5: #a98bc8;
+  --chart-asset-6: #64c3b0;
+  --chart-asset-7: #df806f;
+  --chart-asset-8: #b8c36a;
+  --chart-asset-9: #d27ba5;
+  --chart-asset-10: #7f9ee0;
 }
 .editorial-header {
   height: 76px;

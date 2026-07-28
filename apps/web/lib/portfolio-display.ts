@@ -12,6 +12,16 @@ export function positiveBalanceSymbols(
     .map(([symbol]) => symbol);
 }
 
+export const BASKET_CHART_COLOR_COUNT = 10;
+
+export function basketChartColor(index: number): string {
+  const normalized =
+    ((Math.trunc(index) % BASKET_CHART_COLOR_COUNT) +
+      BASKET_CHART_COLOR_COUNT) %
+    BASKET_CHART_COLOR_COUNT;
+  return `var(--chart-asset-${normalized + 1})`;
+}
+
 export function positiveAllocationEntries(
   allocation: Record<string, number>,
 ): Array<[string, number]> {

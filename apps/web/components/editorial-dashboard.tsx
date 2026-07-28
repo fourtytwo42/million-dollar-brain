@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { formatUnits } from "viem";
 import {
   allocationSummary,
+  basketChartColor,
   positiveAllocationEntries,
   positiveBalanceSymbols,
 } from "../lib/portfolio-display";
@@ -913,7 +914,7 @@ export function EditorialDashboard({
                           cy="100"
                           r="70"
                           pathLength="100"
-                          stroke={`var(--asset-${slice.symbol.toLowerCase()})`}
+                          stroke={basketChartColor(index)}
                           strokeDasharray={`${slice.currentPercent} ${100 - slice.currentPercent}`}
                           strokeDashoffset={offset}
                         >
@@ -931,7 +932,7 @@ export function EditorialDashboard({
                   </figcaption>
                 </figure>
                 <div className="holding-legend">
-                  {holdingSlices.map((slice) => (
+                  {holdingSlices.map((slice, index) => (
                     <div
                       key={slice.symbol}
                       data-testid="basket-holding-row"
@@ -940,7 +941,7 @@ export function EditorialDashboard({
                       <i
                         aria-hidden="true"
                         style={{
-                          background: `var(--asset-${slice.symbol.toLowerCase()})`,
+                          background: basketChartColor(index),
                         }}
                       />
                       <b>{slice.symbol}</b>
