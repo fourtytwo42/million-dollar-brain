@@ -4,15 +4,13 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Restart exact-commit testnet acceptance after the RPC failover
-  migration.
-- Last meaningful change: Deployed and verified
-  `mdb-rpc-failover-testnet.service`. Testnet server traffic now uses loopback
-  `127.0.0.1:18548`, with `192.168.50.117:8547` as the chain-46630 primary and
-  the configured remote HTTPS RPC as secondary. A live Ornith cycle executed
-  successfully through the LAN primary.
-- Next step: Commit and push the RPC migration, then run a fresh two-hour
-  multi-user Robinhood Testnet acceptance rehearsal bound to that exact commit.
+- Current task: None; the testnet acceptance run is stopped at the user's
+  request.
+- Last meaningful change: Stopped and disarmed the exact-commit testnet
+  acceptance run after five successful checkpoints and zero failed attempts.
+  The service is disabled, no endurance process remains, and the evidence is
+  preserved under `var/testnet-v3-endurance`.
+- Next step: Resume acceptance only if the user explicitly requests it.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -140,6 +138,12 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: At the user's request, stopped and disabled
+  `mdb-endurance-testnet.service`, removed its armed state, verified no
+  `tests/endurance-testnet.mjs` process or related unit remained, and marked
+  the state `stopped_by_user`. The preserved partial run contains five
+  successful checkpoints, zero failed attempts, and last completed checkpoint
+  4 on exact commit `3e31943acadb83ff858414c62fef40e48a0beedd`.
 - 2026-07-28: Verified the testnet RPC migration on VM `192.168.50.135`.
   `192.168.50.117:8547` and the remote endpoint both reported chain `46630`
   at zero measured lag. The gateway checks both every 15 seconds, switches
