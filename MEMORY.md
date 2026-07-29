@@ -4,14 +4,12 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: The basket share is rebranded and accepted on devnet as
-  `42 Braincells` with symbol `BRAINS`.
-- Last meaningful change: The devnet BasketVault implementation now reports the
-  new ERC-20 name and symbol without changing balances or storage. The global
-  header and Basket screen use a generated transparent BRAINS mascot and the
-  new product language throughout.
-- Next step: Promote this exact clean pushed candidate through the established
-  testnet release pipeline only when testnet promotion is explicitly requested.
+- Current task: The accepted devnet release is promoted to Robinhood Testnet.
+- Last meaningful change: Testnet BasketVault now reports `42 Braincells` with
+  symbol `BRAINS`; the matching UI, mascot, simplified control experience, and
+  oval-free Basket hero are live at `https://testnet.42braincells.com`.
+- Next step: Continue ordinary development on devnet and use the same
+  exact-commit promotion path for future testnet releases.
 - Blockers: Permanent mainnet failover still requires its Alchemy endpoint.
   Mainnet activation also requires canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
@@ -29,7 +27,7 @@ Durable project context lives here. Update this file whenever information should
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
   `3000`; their databases, state, manifests, timers, and wallet sessions are
   isolated.
-- Last verified 2026-07-28: the public testnet is available at
+- Last verified 2026-07-29: the public testnet is available at
   `https://testnet.42braincells.com`. The apex
   `https://42braincells.com` is a separate static mainnet Coming Soon page
   served on VM loopback port `3002`. Both are routed through the named
@@ -47,6 +45,41 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - BRAINS Robinhood Testnet promotion
+
+- Context: The user explicitly authorized promotion of the accepted devnet
+  release to the existing chain-46630 testnet deployment.
+- Decision: Promote source release candidate
+  `0f58ea2824dd8043b69cfb10418e27059095a36d`, preserve every proxy address and
+  all protocol state, upgrade only BasketVault for the new ERC-20 metadata, and
+  deploy the matching web presentation to port `3001`.
+- Files: `packages/contracts/script/UpgradeBasketIdentity.s.sol`,
+  `scripts/upgrade-basket-identity.sh`, `scripts/rehearse-testnet.sh`,
+  `tests/graduation-policy.test.mjs`,
+  `packages/contracts/deployments/testnet-v3.json`.
+- Commands/tests: Full devnet release gate; 35/35 Foundry tests; all TypeScript
+  suites; production build; complete Chromium devnet UAT; isolated chain-46630
+  rehearsal; encrypted-keystore dry run and broadcast; public testnet
+  transactional smoke; public desktop/mobile/dark in-app Browser UAT.
+- Result: Basket proxy `0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B`
+  upgraded to implementation `0xd28cf38b6133e97492392480f4d7209bb027ebda`
+  in transaction
+  `0x2ebbb234b573be20f1e4baa9fe99be2f5f7a378cb23d94459dfcc43c94249cdb`.
+  Pre/post comparison preserved supply
+  `11067945684076116008307`, all 42 owners, prices, presets, profiles, rewards,
+  queue counters, and activation flags. Manifest hash is
+  `171c08fd46efc325374dc2efa58dc305f87b3ef194c3effcf96f2d0bcf242e45`.
+- Acceptance: Scenario 0 completed an initial brain purchase, ControlBundle
+  update, BRAINS buy, atomic sell, claim, and oversized-sell rejection with
+  fresh oracle data, positive NAV, no queued sale, and successful transaction
+  receipts. Public HTTPS serves the new mascot and BRAINS UI with hidden
+  disposable-wallet controls, responsive layout, and zero browser errors.
+- Operations: Devnet and all testnet web, cycle, collector, and RPC-failover
+  services are active. The LAN RPC was primary and two blocks ahead of the
+  healthy secondary at final verification. Operator gas was
+  `326683572651000` wei; top it up before another contract deployment or
+  extended operator-funded acceptance run.
 
 ### 2026-07-29 - BRAINS basket-share rebrand
 
@@ -1098,9 +1131,10 @@ build`; authenticated live `/api/collect-market`.
   and run `scripts/configure-mainnet-rpc-failover.sh`. Until then, the
   mainnet-shadow worker uses `192.168.50.173:8547` directly and the permanent
   loopback failover service remains disabled.
-- 2026-07-29: Braincell Controls Experience v4 is accepted on devnet but has
-  not been promoted to testnet. Any promotion must use the exact clean pushed
-  candidate and the established testnet acceptance pipeline.
+- 2026-07-29: Braincell Controls Experience v4 and the BRAINS identity are live
+  on testnet from source release
+  `0f58ea2824dd8043b69cfb10418e27059095a36d`. Future changes still begin on
+  devnet and use the exact-commit promotion pipeline.
 - 2026-07-28: MDB testnet now uses the server-only LAN-primary,
   remote-failover gateway. The browser remains on public HTTPS. The current
   remote endpoint is the official rate-limited public RPC because no separate

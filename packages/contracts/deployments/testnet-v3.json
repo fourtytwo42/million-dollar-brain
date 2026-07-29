@@ -200,6 +200,7 @@
     "creatorVault": "0x81720eEA92D608daE1D789673d0a4d59c6B16485",
     "brain": "0x97B0fbb23dfadE516bbe7B9f4753EC4f4e282B1c",
     "basket": "0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B",
+    "basketImplementation": "0xd28cf38b6133e97492392480f4d7209bb027ebda",
     "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347"
   },
   "evidence": {
@@ -208,11 +209,19 @@
     "qualification": "test-rehearsal-only",
     "canonicalMainnetValidationRequired": true
   },
-  "manifestHash": "d6c6ac9a2e588e8f560cddb25cdbb5869440ca8610822806f921a28819d44539",
+  "manifestHash": "171c08fd46efc325374dc2efa58dc305f87b3ef194c3effcf96f2d0bcf242e45",
   "assetRegistry": "0x03E4AEEfe8287a3D8DD9661e931F6D5078eEB435",
   "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
   "controlCatalogHash": "0x1c5b19d5171ffeb7f1d56cb571f80a4659801bed9db6000d67dd0b575fc6b774",
   "controlSchemaVersion": 1,
   "controlCatalogVersion": 1,
-  "releaseCommit": "8a13b8f798dd9df1b7f99d6dc0d76eadc59a01fb"
+  "releaseCommit": "0f58ea2824dd8043b69cfb10418e27059095a36d",
+  "basketIdentity": {
+    "name": "42 Braincells",
+    "symbol": "BRAINS",
+    "implementation": "0xd28cf38b6133e97492392480f4d7209bb027ebda",
+    "implementationTransaction": "0x15e42a32096f5d8609c9520de5634d178f22c59dfb7f3dba546a5a51e3a88674",
+    "upgradeTransaction": "0x2ebbb234b573be20f1e4baa9fe99be2f5f7a378cb23d94459dfcc43c94249cdb",
+    "upgradedAt": "2026-07-29T18:13:13Z"
+  }
 }
