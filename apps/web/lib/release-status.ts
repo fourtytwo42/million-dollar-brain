@@ -52,6 +52,45 @@ export type PromotionReceiptV1 = {
   broadcast: false;
 };
 
+export type AssetQualificationEvidenceV3 = {
+  schemaVersion: 3;
+  symbol: string;
+  required: boolean;
+  included: boolean;
+  qualificationWindowPassed: boolean;
+  qualificationStartedAt: string | null;
+  latestSuccessfulCheckAt: string | null;
+  resetReason: string | null;
+  regularMarketSessions: string[];
+  feedState: Record<string, unknown> | null;
+  liquidityEvidence: Record<string, unknown> | null;
+  evidenceHash: string;
+};
+
+export type MainnetReadinessV1 = {
+  schemaVersion: 1;
+  ready: boolean;
+  requiredSymbols: readonly ["AAPL", "NVDA", "SPY", "WETH"];
+  optionalSymbols: readonly ["MSFT", "QQQ", "SOXX"];
+  qualifiedLaunchSet: string[];
+  missingRequired: string[];
+  observedAt: string;
+};
+
+export type MainnetCandidateManifestV1 = {
+  schemaVersion: 1;
+  chainId: 4663;
+  gitSha: string;
+  createdAt: string;
+  broadcastPermitted: false;
+  activationState: "paused-canary";
+  readyToBroadcast: boolean;
+  signed: boolean;
+  qualifiedLaunchSet: string[];
+  candidateManifestHash: string;
+  evidence: Record<string, boolean>;
+};
+
 type ActivationInput = Omit<CanaryActivationStateV1, "schemaVersion" | "stage">;
 
 function fileHash(path: string) {
@@ -105,7 +144,9 @@ function qualification(): AssetQualificationWindowV2 | null {
           row.qualificationWindowPassed,
       ).length,
       candidateAssets: rows.length,
-      passed: state.gates?.qualificationWindowPassed === true,
+      passed:
+        state.readiness?.ready === true ||
+        state.gates?.qualificationWindowPassed === true,
       observedAt: state.at ?? null,
     };
   } catch {

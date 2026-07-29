@@ -1,7 +1,7 @@
 # Mainnet-Edge Release Specification
 
-**Status:** Engineering candidate; real-value activation disabled  
-**Last verified:** 2026-07-28
+**Status:** Non-broadcast engineering candidate in qualification
+**Last verified:** 2026-07-29
 
 ## Environments
 
@@ -27,21 +27,28 @@ Identity is `(chainId, contractAddress)`. A Robinhood UID is recorded when one
 exists; symbols and names are display metadata only. Discovery never activates
 an asset.
 
-Every candidate must pass each check for 48 continuous hourly observations.
+The required launch set is AAPL, NVDA, SPY, and WETH. MSFT, QQQ, and SOXX
+remain optional and cannot delay the required set. Every candidate must pass
+each check for 48 continuous hourly observations.
 Stocks and ETFs must also span at least two distinct regular US market
 sessions; weekend-only observations cannot qualify:
 
-- Verified circulating market capitalization of at least $100 million fo
+- Verified circulating market capitalization of at least $100 million for
   stocks and crypto, or official AUM of at least $100 million for funds.
 - Non-stock ERC-20 supply comes from an explicitly approved circulating-supply
   adapter. `totalSupply * price` is not sufficient.
-- A valid two-sided $250,000 0x quote and no more than 1% estimated impact fo
+- A valid two-sided $250,000 0x quote and no more than 1% estimated impact for
   both sides of a $25,000 quote.
 - Fresh approved valuation feed, valid token code and identity, sufficient
-  official history, supported transfer behavior, and no halt, oracle pause, o
+  official history, supported transfer behavior, and no halt, oracle pause, or
   pending corporate-action multiplier transition.
 
-The hourly shadow runner writes per-asset checks and source hashes. A failed
+The hourly shadow runner automatically discovers Robinhood canonical
+identities, imports the official Chainlink Robinhood feed catalog, reads
+equity shares from SEC Company Facts, and reads ETF net assets from the latest
+SEC N-PORT filing. WETH uses its canonical deposit-backed supply on Robinhood
+Chain plus ETH/USD valuation. The runner writes per-asset checks and source
+hashes. A failed
 observation or a gap longer than 90 minutes resets only that asset's clock.
 Unrelated code releases do not reset qualification. Activation still requires
 a reviewed, committed manifest and an on-chain registry update.
@@ -112,7 +119,10 @@ Engineering acceptance requires:
 
 `scripts/check-release.sh`, `scripts/promote-to-testnet.sh`,
 `scripts/rehearse-mainnet.sh`, and `scripts/check-mainnet-canary.sh` produce
-non-broadcast release evidence. `scripts/deploy-mainnet.sh` remains
+non-broadcast release evidence. `scripts/build-mainnet-candidate.mjs` writes
+the immutable `mainnet-candidate-v3.json` report and signs its hash with the
+encrypted, unfunded protocol-operator identity. The quote authorizer is a
+separate encrypted, no-funds identity. `scripts/deploy-mainnet.sh` remains
 fail-closed. It requires chain 4663, a clean
 pushed commit, encrypted signer, explicit broadcast flag, non-mock manifest,
 runtime-bytecode verification, storage checks, fork evidence, testnet
@@ -126,13 +136,15 @@ The remaining inputs are intentionally not fabricated in the repository:
 - A production Alchemy Robinhood mainnet HTTPS RPC endpoint for the configured
   secondary and a production WebSocket endpoint. The LAN Nitro primary is
   already fixed at `192.168.50.173:8547`.
-- Chainlink-supplied Robinhood tokenized-equity feed mappings and per-feed
-  market-session freshness policies.
 - Production 0x API credentials and validated current venue contracts.
 - Final Safe/role addresses and funded mainnet gas wallet.
 - Stable production domain.
 - Forty-eight continuous qualification hours, including two regular sessions
   for every launch stock or ETF.
+- WETH currently fails the locked $100 million circulating-capitalization
+  threshold when measured from canonical WETH deposited on Robinhood Chain.
+  This must be resolved through approved evidence or an explicitly approved
+  policy change; readiness must not fabricate a pass.
 - Independent audit and approved legal release path.
 
 No mainnet transaction or real-value activation is authorized by this

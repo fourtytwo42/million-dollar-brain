@@ -5,6 +5,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
 manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
+candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v3.json"
 testnet_acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
@@ -55,7 +56,7 @@ forge fmt --check packages/contracts
 forge test --root packages/contracts
 
 jq -e '
-  .schemaVersion == 2 and .chainId == 4663 and .broadcastPermitted == false and
+  .schemaVersion == 3 and .chainId == 4663 and .broadcastPermitted == false and
   .gates.noSigningKey == true and
   .gates.canonicalIdentityChecked == true and
   .gates.zeroExConfigured == true and
@@ -63,6 +64,11 @@ jq -e '
   .gates.chainlinkMappingsConfigured == true and
   .gates.qualificationWindowPassed == true
 ' "$shadow_state" >/dev/null
+jq -e '
+  .chainId == 4663 and .gitSha == $sha and
+  .broadcastPermitted == false and .activationState == "paused-canary" and
+  .signed == true and .readyToBroadcast == true
+' --arg sha "$head_sha" "$candidate" >/dev/null
 jq -e '
   .chainId == 46630 and .durationHours >= 2 and
   .protocolFailures == 0 and .atomicBuys == true and .atomicSells == true and

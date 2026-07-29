@@ -44,7 +44,12 @@ export function continuousPassingWindow(rows) {
     window.map((row) => regularMarketDate(row.at)).filter(Boolean),
   ).size;
   if (window.length === 0)
-    return { qualificationHours: 0, regularMarketSessions };
+    return {
+      qualificationHours: 0,
+      regularMarketSessions,
+      qualificationStartedAt: null,
+      latestSuccessfulCheckAt: null,
+    };
   const newest = Date.parse(window[0].at);
   const oldest = Date.parse(window[window.length - 1].at);
   return {
@@ -53,6 +58,8 @@ export function continuousPassingWindow(rows) {
       Math.floor((newest - oldest) / 3_600_000) + 1,
     ),
     regularMarketSessions,
+    qualificationStartedAt: window[window.length - 1].at,
+    latestSuccessfulCheckAt: window[0].at,
   };
 }
 

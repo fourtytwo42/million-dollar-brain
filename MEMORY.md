@@ -4,17 +4,18 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: The accepted devnet release is promoted to Robinhood Testnet.
-- Last meaningful change: Testnet BasketVault now reports `42 Braincells` with
-  symbol `BRAINS`; the matching UI, mascot, simplified control experience, and
-  oval-free Basket hero are live at `https://testnet.42braincells.com`.
-- Next step: Continue ordinary development on devnet and use the same
-  exact-commit promotion path for future testnet releases.
-- Blockers: Permanent mainnet failover still requires its Alchemy endpoint.
-  Mainnet activation also requires canonical
-  Chainlink mappings, production 0x credentials, final roles/Safe addresses,
-  funded gas, an audit, legal approval, and 48 continuous qualification hours
-  with two regular sessions for every launch stock or ETF.
+- Current task: Build the signed, non-broadcast mainnet candidate and complete
+  its external qualification gates without deploying or activating mainnet.
+- Last meaningful change: Mainnet shadow schema v3 now distinguishes the
+  required AAPL/NVDA/SPY/WETH set from optional MSFT/QQQ/SOXX, automatically
+  maps official Chainlink feeds, collects SEC capitalization/AUM evidence, and
+  builds a signed `mainnet-candidate-v3.json`.
+- Next step: Supply the paid Alchemy mainnet endpoint and production 0x API
+  credential/policy, resolve WETH capitalization evidence, then collect 48
+  continuous hours and run the exact-commit fork/testnet acceptance gates.
+- Blockers: Alchemy mainnet HTTPS/WSS and 0x credentials are not configured.
+  WETH's canonical Robinhood-chain deposited value is currently below the
+  locked $100 million requirement. Mainnet deployment remains unauthorized.
 
 ## Current State
 
@@ -45,6 +46,32 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - Mainnet readiness evidence v3
+
+- Context: Prepare the accepted BRAINS release as a fully rehearsed,
+  non-broadcast Robinhood mainnet candidate.
+- Decision: Require AAPL, NVDA, SPY, and WETH; admit MSFT, QQQ, and SOXX only
+  when each independently qualifies. Keep the apex on Coming Soon and all
+  mainnet signing, cycle, web, and execution services disabled.
+- Files: `scripts/mainnet-shadow.mjs`,
+  `scripts/lib/mainnet-readiness.mjs`,
+  `scripts/build-mainnet-candidate.mjs`,
+  `scripts/create-mainnet-keystores.sh`, `scripts/check-release.sh`,
+  `scripts/deploy-mainnet.sh`, `apps/web/lib/release-status.ts`,
+  `tests/mainnet-readiness.test.mjs`, `MAINNET_EDGE_RELEASE.md`.
+- Commands/tests: 12/12 graduation tests; 35/35 Foundry tests; production
+  Next.js build; live read-only shadow collection against chain 4663.
+- Result: Official Chainlink mappings validate for AAPL, NVDA, MSFT, SPY, QQQ,
+  and WETH; SOXX remains fail-closed without an official mapping. SEC Company
+  Facts validates AAPL/NVDA/MSFT capitalization and SEC N-PORT validates
+  SPY/QQQ AUM. Separate encrypted, unfunded identities were created under
+  `/etc/mdb/keys`; public addresses are
+  `0x48665790BE4BF80Aff31FDB28735d8e380bEb000` and
+  `0xEBe93009516Bfa3617F48BE956f1e518Db2531ee`.
+- Follow-up: Configure Alchemy and 0x without committing secrets. WETH's
+  canonical Robinhood-chain deposited value was about $44.9 million at the
+  latest check and truthfully fails the locked $100 million threshold.
 
 ### 2026-07-29 - BRAINS Robinhood Testnet promotion
 

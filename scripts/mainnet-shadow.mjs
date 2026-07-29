@@ -12,6 +12,16 @@ import {
   continuousPassingWindow,
   qualificationWindowPassed,
 } from "./lib/qualification-window.mjs";
+import {
+  CHAINLINK_ROBINHOOD_CATALOG,
+  MAINNET_CORE_SYMBOLS,
+  MAINNET_NOMINATED_SYMBOLS,
+  chainlinkMappingsFromCatalog,
+  officialHistoryCoverage,
+  parseAllowlist,
+  sessionAwareMaximumAgeSeconds,
+  summarizeMainnetReadiness,
+} from "./lib/mainnet-readiness.mjs";
 
 const CHAIN_ID = 4663;
 const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
@@ -31,17 +41,26 @@ const evidencePath =
 const rpcUrl = process.env.MDB_MAINNET_SHADOW_RPC_URL ?? PUBLIC_RPC;
 const apiKey = process.env.ZEROX_API_KEY ?? "";
 const taker = process.env.MDB_MAINNET_SHADOW_TAKER ?? "";
-const chainlinkFeeds = JSON.parse(
+const configuredChainlinkFeeds = JSON.parse(
   process.env.MDB_MAINNET_CHAINLINK_FEEDS_JSON ?? "{}",
 );
-const chainlinkHeartbeatSeconds = Number(
-  process.env.MDB_MAINNET_CHAINLINK_HEARTBEAT_SECONDS ?? "3600",
-);
+let resolvedChainlinkFeeds = configuredChainlinkFeeds;
+const chainlinkCatalogUrl =
+  process.env.MDB_MAINNET_CHAINLINK_CATALOG_URL ?? CHAINLINK_ROBINHOOD_CATALOG;
 const capitalizationEvidence = JSON.parse(
   process.env.MDB_MAINNET_CAPITALIZATION_EVIDENCE_JSON ?? "{}",
 );
-const historyEvidence = JSON.parse(
-  process.env.MDB_MAINNET_HISTORY_EVIDENCE_JSON ?? "{}",
+const secUserAgent =
+  process.env.MDB_SEC_USER_AGENT ??
+  "42-Braincells/1.0 operations@42braincells.com";
+const allowedZeroExTargets = parseAllowlist(
+  process.env.MDB_ZEROEX_ALLOWED_TARGETS,
+);
+const allowedZeroExAllowanceTargets = parseAllowlist(
+  process.env.MDB_ZEROEX_ALLOWED_ALLOWANCE_TARGETS,
+);
+const allowedZeroExSelectors = parseAllowlist(
+  process.env.MDB_ZEROEX_ALLOWED_SELECTORS,
 );
 const CAPITALIZATION_MINIMUM_USD = 100_000_000;
 const IMPACT_NOTIONAL_USD = 25_000;
@@ -49,6 +68,7 @@ const DEPTH_NOTIONAL_USD = 250_000;
 const MAXIMUM_IMPACT_BPS = 100;
 const MAXIMUM_CAPITALIZATION_EVIDENCE_AGE_SECONDS = 172_800;
 const QUALIFICATION_HOURS = 48;
+const FUND_SYMBOLS = new Set(["SPY", "QQQ", "SOXX"]);
 
 if (process.env.MDB_MAINNET_BROADCAST === "true") {
   throw new Error("mainnet shadow refuses broadcast mode");
@@ -60,6 +80,7 @@ if (process.env.MDB_OPERATOR_PRIVATE_KEY || process.env.PRIVATE_KEY) {
 const client = createPublicClient({ transport: http(rpcUrl) });
 const tokenAbi = parseAbi([
   "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
   "function uid() view returns (bytes32)",
   "function oraclePaused() view returns (bool)",
 ]);
@@ -83,6 +104,154 @@ async function json(url, init) {
     );
   }
   return JSON.parse(text);
+}
+
+let secTickersPromise;
+function secHeaders() {
+  return {
+    accept: "application/json",
+    "user-agent": secUserAgent,
+  };
+}
+
+async function secTickers() {
+  secTickersPromise ??= json("https://www.sec.gov/files/company_tickers.json", {
+    headers: secHeaders(),
+  });
+  return secTickersPromise;
+}
+
+function latestFact(units, acceptedForms) {
+  return Object.values(units ?? {})
+    .flat()
+    .filter(
+      (row) =>
+        Number.isFinite(Number(row?.val)) &&
+        acceptedForms.has(row?.form) &&
+        Number.isFinite(Date.parse(row?.filed ?? "")),
+    )
+    .sort((left, right) => Date.parse(right.filed) - Date.parse(left.filed))[0];
+}
+
+async function collectSecFundNetAssets(cik, source) {
+  const submissions = await json(
+    `https://data.sec.gov/submissions/CIK${cik}.json`,
+    { headers: secHeaders() },
+  );
+  const recent = submissions?.filings?.recent ?? {};
+  const index = (recent.form ?? []).findIndex((form) => form === "NPORT-P");
+  if (index < 0) throw new Error("SEC N-PORT filing unavailable");
+  const accession = String(recent.accessionNumber[index]).replaceAll("-", "");
+  const primaryDocument = String(recent.primaryDocument[index])
+    .split("/")
+    .at(-1);
+  const archiveSource = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession}/${primaryDocument}`;
+  const response = await fetch(archiveSource, {
+    headers: secHeaders(),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const xml = await response.text();
+  if (!response.ok) throw new Error(`SEC N-PORT returned ${response.status}`);
+  const valueUsd = Number(xml.match(/<netAssets>([^<]+)<\/netAssets>/)?.[1]);
+  if (!Number.isFinite(valueUsd))
+    throw new Error("SEC N-PORT net assets unavailable");
+  return {
+    kind: "fund",
+    valueUsd,
+    observedAt: new Date().toISOString(),
+    reportDate: recent.reportDate?.[index] ?? null,
+    filedAt: recent.filingDate?.[index] ?? null,
+    source: archiveSource,
+    sourceHash: hash({ source, archiveSource, xml }),
+    supplyAdapterApproved: true,
+    collection: "sec-nport",
+  };
+}
+
+async function collectSecCapitalization(asset, priceUsd) {
+  if (asset.symbol === "WETH") {
+    try {
+      const totalSupply = await client.readContract({
+        address: asset.address,
+        abi: tokenAbi,
+        functionName: "totalSupply",
+      });
+      const valueUsd =
+        (Number(totalSupply) / 10 ** Number(asset.decimals)) * priceUsd;
+      return {
+        kind: "crypto",
+        valueUsd,
+        observedAt: new Date().toISOString(),
+        source:
+          "https://docs.robinhood.com/chain/contracts/#wrapped-ether-weth",
+        sourceHash: hash({
+          chainId: CHAIN_ID,
+          token: asset.address,
+          totalSupply: totalSupply.toString(),
+          priceUsd,
+        }),
+        supplyAdapterApproved: true,
+        collection: "canonical-weth-deposit-supply",
+      };
+    } catch (error) {
+      return {
+        kind: "crypto",
+        valueUsd: null,
+        observedAt: null,
+        source: "https://docs.robinhood.com/chain/contracts/",
+        sourceHash: null,
+        supplyAdapterApproved: false,
+        collection: "canonical-weth-deposit-supply",
+        error:
+          error instanceof Error
+            ? error.message
+            : "WETH supply collection failed",
+      };
+    }
+  }
+  try {
+    const tickers = await secTickers();
+    const ticker = Object.values(tickers).find(
+      (row) => row?.ticker?.toUpperCase() === asset.symbol,
+    );
+    if (!ticker) throw new Error("SEC ticker mapping unavailable");
+    const cik = String(ticker.cik_str).padStart(10, "0");
+    const source = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
+    if (FUND_SYMBOLS.has(asset.symbol))
+      return await collectSecFundNetAssets(cik, source);
+    const companyFacts = await json(source, { headers: secHeaders() });
+    const facts = companyFacts?.facts?.["us-gaap"] ?? {};
+    const deiFacts = companyFacts?.facts?.dei ?? {};
+    const isFund = false;
+    const fact = latestFact(
+      deiFacts.EntityCommonStockSharesOutstanding?.units,
+      new Set(["10-K", "10-Q", "10-K/A", "10-Q/A", "8-K"]),
+    );
+    if (!fact) throw new Error("SEC capitalization fact unavailable");
+    const valueUsd = isFund ? Number(fact.val) : Number(fact.val) * priceUsd;
+    return {
+      kind: isFund ? "fund" : "stock",
+      valueUsd,
+      observedAt: new Date().toISOString(),
+      reportDate: fact.end ?? null,
+      filedAt: fact.filed,
+      source,
+      sourceHash: hash({ cik, fact }),
+      supplyAdapterApproved: true,
+      collection: "sec-company-facts",
+    };
+  } catch (error) {
+    return {
+      kind: FUND_SYMBOLS.has(asset.symbol) ? "fund" : "stock",
+      valueUsd: null,
+      observedAt: null,
+      source: "https://data.sec.gov/",
+      sourceHash: null,
+      supplyAdapterApproved: false,
+      collection: "sec-company-facts",
+      error: error instanceof Error ? error.message : "SEC collection failed",
+    };
+  }
 }
 
 async function inspectTokens(assets) {
@@ -186,13 +355,24 @@ async function quotePair(asset, direction, priceUsd, notionalUsd) {
     const target = quote.transaction?.to;
     const allowanceTarget =
       quote.issues?.allowance?.spender ?? quote.allowanceTarget ?? null;
-    const valid =
+    const selector = quote.transaction?.data?.slice(0, 10)?.toLowerCase();
+    const policyConfigured =
+      allowedZeroExTargets.size > 0 &&
+      allowedZeroExAllowanceTargets.size > 0 &&
+      allowedZeroExSelectors.size > 0;
+    const policyValid =
+      policyConfigured &&
+      allowedZeroExTargets.has(target?.toLowerCase()) &&
+      allowedZeroExAllowanceTargets.has(allowanceTarget?.toLowerCase()) &&
+      allowedZeroExSelectors.has(selector);
+    const structurallyValid =
       isAddress(target) &&
       isAddress(allowanceTarget) &&
       BigInt(quote.sellAmount ?? 0) === sellAmount &&
       BigInt(quote.buyAmount ?? 0) > 0n &&
       typeof quote.transaction?.data === "string" &&
       quote.transaction.data.startsWith("0x");
+    const valid = structurallyValid && policyValid;
     const realizedUsd =
       direction === "buy"
         ? (Number(quote.buyAmount ?? 0) / 10 ** Number(asset.decimals ?? 18)) *
@@ -213,10 +393,16 @@ async function quotePair(asset, direction, priceUsd, notionalUsd) {
       blockNumber: quote.blockNumber ?? null,
       target: target ?? null,
       allowanceTarget,
-      selector: quote.transaction?.data?.slice(0, 10) ?? null,
+      selector: selector ?? null,
+      policyConfigured,
+      policyValid,
       simulationIncomplete: quote.issues?.simulationIncomplete ?? false,
       sourceHash: hash(quote),
-      reason: valid ? null : "0x response failed structural validation",
+      reason: valid
+        ? null
+        : !structurallyValid
+          ? "0x response failed structural validation"
+          : "0x target, allowance target, or selector is not frozen in policy",
     };
   } catch (error) {
     return {
@@ -228,7 +414,7 @@ async function quotePair(asset, direction, priceUsd, notionalUsd) {
 }
 
 async function inspectFeed(asset) {
-  const configuredFeed = chainlinkFeeds[asset.symbol];
+  const configuredFeed = resolvedChainlinkFeeds[asset.symbol];
   const feed =
     typeof configuredFeed === "string"
       ? configuredFeed
@@ -237,7 +423,7 @@ async function inspectFeed(asset) {
     typeof configuredFeed === "object" &&
     Number.isFinite(Number(configuredFeed?.maximumAgeSeconds))
       ? Number(configuredFeed.maximumAgeSeconds)
-      : chainlinkHeartbeatSeconds;
+      : sessionAwareMaximumAgeSeconds(configuredFeed);
   if (!isAddress(feed)) {
     return {
       symbol: asset.symbol,
@@ -273,9 +459,13 @@ async function inspectFeed(asset) {
       decimals: Number(decimals),
       roundId: round[0].toString(),
       answer: round[1].toString(),
+      priceUsd: Number(round[1]) / 10 ** Number(decimals),
       updatedAt: Number(round[3]),
       ageSeconds,
       maximumAgeSeconds,
+      marketHours: configuredFeed?.marketHours ?? null,
+      catalogPath: configuredFeed?.path ?? null,
+      catalogSourceHash: configuredFeed?.sourceHash ?? null,
       valid,
       reason: valid ? null : "invalid, incomplete, or stale Chainlink round",
     };
@@ -291,12 +481,13 @@ async function inspectFeed(asset) {
 
 function classifyAsset(asset) {
   if (asset.symbol === "WETH") return "crypto";
+  if (FUND_SYMBOLS.has(asset.symbol)) return "fund";
   if (/\b(ETF|FUND|TRUST)\b/i.test(asset.name)) return "fund";
   return "stock";
 }
 
-function inspectCapitalization(asset) {
-  const evidence = capitalizationEvidence[asset.symbol];
+function inspectCapitalization(asset, collectedEvidence) {
+  const evidence = capitalizationEvidence[asset.symbol] ?? collectedEvidence;
   const expectedKind = classifyAsset(asset);
   const observedAt = Date.parse(evidence?.observedAt ?? "");
   const ageSeconds = Number.isFinite(observedAt)
@@ -336,27 +527,7 @@ function inspectCapitalization(asset) {
     reason: valid
       ? null
       : "missing, stale, unapproved, or sub-$100M capitalization evidence",
-  };
-}
-
-function inspectHistory(asset) {
-  const evidence = historyEvidence[asset.symbol];
-  const valid =
-    Number(evidence?.days) >= 30 &&
-    Number(evidence?.coverageBps) >= 9_000 &&
-    /^[a-f0-9]{64}$/i.test(evidence?.sourceHash ?? "");
-  return {
-    days: Number.isFinite(Number(evidence?.days))
-      ? Number(evidence.days)
-      : null,
-    coverageBps: Number.isFinite(Number(evidence?.coverageBps))
-      ? Number(evidence.coverageBps)
-      : null,
-    sourceHash: evidence?.sourceHash ?? null,
-    valid,
-    reason: valid
-      ? null
-      : "30 days of sufficiently complete official history are not available",
+    collectionError: evidence?.error ?? null,
   };
 }
 
@@ -437,19 +608,38 @@ const canonicalAssets = [
 ];
 const inspected = await inspectTokens(canonicalAssets);
 const nominated = new Set(
-  (process.env.MDB_MAINNET_SHADOW_SYMBOLS ?? "AAPL,NVDA,MSFT,SPY,QQQ,SOXX,WETH")
+  (
+    process.env.MDB_MAINNET_SHADOW_SYMBOLS ??
+    MAINNET_NOMINATED_SYMBOLS.join(",")
+  )
     .split(",")
     .map((symbol) => symbol.trim())
     .filter(Boolean),
 );
+const nominatedAssets = inspected.filter(
+  (asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG",
+);
+let chainlinkCatalogHash = null;
+if (Object.keys(resolvedChainlinkFeeds).length === 0) {
+  try {
+    const catalog = await json(chainlinkCatalogUrl);
+    chainlinkCatalogHash = hash(catalog);
+    resolvedChainlinkFeeds = chainlinkMappingsFromCatalog(catalog, [
+      ...nominated,
+    ]);
+  } catch {
+    resolvedChainlinkFeeds = {};
+  }
+}
+const feedEvidence = await parallelMap(nominatedAssets, 6, inspectFeed);
+const priorEvidence = priorQualificationEvidence();
 const quoteEvidence = [];
 const marketEvidence = [];
-for (const asset of inspected.filter(
-  (candidate) => nominated.has(candidate.symbol) && candidate.symbol !== "USDG",
-)) {
+for (const asset of nominatedAssets) {
   let priceUsd = null;
   if (asset.symbol === "WETH") {
-    priceUsd = Number(process.env.MDB_SHADOW_WETH_REFERENCE_PRICE ?? "0");
+    priceUsd =
+      feedEvidence.find((row) => row.symbol === asset.symbol)?.priceUsd ?? null;
   } else {
     try {
       const price = await json(`${ROBINHOOD_PRICE}/${asset.symbol}`);
@@ -460,6 +650,26 @@ for (const asset of inspected.filter(
       priceUsd = null;
     }
   }
+  const assetId = `${CHAIN_ID}:${asset.address.toLowerCase()}`;
+  const historyRows = [
+    ...priorEvidence,
+    {
+      at: new Date().toISOString(),
+      assets: [{ assetId, symbol: asset.symbol, officialPriceUsd: priceUsd }],
+    },
+  ];
+  const history = officialHistoryCoverage(
+    historyRows,
+    assetId,
+    asset.symbol,
+    new Date().toISOString(),
+  );
+  const collectedCapitalization =
+    capitalizationEvidence[asset.symbol] ??
+    (priceUsd && priceUsd > 0
+      ? await collectSecCapitalization(asset, priceUsd)
+      : null);
+  const capitalization = inspectCapitalization(asset, collectedCapitalization);
   if (!priceUsd || priceUsd <= 0) {
     quoteEvidence.push({
       symbol: asset.symbol,
@@ -470,8 +680,8 @@ for (const asset of inspected.filter(
     });
     marketEvidence.push({
       symbol: asset.symbol,
-      capitalization: inspectCapitalization(asset),
-      history: inspectHistory(asset),
+      capitalization,
+      history,
       officialPriceUsd: null,
     });
     continue;
@@ -485,19 +695,11 @@ for (const asset of inspected.filter(
   });
   marketEvidence.push({
     symbol: asset.symbol,
-    capitalization: inspectCapitalization(asset),
-    history: inspectHistory(asset),
+    capitalization,
+    history,
     officialPriceUsd: priceUsd,
   });
 }
-const feedEvidence = await parallelMap(
-  inspected.filter(
-    (asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG",
-  ),
-  6,
-  inspectFeed,
-);
-const priorEvidence = priorQualificationEvidence();
 const qualification = inspected
   .filter((asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG")
   .map((asset) => {
@@ -536,17 +738,19 @@ const qualification = inspected
       market?.capitalization?.valid === true &&
       market?.history?.valid === true;
     const assetId = `${CHAIN_ID}:${asset.address.toLowerCase()}`;
-    const window = continuousPassingWindow([
-      ...priorEvidence
-        .flatMap((row) =>
-          (row.assets ?? []).map((candidate) => ({
-            ...candidate,
-            at: candidate.at ?? row.at,
-          })),
-        )
-        .filter((row) => row.assetId === assetId),
+    const priorAssetRows = priorEvidence
+      .flatMap((row) =>
+        (row.assets ?? []).map((candidate) => ({
+          ...candidate,
+          at: candidate.at ?? row.at,
+        })),
+      )
+      .filter((row) => row.assetId === assetId);
+    const windowRows = [
+      ...priorAssetRows,
       { at: new Date().toISOString(), passed },
-    ]);
+    ];
+    const window = continuousPassingWindow(windowRows);
     const windowPassed = qualificationWindowPassed({
       ...window,
       requiredHours: QUALIFICATION_HOURS,
@@ -556,9 +760,28 @@ const qualification = inspected
       assetId,
       symbol: asset.symbol,
       passed,
+      required: MAINNET_CORE_SYMBOLS.includes(asset.symbol),
       qualificationHours: window.qualificationHours,
       regularMarketSessions: window.regularMarketSessions,
       qualificationWindowPassed: windowPassed,
+      qualificationStartedAt: window.qualificationStartedAt,
+      latestSuccessfulCheckAt: window.latestSuccessfulCheckAt,
+      resetReason: passed
+        ? null
+        : Object.entries({
+            identity: identityValid,
+            oracle: asset.oraclePaused !== true,
+            trading: tradingAvailable,
+            corporateAction: noCorporateActionTransition,
+            feed: feed?.valid === true,
+            impact: impactValid,
+            depth: depthValid,
+            capitalization: market?.capitalization?.valid === true,
+            history: market?.history?.valid === true,
+          })
+            .filter(([, valid]) => !valid)
+            .map(([name]) => name)
+            .join(", "),
       checks: {
         identityValid,
         oracleActive: asset.oraclePaused !== true,
@@ -572,18 +795,19 @@ const qualification = inspected
       },
     };
   });
+const readiness = summarizeMainnetReadiness(qualification);
+const requiredQualification = qualification.filter((row) => row.required);
 const currentQualificationPass =
-  qualification.length > 0 && qualification.every((row) => row.passed);
+  requiredQualification.length === MAINNET_CORE_SYMBOLS.length &&
+  requiredQualification.every((row) => row.passed);
 const qualificationHours =
-  qualification.length > 0
-    ? Math.min(...qualification.map((row) => row.qualificationHours))
+  requiredQualification.length > 0
+    ? Math.min(...requiredQualification.map((row) => row.qualificationHours))
     : 0;
-const allQualificationWindowsPassed =
-  qualification.length > 0 &&
-  qualification.every((row) => row.qualificationWindowPassed);
+const allQualificationWindowsPassed = readiness.coreQualificationPassed;
 
 const result = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   mode: "robinhood-mainnet-shadow",
   startedAt,
   completedAt: new Date().toISOString(),
@@ -591,8 +815,12 @@ const result = {
   rpc: rpcUrl === PUBLIC_RPC ? "public-rate-limited" : "configured-provider",
   broadcastPermitted: false,
   officialRegistry: ROBINHOOD_ASSETS,
+  chainlinkCatalog: chainlinkCatalogUrl,
+  chainlinkCatalogHash,
   canonicalAssetCount: inspected.length,
-  assets: inspected,
+  assets: inspected.filter(
+    (asset) => asset.symbol === "USDG" || nominated.has(asset.symbol),
+  ),
   quoteEvidence,
   feedEvidence,
   marketEvidence,
@@ -600,31 +828,51 @@ const result = {
   qualificationHours,
   qualificationRequiredHours: QUALIFICATION_HOURS,
   qualificationWindowPassed: allQualificationWindowsPassed,
+  readiness,
   gates: {
     noSigningKey: true,
-    canonicalIdentityChecked: inspected.every(
-      (asset) =>
-        asset.codePresent &&
+    canonicalIdentityChecked: MAINNET_CORE_SYMBOLS.every((symbol) => {
+      const asset = inspected.find((candidate) => candidate.symbol === symbol);
+      return (
+        asset?.codePresent === true &&
         (!asset.uid ||
-          asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase()),
-    ),
+          asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase())
+      );
+    }),
     zeroExConfigured: Boolean(apiKey),
-    twoSidedQuotesValid:
-      quoteEvidence.length > 0 &&
-      quoteEvidence.every(
-        (row) =>
-          row.impactBuy.valid &&
-          row.impactSell.valid &&
-          row.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
-          row.impactSell.impactBps <= MAXIMUM_IMPACT_BPS &&
-          row.depthBuy.valid &&
-          row.depthSell.valid,
-      ),
-    chainlinkMappingsConfigured:
-      feedEvidence.length > 0 && feedEvidence.every((row) => row.valid),
+    zeroExPolicyFrozen:
+      allowedZeroExTargets.size > 0 &&
+      allowedZeroExAllowanceTargets.size > 0 &&
+      allowedZeroExSelectors.size > 0,
+    twoSidedQuotesValid: MAINNET_CORE_SYMBOLS.every((symbol) => {
+      const row = quoteEvidence.find(
+        (candidate) => candidate.symbol === symbol,
+      );
+      return (
+        row &&
+        row.impactBuy.valid &&
+        row.impactSell.valid &&
+        row.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
+        row.impactSell.impactBps <= MAXIMUM_IMPACT_BPS &&
+        row.depthBuy.valid &&
+        row.depthSell.valid
+      );
+    }),
+    chainlinkMappingsConfigured: MAINNET_CORE_SYMBOLS.every(
+      (symbol) =>
+        feedEvidence.find((row) => row.symbol === symbol)?.valid === true,
+    ),
     qualificationWindowPassed: allQualificationWindowsPassed,
   },
 };
+result.readyToBuildCandidate =
+  result.gates.noSigningKey &&
+  result.gates.canonicalIdentityChecked &&
+  result.gates.zeroExConfigured &&
+  result.gates.zeroExPolicyFrozen &&
+  result.gates.twoSidedQuotesValid &&
+  result.gates.chainlinkMappingsConfigured &&
+  result.gates.qualificationWindowPassed;
 result.sourceHash = hash(result);
 mkdirSync(dirname(statePath), { recursive: true });
 writeFileSync(statePath, `${JSON.stringify(result, null, 2)}\n`, {
@@ -640,14 +888,22 @@ appendFileSync(
     qualificationHours,
     qualificationRequiredHours: QUALIFICATION_HOURS,
     qualificationWindowPassed: allQualificationWindowsPassed,
+    readiness,
     canonicalAssetCount: result.canonicalAssetCount,
     assets: qualification.map((row) => ({
       assetId: row.assetId,
       symbol: row.symbol,
       passed: row.passed,
+      required: row.required,
+      officialPriceUsd:
+        marketEvidence.find((market) => market.symbol === row.symbol)
+          ?.officialPriceUsd ?? null,
       qualificationHours: row.qualificationHours,
       regularMarketSessions: row.regularMarketSessions,
       qualificationWindowPassed: row.qualificationWindowPassed,
+      qualificationStartedAt: row.qualificationStartedAt,
+      latestSuccessfulCheckAt: row.latestSuccessfulCheckAt,
+      resetReason: row.resetReason,
     })),
   })}\n`,
   { mode: 0o640 },
