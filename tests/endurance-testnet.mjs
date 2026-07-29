@@ -188,7 +188,7 @@ async function runAcceptanceActor(page, scenario) {
   assert.equal(body.scenario, scenario);
   assert.ok(body.transactions?.buy);
   assert.ok(body.transactions?.sell);
-  assert.ok(body.transactions?.preset);
+  assert.ok(body.transactions?.controls);
   assert.ok(body.transactions?.brainPurchase);
   return body;
 }
@@ -238,12 +238,7 @@ async function dismissGuide(page) {
   }
 }
 
-function presetAccessibleName(option) {
-  const value = option.value > 0 ? `+${option.value}` : `${option.value}`;
-  return `${value} ${option.label}`;
-}
-
-async function buyBrainPieceAndSetPreset(page, checkpoint, status) {
+async function buyBrainPieceAndSetControls(page, checkpoint, status) {
   const resaleCheckpoint = checkpoint === 0;
   const preferredCandidates = status.pieces.filter((piece) =>
     resaleCheckpoint ? !piece.unowned : piece.unowned,
@@ -274,27 +269,31 @@ async function buyBrainPieceAndSetPreset(page, checkpoint, status) {
     90_000,
   );
 
-  let presetIndex = (checkpoint + 1) % candidate.options.length;
-  if (presetIndex === candidate.preset) {
-    presetIndex = (presetIndex + 1) % candidate.options.length;
-  }
-  const presetButton = page.getByRole("button", {
-    name: presetAccessibleName(candidate.options[presetIndex]),
-    exact: true,
-  });
-  assert.equal(await presetButton.count(), 1);
-  await presetButton.click();
+  await page
+    .getByRole("button", { name: "Change controls", exact: true })
+    .click();
+  const editor = page.getByRole("dialog");
+  await editor.waitFor();
+  const alternate = editor
+    .locator("fieldset")
+    .first()
+    .locator('button[aria-pressed="false"]')
+    .first();
+  assert.equal(await alternate.count(), 1);
+  await alternate.click();
+  await editor
+    .getByRole("button", { name: "Confirm in wallet", exact: true })
+    .click();
   await waitForMessage(
     page,
-    new RegExp(`Piece ${candidate.id} now sets .+ to .+\\.`),
+    `All controls for Piece ${candidate.id} were updated in one transaction.`,
     90_000,
   );
   return {
     pieceId: candidate.id,
     purchaseType: candidate.unowned ? "initial" : "resale",
     paidWad: candidate.price,
-    preset: presetIndex,
-    presetLabel: candidate.options[presetIndex].label,
+    controlsUpdated: true,
   };
 }
 

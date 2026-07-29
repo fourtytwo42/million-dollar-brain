@@ -3,11 +3,10 @@ import { mkdir, readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.MDB_UAT_URL ?? "http://127.0.0.1:3000";
-const screenshotDir =
-  process.env.MDB_UAT_SCREENSHOT_DIR ?? "design/mockups";
+const screenshotDir = process.env.MDB_UAT_SCREENSHOT_DIR ?? "design/mockups";
 const screenshotPath = (name) => `${screenshotDir}/${name}`;
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 
@@ -282,7 +281,7 @@ try {
     await page
       .locator(".brain-cell[aria-current=true]")
       .getAttribute("aria-label"),
-    /^Data-Diet Chef\./,
+    /\. Decision Goblins\. Data Focus\./,
     "End must select the final canonical piece",
   );
   await page.keyboard.press("Home");
@@ -328,7 +327,7 @@ try {
     .click();
   await mobile.getByRole("button", { name: "List", exact: true }).click();
   const search = mobile.getByPlaceholder(
-    "Search name, crew, affinity, or mood",
+    "Search name, crew, affinity, or control",
   );
   await search.fill("Decision Goblins");
   assert.ok(
@@ -358,6 +357,37 @@ try {
     fullPage: true,
   });
   await mobile.close();
+
+  const tablet = await browser.newPage({
+    viewport: { width: 768, height: 1024 },
+  });
+  await tablet.goto(baseUrl, { waitUntil: "networkidle" });
+  const tabletGuide = tablet.getByRole("dialog", {
+    name: "How the brain moves the basket",
+  });
+  if ((await tabletGuide.count()) === 1 && (await tabletGuide.isVisible())) {
+    await tabletGuide
+      .getByRole("button", { name: "Got it", exact: true })
+      .click();
+  }
+  await tablet.locator(".brain-cell").nth(20).click();
+  await tablet
+    .getByRole("complementary", { name: /Selected brain piece:/ })
+    .waitFor();
+  const tabletOverflow = await tablet.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  assert.ok(
+    tabletOverflow <= 1,
+    `tablet layout must not create page-level horizontal scrolling (${tabletOverflow}px)`,
+  );
+  await tablet.screenshot({
+    path: screenshotPath("brain-screen-v3-tablet.png"),
+    fullPage: true,
+  });
+  await tablet.close();
 
   assert.equal(
     await page.getByText("Risk-on", { exact: true }).count(),
@@ -428,24 +458,25 @@ try {
     0,
     "clicking Yours again must clear the ownership highlight",
   );
-  const targetPreset =
-    affordablePiece.preset === 4
-      ? affordablePiece.options[0]
-      : affordablePiece.options[4];
-  const targetPresetValue =
-    targetPreset.value > 0 ? `+${targetPreset.value}` : `${targetPreset.value}`;
-  const selectedMood = page.getByRole("button", {
-    name: `${targetPresetValue} ${targetPreset.label}`,
-    exact: true,
-  });
-  await selectedMood.click();
-  const escapedPresetLabel = targetPreset.label.replace(
-    /[.*+?^${}()|[\]\\]/g,
-    "\\$&",
-  );
   await page
-    .getByText(new RegExp(`now sets .+ to ${escapedPresetLabel}\\.`))
-    .waitFor({ timeout: 30000 });
+    .getByRole("button", { name: "Change controls", exact: true })
+    .click();
+  const controlDialog = page.getByRole("dialog");
+  await controlDialog.waitFor();
+  const firstControl = controlDialog.locator("fieldset").first();
+  const alternateControl = firstControl
+    .locator('button[aria-pressed="false"]')
+    .first();
+  await alternateControl.click();
+  await controlDialog
+    .getByRole("button", { name: "Confirm in wallet", exact: true })
+    .click();
+  await page
+    .getByText(
+      `All controls for Piece ${affordablePiece.id} were updated in one transaction.`,
+      { exact: true },
+    )
+    .waitFor({ timeout: 45000 });
 
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page
@@ -652,8 +683,8 @@ try {
   );
   assert.equal(
     historyStatus.latestCycle.schemaVersion,
-    3,
-    "new cycles must use the reproducible DecisionContextV3 record",
+    5,
+    "new cycles must use the reproducible DecisionContextV5 record",
   );
   assert.equal(
     historyStatus.latestCycle.decisionContext.benchmarks.every(
@@ -726,6 +757,7 @@ try {
     "every returned historical cycle must be selectable",
   );
   const historyDetail = page.getByTestId("decision-history-detail");
+  await historyItems.nth(0).click();
   await historyDetail
     .getByText(historyStatus.cycleHistory[0].txHash, { exact: true })
     .waitFor();
@@ -747,7 +779,9 @@ try {
   );
   await historyItems.nth(1).click();
   await historyDetail
-    .getByText(historyStatus.cycleHistory[1].txHash, { exact: true })
+    .getByText(historyStatus.cycleHistory[1].txHash ?? "Awaiting cycle", {
+      exact: true,
+    })
     .waitFor();
   assert.deepEqual(
     await renderedDecisionSymbols(),
@@ -900,7 +934,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: official market collector, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live MDBS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, bounded DecisionContext V3 evidence, expandable decision data provenance, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
+    "UAT PASS: Control Catalog v1 ownership and atomic bundle updates, DecisionContext V5 evidence, official market collection, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live MDBS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

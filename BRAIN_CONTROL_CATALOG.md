@@ -482,8 +482,8 @@ identified before submission and cannot be saved.
 
 ## 12. Migration from catalog v3
 
-`BRAIN_PRESET_CATALOG.md` remains the deployed catalog-v3 record and migration
-source. Each of its five moods maps to a protocol-authored control bundle for
+`BRAIN_PRESET_CATALOG.md` remains the historical catalog-v3 record, rollback
+format, and migration source. Each of its five moods maps to a protocol-authored control bundle for
 the corresponding piece.
 
 The upgrade:
@@ -495,9 +495,10 @@ The upgrade:
 - Starts new cycles with `brainControlSchemaVersion: 1`.
 - Does not require owners to transact during migration.
 
-The runtime must not switch model compilation to Control Catalog v1 until the
-contract upgrade, UI, compiler, replay fixtures, and testnet acceptance have
-all passed together.
+Devnet may compile Control Catalog v1 after its coordinated contract, UI,
+compiler, replay, and browser acceptance pass. Testnet must promote that exact
+pushed commit in place and enable Control Catalog v1 only after its migration
+reconciles. Mainnet inherits it solely through the normal graduation pipeline.
 
 ## 13. Acceptance criteria
 

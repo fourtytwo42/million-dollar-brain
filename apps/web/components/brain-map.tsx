@@ -10,6 +10,10 @@ import {
 } from "../lib/brain-presentation";
 import { pieceDisplayName, profileUrlLabel } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
+import {
+  summarizeControlBundle,
+  type BrainControlBundle,
+} from "../lib/brain-controls";
 
 type MapPiece = {
   id: number;
@@ -27,6 +31,7 @@ type MapPiece = {
   customName: string;
   profileUrl: string;
   options: readonly { label: string; value: number }[];
+  controlBundle: BrainControlBundle;
 };
 
 type BrainMapProps = {
@@ -59,10 +64,10 @@ function ownershipState(piece: MapPiece, account: string | null) {
 
 function pieceLabel(piece: MapPiece, account: string | null) {
   const name = pieceDisplayName(piece);
-  const mood = piece.options[piece.preset]?.label ?? "Unknown";
+  const controls = summarizeControlBundle(piece.id, piece.controlBundle);
   const state = ownershipState(piece, account);
   const website = profileUrlLabel(piece.profileUrl);
-  return `${name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.${website ? ` Website ${website}.` : ""}`;
+  return `${name}. ${piece.crew}. ${piece.affinity}. Controls: ${controls}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.${website ? ` Website ${website}.` : ""}`;
 }
 
 export function BrainMap({
@@ -86,13 +91,13 @@ export function BrainMap({
   );
   const previewPiece = hoveredId ? pieceById.get(hoveredId) : undefined;
   const filteredPieces = pieces.filter((piece) => {
-    const mood = piece.options[piece.preset]?.label ?? "";
+    const controls = summarizeControlBundle(piece.id, piece.controlBundle);
     return [
       pieceDisplayName(piece),
       piece.name,
       piece.crew,
       piece.affinity,
-      mood,
+      controls,
       piece.profileUrl,
     ]
       .join(" ")
@@ -331,7 +336,10 @@ export function BrainMap({
                     <b>{pieceDisplayName(previewPiece)}</b>
                     <span>
                       {previewPiece.crew} ·{" "}
-                      {previewPiece.options[previewPiece.preset]?.label}
+                      {summarizeControlBundle(
+                        previewPiece.id,
+                        previewPiece.controlBundle,
+                      )}
                     </span>
                     <span>
                       {previewPiece.weight / 100}% influence ·{" "}
@@ -361,7 +369,7 @@ export function BrainMap({
           <span className="sr-only">Search brain pieces</span>
           <input
             type="search"
-            placeholder="Search name, crew, affinity, or mood"
+            placeholder="Search name, crew, affinity, or control"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -379,7 +387,8 @@ export function BrainMap({
                 <span>
                   <b>{pieceDisplayName(piece)}</b>
                   <small>
-                    {piece.options[piece.preset]?.label} · {piece.weight / 100}%
+                    {summarizeControlBundle(piece.id, piece.controlBundle)} ·{" "}
+                    {piece.weight / 100}%
                   </small>
                 </span>
                 <span>

@@ -12,6 +12,8 @@
     "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
     "test:portrait": "node --experimental-strip-types --test tests/portrait.test.ts",
     "test:piece-name": "node --experimental-strip-types --test tests/piece-name.test.ts",
+    "test:brain-controls": "node --experimental-strip-types --test tests/brain-controls.test.ts",
+    "test:compiled-brain": "node --experimental-strip-types --test tests/compiled-brain.test.ts",
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",
     "test:asset-universe": "node --experimental-strip-types --test tests/asset-universe.test.ts",
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",

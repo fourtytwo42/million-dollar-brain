@@ -358,6 +358,20 @@ export const brainAbi = [
   },
   {
     type: "function",
+    name: "controlBundlesEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "controlRegistry",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address" }],
+  },
+  {
+    type: "function",
     name: "immutableWeight",
     stateMutability: "view",
     inputs: [{ name: "pieceId", type: "uint256" }],
@@ -500,6 +514,48 @@ export const brainAbi = [
       { name: "owner", type: "address", indexed: true },
       { name: "ownershipSerial", type: "uint64", indexed: false },
     ],
+  },
+] as const;
+
+export const brainControlAbi = [
+  {
+    type: "function",
+    name: "catalogVersion",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint16" }],
+  },
+  {
+    type: "function",
+    name: "catalogHash",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bytes32" }],
+  },
+  {
+    type: "function",
+    name: "controlBundle",
+    stateMutability: "view",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [
+      { name: "schemaVersion", type: "uint16" },
+      { name: "scalarPack", type: "bytes32" },
+      { name: "assetPack", type: "bytes32" },
+      { name: "bundleHash", type: "bytes32" },
+      { name: "selectionVersion", type: "uint64" },
+      { name: "updatedAt", type: "uint64" },
+    ],
+  },
+  {
+    type: "function",
+    name: "setControlBundle",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "pieceId", type: "uint256" },
+      { name: "scalarPack", type: "bytes32" },
+      { name: "assetPack", type: "bytes32" },
+    ],
+    outputs: [],
   },
 ] as const;
 

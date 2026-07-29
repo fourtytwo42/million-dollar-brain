@@ -1,8 +1,8 @@
 [Unit]
-Description=Run MillionDollar Brain testnet cycle every 15 minutes
+Description=Evaluate 42 Braincells testnet cycle eligibility every five minutes
 
 [Timer]
-OnCalendar=*-*-* *:02,17,32,47:00
+OnCalendar=*-*-* *:00/5:00
 Persistent=true
 AccuracySec=1s
 Unit=mdb-cycle-testnet.service

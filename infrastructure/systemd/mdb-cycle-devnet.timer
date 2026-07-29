@@ -1,8 +1,8 @@
 [Unit]
-Description=Run 42 Braincells devnet cycle hourly
+Description=Evaluate 42 Braincells devnet cycle eligibility every five minutes
 
 [Timer]
-OnCalendar=hourly
+OnCalendar=*-*-* *:00/5:00
 Persistent=true
 AccuracySec=1s
 Unit=mdb-cycle-devnet.service

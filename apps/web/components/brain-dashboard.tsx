@@ -22,7 +22,18 @@ import {
   useSwitchChain,
   useWalletClient,
 } from "wagmi";
-import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
+import {
+  basketAbi,
+  brainAbi,
+  brainControlAbi,
+  erc20Abi,
+  rewardAbi,
+} from "@/lib/abi";
+import {
+  packAssetIds,
+  packScalars,
+  type BrainControlBundle,
+} from "@/lib/brain-controls";
 import { retryApprovalDependentWrite } from "@/lib/approval-retry";
 import {
   normalizeProfileUrl,
@@ -61,6 +72,10 @@ type Piece = {
   options: [BrainOption, BrainOption, BrainOption, BrainOption, BrainOption];
   data: string[];
   tags: string[];
+  controlBundle: BrainControlBundle;
+  controlBundleHash: string | null;
+  controlSelectionVersion: number;
+  controlUpdatedAt: number;
 };
 type Cycle = {
   schemaVersion?: number;
@@ -95,6 +110,13 @@ type Data = {
     sellsEnabled: boolean;
     rebalancesEnabled: boolean;
     brainPurchasesEnabled: boolean;
+    controlBundlesEnabled: boolean;
+  };
+  controlCatalog: {
+    schemaVersion: number;
+    catalogVersion: number;
+    catalogHash: string | null;
+    registry: `0x${string}` | null;
   };
   network: {
     mode: "local" | "testnet" | "mainnet";
@@ -129,6 +151,8 @@ type Data = {
     decimals: number;
     maximumWeightBps: number;
     robinhoodUid: string | null;
+    controlId?: number;
+    tags?: string[];
   }[];
   nav: string;
   navPerShare: string;
@@ -653,8 +677,36 @@ export function BrainDashboard() {
       ),
     );
   }
-  async function preset(piece: Piece, value: number) {
-    if (!data) return;
+  async function setControls(piece: Piece, bundle: BrainControlBundle) {
+    if (!data?.controlCatalog.registry)
+      throw new Error("Control Catalog v1 is not active on this network.");
+    const { wallet, publicClient } = clients();
+    setMessage("Confirm all control changes in your wallet…");
+    const tx = await wallet.writeContract({
+      address: data.controlCatalog.registry,
+      abi: brainControlAbi,
+      functionName: "setControlBundle",
+      args: [
+        BigInt(piece.id),
+        packScalars(bundle.values),
+        packAssetIds(bundle.assetIds),
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
+    const refreshed = await refreshAfterConfirmedAction();
+    setMessage(
+      confirmedActionMessage(
+        `All controls for Piece ${piece.id} were updated in one transaction.`,
+        refreshed,
+      ),
+    );
+  }
+  async function legacyPreset(piece: Piece, value: number) {
+    if (!data || data.activation.controlBundlesEnabled)
+      throw new Error("Use the Control Catalog editor for this braincell.");
     const { wallet, publicClient } = clients();
     const tx = await wallet.writeContract({
       address: data.deployment.brain,
@@ -666,13 +718,7 @@ export function BrainDashboard() {
       hash: tx,
       ...receiptWaitPolicy,
     });
-    const refreshed = await refreshAfterConfirmedAction();
-    setMessage(
-      confirmedActionMessage(
-        `Piece ${piece.id} now sets ${piece.affinity} to ${piece.options[value].label}.`,
-        refreshed,
-      ),
-    );
+    await refreshAfterConfirmedAction();
   }
   async function changeProfile(
     piece: Piece,
@@ -880,10 +926,11 @@ export function BrainDashboard() {
             setMessage(error.shortMessage ?? error.message),
           )
         }
-        onPreset={(piece, value) =>
-          preset(piece, value).catch((error) =>
-            setMessage(error.shortMessage ?? error.message),
-          )
+        onControls={(piece, bundle) =>
+          setControls(piece, bundle).catch((error) => {
+            setMessage(error.shortMessage ?? error.message);
+            throw error;
+          })
         }
         onProfile={(piece, file, name, profileUrl) =>
           changeProfile(piece, file, name, profileUrl).catch((error) => {
@@ -1164,9 +1211,10 @@ export function BrainDashboard() {
                     <select
                       aria-label={`Mood for ${pieceDisplayName(piece)}`}
                       value={piece.preset}
+                      disabled={data.activation.controlBundlesEnabled}
                       onChange={(e) =>
-                        preset(piece, Number(e.target.value)).catch((err) =>
-                          setMessage(err.shortMessage ?? err.message),
+                        legacyPreset(piece, Number(e.target.value)).catch(
+                          (err) => setMessage(err.shortMessage ?? err.message),
                         )
                       }
                     >

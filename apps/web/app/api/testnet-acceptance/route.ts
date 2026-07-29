@@ -17,7 +17,14 @@ import {
   publicClient,
   waitForReliableTransactionReceipt,
 } from "@/lib/chain";
-import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
+import {
+  basketAbi,
+  brainAbi,
+  brainControlAbi,
+  erc20Abi,
+  rewardAbi,
+} from "@/lib/abi";
+import { controlSpec, packAssetIds, packScalars } from "@/lib/brain-controls";
 import { withAdminTransactionLock } from "@/lib/admin-transaction-lock";
 import { buildTestnetSwapPlans, type JsonSwapPlan } from "@/lib/quote-planner";
 import { networkConfig } from "@/lib/network";
@@ -176,13 +183,47 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const selectedPreset = scenario % 5;
-      transactions.preset = await write(actor.client, {
-        address: d.brain,
-        abi: brainAbi,
-        functionName: "setPreset",
-        args: [BigInt(piece.id), selectedPreset],
-      });
+      if (d.brainControlRegistry) {
+        const control = controlSpec(piece.id).controls[0];
+        const nextBundle = {
+          ...piece.controlBundle,
+          values: [...piece.controlBundle.values],
+          assetIds: [...piece.controlBundle.assetIds],
+        };
+        if (piece.id === 42) {
+          const shift = Math.min(5, nextBundle.values[1] ?? 0);
+          nextBundle.values[0] += shift;
+          nextBundle.values[1] -= shift;
+        } else if (control.kind === "multi") {
+          const optionCount = control.options?.length ?? 1;
+          nextBundle.values[0] = 1 << ((scenario + piece.id) % optionCount);
+        } else {
+          const optionCount =
+            control.kind === "attention"
+              ? (control.maximum ?? 0) + 1
+              : (control.options?.length ?? 1);
+          nextBundle.values[0] =
+            ((nextBundle.values[0] ?? 0) + 1) % optionCount;
+        }
+        transactions.controls = await write(actor.client, {
+          address: d.brainControlRegistry,
+          abi: brainControlAbi,
+          functionName: "setControlBundle",
+          args: [
+            BigInt(piece.id),
+            packScalars(nextBundle.values),
+            packAssetIds(nextBundle.assetIds),
+          ],
+        });
+      } else {
+        const selectedPreset = scenario % 5;
+        transactions.preset = await write(actor.client, {
+          address: d.brain,
+          abi: brainAbi,
+          functionName: "setPreset",
+          args: [BigInt(piece.id), selectedPreset],
+        });
+      }
 
       const grossOptions = ["125", "250", "500", "1000"];
       const gross = parseUnits(

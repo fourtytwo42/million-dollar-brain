@@ -95,9 +95,7 @@ function qualification(): AssetQualificationWindowV2 | null {
   if (!existsSync(path)) return null;
   try {
     const state = JSON.parse(readFileSync(path, "utf8"));
-    const rows = Array.isArray(state.qualification)
-      ? state.qualification
-      : [];
+    const rows = Array.isArray(state.qualification) ? state.qualification : [];
     return {
       schemaVersion: 2,
       requiredHours: 48,

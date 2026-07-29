@@ -10,7 +10,8 @@ export function directoryHash(root) {
   const hash = createHash("sha256");
   const visit = (directory) => {
     for (const name of readdirSync(directory).sort()) {
-      if (name === "cache" || name === "trace" || name === "diagnostics") continue;
+      if (name === "cache" || name === "trace" || name === "diagnostics")
+        continue;
       const path = resolve(directory, name);
       const info = statSync(path);
       if (info.isDirectory()) visit(path);
@@ -41,11 +42,7 @@ export function contractBytecodeHashes(repoRoot) {
       sha256(
         execFileSync(
           "forge",
-          [
-            "inspect",
-            `src/${contract}.sol:${contract}`,
-            "deployedBytecode",
-          ],
+          ["inspect", `src/${contract}.sol:${contract}`, "deployedBytecode"],
           { cwd: contractRoot, encoding: "utf8" },
         ).trim(),
       ),

@@ -134,13 +134,13 @@ test("testnet failover compares LAN and remote heads without exposing LAN to bro
   );
 });
 
-test("testnet AI cycle runs every 15 minutes", () => {
+test("testnet evaluates control-selected cycle eligibility every five minutes", () => {
   const timer = readFileSync(
     "infrastructure/systemd/mdb-cycle-testnet.timer",
     "utf8",
   );
-  assert.match(timer, /every 15 minutes/);
-  assert.match(timer, /OnCalendar=\*-\*-\* \*:02,17,32,47:00/);
+  assert.match(timer, /eligibility every five minutes/);
+  assert.match(timer, /OnCalendar=\*-\*-\* \*:00\/5:00/);
 });
 
 test("testnet dashboard collapses reads through Multicall3", () => {

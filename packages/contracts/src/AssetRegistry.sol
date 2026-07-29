@@ -68,7 +68,12 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     mapping(address token => AssetRecord record) private _records;
     mapping(bytes32 uid => address token) public tokenByRobinhoodUid;
     mapping(address token => AssetQualification qualification) private _qualifications;
-    uint256[45] private __gap;
+    // Appended V2 storage for stable control-catalog identities and sector tags.
+    mapping(address token => uint32 id) private _assetIds;
+    mapping(uint32 id => address token) private _tokensByAssetId;
+    mapping(uint32 id => mapping(bytes32 tag => bool enabled)) private _assetTags;
+    uint16 public assetIdentityVersion;
+    uint256[41] private __gap;
 
     event AssetRegistered(address indexed token, bytes32 indexed robinhoodUid, AssetKind kind);
     event AssetConfigurationUpdated(address indexed token);
@@ -80,6 +85,8 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         bool eligible
     );
     event AssetActivationChanged(address indexed token, bool active);
+    event AssetIdentityConfigured(address indexed token, uint32 indexed assetId);
+    event AssetTagConfigured(uint32 indexed assetId, bytes32 indexed tag, bool enabled);
 
     function initialize(address admin, uint256 chainId_) external initializer {
         require(admin != address(0), "zero admin");
@@ -198,6 +205,51 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
                 active[cursor++] = _tokens[i];
             }
         }
+    }
+
+    function configureAssetIdentity(address token, uint32 id, bytes32[] calldata tags)
+        external
+        onlyRole(ASSET_ADMIN_ROLE)
+    {
+        require(_records[token].registered, "unknown asset");
+        require(id != 0, "zero asset id");
+        require(_assetIds[token] == 0 || _assetIds[token] == id, "token id changed");
+        require(_tokensByAssetId[id] == address(0) || _tokensByAssetId[id] == token, "id used");
+        _assetIds[token] = id;
+        _tokensByAssetId[id] = token;
+        for (uint256 i; i < tags.length; ++i) {
+            require(tags[i] != bytes32(0), "zero tag");
+            _assetTags[id][tags[i]] = true;
+            emit AssetTagConfigured(id, tags[i], true);
+        }
+        assetIdentityVersion = 1;
+        emit AssetIdentityConfigured(token, id);
+    }
+
+    function setAssetTag(uint32 id, bytes32 tag, bool enabled) external onlyRole(ASSET_ADMIN_ROLE) {
+        require(_tokensByAssetId[id] != address(0), "unknown asset id");
+        require(tag != bytes32(0), "zero tag");
+        _assetTags[id][tag] = enabled;
+        emit AssetTagConfigured(id, tag, enabled);
+    }
+
+    function assetId(address token) external view returns (uint32) {
+        return _assetIds[token];
+    }
+
+    function tokenForAssetId(uint32 id) external view returns (address) {
+        return _tokensByAssetId[id];
+    }
+
+    function hasTag(uint32 id, bytes32 tag) external view returns (bool) {
+        return _assetTags[id][tag];
+    }
+
+    function isActiveId(uint32 id) external view returns (bool) {
+        address token = _tokensByAssetId[id];
+        if (token == address(0)) return false;
+        AssetRecord storage record = _records[token];
+        return record.active && _eligible(record, _qualifications[token]);
     }
 
     function _eligible(AssetRecord memory record, AssetQualification memory qualification)

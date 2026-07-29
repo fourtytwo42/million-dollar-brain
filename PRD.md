@@ -9,27 +9,28 @@
 chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
 RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
 A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
-broadcast mode. Control Catalog v1 is specified but not deployed; current
-runtimes remain on catalog v3 until the coordinated migration passes. No
-mainnet deployment or real-value activation has occurred.
+broadcast mode. Control Catalog v1 is implemented, enabled, and accepted on
+local Anvil; the exact accepted commit is promoted to testnet only after its
+contract, AI, economic, and responsive gates pass. No mainnet deployment or
+real-value activation has occurred.
 
 ### Normative PRD set
 
 This PRD is the top-level product authority. The following linked specifications are normative parts of the PRD and contain details that would make this file unnecessarily repetitive:
 
-| Specification              | Authority                                                                                                                              |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `BRAIN_CONTROL_CATALOG.md` | Target Control Catalog v1: all 42 multi-control panels, defaults, compiler effects, cadence, data attention, migration, and acceptance |
-| `BRAIN_PRESET_CATALOG.md`  | Deployed catalog-v3 five-mood record and normative migration source; not the target control UX                                         |
-| `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                          |
-| `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                                |
-| `AI_EXPLAINABILITY.md`     | Brain-to-proposal-to-execution attribution and public explanation requirements                                                         |
-| `KEEPER_GAS_POLICY.md`     | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation                                      |
-| `UX_SCREENS.md`            | Screen consolidation, drawers, modals, system states, and mobile behavior                                                              |
-| `TECH_STACK.md`            | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                                                   |
-| `CHAIN_COMPATIBILITY.md`   | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT                                   |
-| `DESIGN_SYSTEM.md`         | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility                                    |
-| `BUILD_READINESS.md`       | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates                              |
+| Specification              | Authority                                                                                                                       |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `BRAIN_CONTROL_CATALOG.md` | Control Catalog v1: all 42 multi-control panels, defaults, compiler effects, cadence, data attention, migration, and acceptance |
+| `BRAIN_PRESET_CATALOG.md`  | Historical catalog-v3 five-mood record and normative migration/rollback source; not the active control UX                       |
+| `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                   |
+| `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                         |
+| `AI_EXPLAINABILITY.md`     | Brain-to-proposal-to-execution attribution and public explanation requirements                                                  |
+| `KEEPER_GAS_POLICY.md`     | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation                               |
+| `UX_SCREENS.md`            | Screen consolidation, drawers, modals, system states, and mobile behavior                                                       |
+| `TECH_STACK.md`            | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                                            |
+| `CHAIN_COMPATIBILITY.md`   | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT                            |
+| `DESIGN_SYSTEM.md`         | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility                             |
+| `BUILD_READINESS.md`       | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates                       |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 

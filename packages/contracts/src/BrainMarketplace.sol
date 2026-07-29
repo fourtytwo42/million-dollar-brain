@@ -47,6 +47,9 @@ contract BrainMarketplace is
     mapping(uint256 => string) public customName;
     // Appended storage for the optional owner profile link.
     mapping(uint256 => string) public profileUrl;
+    // Appended V3 storage for the external Control Catalog registry.
+    address public controlRegistry;
+    bool public controlBundlesEnabled;
 
     event PiecePurchased(
         uint256 indexed pieceId,
@@ -77,6 +80,8 @@ contract BrainMarketplace is
         uint64 ownershipSerial
     );
     event PurchaseControlConfigured(bool purchasesEnabled);
+    event ControlRegistryConfigured(address indexed registry, bool enabled);
+    event ControlBundlesEnabled(bool enabled);
 
     function initialize(
         address admin,
@@ -157,11 +162,29 @@ contract BrainMarketplace is
     }
 
     function setPreset(uint256 pieceId, uint8 preset) external {
+        require(!controlBundlesEnabled, "control catalog enabled");
         _validPiece(pieceId);
         require(ownerOf(pieceId) == msg.sender, "not owner");
         require(preset <= 4, "invalid preset");
         selectedPreset[pieceId] = preset;
         emit PresetChanged(pieceId, preset, msg.sender);
+    }
+
+    function reinitializeV3(address registry, bool enabled)
+        external
+        reinitializer(3)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(registry != address(0), "zero control registry");
+        controlRegistry = registry;
+        controlBundlesEnabled = enabled;
+        emit ControlRegistryConfigured(registry, enabled);
+    }
+
+    function setControlBundlesEnabled(bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(controlRegistry != address(0), "control registry unset");
+        controlBundlesEnabled = enabled;
+        emit ControlBundlesEnabled(enabled);
     }
 
     function canChangePortrait(uint256 pieceId, address account) public view returns (bool) {

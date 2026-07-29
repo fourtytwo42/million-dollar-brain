@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatUnits } from "viem";
+import {
+  controlSpec,
+  summarizeControlBundle,
+  validateControlBundle,
+  type BrainControlBundle,
+} from "../lib/brain-controls";
+import { compileBrainV1 } from "../lib/compiled-brain";
 import {
   allocationSummary,
   basketChartColor,
@@ -23,6 +30,31 @@ type BrainOption = {
   instruction: string;
   value: -2 | -1 | 0 | 1 | 2;
 };
+
+function describeBundleAssets(
+  pieceId: number,
+  bundle: BrainControlBundle,
+  assets: EditorialData["assets"],
+): string | null {
+  const spec = controlSpec(pieceId);
+  if (!spec.assetTag) return null;
+  const byId = new Map(
+    assets.map((asset, index) => [asset.controlId ?? index + 1, asset.symbol]),
+  );
+  const favorites = bundle.assetIds
+    .slice(0, 3)
+    .filter(Boolean)
+    .map((assetId) => byId.get(assetId) ?? `Asset ${assetId}`);
+  const directive = spec.controls[4]?.options?.[bundle.values[4] ?? 0]?.label;
+  const targetId = bundle.assetIds[3] ?? 0;
+  const target = targetId ? (byId.get(targetId) ?? `Asset ${targetId}`) : null;
+  const parts = [
+    favorites.length ? `Favorites: ${favorites.join(", ")}` : null,
+    target && directive ? `${target}: ${directive}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : "No asset-specific order";
+}
+
 export type EditorialPiece = {
   id: number;
   owner: string;
@@ -47,6 +79,10 @@ export type EditorialPiece = {
   options: [BrainOption, BrainOption, BrainOption, BrainOption, BrainOption];
   data: string[];
   tags: string[];
+  controlBundle: BrainControlBundle;
+  controlBundleHash: string | null;
+  controlSelectionVersion: number;
+  controlUpdatedAt: number;
 };
 
 type CycleInstruction = {
@@ -150,6 +186,13 @@ export type EditorialData = {
     sellsEnabled: boolean;
     rebalancesEnabled: boolean;
     brainPurchasesEnabled: boolean;
+    controlBundlesEnabled: boolean;
+  };
+  controlCatalog: {
+    schemaVersion: number;
+    catalogVersion: number;
+    catalogHash: string | null;
+    registry: `0x${string}` | null;
   };
   assets: {
     id: string;
@@ -161,6 +204,8 @@ export type EditorialData = {
     decimals: number;
     maximumWeightBps: number;
     robinhoodUid: string | null;
+    controlId?: number;
+    tags?: string[];
   }[];
   nav: string;
   navPerShare: string;
@@ -355,7 +400,7 @@ export function EditorialDashboard({
   onDeposit,
   onRedeem,
   onBuy,
-  onPreset,
+  onControls,
   onProfile,
   onClaim,
 }: {
@@ -392,7 +437,10 @@ export function EditorialDashboard({
   onDeposit: () => void;
   onRedeem: () => void;
   onBuy: (piece: EditorialPiece) => void;
-  onPreset: (piece: EditorialPiece, preset: number) => void;
+  onControls: (
+    piece: EditorialPiece,
+    bundle: BrainControlBundle,
+  ) => Promise<void>;
   onProfile: (
     piece: EditorialPiece,
     file: File,
@@ -415,6 +463,12 @@ export function EditorialDashboard({
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
+  const [controlEditorOpen, setControlEditorOpen] = useState(false);
+  const [controlDraft, setControlDraft] = useState<BrainControlBundle | null>(
+    null,
+  );
+  const [controlSaving, setControlSaving] = useState(false);
+  const controlDialogRef = useRef<HTMLElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
   const reserveMoney = (value: string | bigint) =>
@@ -444,6 +498,56 @@ export function EditorialDashboard({
     account &&
     selected.owner.toLowerCase() === account.toLowerCase(),
   );
+  const openControlEditor = () => {
+    if (!selected || !mine || !data?.activation.controlBundlesEnabled) return;
+    setControlDraft({
+      schemaVersion: 1,
+      values: [...selected.controlBundle.values],
+      assetIds: [...selected.controlBundle.assetIds],
+    });
+    setControlEditorOpen(true);
+  };
+  const closeControlEditor = () => {
+    if (controlSaving) return;
+    setControlEditorOpen(false);
+    setControlDraft(null);
+  };
+  useEffect(() => {
+    if (!controlEditorOpen) return;
+    const dialog = controlDialogRef.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeControlEditor();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items.at(-1)!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      previous?.focus();
+    };
+  }, [controlEditorOpen, controlSaving]);
   const openProfileEditor = () => {
     if (!selected || !mine || !selected.profileChangeAvailable) return;
     setProfileName(selectedDisplayName);
@@ -519,6 +623,28 @@ export function EditorialDashboard({
     }
     return stats;
   }, {});
+  const controlPreview = useMemo(() => {
+    if (!data || !selected || !controlDraft) return null;
+    const pieces = data.pieces.map((piece) => ({
+      id: piece.id,
+      weightBps: piece.weight,
+      bundle: piece.id === selected.id ? controlDraft : piece.controlBundle,
+    }));
+    const assets = data.assets.map((asset, index) => ({
+      id: asset.id,
+      controlId: asset.controlId ?? index + 1,
+      symbol: asset.symbol,
+      kind: asset.kind,
+      riskClass: asset.riskClass,
+      active: true,
+      tags: asset.tags ?? [],
+      currentWeightBps: data.currentWeightsBps[asset.symbol] ?? 0,
+    }));
+    return {
+      errors: validateControlBundle(selected.id, controlDraft),
+      compiled: compileBrainV1(pieces, assets),
+    };
+  }, [controlDraft, data, selected]);
   const navSeries = (
     data?.performanceHistory.length
       ? data.performanceHistory.map((point) => point.navPerShareWad)
@@ -886,6 +1012,331 @@ export function EditorialDashboard({
         </div>
       )}
 
+      {controlEditorOpen && selected && controlDraft && (
+        <div
+          className="control-editor-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeControlEditor();
+          }}
+        >
+          <section
+            ref={controlDialogRef}
+            className="control-editor-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="control-editor-title"
+          >
+            <header className="control-editor-heading">
+              <div>
+                <p className="section-kicker">
+                  PIECE {String(selected.id).padStart(2, "0")} · ONE TRANSACTION
+                </p>
+                <h2 id="control-editor-title">Tune {selectedDisplayName}</h2>
+                <p>{controlSpec(selected.id).summary}</p>
+              </div>
+              <button
+                type="button"
+                className="profile-editor-close"
+                onClick={closeControlEditor}
+                disabled={controlSaving}
+                aria-label="Close control editor"
+              >
+                ×
+              </button>
+            </header>
+            <div className="control-editor-body">
+              <div className="control-form">
+                {controlSpec(selected.id).controls.map((control, index) => {
+                  const value = controlDraft.values[index] ?? 0;
+                  return (
+                    <fieldset className="control-field" key={control.key}>
+                      <legend>{control.label}</legend>
+                      {control.kind === "choice" && (
+                        <div className="control-segments">
+                          {control.options?.map((choice, optionIndex) => (
+                            <button
+                              type="button"
+                              key={choice.label}
+                              aria-pressed={value === optionIndex}
+                              className={
+                                value === optionIndex ? "selected" : ""
+                              }
+                              onClick={() =>
+                                setControlDraft((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        values: current.values.map(
+                                          (entry, valueIndex) =>
+                                            valueIndex === index
+                                              ? optionIndex
+                                              : entry,
+                                        ),
+                                      }
+                                    : current,
+                                )
+                              }
+                            >
+                              <b>{choice.label}</b>
+                              <span>{choice.meaning}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {control.kind === "multi" && (
+                        <div className="control-chips">
+                          {control.options?.map((choice, optionIndex) => {
+                            const selectedOption =
+                              (value & (1 << optionIndex)) !== 0;
+                            return (
+                              <button
+                                type="button"
+                                key={choice.label}
+                                aria-pressed={selectedOption}
+                                className={selectedOption ? "selected" : ""}
+                                onClick={() =>
+                                  setControlDraft((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          values: current.values.map(
+                                            (entry, valueIndex) =>
+                                              valueIndex === index
+                                                ? entry ^ (1 << optionIndex)
+                                                : entry,
+                                          ),
+                                        }
+                                      : current,
+                                  )
+                                }
+                              >
+                                {choice.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {control.kind === "attention" && (
+                        <label className="control-attention">
+                          <input
+                            type="range"
+                            min="0"
+                            max={control.maximum}
+                            step="5"
+                            value={value}
+                            aria-label={`${control.label} attention`}
+                            onChange={(event) =>
+                              setControlDraft((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      values: current.values.map(
+                                        (entry, valueIndex) =>
+                                          valueIndex === index
+                                            ? Number(event.target.value)
+                                            : entry,
+                                      ),
+                                    }
+                                  : current,
+                              )
+                            }
+                          />
+                          <output>{value}%</output>
+                        </label>
+                      )}
+                    </fieldset>
+                  );
+                })}
+                {controlSpec(selected.id).assetTag && (
+                  <fieldset className="control-field asset-control-field">
+                    <legend>
+                      {controlSpec(selected.id).assetLabel ??
+                        "Qualified assets"}
+                    </legend>
+                    <p>
+                      Only active assets tagged{" "}
+                      <b>{controlSpec(selected.id).assetTag}</b> can be chosen.
+                    </p>
+                    <div className="asset-picker-grid">
+                      {[0, 1, 2, 3].map((slot) => {
+                        const eligible =
+                          data?.assets.filter((asset) =>
+                            (asset.tags ?? []).includes(
+                              controlSpec(selected.id).assetTag!,
+                            ),
+                          ) ?? [];
+                        return (
+                          <label key={slot}>
+                            <span>
+                              {slot < 3
+                                ? `Favorite ${slot + 1}`
+                                : "Direct-order target"}
+                            </span>
+                            <select
+                              value={controlDraft.assetIds[slot] ?? 0}
+                              onChange={(event) =>
+                                setControlDraft((current) =>
+                                  current
+                                    ? {
+                                        ...current,
+                                        assetIds: current.assetIds.map(
+                                          (entry, assetIndex) =>
+                                            assetIndex === slot
+                                              ? Number(event.target.value)
+                                              : entry,
+                                        ),
+                                      }
+                                    : current,
+                                )
+                              }
+                            >
+                              <option value={0}>None</option>
+                              {eligible.map((asset, assetIndex) => (
+                                <option
+                                  value={asset.controlId ?? assetIndex + 1}
+                                  key={asset.id}
+                                >
+                                  {asset.symbol} · {asset.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
+                )}
+              </div>
+              <aside className="control-preview" aria-live="polite">
+                <p className="section-kicker">COMPILED PREVIEW</p>
+                <h3>What changes next review</h3>
+                <div className="control-preview-comparison">
+                  <span>
+                    <small>Current</small>
+                    {summarizeControlBundle(
+                      selected.id,
+                      selected.controlBundle,
+                    )}
+                    {describeBundleAssets(
+                      selected.id,
+                      selected.controlBundle,
+                      data?.assets ?? [],
+                    ) && (
+                      <em>
+                        {describeBundleAssets(
+                          selected.id,
+                          selected.controlBundle,
+                          data?.assets ?? [],
+                        )}
+                      </em>
+                    )}
+                  </span>
+                  <span>
+                    <small>Proposed</small>
+                    {summarizeControlBundle(selected.id, controlDraft)}
+                    {describeBundleAssets(
+                      selected.id,
+                      controlDraft,
+                      data?.assets ?? [],
+                    ) && (
+                      <em>
+                        {describeBundleAssets(
+                          selected.id,
+                          controlDraft,
+                          data?.assets ?? [],
+                        )}
+                      </em>
+                    )}
+                  </span>
+                </div>
+                {controlPreview && (
+                  <>
+                    <dl>
+                      <div>
+                        <dt>Base review</dt>
+                        <dd>{controlPreview.compiled.baseCadenceMinutes}m</dd>
+                      </div>
+                      <div>
+                        <dt>Panic review</dt>
+                        <dd>{controlPreview.compiled.panicCadenceMinutes}m</dd>
+                      </div>
+                      <div>
+                        <dt>USDG floor</dt>
+                        <dd>
+                          {controlPreview.compiled.reserveMinimumBps / 100}%
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Research</dt>
+                        <dd>
+                          {controlPreview.compiled.researchAssetLimit} assets
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="control-safety-note">
+                      Safety, pricing, holdings, liquidity, execution, and
+                      accounting data remain mandatory. These controls only
+                      steer bounded choices.
+                    </p>
+                    {!!controlPreview.compiled.conflicts.length && (
+                      <div className="control-conflicts">
+                        <b>Conflict winners</b>
+                        {controlPreview.compiled.conflicts.map((conflict) => (
+                          <span key={conflict}>{conflict}</span>
+                        ))}
+                      </div>
+                    )}
+                    {!!controlPreview.errors.length && (
+                      <div className="control-errors" role="alert">
+                        {controlPreview.errors.map((error) => (
+                          <span key={error}>{error}</span>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </aside>
+            </div>
+            <footer className="control-editor-footer">
+              <div>
+                <b>One wallet confirmation updates every setting above.</b>
+                <span>
+                  No free text, prompts, URLs, or arbitrary token addresses
+                  reach the allocator.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={controlSaving}
+                onClick={closeControlEditor}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                disabled={
+                  controlSaving || Boolean(controlPreview?.errors.length)
+                }
+                onClick={async () => {
+                  setControlSaving(true);
+                  try {
+                    await onControls(selected, controlDraft);
+                    setControlSaving(false);
+                    closeControlEditor();
+                  } catch {
+                    setControlSaving(false);
+                  }
+                }}
+              >
+                {controlSaving ? "Confirming…" : "Confirm in wallet"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
+
       {screen === "Brain" && (
         <div className="editorial-page brain-page">
           <section className="brain-pulse-strip" aria-label="Brain pulse">
@@ -988,33 +1439,43 @@ export function EditorialDashboard({
                 )}
                 <p className="piece-tagline">{selected.tagline}</p>
                 <p className="piece-lore">“{selected.lore}”</p>
-                <div className="current-mood">
-                  <span>Current setting (mood)</span>
-                  <strong>{selected.options[selected.preset].label}</strong>
-                </div>
-                <div className="mood-ledger">
-                  {selected.options.map((choice, index) => (
-                    <button
-                      key={choice.label}
-                      className={index === selected.preset ? "selected" : ""}
-                      disabled={!mine}
-                      onClick={() => onPreset(selected, index)}
-                      title={
-                        mine
-                          ? choice.instruction
-                          : "Buy this piece to change its mood"
-                      }
-                    >
-                      <span>
-                        {choice.value > 0 ? `+${choice.value}` : choice.value}
-                      </span>
-                      <b>{choice.label}</b>
-                    </button>
-                  ))}
-                </div>
-                <div className="bounded-effect">
-                  <span>WHAT THIS TELLS THE AI NEXT CYCLE</span>
-                  <p>{selected.options[selected.preset].instruction}</p>
+                <div className="control-summary-card">
+                  <span>COMPILED STEERING</span>
+                  <strong>
+                    {summarizeControlBundle(
+                      selected.id,
+                      selected.controlBundle,
+                    )}
+                  </strong>
+                  {describeBundleAssets(
+                    selected.id,
+                    selected.controlBundle,
+                    data?.assets ?? [],
+                  ) && (
+                    <p className="control-assets">
+                      {describeBundleAssets(
+                        selected.id,
+                        selected.controlBundle,
+                        data?.assets ?? [],
+                      )}
+                    </p>
+                  )}
+                  <p>{controlSpec(selected.id).summary}</p>
+                  <div>
+                    <small>
+                      Bundle v{selected.controlSelectionVersion || 1}
+                    </small>
+                    {mine && (
+                      <button
+                        type="button"
+                        className="primary-action"
+                        disabled={!data?.activation.controlBundlesEnabled}
+                        onClick={openControlEditor}
+                      >
+                        Change controls
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="piece-actions">
                   <div>
@@ -1937,7 +2398,8 @@ export function EditorialDashboard({
         </span>
         <span>
           Decision cadence: {network?.decisionCadenceMinutes ?? 60} minutes ·
-          Catalog v{data?.catalog.version ?? "—"} · Character roster v4
+          Control Catalog v{data?.controlCatalog.catalogVersion ?? "—"} ·
+          Character roster v4
         </span>
       </footer>
     </main>
@@ -2081,7 +2543,7 @@ function HowItWorks({
       eyebrow: "02 · STEER",
       actor: "Brain owners",
       title: "Choose the brain's preferences",
-      copy: "Each of the 42 NFT pieces controls one topic. Its owner picks one of five preset moods that becomes part of the AI's next brief.",
+      copy: "Each of the 42 NFT pieces owns a different closed control panel. Its owner changes several understandable levers in one on-chain transaction.",
       action: "Explore the brain",
       destination: "Brain" as const,
     },
@@ -2188,7 +2650,7 @@ function HowItWorks({
             <b>Brain piece</b> a steering NFT
           </span>
           <span>
-            <b>Mood</b> its selected preset
+            <b>Controls</b> its closed, on-chain steering choices
           </span>
           <span>
             <b>Influence</b> its fixed share of the AI brief

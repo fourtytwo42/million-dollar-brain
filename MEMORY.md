@@ -4,15 +4,14 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Control Catalog v1 product requirements are complete; no
-  contract or runtime migration has been started.
-- Last meaningful change: Added `BRAIN_CONTROL_CATALOG.md` and coalesced the
-  target multi-control, cadence, qualified-asset directive, optional
-  data-attention, UI, compiler, safety, and catalog-v3 migration requirements
-  across the normative PRD set.
-- Next step: Implement Control Catalog v1 as one coordinated contract,
-  compiler, scheduler, UI, replay, and testnet release. Do not partially switch
-  live model compilation away from catalog v3.
+- Current task: Finish Control Catalog v1 devnet acceptance, then promote the
+  exact pushed release candidate to the existing Robinhood Testnet deployment.
+- Last meaningful change: Control Catalog v1 is deployed and enabled on devnet.
+  A disposable wallet purchased Piece 21 and atomically updated its filtered
+  semiconductor controls to target NVDA with `exit / disable`.
+- Next step: Verify the restrictive directive in a live Ornith cycle, complete
+  responsive browser and economic regression UAT, commit and push the accepted
+  candidate, then perform the state-preserving testnet UUPS promotion.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -21,7 +20,7 @@ Durable project context lives here. Update this file whenever information should
 ## Current State
 
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
-- The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, hourly Ornith allocator, systemd services, and Playwright Chromium UAT.
+- The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, a five-minute eligibility scheduler, Ornith allocator, systemd services, and Playwright Chromium UAT.
 - A parallel valueless mock deployment is live on Robinhood Testnet chain
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
   `3000`; their databases, state, manifests, timers, and wallet sessions are
@@ -46,10 +45,12 @@ Durable project context lives here. Update this file whenever information should
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
-- Control Catalog v1 is the locked target but is not deployed. It replaces the
-  single `-2` through `+2` owner choice with 42 bespoke closed multi-control
-  panels. Catalog v3 remains the deployed behavior, historical replay format,
-  and deterministic migration source.
+- Last verified 2026-07-29: Control Catalog v1 is deployed and enabled on
+  devnet. The new UUPS `BrainControlRegistry`, appended stable asset IDs and
+  tags, upgraded marketplace gate, all 42 migrated bundles, DecisionContext V5
+  compiler, cadence eligibility scheduler, preview API, and data-driven
+  control editor are live. Catalog v3 remains stored for history and emergency
+  rollback. Testnet remains on catalog v3 until devnet acceptance is complete.
 - Every new allocation persists one deterministic `memeRecap` in `cycles.jsonl` using the recorded brain snapshot and actual target allocation. No additional model call is made, and legacy cycles remain readable without invented dialogue.
 - `PRD.md` v1.2 plus its linked normative specifications is the authoritative
   requirements set. `BRAIN_CONTROL_CATALOG.md` is normative for the target
@@ -141,8 +142,8 @@ When sources conflict, use this order:
 - Target portfolio review uses a five-minute eligibility worker and a compiled
   base cadence of 15m, 30m, 1h, 4h, 6h, or 24h. Adaptive panic cadence,
   minimum trade cooldown, drift, one-cycle concurrency, no-backlog behavior,
-  and hard-rule precedence are defined in `BRAIN_CONTROL_CATALOG.md`. The live
-  catalog-v3 scheduler remains in place until migration.
+  and hard-rule precedence are defined in `BRAIN_CONTROL_CATALOG.md`. Devnet
+  uses this eligibility scheduler; testnet follows after exact-commit promotion.
 - Deposits, redemptions, brain purchases, setting changes, claims, and governance remain available on-chain at any time. Each user pays only their own action gas and does not trigger the AI cycle.
 - Scheduled proposals use a brain-state snapshot. Brain changes after that snapshot affect the next cycle, while execution always rechecks current holdings, prices, liquidity, risk limits, and slippage.
 - Every brain piece has an immutable affinity and weight. Control Catalog v1
@@ -848,14 +849,37 @@ build`; authenticated live `/api/collect-market`.
 - Follow-up: Production still requires approved Robinhood Chain valuation and
   execution adapters; the official-feed contract sync is chain-31337-only.
 
+### 2026-07-29 - Control Catalog v1 devnet implementation checkpoint
+
+- Context: The five-mood interface had to be replaced by 42 bespoke, closed,
+  multi-control panels without changing marketplace or basket economics.
+- Decision: Use one generated catalog, packed versioned bundles in a dedicated
+  UUPS registry, stable asset IDs/tags, deterministic compilation, and a
+  five-minute eligibility scheduler that still honors owner-selected cadence.
+- Files: `apps/web/lib/brain-controls.ts`,
+  `apps/web/lib/compiled-brain.ts`,
+  `packages/contracts/src/BrainControlRegistry.sol`,
+  `packages/contracts/src/AssetRegistry.sol`,
+  `packages/contracts/src/BrainMarketplace.sol`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `scripts/upgrade-brain-controls.sh`.
+- Commands/tests: Foundry 34/34; brain-control tests 6/6; compiler tests 4/4;
+  decision-context tests 5/5; Next.js production build.
+- Result: Devnet migrated all 42 catalog-v3 selections to Control Catalog v1
+  under catalog hash
+  `0x1c5b19d5171ffeb7f1d56cb571f80a4659801bed9db6000d67dd0b575fc6b774`.
+  Live Browser UAT purchased Piece 21 and committed an NVDA
+  `exit / disable` directive in one transaction. Ownership and Bundle v2
+  persisted. Last verified 2026-07-29.
+- Follow-up: Prove the restriction in a live V5 Ornith cycle, finish responsive
+  and economic devnet acceptance, then commit/push and promote that exact
+  candidate to testnet.
+
 ## Open Follow-ups
 
-- 2026-07-29: Implement Control Catalog v1 as a coordinated release. Required
-  work includes versioned packed bundles, catalog-v3 migration, compiler and
-  conflict resolution, cadence eligibility, optional data-attention
-  compilation, UI preview/editor, replay compatibility, contract/context/UAT
-  tests, and a fresh two-hour testnet acceptance run. Do not partially cut over
-  the live allocator.
+- 2026-07-29: Finish the remaining Control Catalog v1 devnet acceptance and
+  perform the exact-commit, state-preserving testnet UUPS promotion. Testnet
+  remains on catalog v3 until the accepted candidate is pushed.
 - 2026-07-29: The live migration, proxy upgrades, release rehearsal, devnet
   release gate, and one live testnet AI execution pass. A fresh exact-commit
   two-hour testnet acceptance run is still required before

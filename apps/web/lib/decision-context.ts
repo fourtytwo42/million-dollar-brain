@@ -23,6 +23,7 @@ import {
   type PortfolioAccountingV1,
 } from "./portfolio-accounting";
 import { calculateCandleMetrics, stableDecisionJson } from "./decision-math";
+import type { CompiledBrainV1 } from "./compiled-brain";
 import { networkConfig } from "./network";
 import {
   ASSET_POLICY,
@@ -219,8 +220,36 @@ export type DecisionContextV4 = Omit<
   inputHash: string;
 };
 
+export type DecisionContextV5 = Omit<
+  DecisionContextV4,
+  "schemaVersion" | "researchPolicy" | "inputHash"
+> & {
+  schemaVersion: 5;
+  controlCatalog: {
+    schemaVersion: 1;
+    catalogVersion: 1;
+    catalogHash: string | null;
+    bundles: {
+      pieceId: number;
+      bundleHash: string | null;
+      selectionVersion: number;
+      values: number[];
+      assetIds: number[];
+    }[];
+  };
+  compiledBrain: CompiledBrainV1;
+  researchPolicy: {
+    maximumRounds: 1;
+    maximumAssets: number;
+    officialAndOnchainOnly: true;
+    unrestrictedWeb: false;
+  };
+  inputHash: string;
+};
+
 // Kept as a source-compatible alias while legacy persisted V2 records remain readable.
-export type DecisionContextV2 = DecisionContextV3 | DecisionContextV4;
+export type DecisionContextV2 =
+  DecisionContextV3 | DecisionContextV4 | DecisionContextV5;
 
 type DashboardState = {
   deployment: {

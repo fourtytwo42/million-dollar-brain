@@ -426,6 +426,27 @@ contract BasketBrainTest is Test {
         assertEq(brain.ownerOf(1), bob);
     }
 
+    function testBrainControlCatalogCanDisableLegacyPresetAndRollBack() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        brain.setPreset(1, 4);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        brain.reinitializeV3(makeAddr("control registry"), true);
+        vm.prank(alice);
+        vm.expectRevert("control catalog enabled");
+        brain.setPreset(1, 1);
+        assertEq(brain.selectedPreset(1), 4);
+
+        vm.prank(admin);
+        brain.setControlBundlesEnabled(false);
+        vm.prank(alice);
+        brain.setPreset(1, 1);
+        assertEq(brain.selectedPreset(1), 1);
+    }
+
     function testBrainOwnerCanChangeProfileOncePerOwnership() public {
         bytes32 alicePortrait = keccak256("alice portrait");
         bytes32 bobPortrait = keccak256("bob portrait");

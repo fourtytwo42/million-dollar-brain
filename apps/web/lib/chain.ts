@@ -8,8 +8,20 @@ import {
   type Hash,
 } from "viem";
 import { nonceManager, privateKeyToAccount } from "viem/accounts";
-import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "./abi";
+import {
+  basketAbi,
+  brainAbi,
+  brainControlAbi,
+  erc20Abi,
+  rewardAbi,
+} from "./abi";
 import { brainDefinition } from "./brain-catalog";
+import {
+  controlSpec,
+  migrateLegacyPreset,
+  unpackAssetIds,
+  unpackScalars,
+} from "./brain-controls";
 import { networkConfig, publicNetworkConfig, viemChain } from "./network";
 import {
   canonicalAssetId,
@@ -40,6 +52,8 @@ export type DeploymentAsset = {
   decimals: number;
   maximumWeightBps: number;
   robinhoodUid: string | null;
+  controlId?: number;
+  tags?: string[];
 };
 
 export type Deployment = LegacyDeployment & {
@@ -51,12 +65,17 @@ export type Deployment = LegacyDeployment & {
   executionAdapter?: Address;
   quoteAuthorizer?: Address;
   pricePublisher?: Address;
+  brainControlRegistry?: Address;
+  controlCatalogHash?: `0x${string}`;
+  controlSchemaVersion?: number;
+  controlCatalogVersion?: number;
   contracts?: {
     router?: Address;
     oracle?: Address;
     valuation?: Address;
     executionAdapter?: Address;
     assetRegistry?: Address;
+    brainControlRegistry?: Address;
     pricePublisher?: Address;
     rewards: Address;
     creatorVault: Address;
@@ -134,6 +153,8 @@ export function normalizeDeployment(raw: Record<string, unknown>): Deployment {
     assetRegistry: raw.assetRegistry ?? contracts?.assetRegistry,
     executionAdapter: raw.executionAdapter ?? contracts?.executionAdapter,
     pricePublisher: raw.pricePublisher ?? contracts?.pricePublisher,
+    brainControlRegistry:
+      raw.brainControlRegistry ?? contracts?.brainControlRegistry,
     rewards: raw.rewards ?? contracts?.rewards,
     creatorVault: raw.creatorVault ?? contracts?.creatorVault,
     brain: raw.brain ?? contracts?.brain,
@@ -153,7 +174,12 @@ export function normalizeDeployment(raw: Record<string, unknown>): Deployment {
 }
 
 export function deploymentAssets(d: Deployment): DeploymentAsset[] {
-  if (d.assets?.length) return d.assets;
+  if (d.assets?.length)
+    return d.assets.map((asset, index) => ({
+      ...asset,
+      controlId: asset.controlId ?? index + 1,
+      tags: asset.tags ?? defaultAssetTags(asset.symbol, asset.kind),
+    }));
   const chainId = d.chainId ?? networkConfig.chainId;
   return [
     {
@@ -166,6 +192,8 @@ export function deploymentAssets(d: Deployment): DeploymentAsset[] {
       decimals: 18,
       maximumWeightBps: 10_000,
       robinhoodUid: null,
+      controlId: 1,
+      tags: ["reserve"],
     },
     {
       id: canonicalAssetId(chainId, d.nvda),
@@ -177,6 +205,8 @@ export function deploymentAssets(d: Deployment): DeploymentAsset[] {
       decimals: 18,
       maximumWeightBps: 5_000,
       robinhoodUid: null,
+      controlId: 3,
+      tags: ["technology", "ai_semiconductor"],
     },
     {
       id: canonicalAssetId(chainId, d.aapl),
@@ -188,6 +218,8 @@ export function deploymentAssets(d: Deployment): DeploymentAsset[] {
       decimals: 18,
       maximumWeightBps: 5_000,
       robinhoodUid: null,
+      controlId: 2,
+      tags: ["technology"],
     },
     {
       id: canonicalAssetId(chainId, d.ethx),
@@ -199,8 +231,24 @@ export function deploymentAssets(d: Deployment): DeploymentAsset[] {
       decimals: 18,
       maximumWeightBps: 5_000,
       robinhoodUid: null,
+      controlId: 12,
+      tags: ["crypto_major"],
     },
   ];
+}
+
+function defaultAssetTags(symbol: string, kind: AssetKind) {
+  const upper = symbol.toUpperCase();
+  const tags = new Set<string>();
+  if (kind === "reserve") tags.add("reserve");
+  if (kind === "crypto") tags.add("crypto_major");
+  if (["AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "META"].includes(upper))
+    tags.add("technology");
+  if (["NVDA", "MSFT", "SOXX"].includes(upper)) tags.add("ai_semiconductor");
+  if (["GOOGL", "META"].includes(upper)) tags.add("communications");
+  if (["AMZN", "TSLA"].includes(upper)) tags.add("consumer_discretionary");
+  if (["SPY", "QQQ", "SOXX"].includes(upper)) tags.add("broad_market");
+  return [...tags];
 }
 
 export function deployment(): Deployment {
@@ -356,6 +404,21 @@ export async function dashboard(
       },
     );
   }
+  const hasControlCatalog = Boolean(d.brainControlRegistry);
+  if (hasControlCatalog) {
+    contracts.push(
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "controlBundlesEnabled",
+      },
+      {
+        address: d.brainControlRegistry!,
+        abi: brainControlAbi,
+        functionName: "catalogHash",
+      },
+    );
+  }
   for (let pieceId = 1; pieceId <= 42; pieceId += 1) {
     const id = BigInt(pieceId);
     contracts.push(
@@ -420,6 +483,14 @@ export async function dashboard(
         args: [id],
       },
     );
+    if (hasControlCatalog) {
+      contracts.push({
+        address: d.brainControlRegistry!,
+        abi: brainControlAbi,
+        functionName: "controlBundle",
+        args: [id],
+      });
+    }
   }
 
   const [results, latestBlock] = await Promise.all([
@@ -455,6 +526,15 @@ export async function dashboard(
     const oracle = results[cursor++] as readonly [bigint, bigint, boolean];
     return { ...asset, value, weightBps, oracle };
   });
+  const controlBundlesEnabled = hasControlCatalog
+    ? Boolean(results[cursor++])
+    : false;
+  const controlCatalogVersion = hasControlCatalog
+    ? (d.controlCatalogVersion ?? 1)
+    : 0;
+  const controlCatalogHash = hasControlCatalog
+    ? (results[cursor++] as `0x${string}`)
+    : null;
   const pieces = Array.from({ length: 42 }, (_, index) => {
     const owner = results[cursor++] as Address;
     const price = results[cursor++] as bigint;
@@ -466,6 +546,27 @@ export async function dashboard(
     const portraitChangeSerialPlusOne = Number(results[cursor++] as bigint);
     const customName = results[cursor++] as string;
     const profileUrl = results[cursor++] as string;
+    const rawControlBundle = hasControlCatalog
+      ? (results[cursor++] as readonly [
+          number,
+          `0x${string}`,
+          `0x${string}`,
+          `0x${string}`,
+          bigint,
+          bigint,
+        ])
+      : null;
+    const legacyBundle = migrateLegacyPreset(index + 1, Number(preset));
+    const controlBundle = rawControlBundle
+      ? {
+          schemaVersion: 1 as const,
+          values: unpackScalars(rawControlBundle[1]).slice(
+            0,
+            controlSpec(index + 1).controls.length,
+          ),
+          assetIds: unpackAssetIds(rawControlBundle[2]),
+        }
+      : legacyBundle;
     const definition = brainDefinition(index + 1);
     return {
       id: index + 1,
@@ -480,6 +581,10 @@ export async function dashboard(
         !unowned && portraitChangeSerialPlusOne !== ownershipSerial + 1,
       customName,
       profileUrl,
+      controlBundle,
+      controlBundleHash: rawControlBundle?.[3] ?? null,
+      controlSelectionVersion: Number(rawControlBundle?.[4] ?? 0n),
+      controlUpdatedAt: Number(rawControlBundle?.[5] ?? 0n),
       affinity: definition.affinity,
       name: definition.name,
       glyph: definition.glyph,
@@ -565,6 +670,13 @@ export async function dashboard(
         !basketControlsConfigured || Boolean(rebalancesEnabled),
       brainPurchasesEnabled:
         !brainControlsConfigured || Boolean(brainPurchasesEnabled),
+      controlBundlesEnabled,
+    },
+    controlCatalog: {
+      schemaVersion: hasControlCatalog ? 1 : 0,
+      catalogVersion: controlCatalogVersion,
+      catalogHash: controlCatalogHash,
+      registry: d.brainControlRegistry ?? null,
     },
     deployment: d,
     blockNumber: latestBlock.number.toString(),

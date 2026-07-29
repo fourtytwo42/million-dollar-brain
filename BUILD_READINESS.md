@@ -1,24 +1,25 @@
 # MillionDollar Brain Build-Readiness Baseline
 
 **Version:** 1.1
-**Status:** Control Catalog v1 product decisions locked; coordinated implementation pending
+**Status:** Control Catalog v1 implemented and accepted on devnet; exact-commit testnet promotion pending
 
 ## Local-devnet implementation status
 
-The native VM release implements the complete catalog-v3 collection: 42 named
-ERC-721 characters, four crews, protocol-authored lore, five closed moods per
-character, immutable portfolio affinities, and signed intensity from -2
-through +2. It also implements always-for-sale pricing, basket shares, 1%
+The native VM release implements 42 named ERC-721 characters, four crews,
+protocol-authored lore, immutable portfolio affinities, and Control Catalog v1
+with one bespoke closed multi-control panel per character. It also implements
+always-for-sale pricing, basket shares, 1%
 entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault,
 owner reward claims, atomic proportional redemptions with no queue, structured
 allocator context, deterministic output validation, keeper authentication, and
 systemd scheduling.
 
-Control Catalog v1 is the locked next target. It replaces the one-mood owner
-interface with 42 bespoke closed control panels, dynamic bounded cadence,
-registry-scoped asset directives, and optional evidence-attention controls.
-The live catalog-v3 state remains authoritative until a coordinated contract,
-compiler, UI, replay, and testnet release migrates it.
+Control Catalog v1 is enabled on devnet with a versioned UUPS bundle registry,
+dynamic bounded cadence, registry-scoped asset directives, optional
+evidence-attention controls, DecisionContext V5, and a data-driven control
+editor. Catalog v3 remains stored for historical rendering, deterministic
+migration, and emergency rollback. Testnet changes only through exact-commit
+promotion after devnet acceptance.
 
 The frontend implements an accessible interactive 42-path SVG Brain marketplace with one continuous anatomically traced lateral-brain silhouette, 42 individually generated roster-v4 portraits, roving keyboard navigation, map zoom, a searchable mobile list, character-led Brain Pulse, and a complete selected-piece right rail. Roster v4 contains 10 diverse humans and 32 creatures, machines, supernatural beings, or sentient objects without changing economic catalog v3. Completed cycles persist deterministic Brain Drama and support client-generated recap cards plus prefilled X, Farcaster, and Telegram sharing. Cerebrum, cerebellum, and brainstem metadata guide portrait placement without producing separate blob outlines. Both editorial light and dark modes are validated against live normative screenshots.
 
@@ -375,9 +376,10 @@ Mainnet deposit, brain purchase, and public distribution functions deploy disabl
 
 ## 19. Build-ready conclusion
 
-No product decision remains open for Control Catalog v1. Implementation is not
-complete until the versioned bundle registry, migration reinitializer,
-compiler, scheduler eligibility worker, control editor, replay fixtures, and
-testnet acceptance land in one coordinated release.
+No product decision remains open for Control Catalog v1. The versioned bundle
+registry, migration reinitializer, compiler, scheduler eligibility worker,
+control editor, and replay fixtures are implemented and accepted on devnet.
+The coordinated release is complete only after exact-commit testnet promotion
+and its fresh two-hour acceptance run pass.
 
 Engineering may begin from this baseline. External gates control whether the completed system may accept real value; they do not require engineering to redesign the MVP.

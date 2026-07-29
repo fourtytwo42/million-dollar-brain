@@ -1,4 +1,10 @@
-import { appendFileSync, mkdirSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { keccak256, stringToHex } from "viem";
 import { basketAbi } from "./abi";
 import { withAdminTransactionLock } from "./admin-transaction-lock";
@@ -6,11 +12,12 @@ import {
   adminClient,
   dashboard,
   deployment,
+  deploymentAssets,
   publicClient,
   waitForReliableTransactionReceipt,
 } from "./chain";
 import { buildDecisionContext } from "./decision-context";
-import type { DecisionContextV4 } from "./decision-context";
+import type { DecisionContextV5 } from "./decision-context";
 import {
   validateDynamicAllocation,
   type DynamicAllocation,
@@ -32,6 +39,13 @@ import { buildTestnetRebalancePlans, reviveSwapPlans } from "./quote-planner";
 import { collectOfficialMarketData } from "./market-history";
 import { syncLocalMarketPrices } from "./market-price-sync";
 import { networkConfig } from "./network";
+import {
+  applyCompiledRestrictions,
+  compileBrainV1,
+  evaluateBrainEligibility,
+} from "./compiled-brain";
+import { summarizeControlBundle } from "./brain-controls";
+import { stableDecisionJson } from "./decision-math";
 
 const allowed = ["USDG", "NVDA", "AAPL", "ETHX"] as const;
 type Symbol = (typeof allowed)[number];
@@ -234,7 +248,7 @@ async function requestModelJson(
 }
 
 export async function runDynamicResearchAllocator(
-  context: DecisionContextV4,
+  context: DecisionContextV5,
   fallback: DynamicAllocation,
 ): Promise<DynamicDecision> {
   const provider =
@@ -259,12 +273,12 @@ export async function runDynamicResearchAllocator(
       "You are the constrained allocation engine for 42 Braincells.",
       "You may allocate only to active asset IDs in eligibleAssetDirectory.",
       "Never invent an address, asset, fact, source, or tool.",
-      "You have one optional structured research round for at most 16 assets.",
+      `You have one optional structured research round for at most ${context.researchPolicy.maximumAssets} registered assets.`,
       'First return either {"kind":"research","requests":[{"assetId":"chain:address","topics":["identity"]}]}',
       'or {"kind":"allocation","allocation":{"chain:address":integer}}.',
       "Allocation weights total 10000, reserve is at least 2000, no risk asset exceeds its maximumWeightBps,",
       "there are at most nine risk positions, and combined high-volatility weight is at most 3000.",
-      `DecisionContextV4: ${JSON.stringify(context)}`,
+      `DecisionContextV5: ${JSON.stringify(context)}`,
     ].join(" ");
     promptHashes.push(keccak256(stringToHex(basePrompt)));
     const first = await requestModelJson(
@@ -280,6 +294,11 @@ export async function runDynamicResearchAllocator(
         first.parsed.requests,
         context.assetRecords,
       );
+      if (requests.length > context.researchPolicy.maximumAssets) {
+        throw new Error(
+          `research request exceeds the compiled limit of ${context.researchPolicy.maximumAssets}`,
+        );
+      }
       const results = buildStructuredResearchResults(
         requests,
         context.assetRecords,
@@ -302,7 +321,7 @@ export async function runDynamicResearchAllocator(
         "Return the final constrained allocation now.",
         "No more research is allowed.",
         'Return exactly {"kind":"allocation","allocation":{"chain:address":integer}}.',
-        `Immutable DecisionContextV4: ${JSON.stringify(context)}`,
+        `Immutable DecisionContextV5: ${JSON.stringify(context)}`,
         `Recorded structured research: ${JSON.stringify(results)}`,
       ].join(" ");
       promptHashes.push(keccak256(stringToHex(finalPrompt)));
@@ -331,7 +350,7 @@ export async function runDynamicResearchAllocator(
       rationale:
         researchResults.length > 0
           ? "Allocation proposed after one recorded structured research round."
-          : "Allocation proposed from the bounded DecisionContext V4.",
+          : "Allocation proposed from the bounded DecisionContext V5.",
       source: "ai",
       rawOutputs,
       promptHashes,
@@ -359,6 +378,45 @@ function serializable<T>(value: T): T {
   ) as T;
 }
 
+type EligibilityState = {
+  lastReviewAtMs: number | null;
+  lastTradeAtMs: number | null;
+};
+
+function eligibilityPaths() {
+  const dir =
+    process.env.MDB_STATE_DIR ??
+    "/home/hendo420/projects/million-dollar-brain/var";
+  mkdirSync(dir, { recursive: true });
+  return {
+    state: `${dir}/control-eligibility.json`,
+    evidence: `${dir}/control-eligibility.jsonl`,
+  };
+}
+
+function loadEligibilityState(): EligibilityState {
+  const paths = eligibilityPaths();
+  if (!existsSync(paths.state))
+    return { lastReviewAtMs: null, lastTradeAtMs: null };
+  try {
+    return JSON.parse(readFileSync(paths.state, "utf8")) as EligibilityState;
+  } catch {
+    return { lastReviewAtMs: null, lastTradeAtMs: null };
+  }
+}
+
+function saveEligibilityState(
+  state: EligibilityState,
+  evidence: Record<string, unknown>,
+) {
+  const paths = eligibilityPaths();
+  writeFileSync(paths.state, `${JSON.stringify(state)}\n`, { mode: 0o600 });
+  appendFileSync(
+    paths.evidence,
+    `${JSON.stringify({ at: new Date().toISOString(), ...evidence })}\n`,
+  );
+}
+
 export async function runCycle() {
   const d = deployment();
   const redemptionTxHash: `0x${string}` | null = null;
@@ -368,9 +426,97 @@ export async function runCycle() {
   }
   await syncVaultLedger();
   const state = await dashboard();
-  const market = await buildDecisionContext(state);
+  const baseMarket = await buildDecisionContext(state);
+  const manifestAssets = deploymentAssets(d);
+  const compiledBrain = compileBrainV1(
+    state.pieces.map((piece) => ({
+      id: piece.id,
+      weightBps: piece.weight,
+      bundle: piece.controlBundle,
+    })),
+    baseMarket.assetRecords.map((asset, index) => {
+      const manifest = manifestAssets.find(
+        (candidate) => candidate.id === asset.id,
+      );
+      return {
+        id: asset.id,
+        controlId: manifest?.controlId ?? index + 1,
+        symbol: asset.symbol,
+        kind: asset.kind,
+        riskClass: asset.riskClass,
+        active: asset.active,
+        tags: manifest?.tags ?? asset.tags,
+        currentWeightBps: state.currentWeightsBps[asset.symbol] ?? 0,
+      };
+    }),
+  );
+  const market: DecisionContextV5 = {
+    ...baseMarket,
+    schemaVersion: 5,
+    controlCatalog: {
+      schemaVersion: 1,
+      catalogVersion: 1,
+      catalogHash: state.controlCatalog.catalogHash,
+      bundles: state.pieces.map((piece) => ({
+        pieceId: piece.id,
+        bundleHash: piece.controlBundleHash,
+        selectionVersion: piece.controlSelectionVersion,
+        values: piece.controlBundle.values,
+        assetIds: piece.controlBundle.assetIds,
+      })),
+    },
+    compiledBrain,
+    researchPolicy: {
+      ...baseMarket.researchPolicy,
+      maximumAssets: compiledBrain.researchAssetLimit,
+    },
+    inputHash: keccak256(
+      stringToHex(
+        stableDecisionJson({
+          baseInputHash: baseMarket.inputHash,
+          controlCatalogHash: state.controlCatalog.catalogHash,
+          compiledBrain,
+        }),
+      ),
+    ),
+  };
+  const eligibilityState = loadEligibilityState();
+  const eligibility = evaluateBrainEligibility(compiledBrain, {
+    nowMs: Date.now(),
+    lastReviewAtMs: eligibilityState.lastReviewAtMs,
+    lastTradeAtMs: null,
+    currentDriftBps: 10_000,
+    basketVolatility24hBps: null,
+    rollingVolatility80thBps: null,
+    navDrawdownFromSevenDayHighBps: null,
+    fresh: !market.freshness.holdRequired,
+    paused: !state.activation.rebalancesEnabled,
+    cycleRunning: false,
+  });
+  if (state.activation.controlBundlesEnabled && !eligibility.eligible) {
+    saveEligibilityState(eligibilityState, {
+      status: "skipped",
+      inputHash: market.inputHash,
+      eligibility,
+    });
+    return {
+      schemaVersion: 5,
+      at: new Date().toISOString(),
+      source: "scheduler",
+      executionStatus: "skipped",
+      rationale: eligibility.reasons.join(" "),
+      eligibility,
+    };
+  }
+  if (state.activation.controlBundlesEnabled) {
+    eligibilityState.lastReviewAtMs = Date.now();
+    saveEligibilityState(eligibilityState, {
+      status: "review_started",
+      inputHash: market.inputHash,
+      eligibility,
+    });
+  }
   const brain = state.pieces.map((piece) => {
-    const selected = piece.options[piece.preset];
     const active = piece.data.every(
       (dependency) => market.dataAvailability[dependency] === true,
     );
@@ -382,11 +528,11 @@ export async function runCycle() {
       affinity: piece.affinity,
       category: piece.category,
       weightBps: piece.weight,
-      selectedOption: selected.label,
-      signedValue: selected.value,
-      weightedValue: active ? selected.value * piece.weight : 0,
+      selectedOption: summarizeControlBundle(piece.id, piece.controlBundle),
+      signedValue: 0 as const,
+      weightedValue: 0,
       canonicalInstruction: active
-        ? selected.instruction
+        ? compiledBrain.pieceSummaries[piece.id - 1].summary
         : "Inactive because validated structured data is unavailable.",
       tags: piece.tags,
       dataDependencies: piece.data,
@@ -394,14 +540,13 @@ export async function runCycle() {
       owned: !piece.unowned,
     };
   });
-  const nonNeutral = brain.filter(
-    (piece) => piece.signedValue !== 0 && piece.active,
-  );
+  const nonNeutral = brain.filter((piece) => piece.active);
   const tagPreferenceBps: Record<string, number> = {};
   for (const piece of nonNeutral) {
     for (const tag of piece.tags) {
       tagPreferenceBps[tag] =
-        (tagPreferenceBps[tag] ?? 0) + piece.weightedValue;
+        (tagPreferenceBps[tag] ?? 0) +
+        (compiledBrain.sectorPreferences[tag] ?? 0);
     }
   }
   const allocatorContext = {
@@ -440,6 +585,13 @@ export async function runCycle() {
   const dynamicDecision = dynamicMode
     ? await runDynamicResearchAllocator(market, dynamicFallback)
     : null;
+  if (dynamicDecision?.source === "ai") {
+    dynamicDecision.allocationById = applyCompiledRestrictions(
+      dynamicDecision.allocationById,
+      compiledBrain,
+      market.reserveAssetId,
+    );
+  }
   const legacyDecision = dynamicMode
     ? null
     : await askAllocator(
@@ -450,7 +602,7 @@ export async function runCycle() {
           : undefined,
       );
   const allocationById = dynamicDecision?.allocationById ?? null;
-  const allocation: Record<string, number> = dynamicDecision
+  let allocation: Record<string, number> = dynamicDecision
     ? Object.fromEntries(
         market.assetRecords
           .filter((asset) => asset.active)
@@ -460,6 +612,31 @@ export async function runCycle() {
           ]),
       )
     : (legacyDecision?.allocation ?? legacyFallback);
+  if (!dynamicMode && legacyDecision?.source === "ai") {
+    const idBySymbol = new Map(
+      market.assetRecords.map((asset) => [asset.symbol, asset.id]),
+    );
+    const symbolById = new Map(
+      market.assetRecords.map((asset) => [asset.id, asset.symbol]),
+    );
+    const byId = Object.fromEntries(
+      Object.entries(allocation).map(([symbol, weight]) => [
+        idBySymbol.get(symbol) ?? symbol,
+        weight,
+      ]),
+    );
+    const restricted = applyCompiledRestrictions(
+      byId,
+      compiledBrain,
+      market.reserveAssetId,
+    );
+    allocation = Object.fromEntries(
+      Object.entries(restricted).map(([id, weight]) => [
+        symbolById.get(id) ?? id,
+        weight,
+      ]),
+    );
+  }
   const decision = {
     allocation,
     allocationById,
@@ -497,7 +674,23 @@ export async function runCycle() {
   let receipt: Awaited<
     ReturnType<typeof waitForReliableTransactionReceipt>
   > | null = null;
-  if (decision.source === "ai") {
+  const proposedDriftBps = Math.max(
+    0,
+    ...Object.entries(decision.allocation).map(([symbol, weight]) =>
+      Math.abs(weight - (state.currentWeightsBps[symbol] ?? 0)),
+    ),
+  );
+  const cooldownUntil =
+    (eligibilityState.lastTradeAtMs ?? 0) +
+    compiledBrain.cooldownMinutes * 60_000;
+  const executionGateReasons: string[] = [];
+  if (proposedDriftBps < compiledBrain.minimumDriftBps)
+    executionGateReasons.push(
+      `Proposed drift ${proposedDriftBps} bps is below the ${compiledBrain.minimumDriftBps} bps threshold.`,
+    );
+  if (Date.now() < cooldownUntil)
+    executionGateReasons.push("The selected trade cooldown is still active.");
+  if (decision.source === "ai" && executionGateReasons.length === 0) {
     if (dynamicMode && networkConfig.mode === "testnet") {
       await collectOfficialMarketData();
       await syncLocalMarketPrices();
@@ -538,6 +731,14 @@ export async function runCycle() {
         receipt: await waitForReliableTransactionReceipt(transactionHash),
       };
     }));
+    eligibilityState.lastTradeAtMs = Date.now();
+    saveEligibilityState(eligibilityState, {
+      status: "trade_executed",
+      inputHash: market.inputHash,
+      transactionHash: hash,
+      proposedDriftBps,
+      cooldownMinutes: compiledBrain.cooldownMinutes,
+    });
   }
   const stateAfter = await dashboard();
   await syncVaultLedger();
@@ -565,7 +766,11 @@ export async function runCycle() {
   const reserveSymbol =
     d.assets?.find((asset) => asset.kind === "reserve")?.symbol ?? "USDG";
   const record = {
-    schemaVersion: dynamicMode ? 4 : 3,
+    schemaVersion: state.activation.controlBundlesEnabled
+      ? 5
+      : dynamicMode
+        ? 4
+        : 3,
     at: new Date().toISOString(),
     allocation: decision.allocation,
     allocationById: decision.allocationById,
@@ -577,6 +782,13 @@ export async function runCycle() {
     redemptionTxHash,
     block: block.toString(),
     executionStatus: hash ? "executed" : "held",
+    eligibility,
+    executionGate: {
+      proposedDriftBps,
+      minimumDriftBps: compiledBrain.minimumDriftBps,
+      cooldownMinutes: compiledBrain.cooldownMinutes,
+      reasons: executionGateReasons,
+    },
     inputHash: market.inputHash,
     promptHash: decision.promptHash,
     promptHashes: decision.promptHashes,
@@ -599,6 +811,8 @@ export async function runCycle() {
     tradeOutcomes,
     brain: {
       catalogVersion: BRAIN_CATALOG_VERSION,
+      controlCatalogVersion: 1,
+      compiledBrain,
       activePieces: brain.filter((piece) => piece.active).length,
       inactivePieces: brain.filter((piece) => !piece.active).length,
       activeNonNeutralInstructions:
