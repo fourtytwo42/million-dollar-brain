@@ -135,9 +135,13 @@ try {
     assert.ok(response.ok(), `generated portrait asset ${href} must load`);
   }
   assert.equal(
-    artHrefs.filter((href) => href?.startsWith("/brain-art/v4/piece-")).length,
+    artHrefs.filter(
+      (href) =>
+        href?.startsWith("/brain-art/v4/piece-") ||
+        href?.startsWith("/api/brain-image/"),
+    ).length,
     42,
-    "all character portraits must use the cache-safe v3 asset path",
+    "all character portraits must use roster v4 art or an owner-authorized replacement",
   );
   const imageMetrics = await page.evaluate(async () => {
     const paths = Array.from(
