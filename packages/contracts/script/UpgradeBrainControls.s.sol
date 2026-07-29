@@ -23,11 +23,14 @@ contract UpgradeBrainControls is Script {
         bytes32 catalogHash = vm.parseJsonBytes32(payload, ".catalogHash");
         uint256[] memory rawPieceIds = vm.parseJsonUintArray(payload, ".pieceIds");
         uint256[] memory rawCounts = vm.parseJsonUintArray(payload, ".scalarCounts");
-        bytes32[] memory maximumPacks = vm.parseJsonBytes32Array(payload, ".scalarMaximumPacks");
-        bytes32[] memory requiredTags = vm.parseJsonBytes32Array(payload, ".requiredAssetTags");
+        bytes32[] memory maximumPacks =
+            vm.parseJsonBytes32Array(payload, ".scalarMaximumPacks");
+        bytes32[] memory requiredTags =
+            vm.parseJsonBytes32Array(payload, ".requiredAssetTags");
         bytes32[] memory migrationScalars =
             vm.parseJsonBytes32Array(payload, ".migrationScalarPacks");
-        bytes32[] memory migrationAssets = vm.parseJsonBytes32Array(payload, ".migrationAssetPacks");
+        bytes32[] memory migrationAssets =
+            vm.parseJsonBytes32Array(payload, ".migrationAssetPacks");
 
         vm.startBroadcast();
         AssetRegistry registry = _upgradeOrDeployAssetRegistry(admin, assets);
@@ -37,7 +40,8 @@ contract UpgradeBrainControls is Script {
         ERC1967Proxy controlProxy = new ERC1967Proxy(
             address(controlImplementation),
             abi.encodeCall(
-                BrainControlRegistry.initialize, (admin, brainProxy, address(registry), catalogHash)
+                BrainControlRegistry.initialize,
+                (admin, brainProxy, address(registry), catalogHash)
             )
         );
         BrainControlRegistry controls = BrainControlRegistry(address(controlProxy));
@@ -69,7 +73,7 @@ contract UpgradeBrainControls is Script {
         BrainMarketplace brainImplementation = new BrainMarketplace();
         brain.upgradeToAndCall(
             address(brainImplementation),
-            abi.encodeCall(BrainMarketplace.reinitializeV3, (address(controls), false))
+            abi.encodeCall(BrainMarketplace.reinitializeV5, (address(controls), false))
         );
         brain.setControlBundlesEnabled(true);
         vm.stopBroadcast();
@@ -182,7 +186,11 @@ contract UpgradeBrainControls is Script {
         values[0] = keccak256(bytes(a));
     }
 
-    function _two(string memory a, string memory b) private pure returns (bytes32[] memory values) {
+    function _two(string memory a, string memory b)
+        private
+        pure
+        returns (bytes32[] memory values)
+    {
         values = new bytes32[](2);
         values[0] = keccak256(bytes(a));
         values[1] = keccak256(bytes(b));
@@ -200,7 +208,8 @@ contract UpgradeBrainControls is Script {
     }
 
     function _implementationOf(address proxy) private view returns (address) {
-        bytes32 slot = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+        bytes32 slot =
+            0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
         return address(uint160(uint256(vm.load(proxy, slot))));
     }
 }

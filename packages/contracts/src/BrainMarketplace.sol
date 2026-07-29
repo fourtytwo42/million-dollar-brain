@@ -170,9 +170,9 @@ contract BrainMarketplace is
         emit PresetChanged(pieceId, preset, msg.sender);
     }
 
-    function reinitializeV3(address registry, bool enabled)
+    function reinitializeV5(address registry, bool enabled)
         external
-        reinitializer(3)
+        reinitializer(5)
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(registry != address(0), "zero control registry");

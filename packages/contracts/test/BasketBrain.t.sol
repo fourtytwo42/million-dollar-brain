@@ -434,7 +434,7 @@ contract BasketBrainTest is Test {
         vm.stopPrank();
 
         vm.prank(admin);
-        brain.reinitializeV3(makeAddr("control registry"), true);
+        brain.reinitializeV5(makeAddr("control registry"), true);
         vm.prank(alice);
         vm.expectRevert("control catalog enabled");
         brain.setPreset(1, 1);
