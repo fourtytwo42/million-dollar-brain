@@ -15,4 +15,5 @@ if [[ "${MDB_SERVER_SIGNING_ENABLED:-false}" == "true" ]]; then
 fi
 
 cd "$repo_root"
-exec npm run start -w @million-dollar-brain/web
+: "${PORT:?PORT is required}"
+exec node node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port "$PORT"
