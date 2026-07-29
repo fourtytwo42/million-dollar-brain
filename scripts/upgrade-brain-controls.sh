@@ -52,7 +52,7 @@ else
   [[ -r "${MDB_OPERATOR_PASSWORD_FILE:?}" ]]
   [[ -z "$(git -C "$repo_root" status --porcelain)" ]]
   [[ "$(git -C "$repo_root" rev-parse HEAD)" == "$(git -C "$repo_root" rev-parse '@{u}')" ]]
-  deployer="${MDB_DEPLOYER_ADDRESS:?}"
+  deployer="${MDB_DEPLOYER_ADDRESS:-$(jq -er '.deployer' "$manifest")}"
   signer=(--keystore "$MDB_OPERATOR_KEYSTORE" --password-file "$MDB_OPERATOR_PASSWORD_FILE")
   assets="$(jq -r '[.assets[].address] | join(",")' "$manifest")"
   asset_ids="$(seq -s, 1 "$(jq '.assets | length' "$manifest")")"
