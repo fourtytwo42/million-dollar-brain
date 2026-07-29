@@ -51,6 +51,7 @@ if ! sudo -u postgres psql -Atc "select 1 from pg_database where datname='millio
   dump="$(mktemp /tmp/mdb-devnet.XXXXXX.dump)"
   trap 'rm -f "$dump"' EXIT
   sudo -u postgres pg_dump -Fc milliondollarbrain >"$dump"
+  chmod 0644 "$dump"
   sudo -u postgres createdb -O "$owner" milliondollarbrain_devnet
   sudo -u postgres pg_restore --no-owner --role="$owner" -d milliondollarbrain_devnet "$dump"
   rm -f "$dump"
