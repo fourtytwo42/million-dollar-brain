@@ -31,6 +31,11 @@
     "node": ">=24.18.0"
   },
   "overrides": {
+    "axios": "1.19.0",
+    "postcss": "8.5.25",
+    "sharp": "0.35.3",
+    "uuid": "11.1.1",
+    "ws": "8.21.1",
     "@rainbow-me/rainbowkit@2.2.11": {
       "cuer@0.0.3": {
         "qr": "0.5.5"

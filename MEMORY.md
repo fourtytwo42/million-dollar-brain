@@ -61,7 +61,8 @@ Durable project context lives here. Update this file whenever information should
   `scripts/deploy-mainnet.sh`, `apps/web/lib/release-status.ts`,
   `tests/mainnet-readiness.test.mjs`, `MAINNET_EDGE_RELEASE.md`.
 - Commands/tests: 12/12 graduation tests; 35/35 Foundry tests; production
-  Next.js build; live read-only shadow collection against chain 4663.
+  Next.js build; live read-only shadow collection against chain 4663; wallet
+  and network regression suites; production dependency audit.
 - Result: Official Chainlink mappings validate for AAPL, NVDA, MSFT, SPY, QQQ,
   and WETH; SOXX remains fail-closed without an official mapping. SEC Company
   Facts validates AAPL/NVDA/MSFT capitalization and SEC N-PORT validates
@@ -72,6 +73,9 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Configure Alchemy and 0x without committing secrets. WETH's
   canonical Robinhood-chain deposited value was about $44.9 million at the
   latest check and truthfully fails the locked $100 million threshold.
+- Dependency gate: Pinned patched transitive Axios, PostCSS, Sharp, UUID, and
+  WebSocket releases through root overrides. `npm audit --omit=dev` reports
+  zero vulnerabilities after the update.
 
 ### 2026-07-29 - BRAINS Robinhood Testnet promotion
 
