@@ -13,6 +13,8 @@ cd "$repo_root"
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse '@{u}')" ]]
 (cd packages/contracts && forge fmt --check)
 npm run test:contracts
+npm run test:brain-controls
+npm run test:compiled-brain
 npm run test:meme
 npm run test:portfolio-display
 npm run test:portrait
@@ -22,6 +24,7 @@ npm run test:market-data
 npm run test:network
 npm run test:wallet
 npm run test:graduation
+npm run format:check
 npm --workspace apps/web run build
 case "$environment" in
   devnet)
