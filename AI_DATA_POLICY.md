@@ -15,7 +15,7 @@ Ornith cannot add an asset, browse for a token contract, choose a data source, c
 
 ## 2. MVP asset universe
 
-The hourly decision package contains:
+Each scheduled decision package contains:
 
 - USDG as the required reserve asset.
 - No fixed ceiling on qualified candidates; no more than nine risk positions
@@ -153,29 +153,53 @@ research remain excluded.
 
 ## 7. How the brain changes data use
 
-Brain Piece 42 selects data-group weighting:
+Brain controls steer optional attention, comparison, research, and reaction.
+They cannot hide or remove mandatory safety evidence.
 
-| Preset                 | Market and technical | Issuer fundamentals | Macro and corporate actions |
-| ---------------------- | -------------------: | ------------------: | --------------------------: |
-| Market and technical   |                  70% |                 20% |                         10% |
-| Balanced data          |                  50% |                 35% |                         15% |
-| Fundamentals and macro |                  30% |                 50% |                         20% |
+Always-on data includes:
 
-Other pieces narrow the focus further:
+- Exact asset identity, contract, registry status, and trade permissions.
+- Current holdings, value, weight, reserve, NAV, cost basis, and P&L.
+- Validated price and age, bid, ask, spread, liquidity, halt state, oracle
+  pause, and corporate-action transition.
+- Hard limits, pending flows, previous target, and execution result and
+  availability.
 
-- Holding Horizon selects the return windows emphasized.
-- Trend, valuation, quality, volatility, and corporate-action pieces control their corresponding metrics.
-- Sector affinities change scores only for assets carrying approved registry tags.
-- Liquidity and trading-cost pieces influence preferences inside the hard execution limits.
+Data-Diet Chef allocates exactly 100 optional-attention points among:
 
-These settings steer ranking. They do not override the stable reserve, asset caps, liquidity minimums, oracle freshness, halts, turnover limits, or other hard rules.
+- Price and technical features.
+- Fundamentals.
+- Valuation.
+- Macro.
+- Liquidity and execution.
+- Portfolio history.
+- Decision outcomes.
+- Corporate events.
+
+It also selects context appetite, up to four history windows, deterministic
+truncation priority, and optional dossier depth. Attention Hydra selects
+timeframes, reference comparisons, and the policy for conflicting horizons.
+Holding Horizon, Momentum Moth, The Adult in the Room, Bargain-Bin Prophet,
+Macro Weather Goblin, Headline-Risk Manager, Exit-Liquidity Unicorn, and
+Trust-Issues Owl further steer their corresponding optional evidence.
+
+Trust-Issues Owl may permit one structured research round for zero to four
+registered assets. The protocol hard cap remains sixteen. Research uses only
+registered IDs and protocol-authored questions.
+
+These controls alter prominence and scoring, not truth or availability. They
+do not override the stable reserve, asset caps, qualification, liquidity
+minimums, oracle freshness, halts, turnover limits, or other hard rules. Raw
+candles, old prompts, prior conversations, unlimited events, owner URLs, and
+web prose remain excluded.
 
 ## 8. Reproducibility
 
 Every cycle stores:
 
 - Asset Registry version.
-- Brain version and all 42 selections.
+- Brain schema version, all 42 control bundles, compiled result, conflicts, and
+  bundle hashes.
 - Source record identifiers and observation timestamps.
 - Hash of the structured decision package.
 - Formula versions.

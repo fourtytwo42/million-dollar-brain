@@ -2,31 +2,34 @@
 
 ## Product Requirements Document
 
-**Version:** 1.1
+**Version:** 1.2
 **Status:** Mainnet-edge engineering candidate; real-value activation disabled
-**Date:** 2026-07-28
+**Date:** 2026-07-29
 **Implementation status:** Local Anvil remains usable. A fresh public
 chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
 RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
 A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
-broadcast mode. No mainnet deployment or real-value activation has occurred.
+broadcast mode. Control Catalog v1 is specified but not deployed; current
+runtimes remain on catalog v3 until the coordinated migration passes. No
+mainnet deployment or real-value activation has occurred.
 
 ### Normative PRD set
 
 This PRD is the top-level product authority. The following linked specifications are normative parts of the PRD and contain details that would make this file unnecessarily repetitive:
 
-| Specification             | Authority                                                                                                 |
-| ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `BRAIN_PRESET_CATALOG.md` | All 42 pieces, options, defaults, weights, effects, confidence thresholds, and data dependencies          |
-| `BRAIN_SCHEMA.md`         | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas             |
-| `AI_DATA_POLICY.md`       | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior   |
-| `AI_EXPLAINABILITY.md`    | Brain-to-proposal-to-execution attribution and public explanation requirements                            |
-| `KEEPER_GAS_POLICY.md`    | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation         |
-| `UX_SCREENS.md`           | Screen consolidation, drawers, modals, system states, and mobile behavior                                 |
-| `TECH_STACK.md`           | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                      |
-| `CHAIN_COMPATIBILITY.md`  | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT      |
-| `DESIGN_SYSTEM.md`        | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility       |
-| `BUILD_READINESS.md`      | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates |
+| Specification              | Authority                                                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `BRAIN_CONTROL_CATALOG.md` | Target Control Catalog v1: all 42 multi-control panels, defaults, compiler effects, cadence, data attention, migration, and acceptance |
+| `BRAIN_PRESET_CATALOG.md`  | Deployed catalog-v3 five-mood record and normative migration source; not the target control UX                                         |
+| `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                          |
+| `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                                |
+| `AI_EXPLAINABILITY.md`     | Brain-to-proposal-to-execution attribution and public explanation requirements                                                         |
+| `KEEPER_GAS_POLICY.md`     | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation                                      |
+| `UX_SCREENS.md`            | Screen consolidation, drawers, modals, system states, and mobile behavior                                                              |
+| `TECH_STACK.md`            | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                                                   |
+| `CHAIN_COMPATIBILITY.md`   | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT                                   |
+| `DESIGN_SYSTEM.md`         | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility                                    |
+| `BUILD_READINESS.md`       | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates                              |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
@@ -36,9 +39,19 @@ If an older concept note conflicts with this PRD set, this PRD set controls. `PR
 
 42 Braincells is a community-steered portfolio protocol on Robinhood Chain.
 
-Users deposit an approved base asset into a basket and receive transferable basket shares priced from net asset value. A constrained AI reviews the portfolio on a schedule, initially hourly, and proposes the basket's target holdings for the next hour. Deterministic contracts enforce asset, risk, turnover, liquidity, oracle, and execution restrictions before any trade occurs.
+Users buy basket-share tokens with an approved base asset and may sell them
+atomically for their proportional share of live basket NAV. A constrained AI
+reviews the portfolio on a brain-controlled bounded schedule and proposes
+target holdings until the next eligible review. Deterministic contracts
+enforce asset, risk, turnover, liquidity, oracle, and execution restrictions
+before any trade occurs.
 
-The AI is steered by a visual brain containing exactly 42 always-for-sale pieces. Each piece has an immutable affinity, immutable influence weight, and closed set of protocol-defined options. Owners can select among the allowed options but cannot submit text or instructions.
+The AI is steered by a visual brain containing exactly 42 always-for-sale
+pieces. Each piece has an immutable affinity, immutable influence weight, and
+a bespoke panel of closed protocol-defined controls. Owners can combine
+bounded choices, asset directives, timing preferences, and data-attention
+settings but cannot submit text, arbitrary contracts, prompts, or data
+sources.
 
 Protocol revenue is divided between:
 
@@ -98,7 +111,9 @@ A user who deposits the base asset, receives basket shares, transfers shares, or
 
 ### 5.2 Brain-piece owner
 
-A wallet that owns one or more brain pieces, selects their allowed options, receives reward accrual, and may be bought out at the displayed on-chain price.
+A wallet that owns one or more brain pieces, changes their allowed control
+bundles, receives reward accrual, and may be bought out at the displayed
+on-chain price.
 
 ### 5.3 Creator
 
@@ -131,7 +146,8 @@ The MVP consists of the following upgradeable components:
    - Restricts transfers to the Brain Marketplace.
 
 3. **Brain Settings Registry**
-   - Stores each piece's affinity, allowed option IDs, default, current selection, and version.
+   - Stores each piece's affinity, versioned control schema, packed current
+     bundle, selection version, and bundle hash.
 
 4. **Brain Marketplace**
    - Sells unowned pieces at their initial price.
@@ -242,7 +258,12 @@ Requirements:
 
 ## 8. Brain requirements
 
-The proposed affinity, weighting, aggregation, and asset-selection design is maintained in `BRAIN_SCHEMA.md`. Complete option meanings, defaults, effects, and data dependencies are maintained in `BRAIN_PRESET_CATALOG.md`. The free-source, deterministic-calculation, no-browsing, and asset-universe rules are maintained in `AI_DATA_POLICY.md`.
+The affinity, weighting, compilation, and asset-selection design is maintained
+in `BRAIN_SCHEMA.md`. The target multi-control system is defined in
+`BRAIN_CONTROL_CATALOG.md`. `BRAIN_PRESET_CATALOG.md` records the deployed
+catalog-v3 state and its migration source. The free-source,
+deterministic-calculation, no-browsing, and asset-universe rules are maintained
+in `AI_DATA_POLICY.md`.
 
 ### 8.1 Fixed supply
 
@@ -252,35 +273,60 @@ The proposed affinity, weighting, aggregation, and asset-selection design is mai
 - Pieces have different sizes and immutable influence weights.
 - All piece weights sum to 10,000 basis points.
 
-### 8.2 Affinities and options
+### 8.2 Affinities and control bundles
 
 Each piece stores:
 
 - Immutable affinity ID.
 - Immutable influence weight.
-- Closed protocol-defined option list.
-- Default option.
-- Current selected option.
+- Versioned closed protocol-defined control schema.
+- Default control bundle.
+- Current packed control bundle and hash.
 - Selection version.
-- Last selection timestamp.
+- Effective cycle and last selection timestamp.
 
 Owners may:
 
-- View every affinity, option, weight, and selection.
-- Select one allowed option for each owned piece.
-- Change the selection at any time on-chain.
+- View every affinity, control, default, weight, current value, and compiled
+  effect.
+- Combine the piece's bounded toggles, choices, fixed steps, asset pickers,
+  thresholds, attention budgets, reaction matrices, and constrained rule
+  cards.
+- Change all controls for one owned piece in one on-chain transaction.
+- Select assets only from the piece's allowed scope of the currently qualified
+  Asset Registry.
 
 Owners may not:
 
-- Enter text, links, instructions, prompts, or contract addresses into the AI
-  steering context.
-- Select an option not defined for that piece.
+- Enter text, links, instructions, prompts, arbitrary data sources, or contract
+  addresses into the AI steering context.
+- Select a value or asset not defined for that control.
 - Change the piece's affinity or weight.
 - Override the asset registry or hard risk controls.
+- Hide mandatory identity, price, execution, safety, holdings, accounting, or
+  halt data.
 
 A change made after the current AI snapshot affects the next scheduled cycle.
+It never triggers an immediate cycle.
 
-### 8.2.1 Owner profile customization
+### 8.2.1 Control families and compiler precedence
+
+- **Executive Dysfunction** cells steer portfolio-wide mandate, reserve,
+  diversification, horizon, and responsiveness.
+- **Market Mystics** steer signals, trading styles, entries, exits, and
+  timeframes.
+- **Sector Weirdos** steer registry-tagged sectors, preferred qualified assets,
+  champions, exposure preferences, and restrictive directives.
+- **Decision Goblins** steer confidence, structured research, macro and event
+  reactions, liquidity, execution cost, profit-taking, and context attention.
+
+The compiler applies emergency and hard protocol rules first, Asset Registry
+eligibility second, restrictive asset directives third, portfolio limits
+fourth, weighted asset and sector preferences fifth, strategy/timing/data
+attention sixth, and Ornith's allocation last. The exact rules and all 42
+control panels are normative in `BRAIN_CONTROL_CATALOG.md`.
+
+### 8.2.2 Owner profile customization
 
 - Each purchaser receives one combined name, media, and optional-link
   customization for that ownership period.
@@ -402,13 +448,28 @@ Automation Reserve USDG is committed operating revenue and is not creator-withdr
 
 ### 10.1 Schedule
 
-- The initial target schedule is one decision cycle per hour.
-- The final interval must be configurable through an upgradeable or administrative parameter.
+- A scheduler eligibility worker wakes every five minutes.
+- Time-Horizon Time Machine selects a bounded base review cadence from 15
+  minutes, 30 minutes, one hour, four hours, six hours, or 24 hours.
+- Caffeinated Hummingbird may temporarily shorten the review cadence after
+  validated volatility or drawdown triggers.
+- Gas-Fee Furnace controls the bounded minimum time between executed trades and
+  minimum allocation drift.
+- Systemd timers are stable infrastructure and are not dynamically rewritten
+  from brain state.
 - AI cycles are independent of user deposits, redemptions, brain activity, claims, and governance actions.
 - Each cycle uses an immutable brain, Asset Registry, portfolio, price, and data snapshot identified by versions and hashes.
 - A brain setting changed after the snapshot affects the next cycle.
+- A brain setting change never triggers an immediate cycle.
+- At most one cycle may run at a time, and missed windows do not create a
+  backlog.
+- Emergency pause, stale mandatory data, cooldowns, turnover caps, and risk
+  controls always take precedence over owner cadence choices.
 - Deposits and redemptions after proposal creation do not change its percentage targets; deterministic execution applies accepted targets to the then-current balances and NAV.
 - A valid proposal expires when its deadline passes or a newer cycle supersedes it.
+- Cycle history records base and effective cadence, normal or panic mode,
+  eligibility reason, time since the previous review and trade, drift, Hold or
+  skip reason, and execution result.
 
 ### 10.2 Model providers
 
@@ -430,7 +491,7 @@ Primary model:
 | Codex/catalog slug | `gpu45-ornith-1-0-35b-q5-k-m-688b8d0a` |
 | Modality           | Text only                              |
 | Context            | 262,144 tokens                         |
-| Role               | Primary hourly portfolio allocator     |
+| Role               | Primary scheduled portfolio allocator  |
 
 Text-only operation is sufficient because the model receives structured text and JSON. Images are not part of the allocation input.
 
@@ -466,7 +527,8 @@ Every cycle records:
 Every cycle supplies:
 
 - Protocol constitution.
-- All 42 affinities, selected options, weights, and canonical option meanings.
+- All 42 affinities, immutable weights, current control bundles, canonical
+  effects, compiler conflicts, and the complete `CompiledBrainV1`.
 - Approved asset IDs, contracts, categories, risk tiers, and active status.
 - Current asset prices, price ages, liquidity, volume, spreads, volatility, and recent returns.
 - Current basket balances, values, weights, NAV, reserve, and target drift.
@@ -477,12 +539,16 @@ Every cycle supplies:
 - Complete structured dossiers for every active asset, including source timestamps, formula versions, and validity flags.
 - At most 12 compact detailed cycles. Older history enters only through fixed 24-hour, 7-day, and 30-day rollups.
 
-No user-authored text enters the model context.
+No user-authored text, presentation profile, arbitrary contract, arbitrary
+URL, or arbitrary data source enters the model context.
 
 The complete brain is supplied in two forms:
 
-- Piece-by-piece affinities, options, selections, and weights.
-- A normalized machine-readable preference vector produced by aggregating the selected option effects.
+- Piece-by-piece affinities, control values, canonical meanings, dependencies,
+  and immutable weights.
+- A normalized machine-readable compilation containing portfolio preferences,
+  asset directives and scores, cadence/cooldown rules, optional data-attention
+  budgets, bounded research limits, inactive effects, and conflict winners.
 
 The asset catalog is supplied from the on-chain Asset Registry and contains only active, approved assets. Dynamic market statistics are supplied by approved data adapters and included in the cycle input hash.
 
@@ -504,6 +570,14 @@ Required stale portfolio, valuation, quote, halt, or execution state produces
 a Hold. PostgreSQL stores both model calls, exact contexts, hashes, research,
 raw outputs, validated allocation, snapshots, observations, accounting,
 outcomes, and execution or simulation receipts.
+
+Mandatory identity, qualification, holdings, NAV, accounting, price freshness,
+bid/ask, spread, liquidity, halt, oracle-pause, corporate-action-transition,
+hard-limit, flow, and execution-availability fields are always present. Brain
+controls may emphasize optional calculated features, fundamentals, macro,
+comparisons, outcomes, and structured research but cannot suppress mandatory
+evidence. Raw candles, old prompts, prior conversations, unlimited events, and
+web prose remain excluded.
 
 The native market collector samples official Robinhood quotes for every
 registered candidate and configured reference-only benchmark. It applies the
@@ -871,14 +945,24 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 3. Vault transfers the requested available amount.
 4. Withdrawal event and dashboard history update.
 
-### 17.6 Change a brain preset
+### 17.6 Change a braincell's controls
 
 1. Owner opens one of their brain pieces.
-2. Application compares all five closed moods and shows the current aggregate effect, character identity, lore, and underlying affinity.
-3. Owner previews the new aggregate effect and its required data.
-4. Owner signs the on-chain setting change and pays gas.
-5. Registry records the new selection and brain version.
-6. The change applies to the next cycle snapshot and does not trigger an immediate rebalance.
+2. Inspector shows a concise compiled steering summary and a clear **Change
+   controls** action.
+3. A focused editor presents only that cell's bounded toggles, choices,
+   fixed-step controls, registry-scoped asset pickers, thresholds, attention
+   budgets, or rule cards.
+4. Every meme label is paired with a plain-English effect and unavailable-data
+   behavior.
+5. Owner previews current versus proposed compiled effects, affected assets,
+   conflicts, inactive dependencies, and the next eligible cycle.
+6. Owner signs one transaction containing the entire valid control bundle and
+   pays gas.
+7. Registry records the schema version, bundle, bundle hash, and selection
+   version.
+8. The change applies to the next eligible cycle snapshot and does not trigger
+   an immediate rebalance.
 
 ### 17.7 Customize a braincell profile
 
@@ -1022,10 +1106,12 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - Initial MDBS NAV is 1 USDG, creator seed capital is 10,000 USDG, audited-pilot TVL is capped at 100,000 USDG, and the per-wallet deposit cap is 25,000 USDG.
 - Basket fees split equally between the Creator DAO Vault and brain owners.
 - Within the creator half of basket fees, 40% of the total fee is creator-withdrawable and 10% of the total fee funds the Automation Reserve.
-- Basket-share transfers, internal rebalances, managed NAV, investment gains, preset changes, and reward claims have no additional protocol fee.
+- Basket-share transfers, internal rebalances, managed NAV, investment gains,
+  brain control changes, and reward claims have no additional protocol fee.
 - Fees and brain-owner rewards are denominated in USDG for the MVP.
 - The brain contains exactly 42 differently sized pieces.
-- Brain pieces have fixed affinities and closed options with no user text.
+- Brain pieces have fixed affinities and bespoke closed multi-control panels
+  with no user text.
 - Brain pieces are always for sale at 120% of their previous settled price.
 - Initial total brain valuation is 42,000 USDG, producing tier prices of 2,100, 1,260, 630, and 525 USDG per piece.
 - Full initial brain-piece purchase revenue goes to the Creator DAO Vault.
@@ -1034,8 +1120,11 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The brain piece being transferred is excluded from the distribution generated by its own sale.
 - If a fee event has no eligible owned brain piece, its brain-owner portion goes to the Creator DAO Vault and is not claimable by future owners.
 - User actions remain available on-chain at any time and users pay their own gas.
-- AI allocation runs on a separate schedule, initially hourly.
-- The hourly snapshot begins at minute 00 UTC, inference is due by minute 12, and proposals expire at minute 20.
+- AI allocation runs independently from user actions. A five-minute scheduler
+  eligibility worker evaluates the bounded compiled cadence.
+- Base review cadence ranges from 15 minutes to 24 hours. Adaptive panic
+  cadence, trade cooldown, drift, concurrency, expiry, and no-backlog behavior
+  are defined in `BRAIN_CONTROL_CATALOG.md`.
 - The automation server uses a registered native-ETH Keeper Wallet to submit scheduled decisions.
 - The Keeper Wallet is refueled and reimbursed from the isolated Automation Reserve and has no custody or administrative authority.
 - The AI receives the complete brain, approved assets, current basket, statistics, limits, and prior result.
@@ -1051,7 +1140,10 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
   research. One bounded structured research round is permitted for at most 16
   registered assets.
 - Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
-- Piece 42 is Data Focus and weights market, fundamental, macro, and corporate-action metrics.
+- Data-Diet Chef allocates optional attention among technical, fundamental,
+  valuation, macro, liquidity, portfolio-history, outcome, and corporate-event
+  evidence. Attention Hydra selects bounded timeframes and comparisons.
+  Mandatory safety and accounting data cannot be removed.
 - The MVP uses three primary public screens: Brain, Basket, and Decisions. Account, detail, transaction, education, and activity experiences are consolidated into drawers, modals, or tabs; Admin remains separate.
 - Basket holdings views show only assets with positive on-chain balances. Decision summaries, details, and generated share cards show only assets with positive target weights for that recorded cycle; zero-balance and zero-weight assets remain available to protocol logic but are omitted from portfolio presentation.
 - A first-time visitor receives a dismissible floating four-step tour explaining basket ownership, brain steering, scheduled AI proposals, and deterministic contract execution. It presents one step at a time, never changes document flow or pushes primary product content down, and keeps its glossary collapsed until requested. `How it works` permanently reopens the tour, and every primary screen carries a plain-language purpose statement.
@@ -1081,5 +1173,11 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The PRD and its ten linked normative specifications form one authoritative requirements set.
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
 - The private source repository is `fourtytwo42/million-dollar-brain`.
-- The MVP schedule is hourly and configurable; any future interval change is an administrative protocol change.
+- Control Catalog v1 replaces the target one-mood-per-piece UX with 42 bespoke
+  multi-control panels. Catalog v3 remains the deployed state and migration
+  source until the coordinated contract, compiler, UI, replay, and testnet
+  rollout passes.
+- Owners may steer optional evidence attention and bounded structured research,
+  but mandatory safety, valuation, execution, and accounting data are always
+  supplied.
 - Cycle inputs use immutable versioned snapshots; later user actions do not silently mutate an already signed proposal.

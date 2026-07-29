@@ -1,10 +1,15 @@
-# MillionDollar Brain Preset and Asset Schema
+# 42 Braincells Control and Asset Schema
 
-**Version:** 0.2  
-**Status:** Normative MVP specification  
+**Version:** 1.0
+
+**Status:** Normative target specification; catalog-v3 compatibility retained
+
 **Purpose:** Define how the 42 brain pieces steer the AI and how the protocol tells the AI which assets it may hold.
 
-The complete user-facing option meanings, locked MVP defaults, behavioral effects, and data dependencies are defined in `BRAIN_PRESET_CATALOG.md`.
+The target control definitions, defaults, effects, cadence, data-attention
+rules, and migration are defined in `BRAIN_CONTROL_CATALOG.md`.
+`BRAIN_PRESET_CATALOG.md` remains the deployed catalog-v3 record and migration
+source.
 
 ## 1. Core design rule
 
@@ -16,7 +21,8 @@ The system has three separate layers:
    - Stores hard restrictions the AI cannot change.
 
 2. **Brain**
-   - Expresses weighted preferences through closed preset options.
+   - Expresses weighted preferences, bounded directives, cadence, and optional
+     data attention through closed multi-control bundles.
    - Does not directly authorize contracts or execute trades.
    - Does not accept user text.
 
@@ -29,24 +35,31 @@ The deterministic portfolio compiler compares target weights with current weight
 
 ## 2. Brain-piece structure
 
-Every piece has:
+Under Control Catalog v1 every piece has:
 
 ```json
 {
   "piece_id": 1,
   "affinity_id": "capital_objective",
   "weight_bps": 500,
-  "allowed_option_ids": [0, 1, 2, 3, 4],
-  "default_option_id": 2,
-  "selected_option_id": 2,
+  "control_schema_version": 1,
+  "packed_control_values": "0x...",
+  "bundle_hash": "0x...",
   "selection_version": 4,
   "effective_cycle": 1205
 }
 ```
 
-On-chain state stores IDs, weights, ownership, selections, and versions. Each
-option has protocol-authored metadata and a content hash so the exact meaning
-supplied to the model is auditable.
+On-chain state stores IDs, weights, ownership, versioned packed bundles, and
+hashes. Each control and value has protocol-authored metadata and a content
+hash so its exact meaning is auditable. The schema supports closed choices,
+toggles, fixed steps, registry-scoped asset sets and rankings, attention
+budgets, thresholds, reaction matrices, and constrained rule cards.
+
+The contract accepts one atomic bundle update per transaction. It rejects
+unknown control IDs, out-of-range values, excessive selections, duplicate
+assets, unqualified or out-of-scope registry IDs, and unsupported schema
+versions.
 
 Each piece also stores presentation-only profile state:
 
@@ -68,7 +81,16 @@ combined profile change. The admin may reset `portrait_hash` to zero for
 media moderation or clear `profile_url` for link moderation without altering
 the serial or restoring that allowance. The custom name, portrait hash, hosted
 media, and profile URL are never included in the AI prompt; only the immutable
-character, affinity, preset, and canonical instruction influence allocation.
+character, affinity, control bundle, and canonical compiled effects influence
+allocation.
+
+### 2.1 Catalog-v3 compatibility
+
+Before the coordinated Control Catalog v1 upgrade, the deployed registry uses
+`selected_option_id` with five moods. The reinitializer maps each current mood
+to a protocol-authored v1 bundle without changing ownership, prices, rewards,
+profile serials, or historical evidence. Old cycles retain their original
+catalog version and selected option.
 
 ## 3. MVP weight tiers
 
@@ -82,7 +104,11 @@ character, affinity, preset, and canonical instruction influence allocation.
 
 No single piece controls more than 5% of the complete brain.
 
-## 4. MVP 42-piece brain
+## 4. Legacy catalog-v3 42-piece brain
+
+The tables in this section describe deployed migration inputs, not the target
+owner interface. The normative v1 controls for all 42 IDs are in
+`BRAIN_CONTROL_CATALOG.md`.
 
 ### 4.1 Core mandate pieces
 
@@ -158,11 +184,15 @@ If no active asset has a selected tag, that affinity contributes no portfolio pr
 |  41 | New-position threshold   |    125 | Very selective       | Normal            | Explore more names      |
 |  42 | Data focus               |    125 | Market and technical | Balanced data     | Fundamentals and macro  |
 
-Piece 42 changes the relative weighting of approved structured-data groups. It does not authorize browsing or add assets to the registry.
+Piece 42 allocates optional-attention points among approved structured-data
+groups and selects bounded context depth and truncation preferences. Piece 29
+selects bounded timeframes and reference comparisons, while other pieces steer
+their corresponding optional evidence. None can remove mandatory safety data,
+authorize browsing, or add assets to the registry.
 
-## 5. Option effects
+## 5. Control effects
 
-Each option has two meanings:
+Each control value has two meanings:
 
 1. **Canonical model instruction**
    - A short protocol-written statement placed in the model context.
@@ -174,10 +204,11 @@ Example:
 
 ```json
 {
-  "affinity_id": "technology_tilt",
-  "option_id": 2,
-  "label": "Overweight",
-  "instruction": "Prefer approved technology-tagged assets when their data supports inclusion.",
+  "piece_id": 21,
+  "control_id": "sector_status",
+  "value": "overweight",
+  "label": "The fabs demand tribute",
+  "instruction": "Prefer qualified AI-and-semiconductor assets when validated evidence supports inclusion.",
   "effects": [
     {
       "dimension": "tag_preference:technology",
@@ -187,57 +218,67 @@ Example:
 }
 ```
 
-Another example:
+Registry-scoped asset example:
 
 ```json
 {
-  "affinity_id": "stable_reserve_preference",
-  "option_id": 2,
-  "label": "High reserve",
-  "instruction": "Prefer a stable-asset allocation above the protocol minimum.",
-  "effects": [
-    {
-      "dimension": "stable_reserve_bias",
-      "value": 1
-    }
-  ]
+  "piece_id": 21,
+  "control_id": "asset_directive",
+  "asset_id": 104,
+  "value": "no_new_buys",
+  "allowed_registry_tag": "ai_semiconductor"
 }
 ```
 
-The brain compiler multiplies each effect by the piece's weight and produces normalized preference scores.
+The brain compiler weights positive preferences by the piece's immutable
+influence. Restrictive directives use the deterministic precedence below
+rather than being diluted by positive scores.
 
 ## 6. Conflict resolution
 
-The brain should not be concatenated into 42 unrelated sentences without interpretation.
+The brain is compiled before it reaches Ornith. It is not a concatenation of
+owner strings or 42 unrelated instructions.
 
 For each cycle:
 
-1. Read all 42 selections.
-2. Convert every option to its canonical effects.
-3. Multiply effects by piece weights.
-4. Aggregate effects by dimension.
-5. Normalize each dimension to a defined range.
-6. Supply the model with:
-   - The complete piece-by-piece brain.
-   - The aggregate preference vector.
-   - The permanent protocol constitution.
+1. Read and validate all 42 versioned bundles.
+2. Remove effects whose optional dependencies are unavailable and record why.
+3. Apply emergency pauses and immutable protocol rules.
+4. Apply Asset Registry eligibility and execution availability.
+5. Resolve restrictive directives in the order `exit`, `disabled`,
+   `no_new_buys`, and `reduce`.
+6. Apply reserve, concentration, position-count, volatility, and turnover
+   limits.
+7. Weight and aggregate asset, sector, strategy, and evidence preferences.
+8. Compile cadence, cooldown, drift, data-attention, and research budgets.
+9. Supply Ornith with the piece-by-piece controls, compiled result, and
+   permanent protocol constitution.
 
 Example:
 
 ```json
 {
-  "aggregate_preferences": {
+  "compiled_brain": {
     "risk_posture": 0.18,
     "equity_crypto_tilt": -0.24,
     "diversification": 0.51,
     "stable_reserve_bias": 0.32,
     "tag_preference:technology": 0.15,
-    "tag_preference:crypto_major": -0.08
+    "asset_directives": {
+      "104": "no_new_buys"
+    },
+    "base_review_minutes": 60,
+    "minimum_trade_cooldown_minutes": 60,
+    "minimum_drift_bps": 200,
+    "research_asset_limit": 2
   }
 }
 ```
 
-Hard risk rules always outrank the aggregate preference vector.
+For conflicts on one asset, the most restrictive valid directive wins; equal
+restrictive directives break ties by lower piece ID. Positive preferences
+aggregate by immutable weight. Hard risk rules always outrank the compiled
+brain.
 
 ## 7. Asset Registry
 
@@ -293,7 +334,7 @@ Only the configured asset-listing administrator may add, pause, or change assets
 
 ### 7.2 Dynamic cycle data
 
-For every active asset, the hourly decision package includes:
+For every active asset, each scheduled decision package includes:
 
 - Current USD price.
 - Price timestamp and age.
@@ -364,7 +405,7 @@ the orchestrator returns only recorded official/on-chain evidence.
 
 ## 9. What the AI returns
 
-The AI returns the desired basket for the next hour:
+The AI returns the desired basket until the next eligible review:
 
 ```json
 {
@@ -446,7 +487,8 @@ Pausing an asset removes it from future purchases. The risk controller determine
 ## 12. Locked MVP configuration
 
 1. The four weight tiers and 10,000 bps total brain weight are accepted.
-2. All 42 pieces affect allocation. Piece 42 controls structured-data focus.
+2. All 42 pieces affect allocation, cadence, execution preferences, or
+   optional structured-data attention as defined in the Control Catalog.
 3. The 16 asset and sector affinities are accepted.
 4. Asset and sector options are `Underweight / Neutral / Overweight`.
 5. A new owner inherits the piece's current setting and may change it after ownership settles.

@@ -1,9 +1,14 @@
 # MillionDollar Brain Preset Catalog
 
 **Version:** 0.3
-**Status:** AI-facing collectible catalog v3
+**Status:** Deployed catalog-v3 record and Control Catalog v1 migration source
 **Pieces:** 42  
 **Options per piece:** 5
+
+> New development targets the multi-control system in
+> `BRAIN_CONTROL_CATALOG.md`. This document remains normative for currently
+> deployed catalog-v3 behavior, historical replay, and deterministic migration.
+> It is not the target owner interface.
 
 ## 1. How presets work
 

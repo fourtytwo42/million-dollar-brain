@@ -12,7 +12,7 @@ NFT ownership and settings
         ↓
 Locked brain snapshot
         ↓
-Weighted preference vector
+Deterministic compiled brain
         ↓
 Ornith target allocation
         ↓
@@ -32,7 +32,7 @@ The interface must distinguish between facts the protocol can prove and explanat
 These are authoritative:
 
 - NFT owner at the snapshot block.
-- Piece affinity, selected option, and weight.
+- Piece affinity, versioned control bundle, bundle hash, and weight.
 - Brain version.
 - Asset Registry version.
 - Basket balances and validated prices.
@@ -47,7 +47,8 @@ These are calculated from protocol-defined rules:
 
 - Which pieces contributed to each aggregate preference.
 - Weighted preference scores.
-- Conflicting presets that offset one another.
+- Conflicting controls, restrictive directives, and deterministic winners.
+- Compiled cadence, cooldown, drift, data-attention, and research limits.
 - Current-versus-target allocation deltas.
 - Which hard rule capped, blocked, or modified a target.
 - Why a trade was skipped due to bands, cost, liquidity, or slippage.
@@ -98,8 +99,13 @@ Every scheduled cycle locks a specific brain snapshot:
       "piece_id": 20,
       "owner": "0x42...A91",
       "affinity_id": "technology",
-      "option_id": 2,
-      "option_label": "Overweight",
+      "control_schema_version": 1,
+      "control_values": {
+        "sector_status": "overweight",
+        "favorites": [104],
+        "champion": 104
+      },
+      "bundle_hash": "0x...",
       "weight_bps": 150
     }
   ],
@@ -109,15 +115,17 @@ Every scheduled cycle locks a specific brain snapshot:
 
 The UI should let users inspect all 42 pieces exactly as Ornith received them.
 
-## 5. Weighted preference compilation
+## 5. Control compilation
 
-Every selected option maps to protocol-defined numeric effects.
+Every closed control value maps to protocol-defined effects. Restrictive asset
+directives resolve before weighted positive preferences.
 
 Example:
 
 ```text
 Technology piece
-Setting: Overweight
+Sector status: Overweight
+Champion asset: registry ID 104
 Piece weight: 1.5%
 Effect: technology preference +1
 Weighted contribution: +0.015
@@ -131,7 +139,13 @@ The compiler aggregates every contribution:
   "growth_preference": 0.18,
   "stable_reserve_bias": 0.32,
   "diversification_preference": 0.51,
-  "crypto_preference": -0.08
+  "crypto_preference": -0.08,
+  "asset_directives": {
+    "104": "preferred"
+  },
+  "base_review_minutes": 60,
+  "minimum_trade_cooldown_minutes": 60,
+  "minimum_drift_bps": 200
 }
 ```
 

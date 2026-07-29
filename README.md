@@ -2,7 +2,10 @@
 
 **The internet's last 42 braincells manage an on-chain portfolio.**
 
-42 Braincells is a proposed DeFi basket protocol for Robinhood Chain. Basket-share holders buy and sell proportional exposure to a managed portfolio, while owners of 42 always-for-sale brain-piece NFTs steer a constrained scheduled AI allocation through closed, auditable presets.
+42 Braincells is a proposed DeFi basket protocol for Robinhood Chain.
+Basket-share holders buy and sell proportional exposure to a managed
+portfolio, while owners of 42 always-for-sale brain-piece NFTs steer a
+constrained scheduled AI allocation through closed, auditable control panels.
 
 ## Current status
 
@@ -33,6 +36,7 @@ cannot sign or broadcast. No mainnet contracts or real funds are enabled. See
 - [Product Requirements](PRD.md)
 - [Screen Map](UX_SCREENS.md)
 - [Brain Schema](BRAIN_SCHEMA.md)
+- [Brain Control Catalog](BRAIN_CONTROL_CATALOG.md)
 - [Brain Preset Catalog](BRAIN_PRESET_CATALOG.md)
 - [Brain Characters and Moods](BRAIN_CHARACTERS.md)
 - [AI Data Policy](AI_DATA_POLICY.md)
@@ -49,13 +53,17 @@ cannot sign or broadcast. No mainnet contracts or real funds are enabled. See
 - [Primary screen mockups](design/mockups/README.md)
 - [Generated brain and 42-character art system](design/brain-art/README.md)
 
-The PRD and the ten specifications listed after it form the authoritative requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a superseded historical concept note.
+The PRD and the linked specifications listed after it form the authoritative
+requirements set. [Product Brief](PRODUCT_BRIEF.md) is retained only as a
+superseded historical concept note.
 
 ## Core design
 
 - Upgradeable EVM contracts targeting Robinhood Chain.
 - Entry and redemption fees instead of a basket-share transfer tax.
 - Exactly 42 brain NFTs with immutable affinities and influence weights.
+- Each braincell has a bespoke closed control panel for portfolio preferences,
+  qualified-asset directives, bounded cadence, or optional data attention.
 - Ornith proposes constrained target weights from every qualified registry
   asset while holding no more than nine risk positions plus USDG.
 - Deterministic validation and execution enforce portfolio and security limits.

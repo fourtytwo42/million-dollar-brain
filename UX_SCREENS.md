@@ -119,8 +119,10 @@ Use a `See why` action to open the latest decision.
 
 - Exactly 42 visible pieces.
 - Color may represent affinity group.
-- Selected overlay may show ownership, weight, preset, price, or recent change.
-- Hover or tap shows piece name, current preset, influence, owner status, and price.
+- Selected overlay may show ownership, weight, compiled role, price, or recent
+  change.
+- Hover or tap shows piece name, concise steering summary, influence, owner
+  status, and price.
 - Selecting a piece opens the Brain Piece drawer.
 - The Brain has one character-first map rather than a Characters/Ownership/Influence/Mood selector. Ownership is shown by the permanent halo; influence and current mood remain in the tooltip and inspector.
 - Personally owned pieces retain a double-outline ownership halo on the map.
@@ -131,7 +133,7 @@ The brain itself is the NFT marketplace. There is no separate marketplace page.
 ### Primary actions
 
 - Buy the selected brain piece.
-- Change the selected mood when owned.
+- Change the selected cell's control bundle when owned.
 - Claim brain-owner rewards.
 
 MDBS trading, holdings, and allocation detail belong on Basket and are not duplicated on Brain. Brain-piece finances remain on Brain beneath the selected-piece inspector:
@@ -152,22 +154,36 @@ MDBS trading, holdings, and allocation detail belong on Basket and are not dupli
 ### Summary
 
 - Piece name, number, brain location, and affinity group.
-- Current preset and plain-language effect.
+- Concise plain-language summary of the current compiled controls.
 - Immutable influence weight.
 - Contribution to the current compiled brain.
 - Owner and current purchase price.
 - Next purchase price.
-- Data status: active, partly active, or inactive.
+- Inactive optional dependencies are explained only where they affect a
+  control; do not show a generic partly-active chip.
 
-### Preset comparison
+### Control editor
 
-Show all five closed moods in a simple comparison, pairing memorable character language with the exact bounded portfolio effect:
+For the current owner, show a clear **Change controls** action. It opens a
+focused modal on desktop and bottom sheet on mobile. Depending on the cell, it
+may contain toggles, segmented choices, fixed-step sliders, dials,
+multi-select chips, ranked registry-asset pickers, attention budgets,
+thresholds, reaction matrices, or constrained rule cards.
 
-- What changes.
-- Which data it uses.
-- Current aggregate value.
-- Previewed aggregate value after the change.
-- Earliest cycle in which the change can apply.
+Every setting pairs its meme label with:
+
+- A plain-English meaning.
+- What portfolio preference, asset directive, cadence, or data attention it
+  changes.
+- Required optional data and its unavailable behavior.
+- Current and proposed compiled result.
+- Conflicts and the rule that wins.
+- Earliest eligible cycle and whether drift or cooldown may still skip a
+  trade.
+
+All controls for one cell are saved in one wallet transaction. The editor has
+no free text or arbitrary address fields. Asset pickers contain only currently
+qualified registry assets in the control's allowed scope.
 
 Avoid presenting the setting as a guaranteed trade.
 
@@ -190,7 +206,7 @@ For a piece owned by another wallet:
 
 For the current owner:
 
-- Change preset.
+- Change controls.
 - View the shared Brain finances block and claim accrued rewards.
 - View ownership and selection history.
 
@@ -504,8 +520,10 @@ desktop panel sits beside the product and becomes a mobile bottom sheet. It
 shows one focused concept at a time while exposing all four steps:
 
 1. Own the basket by depositing USDG for redeemable MDBS.
-2. Steer preferences through the 42 brain pieces and their closed presets.
-3. Let the constrained AI propose target weights on the hourly schedule.
+2. Steer preferences, bounded asset directives, timing, and optional evidence
+   attention through the 42 braincells' closed controls.
+3. Let the constrained AI propose target weights on the next eligible bounded
+   schedule.
 4. Let deterministic contracts enforce the allowlist, reserve, and limits
    before execution.
 
@@ -577,7 +595,7 @@ Mobile requirements:
 ### Later
 
 - Historical brain-state playback.
-- Portfolio and preset simulator.
+- Portfolio and control-bundle simulator.
 - Notifications.
 - Brain configuration sandbox.
 - Governance.

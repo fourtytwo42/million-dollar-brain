@@ -4,12 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: None; animated braincell profiles, optional links, link
-  moderation, and the compact selected-piece inspector are live and verified.
-- Last meaningful change: Upgraded the existing devnet and valueless testnet
-  Brain proxies, restarted both web runtimes, and completed a live devnet GIF,
-  custom-name, and HTTPS-link transaction through the browser.
-- Next step: None for this feature.
+- Current task: Control Catalog v1 product requirements are complete; no
+  contract or runtime migration has been started.
+- Last meaningful change: Added `BRAIN_CONTROL_CATALOG.md` and coalesced the
+  target multi-control, cadence, qualified-asset directive, optional
+  data-attention, UI, compiler, safety, and catalog-v3 migration requirements
+  across the normative PRD set.
+- Next step: Implement Control Catalog v1 as one coordinated contract,
+  compiler, scheduler, UI, replay, and testnet release. Do not partially switch
+  live model compilation away from catalog v3.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -43,10 +46,20 @@ Durable project context lives here. Update this file whenever information should
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
+- Control Catalog v1 is the locked target but is not deployed. It replaces the
+  single `-2` through `+2` owner choice with 42 bespoke closed multi-control
+  panels. Catalog v3 remains the deployed behavior, historical replay format,
+  and deterministic migration source.
 - Every new allocation persists one deterministic `memeRecap` in `cycles.jsonl` using the recorded brain snapshot and actual target allocation. No additional model call is made, and legacy cycles remain readable without invented dialogue.
-- `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
+- `PRD.md` v1.2 plus its linked normative specifications is the authoritative
+  requirements set. `BRAIN_CONTROL_CATALOG.md` is normative for the target
+  control system; `BRAIN_PRESET_CATALOG.md` is normative for deployed
+  catalog-v3 behavior and migration.
 - `PRODUCT_BRIEF.md` is superseded historical context.
-- No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
+- No product decision remains open for Control Catalog v1. Its coordinated
+  implementation and acceptance remain open. `BUILD_READINESS.md`
+  distinguishes locked engineering defaults from deployed state and external
+  production gates.
 - Devnet, testnet, and mainnet have normalized isolated manifests, state
   directories, databases, services, and timers. Promotion records the exact
   pushed Git SHA, full web-build hash, contract bytecode hashes, manifest hash,
@@ -125,17 +138,55 @@ When sources conflict, use this order:
 - Redemption is atomic USDG-only at every valid size. The vault proportionally sells the acting holder's fraction of all positively held assets, burns MDBS, routes fees, and transfers USDG in one transaction. If any required step cannot meet freshness, availability, deadline, or slippage checks, the whole transaction reverts and no state changes. New queue creation and processing are disabled; legacy queue storage and cancellation remain only for upgrade compatibility.
 - Brain pieces use an always-for-sale model: the full initial sale goes to the creator DAO; later buyers pay 120% of the last settled price, the seller receives the prior price, and only the 20% increase is split equally between the DAO and brain pool.
 - Brain rewards on later purchases use a pre-transaction ownership snapshot so a buyer cannot immediately recover part of their own payment. Initial sales create no brain-owner reward and require no reward escrow.
-- Portfolio review is scheduled, initially hourly, and independent of user actions. A scheduler or permissionless keeper submits signed AI proposals and is funded or reimbursed from the creator DAO's existing fee share.
+- Target portfolio review uses a five-minute eligibility worker and a compiled
+  base cadence of 15m, 30m, 1h, 4h, 6h, or 24h. Adaptive panic cadence,
+  minimum trade cooldown, drift, one-cycle concurrency, no-backlog behavior,
+  and hard-rule precedence are defined in `BRAIN_CONTROL_CATALOG.md`. The live
+  catalog-v3 scheduler remains in place until migration.
 - Deposits, redemptions, brain purchases, setting changes, claims, and governance remain available on-chain at any time. Each user pays only their own action gas and does not trigger the AI cycle.
 - Scheduled proposals use a brain-state snapshot. Brain changes after that snapshot affect the next cycle, while execution always rechecks current holdings, prices, liquidity, risk limits, and slippage.
-- Every brain piece has an immutable affinity, immutable weight, and closed protocol-defined option list. Owners may select an option on-chain but cannot submit text, links, instructions, or arbitrary prompt content. A separately isolated presentation feature permits the current owner to commit one portrait hash per ownership; portrait bytes never enter the AI context.
-- The AI is a constrained hourly allocator. Each cycle receives the entire canonical brain, approved asset universe and statistics, current basket and performance state, previous decision, and operating limits, then returns schema-validated target weights for the next hour.
+- Every brain piece has an immutable affinity and weight. Control Catalog v1
+  gives it a bespoke closed bundle of choices, toggles, fixed steps,
+  registry-scoped asset picks, thresholds, reaction matrices, attention
+  budgets, or constrained rule cards. Owners cannot submit text, arbitrary
+  contracts, prompts, URLs, or data sources to the allocator. Profile
+  customization remains presentation-only.
+- The target AI is a constrained scheduled allocator. Each cycle receives the
+  entire canonical brain and compiled controls, approved asset universe and
+  statistics, current basket and performance state, previous decisions,
+  mandatory safety/accounting data, and operating limits, then returns
+  schema-validated target weights until the next eligible review.
 - The model may run through OpenRouter or the user's local appliance behind one provider adapter. Provider, exact model, configuration, prompt version, input hash, and output hash must be recorded for every cycle.
 - Invalid, stale, late, unavailable, or unsafe model results fail closed and keep the current portfolio. Models never receive keys or direct execution authority.
 - Every protocol smart contract is UUPS-upgradeable behind ERC-1967. Local and early testnet may use development EOAs; before real value, high-impact roles move to a 2-of-3 EIP-1271-compatible multisig and normal upgrades use a 48-hour timelock. Emergency pause cannot install code.
 - The MVP DAO is a simple creator-controlled upgradeable revenue vault. The owner may withdraw creator-side revenue, but basket principal and brain-owner liabilities must remain outside its normal withdrawal authority.
 
 ## Verification Ledger
+
+### 2026-07-29 - Control Catalog v1 PRD Consolidation
+
+- Context: The single `-2` through `+2` choice per braincell was too narrow.
+  Owners need multiple fun but understandable bounded levers, including direct
+  qualified-asset preferences, cadence, timeframes, evidence attention, and
+  structured research without prompt-injection surfaces.
+- Decision: Adopt 42 bespoke closed multi-control panels. Use meme labels plus
+  plain-English effects, one atomic bundle transaction per piece, a five-minute
+  scheduler eligibility worker, 15-minute through 24-hour bounded cadence,
+  mandatory always-on safety/accounting data, and deterministic compiler
+  precedence. Preserve catalog v3 as deployed behavior and migration source.
+- Files: `BRAIN_CONTROL_CATALOG.md`, `PRD.md`, `BRAIN_SCHEMA.md`,
+  `AI_DATA_POLICY.md`, `AI_EXPLAINABILITY.md`, `UX_SCREENS.md`,
+  `BUILD_READINESS.md`, `README.md`, `BRAIN_PRESET_CATALOG.md`, and
+  `BRAIN_CHARACTERS.md`.
+- Commands/tests: Prettier passed all ten edited/new documents; all local
+  Markdown links resolve; the catalog contains exactly IDs 1 through 42;
+  stale target terminology checks passed; `git diff --check` passed.
+- Result: Product and migration requirements are build-ready. No contract,
+  compiler, scheduler, UI, or live runtime behavior changed.
+- Follow-up: Implement and test the registry bundle upgrade, catalog-v3
+  reinitializer, deterministic compiler, cadence worker, control editor,
+  context/replay changes, and coordinated testnet migration before runtime
+  cutover.
 
 ### 2026-07-28 - Animated Braincell Profiles and Optional Links
 
@@ -799,6 +850,12 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
+- 2026-07-29: Implement Control Catalog v1 as a coordinated release. Required
+  work includes versioned packed bundles, catalog-v3 migration, compiler and
+  conflict resolution, cadence eligibility, optional data-attention
+  compilation, UI preview/editor, replay compatibility, contract/context/UAT
+  tests, and a fresh two-hour testnet acceptance run. Do not partially cut over
+  the live allocator.
 - 2026-07-29: The live migration, proxy upgrades, release rehearsal, devnet
   release gate, and one live testnet AI execution pass. A fresh exact-commit
   two-hour testnet acceptance run is still required before

@@ -1,11 +1,24 @@
 # MillionDollar Brain Build-Readiness Baseline
 
-**Version:** 1.0
-**Status:** Internal product and architecture decisions locked
+**Version:** 1.1
+**Status:** Control Catalog v1 product decisions locked; coordinated implementation pending
 
 ## Local-devnet implementation status
 
-The native VM release implements the complete catalog-v3 collection: 42 named ERC-721 characters, four crews, protocol-authored lore, five closed moods per character, immutable portfolio affinities, and signed intensity from -2 through +2. It also implements always-for-sale pricing, basket shares, 1% entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault, owner reward claims, 1%-of-NAV immediate redemption, cancellable FIFO queued redemption with partial 5%-of-NAV hourly settlement, structured allocator context, deterministic output validation, keeper authentication, and systemd scheduling.
+The native VM release implements the complete catalog-v3 collection: 42 named
+ERC-721 characters, four crews, protocol-authored lore, five closed moods per
+character, immutable portfolio affinities, and signed intensity from -2
+through +2. It also implements always-for-sale pricing, basket shares, 1%
+entry and redemption fees, the 50/40/10 fee split, creator withdrawal vault,
+owner reward claims, atomic proportional redemptions with no queue, structured
+allocator context, deterministic output validation, keeper authentication, and
+systemd scheduling.
+
+Control Catalog v1 is the locked next target. It replaces the one-mood owner
+interface with 42 bespoke closed control panels, dynamic bounded cadence,
+registry-scoped asset directives, and optional evidence-attention controls.
+The live catalog-v3 state remains authoritative until a coordinated contract,
+compiler, UI, replay, and testnet release migrates it.
 
 The frontend implements an accessible interactive 42-path SVG Brain marketplace with one continuous anatomically traced lateral-brain silhouette, 42 individually generated roster-v4 portraits, roving keyboard navigation, map zoom, a searchable mobile list, character-led Brain Pulse, and a complete selected-piece right rail. Roster v4 contains 10 diverse humans and 32 creatures, machines, supernatural beings, or sentient objects without changing economic catalog v3. Completed cycles persist deterministic Brain Drama and support client-generated recap cards plus prefilled X, Farcaster, and Telegram sharing. Cerebrum, cerebellum, and brainstem metadata guide portrait placement without producing separate blob outlines. Both editorial light and dark modes are validated against live normative screenshots.
 
@@ -143,10 +156,13 @@ The executor processes an accepted cycle atomically. Any planned trade failure r
 
 | Item                        | Locked value                                         |
 | --------------------------- | ---------------------------------------------------- |
-| Decision cadence            | Every hour at minute 00 UTC                          |
-| Snapshot window             | Minute 00 through minute 05                          |
-| Inference deadline          | Minute 12                                            |
-| Proposal expiration         | Minute 20                                            |
+| Scheduler eligibility check | Every five minutes                                   |
+| Base review cadence         | Owner-selected 15m, 30m, 1h, 4h, 6h, or 24h          |
+| Adaptive review cadence     | Bounded 15m, 30m, or 1h panic mode                   |
+| Minimum trade cooldown      | Owner-selected 15m through 24h within hard limits    |
+| Minimum trade drift         | Owner-selected 0.5% through 5% within hard limits    |
+| Concurrency                 | One active cycle; no missed-window backlog           |
+| Proposal expiration         | Derived per cadence with a hard protocol ceiling     |
 | Primary model               | Ornith 1.0 35B MoE Q5_K_M                            |
 | Live model ID               | `ornith-1.0-35b-Q5_K_M-688b8d0a`                     |
 | Provider                    | GPU45 local appliance                                |
@@ -157,6 +173,11 @@ The executor processes an accepted cycle atomically. Any planned trade failure r
 | Automatic provider fallback | Disabled                                             |
 
 A transport retry is allowed only before the inference deadline and uses the same immutable input package. The first schema-valid final output wins.
+
+The eligibility worker reads compiled on-chain cadence without rewriting
+systemd timers. Setting changes never trigger immediate inference. Emergency
+pause, mandatory-data freshness, cooldown, turnover, drift, and risk rules
+always win.
 
 OpenRouter remains an implemented provider adapter but has no active automatic fallback. If Ornith fails, the cycle holds. Enabling another model requires shadow testing, a published configuration change, and the normal 48-hour timelock.
 
@@ -324,6 +345,11 @@ Before public testnet:
 - Release fuzzing uses at least 50,000 runs per property.
 - Accounting invariants run at least 100,000 calls per release candidate.
 - Frontend critical user journeys pass Playwright and axe.
+- Control Catalog tests cover all 42 defaults, closed domains, one-transaction
+  bundle updates, registry-scoped asset validation, deterministic compilation,
+  conflicts, cadence, cooldown, data attention, and catalog-v3 migration.
+- Context tests prove mandatory evidence cannot be removed and owner-authored
+  text, URLs, contracts, and arbitrary sources cannot enter Ornith input.
 
 Before real value:
 
@@ -349,6 +375,9 @@ Mainnet deposit, brain purchase, and public distribution functions deploy disabl
 
 ## 19. Build-ready conclusion
 
-No internal MVP product, economic, protocol, model, UI, stack, environment, wallet, monitoring, or deployment-pattern decision remains open.
+No product decision remains open for Control Catalog v1. Implementation is not
+complete until the versioned bundle registry, migration reinitializer,
+compiler, scheduler eligibility worker, control editor, replay fixtures, and
+testnet acceptance land in one coordinated release.
 
 Engineering may begin from this baseline. External gates control whether the completed system may accept real value; they do not require engineering to redesign the MVP.

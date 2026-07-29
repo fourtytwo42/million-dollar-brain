@@ -5,6 +5,12 @@
 **Characters:** 42  
 **Closed moods per character:** 5
 
+> This document defines character roster v4 and the deployed catalog-v3 mood
+> voice used by historical cycles. New steering development uses the same
+> characters with the multi-control panels in `BRAIN_CONTROL_CATALOG.md`.
+> Character flavor remains presentation and deterministic recap material; it
+> never grants free-form model input.
+
 ## Design contract
 
 Each NFT has two simultaneous identities:
