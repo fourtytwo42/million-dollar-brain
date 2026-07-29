@@ -3,7 +3,10 @@ import test from "node:test";
 import {
   defaultPortraitUrl,
   EMPTY_PORTRAIT_HASH,
+  isAnimatedWebp,
+  portraitMediaType,
   portraitUrl,
+  preserveAnimatedPortrait,
 } from "../apps/web/lib/portrait.ts";
 
 test("canonical portraits remain the fallback", () => {
@@ -20,4 +23,45 @@ test("custom portrait URLs are keyed by the exact on-chain hash", () => {
     portraitUrl({ id: 7, portraitHash: hash }),
     `/api/brain-image/7?hash=${hash}`,
   );
+});
+
+test("GIF and animated WebP media are recognized without flattening", () => {
+  const gif = new TextEncoder().encode("GIF89a");
+  const animatedWebp = new Uint8Array([
+    ...new TextEncoder().encode("RIFF"),
+    12,
+    0,
+    0,
+    0,
+    ...new TextEncoder().encode("WEBP"),
+    ...new TextEncoder().encode("ANIM"),
+    4,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+  ]);
+  const staticWebp = new Uint8Array([
+    ...new TextEncoder().encode("RIFF"),
+    0,
+    0,
+    0,
+    0,
+    ...new TextEncoder().encode("WEBP"),
+    ...new TextEncoder().encode("VP8 "),
+    0,
+    0,
+    0,
+    0,
+  ]);
+
+  assert.equal(portraitMediaType(gif), "image/gif");
+  assert.equal(preserveAnimatedPortrait(gif), true);
+  assert.equal(isAnimatedWebp(animatedWebp), true);
+  assert.equal(preserveAnimatedPortrait(animatedWebp), true);
+  assert.equal(isAnimatedWebp(staticWebp), false);
+  assert.equal(preserveAnimatedPortrait(staticWebp), false);
 });

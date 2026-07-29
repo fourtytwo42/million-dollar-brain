@@ -4,11 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { keccak256 } from "viem";
 import { brainAbi } from "@/lib/abi";
 import { deployment, publicClient } from "@/lib/chain";
+import { MAX_ANIMATED_PORTRAIT_BYTES, portraitMediaType } from "@/lib/portrait";
 
 export const runtime = "nodejs";
 
 const HASH_PATTERN = /^0x[0-9a-f]{64}$/;
-const MAX_PORTRAIT_BYTES = 512 * 1024;
+const MAX_PORTRAIT_BYTES = MAX_ANIMATED_PORTRAIT_BYTES;
 
 function parsePieceId(raw: string) {
   const pieceId = Number(raw);
@@ -26,6 +27,11 @@ function portraitDirectory() {
 }
 
 function portraitPath(pieceId: number, hash: string) {
+  const brain = deployment().brain.toLowerCase();
+  return join(portraitDirectory(), brain, String(pieceId), `${hash}.media`);
+}
+
+function legacyPortraitPath(pieceId: number, hash: string) {
   const brain = deployment().brain.toLowerCase();
   return join(portraitDirectory(), brain, String(pieceId), `${hash}.webp`);
 }
@@ -53,12 +59,12 @@ async function currentPortraitHash(pieceId: number) {
   ).toLowerCase();
 }
 
-function isWebp(bytes: Uint8Array) {
-  return (
-    bytes.length >= 12 &&
-    new TextDecoder().decode(bytes.subarray(0, 4)) === "RIFF" &&
-    new TextDecoder().decode(bytes.subarray(8, 12)) === "WEBP"
-  );
+async function storedPortrait(pieceId: number, hash: string) {
+  try {
+    return await readFile(portraitPath(pieceId, hash));
+  } catch {
+    return readFile(legacyPortraitPath(pieceId, hash));
+  }
 }
 
 export async function GET(
@@ -76,10 +82,12 @@ export async function GET(
     }
 
     try {
-      const image = await readFile(portraitPath(pieceId, hash));
+      const image = await storedPortrait(pieceId, hash);
+      const mediaType = portraitMediaType(image);
+      if (!mediaType) throw new Error("invalid stored portrait");
       return new NextResponse(image, {
         headers: {
-          "content-type": "image/webp",
+          "content-type": mediaType,
           "cache-control": "public, max-age=31536000, immutable",
           "x-content-type-options": "nosniff",
         },
@@ -116,9 +124,12 @@ export async function POST(
 
     const form = await request.formData();
     const file = form.get("portrait");
-    if (!(file instanceof File) || file.type !== "image/webp") {
+    if (
+      !(file instanceof File) ||
+      (file.type !== "image/webp" && file.type !== "image/gif")
+    ) {
       return NextResponse.json(
-        { error: "a WebP portrait is required" },
+        { error: "a GIF or WebP portrait is required" },
         { status: 400 },
       );
     }
@@ -130,9 +141,10 @@ export async function POST(
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (!isWebp(bytes)) {
+    const mediaType = portraitMediaType(bytes);
+    if (!mediaType || mediaType !== file.type) {
       return NextResponse.json(
-        { error: "invalid WebP portrait" },
+        { error: "invalid GIF or WebP portrait" },
         { status: 400 },
       );
     }

@@ -444,9 +444,16 @@ contract BasketBrainTest is Test {
         brain.setProfile(1, bytes32(0), "Alice");
         vm.expectRevert("empty name");
         brain.setProfile(1, alicePortrait, "");
-        brain.setProfile(1, alicePortrait, "Exit Liquidity Department");
+        vm.expectRevert("invalid url");
+        brain.setProfile(1, alicePortrait, "Alice", "javascript:alert(1)");
+        vm.expectRevert("invalid url");
+        brain.setProfile(1, alicePortrait, "Alice", "http://example.com");
+        brain.setProfile(
+            1, alicePortrait, "Exit Liquidity Department", "https://example.com/braincell"
+        );
         assertEq(brain.portraitHash(1), alicePortrait);
         assertEq(brain.customName(1), "Exit Liquidity Department");
+        assertEq(brain.profileUrl(1), "https://example.com/braincell");
         assertFalse(brain.canChangeProfile(1, alice));
         vm.expectRevert("profile already changed");
         brain.setProfile(1, keccak256("second alice portrait"), "Second name");
@@ -458,10 +465,12 @@ contract BasketBrainTest is Test {
         assertEq(brain.ownershipSerial(1), 2);
         assertEq(brain.portraitHash(1), alicePortrait);
         assertEq(brain.customName(1), "Exit Liquidity Department");
+        assertEq(brain.profileUrl(1), "https://example.com/braincell");
         assertTrue(brain.canChangeProfile(1, bob));
         brain.setProfile(1, bobPortrait, unicode"Bob's Moon Bureau 🚀");
         assertEq(brain.portraitHash(1), bobPortrait);
         assertEq(brain.customName(1), unicode"Bob's Moon Bureau 🚀");
+        assertEq(brain.profileUrl(1), "");
         assertFalse(brain.canChangeProfile(1, bob));
         vm.stopPrank();
     }
@@ -500,6 +509,25 @@ contract BasketBrainTest is Test {
         vm.prank(alice);
         vm.expectRevert("profile already changed");
         brain.setProfile(1, keccak256("replacement"), "Replacement");
+    }
+
+    function testAdminCanModerateProfileUrlWithoutRestoringProfileChange() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        brain.setProfile(
+            1, keccak256("linked portrait"), "Linked Braincell", "https://example.com/profile"
+        );
+        vm.stopPrank();
+
+        vm.prank(bob);
+        vm.expectRevert();
+        brain.resetProfileUrl(1);
+
+        vm.prank(admin);
+        brain.resetProfileUrl(1);
+        assertEq(brain.profileUrl(1), "");
+        assertFalse(brain.canChangeProfile(1, alice));
     }
 
     function testCurrentBrainOwnerCanClaimBasketFees() public {

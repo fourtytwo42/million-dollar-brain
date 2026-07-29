@@ -4,13 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: None; combined braincell profile customization and portrait
-  moderation are live and verified.
-- Last meaningful change: Upgraded the existing devnet and valueless testnet
-  Brain proxies, restarted both web runtimes, completed the one-transaction
-  name-and-image flow on devnet, and verified the admin portrait reset preserves
-  the custom name and consumed allowance.
-- Next step: None for this feature.
+- Current task: Roll out animated braincell media, an optional on-chain profile
+  link, link moderation, and the compact selected-piece inspector.
+- Last meaningful change: Implemented and tested the combined name, media hash,
+  and optional HTTPS-link transaction while preserving GIF and animated WebP
+  bytes. Contract tests, focused media/link tests, and the production web build
+  pass on the authoritative VM.
+- Next step: Commit and push the implementation, upgrade the existing devnet
+  and valueless testnet Brain proxies, restart both web runtimes, and complete
+  live desktop/mobile browser UAT.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -137,6 +139,35 @@ When sources conflict, use this order:
 - The MVP DAO is a simple creator-controlled upgradeable revenue vault. The owner may withdraw creator-side revenue, but basket principal and brain-owner liabilities must remain outside its normal withdrawal authority.
 
 ## Verification Ledger
+
+### 2026-07-28 - Animated Braincell Profiles and Optional Links
+
+- Context: Owner-uploaded GIFs were being flattened to a static WebP, the
+  selected-piece inspector was awkwardly arranged, and owners needed one
+  optional link shown with their braincell.
+- Decision: Include the name, exact media hash, and optional HTTPS link in the
+  same one-change-per-ownership transaction. Preserve GIF and animated WebP
+  bytes up to 4 MiB; continue normalizing static PNG/JPEG/WebP uploads to a
+  384-by-384 WebP. Links are presentation-only, capped at 200 printable ASCII
+  bytes, never enter AI context, and may be independently cleared by the admin
+  without restoring the owner's allowance.
+- Files: `packages/contracts/src/BrainMarketplace.sol`,
+  `apps/web/lib/portrait.ts`,
+  `apps/web/app/api/brain-image/[pieceId]/route.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/components/brain-map.tsx`,
+  `scripts/moderate-brain-profile-url.sh`, `PRD.md`, `BRAIN_SCHEMA.md`, and
+  `DESIGN_SYSTEM.md`.
+- Commands/tests: Focused portrait tests 3/3; profile-name/link tests 3/3;
+  Foundry tests 29/29; Next.js production build passed; changed files pass
+  Prettier, `forge fmt --check`, `bash -n`, and `git diff --check`.
+- Result: The inspector now uses a compact two-column 132-pixel desktop and
+  96-pixel mobile media header, displays a safe external link, and omits the
+  redundant active/partly-inactive data chip. Tooltip/focus previews show the
+  link label without making the hover overlay interactive.
+- Follow-up: Upgrade the existing devnet and valueless testnet proxies and
+  complete live animated-media, URL, moderation, responsive-layout, and
+  accessibility UAT.
 
 - 2026-07-28: At the user's request, stopped and disabled
   `mdb-endurance-testnet.service`, removed its armed state, verified no

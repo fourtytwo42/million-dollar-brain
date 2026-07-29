@@ -282,27 +282,31 @@ A change made after the current AI snapshot affects the next scheduled cycle.
 
 ### 8.2.1 Owner profile customization
 
-- Each purchaser receives one combined name-and-portrait customization for that
-  ownership period.
+- Each purchaser receives one combined name, media, and optional-link
+  customization for that ownership period.
 - The owner may use it at any time after purchase; it is not part of the buy
   transaction.
-- The application center-crops the chosen PNG, JPEG, or WebP to a 384-by-384
-  WebP, validates a nonempty name of at most 48 UTF-8 bytes, and commits the
-  name and exact image-content hash together in one wallet transaction. It then
-  self-hosts the matching image bytes.
-- The contract accepts one profile update per ownership serial. A second name
-  or image change reverts.
+- The application center-crops a static PNG, JPEG, or WebP to a 384-by-384
+  WebP. Animated GIF and WebP uploads retain their original bytes and
+  animation. The application validates a nonempty name of at most 48 UTF-8
+  bytes and an optional HTTPS link of at most 200 printable ASCII bytes, then
+  commits the name, exact media-content hash, and link together in one wallet
+  transaction. It self-hosts the matching media bytes.
+- The contract accepts one profile update per ownership serial. A second name,
+  media, or link change reverts.
 - A completed always-for-sale purchase advances the ownership serial and gives
   the new purchaser one fresh combined customization. The existing name and
-  portrait remain visible until that purchaser changes them.
-- Custom names and portraits are presentation only. They never enter the
+  profile remain visible until that purchaser changes it.
+- Custom names, media, and links are presentation only. They never enter the
   allocator prompt, replace the immutable character identity, change affinity,
   alter influence, grant asset permissions, or affect fees.
-- The UI validates file type and size. The image service stores bytes only when
-  their hash equals the piece's current on-chain commitment.
-- The contract admin may moderate an image by resetting its portrait hash to
-  the canonical image. Moderation does not change the custom name, ownership,
-  ownership serial, or consumed profile-customization allowance.
+- The UI validates media type and size. The media service stores bytes only
+  when their hash equals the piece's current on-chain commitment and serves
+  the detected GIF or WebP content type with `nosniff`.
+- The contract admin may independently moderate media by resetting its portrait
+  hash to the canonical image or moderate a link by clearing it. Moderation
+  does not change the custom name, ownership, ownership serial, or consumed
+  profile-customization allowance.
 
 ### 8.3 Initial brain-piece purchase
 
@@ -879,19 +883,21 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 ### 17.7 Customize a braincell profile
 
 1. Owner selects their piece and clicks its portrait, name, or Customize affordance.
-2. A focused editor card lets the owner choose a PNG, JPEG, or WebP and enter
-   the braincell's new name.
-3. Application previews and normalizes the image to a square 384-by-384 WebP
-   and validates the bounded name.
-4. Owner confirms one transaction committing both the name and portrait hash
-   and pays gas.
+2. A focused editor card lets the owner choose a PNG, JPEG, GIF, or WebP, enter
+   the braincell's new name, and optionally add an HTTPS link.
+3. Application previews the media, normalizes static uploads to a square
+   384-by-384 WebP, preserves animated GIF/WebP bytes, and validates the
+   bounded name and link.
+4. Owner confirms one transaction committing the name, portrait hash, and
+   optional link and pays gas.
 5. After confirmation, the application uploads only the exact hash-matching
    bytes to self-hosted storage.
 6. The map, searchable list, tooltip, and inspector switch to the new display
-   name and cache-safe custom portrait URL.
-7. Further name or portrait changes revert until another purchaser buys the
-   piece at its increased price. An admin image reset does not restore this
-   allowance.
+   name and cache-safe custom media URL. The tooltip shows a concise link label;
+   the inspector provides the safe external link.
+7. Further name, media, or link changes revert until another purchaser buys the
+   piece at its increased price. Admin media or link moderation does not restore
+   this allowance.
 
 ### 17.8 Claim brain-owner rewards
 

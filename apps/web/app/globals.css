@@ -2471,7 +2471,7 @@ footer {
   position: absolute;
   z-index: 5;
   display: flex;
-  width: 205px;
+  width: 230px;
   flex-direction: column;
   gap: 4px;
   padding: 10px 11px;
@@ -2492,6 +2492,13 @@ footer {
 .brain-piece-tooltip span {
   color: var(--text-muted);
   font-size: 10px;
+}
+.brain-piece-tooltip .tooltip-profile-link {
+  overflow: hidden;
+  color: var(--primary);
+  font-family: "IBM Plex Mono", "DM Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .brain-piece-tooltip strong {
   color: var(--primary);
@@ -2565,14 +2572,19 @@ footer {
   min-width: 0;
   padding: 16px;
 }
+.piece-inspector .piece-ledger-head {
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
 .piece-inspector .detail-portrait {
-  width: 104px;
-  height: 104px;
+  width: 132px;
+  height: 132px;
   border-radius: 7px;
 }
 .piece-inspector .detail-portrait img {
-  width: 112px;
-  height: 112px;
+  width: 140px;
+  height: 140px;
 }
 .portrait-change-button {
   position: relative;
@@ -2605,8 +2617,45 @@ footer {
   text-align: center;
   text-transform: uppercase;
 }
-.piece-ledger-head .portrait-change-status {
+.piece-identity {
+  min-width: 0;
+}
+.piece-identity .section-kicker {
+  margin-bottom: 4px;
+}
+.piece-identity-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.piece-identity-meta span:first-child {
+  width: 100%;
+  color: var(--text);
+  font-weight: 700;
+}
+.piece-profile-link {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+  overflow: hidden;
+  color: var(--primary);
+  font:
+    700 10px/1.3 "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-customization-note {
+  margin: 10px 0 0;
+  padding: 7px 9px;
+  border-left: 2px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface-subtle));
   color: var(--primary);
   font-size: 10px;
   line-height: 1.35;
@@ -2719,14 +2768,16 @@ footer {
     monospace;
   text-transform: uppercase;
 }
-.profile-name-field {
+.profile-name-field,
+.profile-link-field {
   display: grid;
   gap: 6px;
   margin-top: 15px;
   color: var(--text-muted);
   font-size: 11px;
 }
-.profile-name-field input {
+.profile-name-field input,
+.profile-link-field input {
   width: 100%;
   padding: 13px 14px;
   border: 1px solid var(--border);
@@ -2738,7 +2789,14 @@ footer {
     "Playfair Display",
     serif;
 }
-.profile-name-field small {
+.profile-link-field input {
+  font:
+    500 14px "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+}
+.profile-name-field small,
+.profile-link-field small {
   justify-self: end;
   font-family: "IBM Plex Mono", "DM Mono", monospace;
 }
@@ -3324,21 +3382,27 @@ footer {
   .brain-piece-tooltip {
     width: 175px;
   }
-  .piece-ledger-head {
-    grid-template-columns: auto minmax(0, 1fr);
+  .piece-inspector .piece-ledger-head {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
   }
   .piece-inspector .detail-portrait {
-    width: 84px;
-    height: 84px;
+    width: 96px;
+    height: 96px;
   }
   .piece-inspector .detail-portrait img {
-    width: 90px;
-    height: 90px;
+    width: 102px;
+    height: 102px;
   }
-  .piece-ledger-head > .status-active,
-  .piece-ledger-head > .status-inactive {
-    grid-column: 1 / -1;
-    justify-self: start;
+  .profile-editor-card {
+    padding: 17px;
+  }
+  .profile-image-picker {
+    min-height: 170px;
+  }
+  .profile-image-picker img {
+    width: 138px;
+    height: 138px;
   }
   .piece-actions {
     align-items: stretch;

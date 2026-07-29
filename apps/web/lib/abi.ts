@@ -393,6 +393,13 @@ export const brainAbi = [
   },
   {
     type: "function",
+    name: "profileUrl",
+    stateMutability: "view",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [{ type: "string" }],
+  },
+  {
+    type: "function",
     name: "canChangeProfile",
     stateMutability: "view",
     inputs: [
@@ -435,7 +442,26 @@ export const brainAbi = [
   },
   {
     type: "function",
+    name: "setProfile",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "pieceId", type: "uint256" },
+      { name: "newPortraitHash", type: "bytes32" },
+      { name: "newName", type: "string" },
+      { name: "newProfileUrl", type: "string" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
     name: "resetPortrait",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "pieceId", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "resetProfileUrl",
     stateMutability: "nonpayable",
     inputs: [{ name: "pieceId", type: "uint256" }],
     outputs: [],
@@ -450,11 +476,23 @@ export const brainAbi = [
       { name: "ownershipSerial", type: "uint64", indexed: true },
       { name: "portraitHash", type: "bytes32", indexed: false },
       { name: "customName", type: "string", indexed: false },
+      { name: "profileUrl", type: "string", indexed: false },
     ],
   },
   {
     type: "event",
     name: "PortraitModerated",
+    anonymous: false,
+    inputs: [
+      { name: "pieceId", type: "uint256", indexed: true },
+      { name: "moderator", type: "address", indexed: true },
+      { name: "owner", type: "address", indexed: true },
+      { name: "ownershipSerial", type: "uint64", indexed: false },
+    ],
+  },
+  {
+    type: "event",
+    name: "ProfileUrlModerated",
     anonymous: false,
     inputs: [
       { name: "pieceId", type: "uint256", indexed: true },

@@ -8,7 +8,7 @@ import {
   BRAIN_SILHOUETTE_PATH,
   type BrainDirection,
 } from "../lib/brain-presentation";
-import { pieceDisplayName } from "../lib/piece-name";
+import { pieceDisplayName, profileUrlLabel } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
 
 type MapPiece = {
@@ -25,6 +25,7 @@ type MapPiece = {
   ownershipSerial: number;
   profileChangeAvailable: boolean;
   customName: string;
+  profileUrl: string;
   options: readonly { label: string; value: number }[];
 };
 
@@ -60,7 +61,8 @@ function pieceLabel(piece: MapPiece, account: string | null) {
   const name = pieceDisplayName(piece);
   const mood = piece.options[piece.preset]?.label ?? "Unknown";
   const state = ownershipState(piece, account);
-  return `${name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.`;
+  const website = profileUrlLabel(piece.profileUrl);
+  return `${name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.${website ? ` Website ${website}.` : ""}`;
 }
 
 export function BrainMap({
@@ -91,6 +93,7 @@ export function BrainMap({
       piece.crew,
       piece.affinity,
       mood,
+      piece.profileUrl,
     ]
       .join(" ")
       .toLowerCase()
@@ -338,6 +341,11 @@ export function BrainMap({
                           ? "Unowned"
                           : shortOwner(previewPiece.owner)}
                     </span>
+                    {previewPiece.profileUrl.startsWith("https://") && (
+                      <span className="tooltip-profile-link">
+                        ↗ {profileUrlLabel(previewPiece.profileUrl)}
+                      </span>
+                    )}
                     <strong>${displayPrice(previewPiece.price)}</strong>
                   </div>
                 );

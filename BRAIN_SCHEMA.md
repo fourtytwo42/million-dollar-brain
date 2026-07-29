@@ -54,20 +54,21 @@ Each piece also stores presentation-only profile state:
 {
   "portrait_hash": "0x...",
   "custom_name": "Exit Liquidity Department",
+  "profile_url": "https://example.com/braincell",
   "ownership_serial": 3,
   "portrait_change_serial_plus_one": 4
 }
 ```
 
-The current owner may commit one nonzero portrait hash and one bounded custom
-name together while
+The current owner may commit one nonzero portrait hash, one bounded custom
+name, and one optional bounded HTTPS profile URL together while
 `portrait_change_serial_plus_one != ownership_serial + 1`. Every completed
 purchase increments `ownership_serial`, which grants the purchaser one new
 combined profile change. The admin may reset `portrait_hash` to zero for
-moderation without altering the serial or restoring that allowance. The custom
-name, portrait hash, and hosted image are never included in the AI prompt; only
-the immutable character, affinity, preset, and canonical instruction influence
-allocation.
+media moderation or clear `profile_url` for link moderation without altering
+the serial or restoring that allowance. The custom name, portrait hash, hosted
+media, and profile URL are never included in the AI prompt; only the immutable
+character, affinity, preset, and canonical instruction influence allocation.
 
 ## 3. MVP weight tiers
 

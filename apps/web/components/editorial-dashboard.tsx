@@ -10,7 +10,9 @@ import {
 } from "../lib/portfolio-display";
 import {
   MAX_CUSTOM_PIECE_NAME_BYTES,
+  normalizeProfileUrl,
   pieceDisplayName,
+  profileUrlLabel,
   validateCustomPieceName,
 } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
@@ -31,6 +33,7 @@ export type EditorialPiece = {
   ownershipSerial: number;
   profileChangeAvailable: boolean;
   customName: string;
+  profileUrl: string;
   weight: number;
   affinity: string;
   name: string;
@@ -390,7 +393,12 @@ export function EditorialDashboard({
   onRedeem: () => void;
   onBuy: (piece: EditorialPiece) => void;
   onPreset: (piece: EditorialPiece, preset: number) => void;
-  onProfile: (piece: EditorialPiece, file: File, name: string) => Promise<void>;
+  onProfile: (
+    piece: EditorialPiece,
+    file: File,
+    name: string,
+    profileUrl: string,
+  ) => Promise<void>;
   onClaim: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
@@ -402,6 +410,7 @@ export function EditorialDashboard({
   const profileInputRef = useRef<HTMLInputElement>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
+  const [profileUrl, setProfileUrl] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState("");
@@ -438,6 +447,7 @@ export function EditorialDashboard({
   const openProfileEditor = () => {
     if (!selected || !mine || !selected.profileChangeAvailable) return;
     setProfileName(selectedDisplayName);
+    setProfileUrl(selected.profileUrl);
     setProfileFile(null);
     setProfilePreview(null);
     setProfileError("");
@@ -448,6 +458,7 @@ export function EditorialDashboard({
     setProfileEditorOpen(false);
     setProfileFile(null);
     setProfilePreview(null);
+    setProfileUrl("");
     setProfileError("");
   };
   useEffect(() => {
@@ -465,10 +476,6 @@ export function EditorialDashboard({
   };
   const latestPreferences =
     data?.latestCycle?.brain?.activeNonNeutralInstructions ?? [];
-  const selectedActive =
-    selected?.data.every(
-      (dependency) => data?.dataAvailability[dependency] === true,
-    ) ?? false;
   const latestAllocation = data?.latestCycle?.allocation ?? { USDG: 10000 };
   const holdingSlices = data
     ? positiveBalanceSymbols(data.holdings).map((symbol) => {
@@ -747,14 +754,16 @@ export function EditorialDashboard({
                 alt="New braincell portrait preview"
               />
               <span>
-                {profileFile ? "Choose a different image" : "Choose image"}
+                {profileFile
+                  ? "Choose different media"
+                  : "Choose image or animation"}
               </span>
             </button>
             <input
               ref={profileInputRef}
               className="sr-only"
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/gif,image/webp"
               disabled={profileSaving}
               onChange={(event) => {
                 const file = event.target.files?.[0] ?? null;
@@ -785,12 +794,29 @@ export function EditorialDashboard({
               </small>
             </label>
 
+            <label className="profile-link-field">
+              <span>Link shown with this braincell (optional)</span>
+              <input
+                type="url"
+                value={profileUrl}
+                disabled={profileSaving}
+                placeholder="example.com/your-page"
+                onChange={(event) => {
+                  setProfileUrl(event.target.value);
+                  setProfileError("");
+                }}
+                autoComplete="url"
+                spellCheck={false}
+              />
+              <small>HTTPS only · visible in the tooltip and details</small>
+            </label>
+
             <div className="profile-editor-notice">
-              <strong>Name + image use one on-chain change.</strong>
+              <strong>Name + media + link use one on-chain change.</strong>
               <span>
-                Your wallet commits both together. You cannot edit either again
-                until someone else purchases this braincell. Moderators may
-                restore an image to the original without restoring this change.
+                Animated GIF and WebP files stay animated. Your wallet commits
+                the name, media hash, and optional link together. You cannot
+                edit them again until someone else purchases this braincell.
               </span>
             </div>
             {profileError && (
@@ -813,7 +839,7 @@ export function EditorialDashboard({
                 disabled={profileSaving || !profileFile}
                 onClick={async () => {
                   if (!profileFile) {
-                    setProfileError("Choose an image.");
+                    setProfileError("Choose an image or animation.");
                     return;
                   }
                   const validationError = validateCustomPieceName(profileName);
@@ -821,10 +847,26 @@ export function EditorialDashboard({
                     setProfileError(validationError);
                     return;
                   }
+                  let normalizedUrl = "";
+                  try {
+                    normalizedUrl = normalizeProfileUrl(profileUrl);
+                  } catch (error) {
+                    setProfileError(
+                      error instanceof Error
+                        ? error.message
+                        : "Enter a valid website address.",
+                    );
+                    return;
+                  }
                   setProfileSaving(true);
                   setProfileError("");
                   try {
-                    await onProfile(selected, profileFile, profileName);
+                    await onProfile(
+                      selected,
+                      profileFile,
+                      profileName,
+                      normalizedUrl,
+                    );
                     setProfileSaving(false);
                     closeProfileEditor();
                   } catch (error) {
@@ -888,7 +930,7 @@ export function EditorialDashboard({
                     disabled={!mine || !selected.profileChangeAvailable}
                     aria-label={
                       mine && selected.profileChangeAvailable
-                        ? `Customize ${selectedDisplayName}'s name and portrait`
+                        ? `Customize ${selectedDisplayName}'s profile`
                         : "This braincell profile cannot be customized right now"
                     }
                     onClick={openProfileEditor}
@@ -901,7 +943,7 @@ export function EditorialDashboard({
                       <span className="portrait-change-hint">Customize</span>
                     )}
                   </button>
-                  <div>
+                  <div className="piece-identity">
                     <p className="section-kicker">
                       PIECE {String(selected.id).padStart(2, "0")} ·{" "}
                       {selected.crew}
@@ -911,36 +953,39 @@ export function EditorialDashboard({
                       className="piece-name-button"
                       disabled={!mine || !selected.profileChangeAvailable}
                       onClick={openProfileEditor}
-                      aria-label={`Customize ${selectedDisplayName}'s name and portrait`}
+                      aria-label={`Customize ${selectedDisplayName}'s profile`}
                     >
                       <h2>{selectedDisplayName}</h2>
                       {mine && selected.profileChangeAvailable && (
                         <span aria-hidden="true">✎</span>
                       )}
                     </button>
-                    <p>
-                      Steers {selected.affinity} · {selected.weight / 100}% of
-                      the brain&apos;s influence
-                    </p>
-                    <p className="character-form">
-                      {selected.kind} · {selected.visual}
-                    </p>
-                    {mine && (
-                      <p className="portrait-change-status">
-                        {selected.profileChangeAvailable
-                          ? "Customize this braincell's name and portrait once."
-                          : "Profile customization used. The next purchaser gets one new change."}
-                      </p>
+                    <div className="piece-identity-meta">
+                      <span>Steers {selected.affinity}</span>
+                      <span>{selected.weight / 100}% influence</span>
+                      <span>
+                        {selected.kind} · {selected.visual}
+                      </span>
+                    </div>
+                    {selected.profileUrl.startsWith("https://") && (
+                      <a
+                        className="piece-profile-link"
+                        href={selected.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow ugc"
+                      >
+                        {profileUrlLabel(selected.profileUrl)} ↗
+                      </a>
                     )}
                   </div>
-                  <span
-                    className={
-                      selectedActive ? "status-active" : "status-inactive"
-                    }
-                  >
-                    {selectedActive ? "ACTIVE DATA" : "PARTLY INACTIVE"}
-                  </span>
                 </div>
+                {mine && (
+                  <p className="profile-customization-note">
+                    {selected.profileChangeAvailable
+                      ? "Customize the name, moving image, and link once for this ownership."
+                      : "Profile customization used. The next purchaser gets one new change."}
+                  </p>
+                )}
                 <p className="piece-tagline">{selected.tagline}</p>
                 <p className="piece-lore">“{selected.lore}”</p>
                 <div className="current-mood">

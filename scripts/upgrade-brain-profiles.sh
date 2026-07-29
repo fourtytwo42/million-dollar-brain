@@ -58,5 +58,6 @@ MDB_BRAIN="$brain" forge script \
   --gas-estimate-multiplier 175
 
 cast call "$brain" 'customName(uint256)(string)' 1 --rpc-url "$rpc" >/dev/null
+cast call "$brain" 'profileUrl(uint256)(string)' 1 --rpc-url "$rpc" >/dev/null
 cast call "$brain" 'canChangeProfile(uint256,address)(bool)' 1 "$brain" --rpc-url "$rpc" >/dev/null
 echo "Brain profile implementation is active on chain $chain_id at $brain"

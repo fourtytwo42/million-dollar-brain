@@ -45,6 +45,8 @@ contract BrainMarketplace is
     bool public purchasesEnabled;
     // Appended storage for the combined one-profile-change-per-ownership feature.
     mapping(uint256 => string) public customName;
+    // Appended storage for the optional owner profile link.
+    mapping(uint256 => string) public profileUrl;
 
     event PiecePurchased(
         uint256 indexed pieceId,
@@ -59,9 +61,16 @@ contract BrainMarketplace is
         address indexed owner,
         uint64 indexed ownershipSerial,
         bytes32 portraitHash,
-        string customName
+        string customName,
+        string profileUrl
     );
     event PortraitModerated(
+        uint256 indexed pieceId,
+        address indexed moderator,
+        address indexed owner,
+        uint64 ownershipSerial
+    );
+    event ProfileUrlModerated(
         uint256 indexed pieceId,
         address indexed moderator,
         address indexed owner,
@@ -170,22 +179,50 @@ contract BrainMarketplace is
     function setProfile(uint256 pieceId, bytes32 newPortraitHash, string calldata newName)
         external
     {
+        _setProfile(pieceId, newPortraitHash, newName, "");
+    }
+
+    function setProfile(
+        uint256 pieceId,
+        bytes32 newPortraitHash,
+        string calldata newName,
+        string calldata newProfileUrl
+    ) external {
+        _setProfile(pieceId, newPortraitHash, newName, newProfileUrl);
+    }
+
+    function _setProfile(
+        uint256 pieceId,
+        bytes32 newPortraitHash,
+        string memory newName,
+        string memory newProfileUrl
+    ) private {
         _validPiece(pieceId);
         require(ownerOf(pieceId) == msg.sender, "not owner");
         require(newPortraitHash != bytes32(0), "empty portrait");
         require(canChangeProfile(pieceId, msg.sender), "profile already changed");
         _validateName(newName);
+        _validateProfileUrl(newProfileUrl);
 
         portraitHash[pieceId] = newPortraitHash;
         customName[pieceId] = newName;
+        profileUrl[pieceId] = newProfileUrl;
         portraitChangeSerialPlusOne[pieceId] = ownershipSerial[pieceId] + 1;
-        emit ProfileChanged(pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash, newName);
+        emit ProfileChanged(
+            pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash, newName, newProfileUrl
+        );
     }
 
     function resetPortrait(uint256 pieceId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validPiece(pieceId);
         portraitHash[pieceId] = bytes32(0);
         emit PortraitModerated(pieceId, msg.sender, ownerOf(pieceId), ownershipSerial[pieceId]);
+    }
+
+    function resetProfileUrl(uint256 pieceId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _validPiece(pieceId);
+        profileUrl[pieceId] = "";
+        emit ProfileUrlModerated(pieceId, msg.sender, ownerOf(pieceId), ownershipSerial[pieceId]);
     }
 
     function reinitializeV2(bool purchasesEnabled_)
@@ -205,14 +242,29 @@ contract BrainMarketplace is
         require(pieceId > 0 && pieceId <= PIECE_COUNT, "invalid piece");
     }
 
-    function _validateName(string calldata value) private pure {
-        bytes calldata raw = bytes(value);
+    function _validateName(string memory value) private pure {
+        bytes memory raw = bytes(value);
         require(raw.length > 0, "empty name");
         require(raw.length <= 48, "name too long");
         require(raw[0] != 0x20 && raw[raw.length - 1] != 0x20, "name whitespace");
         for (uint256 i; i < raw.length; ++i) {
             uint8 character = uint8(raw[i]);
             require(character >= 0x20 && character != 0x7f, "invalid name");
+        }
+    }
+
+    function _validateProfileUrl(string memory value) private pure {
+        bytes memory raw = bytes(value);
+        if (raw.length == 0) return;
+        require(raw.length <= 200, "url too long");
+        require(
+            raw.length >= 8 && raw[0] == "h" && raw[1] == "t" && raw[2] == "t" && raw[3] == "p"
+                && raw[4] == "s" && raw[5] == ":" && raw[6] == "/" && raw[7] == "/",
+            "invalid url"
+        );
+        for (uint256 i; i < raw.length; ++i) {
+            uint8 character = uint8(raw[i]);
+            require(character >= 0x21 && character <= 0x7e, "invalid url");
         }
     }
 

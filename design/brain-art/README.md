@@ -29,3 +29,10 @@ The magenta sources were keyed with the ImageGen chroma-key helper, downsampled 
 - Characters mode uses 58% opacity and 35% saturation at rest, 85% on preview, and full color on selection.
 - The Brain keeps one character-first portrait treatment. Ownership remains visible through the halo and `Yours` filter; influence and current mood remain explicit in accessible labels, tooltips, and the selected-piece inspector.
 - Accessible names come from catalog data, not text embedded in the image.
+- Owner profile media may be a normalized static WebP or a preserved animated
+  GIF/WebP. Hash-keyed self-hosted media is clipped by the same SVG segments as
+  the canonical art; animation never changes hit testing or economic identity.
+- An owner may include one optional HTTPS profile link in the same one-time
+  name-and-media transaction. It is presentation-only and never enters the AI
+  context. Admins can independently reset custom media or clear the link
+  without restoring the owner's consumed customization.

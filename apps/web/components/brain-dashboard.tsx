@@ -24,7 +24,11 @@ import {
 } from "wagmi";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 import { retryApprovalDependentWrite } from "@/lib/approval-retry";
-import { pieceDisplayName, validateCustomPieceName } from "@/lib/piece-name";
+import {
+  normalizeProfileUrl,
+  pieceDisplayName,
+  validateCustomPieceName,
+} from "@/lib/piece-name";
 import { preparePortrait } from "@/lib/portrait";
 import { EditorialDashboard } from "./editorial-dashboard";
 
@@ -43,6 +47,7 @@ type Piece = {
   ownershipSerial: number;
   profileChangeAvailable: boolean;
   customName: string;
+  profileUrl: string;
   weight: number;
   affinity: string;
   name: string;
@@ -673,17 +678,20 @@ export function BrainDashboard() {
     piece: Piece,
     sourceFile: File,
     newName: string,
+    newProfileUrl: string,
   ) {
     if (!data) return;
     const nameError = validateCustomPieceName(newName);
     if (nameError) throw new Error(nameError);
-    setMessage("Preparing a square 384 × 384 portrait…");
+    const normalizedProfileUrl = normalizeProfileUrl(newProfileUrl);
+    setMessage("Preparing your braincell media…");
     const portrait = await preparePortrait(sourceFile);
     const bytes = new Uint8Array(await portrait.arrayBuffer());
     const hash = keccak256(bytes);
     const alreadyCommitted =
       hash.toLowerCase() === piece.portraitHash.toLowerCase() &&
-      newName === piece.customName;
+      newName === piece.customName &&
+      normalizedProfileUrl === piece.profileUrl;
 
     if (!piece.profileChangeAvailable && !alreadyCommitted) {
       throw new Error(
@@ -694,13 +702,13 @@ export function BrainDashboard() {
     const { wallet, publicClient } = clients();
     if (!alreadyCommitted) {
       setMessage(
-        "Confirm the one-time name and portrait change in your wallet…",
+        "Confirm the one-time name, media, and link change in your wallet…",
       );
       const tx = await wallet.writeContract({
         address: data.deployment.brain,
         abi: brainAbi,
         functionName: "setProfile",
-        args: [BigInt(piece.id), hash, newName],
+        args: [BigInt(piece.id), hash, newName, normalizedProfileUrl],
       });
       await publicClient.waitForTransactionReceipt({
         hash: tx,
@@ -721,7 +729,7 @@ export function BrainDashboard() {
         const refreshed = await refreshAfterConfirmedAction();
         setMessage(
           confirmedActionMessage(
-            `Piece ${piece.id} is now ${newName} and uses your custom portrait. This ownership's one profile change has been used.`,
+            `Piece ${piece.id} is now ${newName} and uses your custom profile. This ownership's one profile change has been used.`,
             refreshed,
           ),
         );
@@ -735,7 +743,7 @@ export function BrainDashboard() {
     }
     await refreshAfterConfirmedAction();
     throw new Error(
-      `The name and portrait hash are committed on chain, but the image upload failed: ${uploadError}. Open Customize and choose the same file and name to retry.`,
+      `The profile is committed on chain, but the media upload failed: ${uploadError}. Open Customize and choose the same file, name, and link to retry.`,
     );
   }
   async function redeem() {
@@ -877,8 +885,8 @@ export function BrainDashboard() {
             setMessage(error.shortMessage ?? error.message),
           )
         }
-        onProfile={(piece, file, name) =>
-          changeProfile(piece, file, name).catch((error) => {
+        onProfile={(piece, file, name, profileUrl) =>
+          changeProfile(piece, file, name, profileUrl).catch((error) => {
             setMessage(error.shortMessage ?? error.message);
             throw error;
           })

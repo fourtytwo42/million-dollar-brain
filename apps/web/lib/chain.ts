@@ -413,6 +413,12 @@ export async function dashboard(
         functionName: "customName",
         args: [id],
       },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "profileUrl",
+        args: [id],
+      },
     );
   }
 
@@ -459,6 +465,7 @@ export async function dashboard(
     const ownershipSerial = Number(results[cursor++] as bigint);
     const portraitChangeSerialPlusOne = Number(results[cursor++] as bigint);
     const customName = results[cursor++] as string;
+    const profileUrl = results[cursor++] as string;
     const definition = brainDefinition(index + 1);
     return {
       id: index + 1,
@@ -472,6 +479,7 @@ export async function dashboard(
       profileChangeAvailable:
         !unowned && portraitChangeSerialPlusOne !== ownershipSerial + 1,
       customName,
+      profileUrl,
       affinity: definition.affinity,
       name: definition.name,
       glyph: definition.glyph,
