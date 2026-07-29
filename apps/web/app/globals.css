@@ -784,6 +784,32 @@ footer {
   font-size: 13px;
   color: var(--text-muted);
 }
+
+.canary-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.canary-banner strong {
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 720px) {
+  .canary-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+}
 .how-it-works {
   position: fixed;
   z-index: 30;

@@ -1,5 +1,9 @@
 import { Pool, type PoolClient } from "pg";
-import type { AssetQualificationV1, AssetRecordV1 } from "./asset-universe.ts";
+import type {
+  AssetQualificationV1,
+  AssetQualificationWindowV2,
+  AssetRecordV1,
+} from "./asset-universe.ts";
 import type {
   ResearchRequestV1,
   ResearchResultV1,
@@ -226,6 +230,17 @@ async function ensureSchema(client: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS mdb_asset_qualification_daily_v4_latest_idx
       ON mdb_asset_qualification_daily_v4 (asset_id, observed_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_asset_qualification_hourly_v5 (
+      asset_id text NOT NULL REFERENCES mdb_asset_candidates_v4(asset_id) ON DELETE CASCADE,
+      observation_hour timestamptz NOT NULL,
+      observed_at timestamptz NOT NULL,
+      qualification jsonb NOT NULL,
+      evidence_hash text NOT NULL,
+      passed boolean NOT NULL,
+      PRIMARY KEY (asset_id, observation_hour)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_asset_qualification_hourly_v5_latest_idx
+      ON mdb_asset_qualification_hourly_v5 (asset_id, observed_at DESC);
     CREATE TABLE IF NOT EXISTS mdb_decision_research_v4 (
       input_hash text NOT NULL,
       round integer NOT NULL CHECK (round = 1),
@@ -246,7 +261,7 @@ async function ensureSchema(client: PoolClient) {
       broadcast boolean NOT NULL CHECK (broadcast = false),
       evidence_hash text NOT NULL
     );
-    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4)
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4), (5)
       ON CONFLICT (version) DO NOTHING;
   `);
 }
@@ -373,7 +388,7 @@ export async function recentPortfolioSnapshots(limit = 32) {
 
 export async function persistAssetCandidate(
   asset: AssetRecordV1,
-  qualification: AssetQualificationV1,
+  qualification: AssetQualificationV1 | AssetQualificationWindowV2,
   manifestHash: string,
   passed: boolean,
 ) {
@@ -405,15 +420,15 @@ export async function persistAssetCandidate(
         ],
       );
       await client.query(
-        `INSERT INTO mdb_asset_qualification_daily_v4
-          (asset_id,observation_date,observed_at,qualification,evidence_hash,passed)
+        `INSERT INTO mdb_asset_qualification_hourly_v5
+          (asset_id,observation_hour,observed_at,qualification,evidence_hash,passed)
          VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT(asset_id,observation_date) DO UPDATE SET
+         ON CONFLICT(asset_id,observation_hour) DO UPDATE SET
            observed_at=excluded.observed_at, qualification=excluded.qualification,
            evidence_hash=excluded.evidence_hash, passed=excluded.passed`,
         [
           asset.id,
-          qualification.observedAt.slice(0, 10),
+          `${qualification.observedAt.slice(0, 13)}:00:00.000Z`,
           qualification.observedAt,
           json(qualification),
           qualification.evidenceHash,

@@ -1,0 +1,9 @@
+[Unit]
+Description=42 Braincells isolated runtime health and alert checks
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/check-runtime-health.sh

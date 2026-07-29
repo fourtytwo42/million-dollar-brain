@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(diname "${BASH_SOURCE[0]}")/.." && pwd)"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
 manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
-testnet_acceptance="$repo_root/var/testnet-readiness/v3-72h-acceptance.json"
+testnet_acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
 [[ "${MDB_MAINNET_BROADCAST:-false}" == "true" ]] || {
@@ -13,7 +13,7 @@ export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-lin
   exit 1
 }
 [[ "${MDB_MAINNET_RELEASE_APPROVED:-false}" == "true" ]] || {
-  echo "Missing explicit extenal release approval." >&2
+  echo "Missing explicit external release approval." >&2
   exit 1
 }
 [[ -r "$env_file" ]]
@@ -27,7 +27,10 @@ set +a
   echo "A paid redundant production RPC is required." >&2
   exit 1
 }
+[[ -n "${MDB_BACKUP_RPC_URL:-}" && "$MDB_BACKUP_RPC_URL" != "$MDB_RPC_URL" ]]
+[[ -n "${MDB_WEBSOCKET_URL:-}" && -n "${MDB_BACKUP_WEBSOCKET_URL:-}" ]]
 [[ "$(cast chain-id --rpc-url "${MDB_RPC_URL:?}")" == "4663" ]]
+[[ "$(cast chain-id --rpc-url "$MDB_BACKUP_RPC_URL")" == "4663" ]]
 [[ -n "${ZEROX_API_KEY:-}" ]]
 [[ -r "${MDB_OPERATOR_KEYSTORE:?}" ]]
 [[ -r "${MDB_OPERATOR_PASSWORD_FILE:?}" ]]
@@ -44,19 +47,28 @@ forge fmt --check packages/contracts
 forge test --root packages/contracts
 
 jq -e '
-  .chainId == 4663 and .broadcastPermitted == false and
+  .schemaVersion == 2 and .chainId == 4663 and .broadcastPermitted == false and
   .gates.noSigningKey == true and
   .gates.canonicalIdentityChecked == true and
   .gates.zeroExConfigured == true and
   .gates.twoSidedQuotesValid == true and
   .gates.chainlinkMappingsConfigured == true and
-  .gates.thirtyDailyPasses == true
+  .gates.qualificationWindowPassed == true
 ' "$shadow_state" >/dev/null
 jq -e '
-  .chainId == 46630 and .durationHours >= 72 and
-  .failures == 0 and .atomicBuys == true and .atomicSells == true and
+  .chainId == 46630 and .durationHours >= 2 and
+  .protocolFailures == 0 and .atomicBuys == true and .atomicSells == true and
   .autonomousCycles == true
 ' "$testnet_acceptance" >/dev/null
+[[ "$(jq -r '.gitSha' "$testnet_acceptance")" == "$head_sha" ]] || {
+  echo "Testnet acceptance was not produced from the release commit." >&2
+  exit 1
+}
+testnet_candidate="$repo_root/var/releases/$head_sha/testnet.json"
+[[ -r "$testnet_candidate" ]]
+[[ "$(jq -r '.gitSha' "$testnet_candidate")" == "$head_sha" ]]
+[[ "$(jq -r '.environment' "$testnet_candidate")" == "testnet" ]]
+node "$repo_root/scripts/verify-release-artifacts.mjs" testnet
 
 deployer="$(cast wallet address --keystore "$MDB_OPERATOR_KEYSTORE" \
   --password-file "$MDB_OPERATOR_PASSWORD_FILE")"
@@ -74,7 +86,7 @@ MDB_DEPLOYMENT_OUTPUT="$manifest" \
 jq -e '
   .schemaVersion == 3 and .chainId == 4663 and
   .environment == "robinhood-mainnet" and .canonicalAssets == true and
-  .productionParityReplicas == false
+  .productionParityReplicas == false and .activationState == "paused-canary"
 ' "$manifest" >/dev/null
 ! grep -Eiq 'mock|replica|test quote' "$manifest"
 echo "Mainnet deployment completed from $head_sha; verify runtime bytecode before activation."

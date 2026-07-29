@@ -95,9 +95,9 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     faucetLanOnly: false,
     mockAssets: true,
     deploymentFile:
-      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/local.json",
-    stateDir: "/home/hendo420/projects/million-dollar-brain/var",
-    databaseName: "milliondollarbrain",
+      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/local-v3.json",
+    stateDir: "/home/hendo420/projects/million-dollar-brain/var/devnet",
+    databaseName: "milliondollarbrain_devnet",
   },
   testnet: {
     chainId: 46630,
@@ -114,8 +114,8 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     faucetLanOnly: true,
     mockAssets: true,
     deploymentFile:
-      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet.json",
-    stateDir: "/home/hendo420/projects/million-dollar-brain/var/testnet",
+      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet-v3.json",
+    stateDir: "/home/hendo420/projects/million-dollar-brain/var/testnet-v3",
     databaseName: "milliondollarbrain_testnet",
   },
   mainnet: {
@@ -133,7 +133,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     faucetLanOnly: true,
     mockAssets: false,
     deploymentFile:
-      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet.json",
+      "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json",
     stateDir: "/home/hendo420/projects/million-dollar-brain/var/mainnet",
     databaseName: "milliondollarbrain_mainnet",
   },

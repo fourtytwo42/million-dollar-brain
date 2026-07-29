@@ -13,7 +13,8 @@ The Anvil universe intentionally retains its four legacy mocks for fast,
 deterministic regression tests. The isolated V3 Robinhood Testnet environment
 uses 12 production-interface replicas, while mainnet shadow inspects canonical
 assets without signing or broadcasting. Production Chainlink mappings, 0x
-credentials, multisig/timelock administration, two-hour and 30-day evidence,
+credentials, multisig/timelock administration, fresh two-hour testnet evidence,
+48-hour asset qualification,
 legal review, and independent audits remain release gates.
 
 ## 1. Purpose
@@ -105,15 +106,13 @@ Rewards never expire. Ownership changes checkpoint rewards before settlement. Se
 
 ### Redemption
 
-- A redemption request escrows MDBS; shares burn only when settlement completes.
-- Immediate USDG settlement is allowed when the request is no more than 1% of NAV and every held risk asset can be sold within fresh-price and slippage limits.
-- Immediate and queued settlements liquidate the same share fraction of every position, including the USDG reserve, so remaining weights are unchanged apart from rounding.
-- Every other request enters a FIFO USDG queue.
-- Queue settlement value is calculated from validated NAV at execution, not request time.
+- Every sale liquidates the holder's proportional claim, charges the acting
+  holder's fee, burns MDBS, and returns USDG in one transaction.
 - The user supplies minimum proceeds and a deadline.
-- An unprocessed request may be cancelled at any time; escrowed shares return to the user.
-- An expired request cannot execute and remains cancelable.
-- The queue may liquidate at most 5% of NAV per hourly cycle.
+- If any required sale cannot satisfy freshness, halt, liquidity, or slippage
+  rules, the entire transaction reverts and the user retains MDBS.
+- New queued sales and queue processing are permanently disabled. Legacy
+  cancellation storage exists only for upgrade compatibility.
 - Stock Tokens are not distributed in kind.
 
 ## 6. Portfolio and execution limits

@@ -88,6 +88,30 @@ scripts/verify-testnet-readiness.sh
 Evidence is written under `var/testnet-readiness/` and is not a deployment
 manifest.
 
+The canonical acceptance summary is generated with:
+
+```bash
+node scripts/generate-testnet-acceptance.mjs
+```
+
+It records the exact tested Git SHA. A contract, wallet, valuation, execution,
+or accounting change invalidates older acceptance and requires a new two-hour
+run. Presentation-only releases use focused testnet browser UAT.
+
+## Graduation path
+
+- Devnet uses `local-v3.json`, `var/devnet`, and
+  `milliondollarbrain_devnet`.
+- Testnet uses `testnet-v3.json`, `var/testnet-v3`, and
+  `milliondollarbrain_testnet`.
+- Mainnet uses `mainnet-v3.json`, `var/mainnet`, and
+  `milliondollarbrain_mainnet`.
+
+`scripts/check-release.sh devnet` creates the devnet candidate.
+`scripts/promote-to-testnet.sh` rehearses promotion without broadcasting.
+Mainnet rehearsal and canary checks likewise default to non-broadcast behavior.
+Testnet and mainnet are never patched independently from the promoted commit.
+
 ## Current deployment and future broadcast
 
 `scripts/deploy-testnet-v3.sh` refuses to run unless all of these are true:

@@ -1,0 +1,13 @@
+[Unit]
+Description=Deploy 42 Braincells contracts to isolated Anvil devnet
+After=mdb-anvil.service
+Before=mdb-web-devnet.service
+
+[Service]
+Type=oneshot
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain/packages/contracts
+EnvironmentFile=/etc/mdb/devnet.env
+ExecStartPre=/usr/bin/mkdir -p /home/hendo420/projects/million-dollar-brain/packages/contracts/deployments
+ExecStart=/home/hendo420/.foundry/bin/forge script script/DeployLocal.s.sol:DeployLocal --rpc-url http://127.0.0.1:8545 --broadcast
+RemainAfterExit=yes

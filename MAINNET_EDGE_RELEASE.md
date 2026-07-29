@@ -5,12 +5,12 @@
 
 ## Environments
 
-| Environment          | Chain | Purpose                                                                     | Broadcast policy                         |
-| -------------------- | ----: | --------------------------------------------------------------------------- | ---------------------------------------- |
-| Local                | 31337 | Deterministic development and destructive tests                             | Local only                               |
-| Robinhood Testnet V3 | 46630 | Production-interface replicas, signed RFQ execution, wallets, and endurance | Test assets only                         |
-| Mainnet shadow       |  4663 | Canonical identity, oracle, liquidity, AI, and simulation evidence          | Read-only; keys rejected                 |
-| Mainnet              |  4663 | Real canonical assets                                                       | Disabled until every release gate passes |
+| Environment          | Chain | Purpose                                                                     | Broadcast policy         |
+| -------------------- | ----: | --------------------------------------------------------------------------- | ------------------------ |
+| Devnet               | 31337 | Deterministic development and destructive tests                             | Local only               |
+| Robinhood Testnet V3 | 46630 | Production-interface replicas, signed RFQ execution, wallets, and endurance | Test assets only         |
+| Mainnet shadow       |  4663 | Asset qualification worker and fork/simulation evidence                     | Read-only; keys rejected |
+| Mainnet canary       |  4663 | Paused canonical deployment and LAN verification on port 3003               | Staged activation only   |
 
 Robinhood does not publish canonical Stock Token deployments on chain 46630.
 The V3 testnet deployment therefore uses clearly labelled ERC-8056-compatible
@@ -27,7 +27,9 @@ Identity is `(chainId, contractAddress)`. A Robinhood UID is recorded when one
 exists; symbols and names are display metadata only. Discovery never activates
 an asset.
 
-Every candidate must pass each check on 30 consecutive UTC dates:
+Every candidate must pass each check for 48 continuous hourly observations.
+Stocks and ETFs must also span at least two distinct regular US market
+sessions; weekend-only observations cannot qualify:
 
 - Verified circulating market capitalization of at least $100 million for
   stocks and crypto, or official AUM of at least $100 million for funds.
@@ -39,9 +41,10 @@ Every candidate must pass each check on 30 consecutive UTC dates:
   official history, supported transfer behavior, and no halt, oracle pause, or
   pending corporate-action multiplier transition.
 
-The hourly shadow runner writes per-asset checks and source hashes. Any missing
-or failed daily observation breaks that asset's continuity. Activation still
-requires a reviewed, committed manifest and an on-chain registry update.
+The hourly shadow runner writes per-asset checks and source hashes. A failed
+observation or a gap longer than 90 minutes resets only that asset's clock.
+Unrelated code releases do not reset qualification. Activation still requires
+a reviewed, committed manifest and an on-chain registry update.
 
 ## Valuation and execution
 
@@ -101,12 +104,15 @@ Engineering acceptance requires:
   assertion that rejected a documented deterministic Hold even when a recent
   successful Ornith cycle existed; the corrected checkpoint and every later
   checkpoint passed. No protocol transaction was lost or queued.
-- Thirty consecutive passing mainnet-shadow qualification dates for every
-  launch asset.
+- Forty-eight continuous passing mainnet-shadow hours for every launch asset,
+  including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
   oracle mappings, and real 0x quote simulation.
 
-`scripts/deploy-mainnet.sh` remains fail-closed. It requires chain 4663, a clean
+`scripts/check-release.sh`, `scripts/promote-to-testnet.sh`,
+`scripts/rehearse-mainnet.sh`, and `scripts/check-mainnet-canary.sh` produce
+non-broadcast release evidence. `scripts/deploy-mainnet.sh` remains
+fail-closed. It requires chain 4663, a clean
 pushed commit, encrypted signer, explicit broadcast flag, non-mock manifest,
 runtime-bytecode verification, storage checks, fork evidence, testnet
 acceptance, shadow evidence, and all external credentials. The shadow runner
@@ -122,8 +128,23 @@ The remaining inputs are intentionally not fabricated in the repository:
 - Production 0x API credentials and validated current venue contracts.
 - Final Safe/role addresses and funded mainnet gas wallet.
 - Stable production domain.
-- Thirty consecutive days of complete mainnet-shadow qualification evidence.
+- Forty-eight continuous qualification hours, including two regular sessions
+  for every launch stock or ETF.
 - Independent audit and approved legal release path.
 
 No mainnet transaction or real-value activation is authorized by this
 engineering specification.
+
+## Graduation and canary controls
+
+Devnet, testnet, and mainnet use the same Git commit and build artifact but
+separate manifests, databases, state directories, history, secrets, signers,
+services, and timers. Devnet acceptance creates a release candidate. Testnet
+acceptance must reference that exact SHA. A contract, wallet, valuation,
+execution, or accounting change requires a fresh two-hour testnet acceptance.
+
+Mainnet deploys with basket buys, basket sells, AI rebalancing, and brain
+purchases disabled. `paused-canary`, `user-actions`, `automation`, and
+`emergency` are explicit on-chain stages. Claims remain independent. The apex
+domain stays on Coming Soon until a recorded activation approval routes it to
+the verified port-3003 canary.

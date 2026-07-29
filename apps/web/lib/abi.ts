@@ -56,6 +56,34 @@ const swapPlanComponents = [
 export const basketAbi = [
   {
     type: "function",
+    name: "canaryControlsConfigured",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "buysEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "sellsEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "rebalancesEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
     name: "nav",
     stateMutability: "view",
     inputs: [],
@@ -265,6 +293,20 @@ export const basketAbi = [
 ] as const;
 
 export const brainAbi = [
+  {
+    type: "function",
+    name: "marketControlsConfigured",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "purchasesEnabled",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "bool" }],
+  },
   {
     type: "function",
     name: "catalogVersion",

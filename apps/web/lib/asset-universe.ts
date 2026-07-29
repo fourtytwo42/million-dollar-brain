@@ -21,6 +21,16 @@ export type AssetQualificationV1 = {
   reasons: string[];
 };
 
+export type AssetQualificationWindowV2 = Omit<
+  AssetQualificationV1,
+  "consecutiveDays"
+> & {
+  schemaVersion: 2;
+  qualificationHours: number;
+  regularMarketSessions: number;
+  lastFailureAt: string | null;
+};
+
 export type AssetRecordV1 = {
   id: string;
   chainId: number;
@@ -37,7 +47,7 @@ export type AssetRecordV1 = {
   executionAdapter: Address | null;
   circulatingSupplyAdapter: Address | null;
   canonicalSource: string;
-  qualification: AssetQualificationV1 | null;
+  qualification: AssetQualificationV1 | AssetQualificationWindowV2 | null;
   active: boolean;
 };
 
@@ -53,7 +63,7 @@ export type CompactAssetV1 = {
   volatility30dBps: number | null;
   liquidityScoreBps: number | null;
   spreadBps: number | null;
-  qualificationDays: number;
+  qualificationHours: number;
   maximumWeightBps: number;
 };
 
@@ -72,7 +82,8 @@ export const ASSET_POLICY = {
   minimumMarketCapOrAumUsdWad: 100_000_000n * 10n ** 18n,
   minimumExecutableDepthUsdWad: 250_000n * 10n ** 18n,
   maximumProbeImpactBps: 100,
-  minimumQualificationDays: 30,
+  minimumQualificationHours: 48,
+  minimumRegularMarketSessions: 2,
   maximumRiskPositions: 9,
   maximumAssetWeightBps: 2_000,
   maximumHighVolatilityBps: 3_000,
@@ -144,7 +155,7 @@ export function qualificationStatus(
     | "executionAdapter"
     | "circulatingSupplyAdapter"
   >,
-  evidence: AssetQualificationV1 | null,
+  evidence: AssetQualificationV1 | AssetQualificationWindowV2 | null,
   now = Date.now(),
 ) {
   const reasons: string[] = [];
@@ -156,8 +167,19 @@ export function qualificationStatus(
     ? BigInt(evidence.executableDepthUsdWad)
     : 0n;
   if (Date.parse(evidence.validUntil) <= now) reasons.push("evidence expired");
-  if (evidence.consecutiveDays < ASSET_POLICY.minimumQualificationDays) {
-    reasons.push("30 consecutive qualification days not complete");
+  if (
+    !("qualificationHours" in evidence) ||
+    evidence.qualificationHours < ASSET_POLICY.minimumQualificationHours
+  ) {
+    reasons.push("48 continuous qualification hours not complete");
+  }
+  if (
+    (asset.kind === "stock" || asset.kind === "etf") &&
+    (!("regularMarketSessions" in evidence) ||
+      evidence.regularMarketSessions <
+        ASSET_POLICY.minimumRegularMarketSessions)
+  ) {
+    reasons.push("two regular US market sessions not observed");
   }
   if (marketCap < ASSET_POLICY.minimumMarketCapOrAumUsdWad) {
     reasons.push("market cap or AUM below $100M");

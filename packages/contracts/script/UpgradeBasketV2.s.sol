@@ -9,7 +9,7 @@ contract UpgradeBasketV2 is Script {
     function run() external {
         uint256 key = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(key);
-        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/local.json");
+        string memory deploymentPath = string.concat(vm.projectRoot(), "/deployments/local-v3.json");
         string memory deployment = vm.readFile(deploymentPath);
         address basketAddress = vm.parseJsonAddress(deployment, ".basket");
         address usdg = vm.parseJsonAddress(deployment, ".usdg");

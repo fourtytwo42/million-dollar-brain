@@ -1,0 +1,11 @@
+[Unit]
+Description=Run 42 Braincells devnet cycle hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+AccuracySec=1s
+Unit=mdb-cycle-devnet.service
+
+[Install]
+WantedBy=timers.target

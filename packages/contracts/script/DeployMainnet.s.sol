@@ -144,6 +144,7 @@ contract DeployMainnet is Script {
             )
         );
         rewards.grantRole(rewards.BRAIN_ROLE(), address(brain));
+        brain.reinitializeV2(false);
 
         BasketVault basket = BasketVault(
             address(
@@ -170,6 +171,7 @@ contract DeployMainnet is Script {
         bootstrapWeights[0] = 10_000;
         basket.reinitializeV2(address(valuation), 900, 100, bootstrapAssets, bootstrapWeights);
         basket.reinitializeV3(address(registry), address(execution));
+        basket.reinitializeV4(false, false, false);
         execution.grantRole(execution.VAULT_ROLE(), address(basket));
 
         string memory root = "mainnet";
@@ -178,6 +180,7 @@ contract DeployMainnet is Script {
         vm.serializeUint(root, "chainId", CHAIN_ID);
         vm.serializeBool(root, "canonicalAssets", true);
         vm.serializeBool(root, "productionParityReplicas", false);
+        vm.serializeString(root, "activationState", "paused-canary");
         vm.serializeAddress(root, "deployer", deployer);
         vm.serializeAddress(root, "quoteAuthorizer", quoteAuthorizer);
         vm.serializeAddress(root, "usdg", CANONICAL_USDG);

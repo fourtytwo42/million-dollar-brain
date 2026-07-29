@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect official 42 Braincells mainnet market data every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:45
+Persistent=true
+AccuracySec=1s
+Unit=mdb-market-collector-mainnet.service
+
+[Install]
+WantedBy=timers.target

@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="/home/hendo420/.local/node/bin:/home/hendo420/.foundry/bin:/usr/bin:/bin"
 
-if [[ "${MDB_NETWORK_MODE:-local}" != "local" ]]; then
+if [[ "${MDB_SERVER_SIGNING_ENABLED:-false}" == "true" ]]; then
   : "${MDB_OPERATOR_KEYSTORE:?MDB_OPERATOR_KEYSTORE is required}"
   : "${MDB_OPERATOR_PASSWORD_FILE:?MDB_OPERATOR_PASSWORD_FILE is required}"
   export MDB_OPERATOR_PRIVATE_KEY="$(

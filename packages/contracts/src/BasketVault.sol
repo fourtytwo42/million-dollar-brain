@@ -109,6 +109,11 @@ contract BasketVault is
     IAssetRegistryView public assetRegistry;
     IExecutionAdapterV3 public executionAdapter;
     bool public swapPlansRequired;
+    // V4 storage. Granular launch controls allow a verified paused mainnet canary.
+    bool public canaryControlsConfigured;
+    bool public buysEnabled;
+    bool public sellsEnabled;
+    bool public rebalancesEnabled;
     uint256[41] private __gap;
 
     event Deposited(address indexed account, uint256 gross, uint256 shares, uint256 fee);
@@ -134,6 +139,7 @@ contract BasketVault is
     event TargetWeightsUpdated(bytes32 indexed cycleHash, address[] assets, uint16[] weights);
     event BasketV2Configured(address indexed valuation, uint256 maximumPriceAge, uint256 maximumSlippageBps);
     event BasketV3Configured(address indexed assetRegistry, address indexed executionAdapter);
+    event CanaryControlsConfigured(bool buysEnabled, bool sellsEnabled, bool rebalancesEnabled);
     event SupportedAssetAdded(address indexed asset);
     event SupportedAssetRemoved(address indexed asset);
 
@@ -195,6 +201,22 @@ contract BasketVault is
         executionAdapter = IExecutionAdapterV3(executionAdapter_);
         swapPlansRequired = true;
         emit BasketV3Configured(assetRegistry_, executionAdapter_);
+    }
+
+    function reinitializeV4(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_)
+        external
+        reinitializer(4)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setCanaryControls(buysEnabled_, sellsEnabled_, rebalancesEnabled_);
+    }
+
+    function setCanaryControls(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(canaryControlsConfigured, "controls not configured");
+        _setCanaryControls(buysEnabled_, sellsEnabled_, rebalancesEnabled_);
     }
 
     function addSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -291,6 +313,7 @@ contract BasketVault is
         nonReentrant
         returns (uint256 shares)
     {
+        require(_buysEnabled(), "buys disabled");
         require(!swapPlansRequired, "swap plan required");
         return _depositLegacy(grossAmount, minimumShares, deadline);
     }
@@ -300,6 +323,7 @@ contract BasketVault is
         nonReentrant
         returns (uint256 shares)
     {
+        require(_buysEnabled(), "buys disabled");
         require(swapPlansRequired, "V3 not configured");
         require(block.timestamp <= deadline, "expired");
         require(grossAmount >= _usdWadToReserve(10e18), "minimum deposit");
@@ -352,6 +376,7 @@ contract BasketVault is
     }
 
     function redeem(uint256 shares, uint256 minimumNet, uint256 deadline) external nonReentrant returns (uint256 net) {
+        require(_sellsEnabled(), "sells disabled");
         require(!swapPlansRequired, "swap plan required");
         return _redeemLegacy(shares, minimumNet, deadline);
     }
@@ -361,6 +386,7 @@ contract BasketVault is
         nonReentrant
         returns (uint256 net)
     {
+        require(_sellsEnabled(), "sells disabled");
         require(swapPlansRequired, "V3 not configured");
         require(block.timestamp <= deadline, "expired");
         uint256 supply = totalSupply();
@@ -419,6 +445,7 @@ contract BasketVault is
         onlyRole(KEEPER_ROLE)
         nonReentrant
     {
+        require(_rebalancesEnabled(), "rebalances disabled");
         require(!swapPlansRequired, "swap plan required");
         _rebalanceLegacy(targetAssets, weights, cycleHash);
     }
@@ -429,6 +456,7 @@ contract BasketVault is
         bytes32 cycleHash,
         SwapPlan[] calldata plans
     ) external onlyRole(KEEPER_ROLE) nonReentrant {
+        require(_rebalancesEnabled(), "rebalances disabled");
         require(swapPlansRequired, "V3 not configured");
         _validateTargetWeights(targetAssets, weights);
         uint256 totalNav = totalAssetsUsd();
@@ -704,4 +732,24 @@ contract BasketVault is
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+
+    function _setCanaryControls(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_) private {
+        canaryControlsConfigured = true;
+        buysEnabled = buysEnabled_;
+        sellsEnabled = sellsEnabled_;
+        rebalancesEnabled = rebalancesEnabled_;
+        emit CanaryControlsConfigured(buysEnabled_, sellsEnabled_, rebalancesEnabled_);
+    }
+
+    function _buysEnabled() private view returns (bool) {
+        return !canaryControlsConfigured || buysEnabled;
+    }
+
+    function _sellsEnabled() private view returns (bool) {
+        return !canaryControlsConfigured || sellsEnabled;
+    }
+
+    function _rebalancesEnabled() private view returns (bool) {
+        return !canaryControlsConfigured || rebalancesEnabled;
+    }
 }

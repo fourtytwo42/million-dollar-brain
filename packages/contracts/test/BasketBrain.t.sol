@@ -173,6 +173,48 @@ contract BasketBrainTest is Test {
         assertGt(usdg.balanceOf(alice), 90_000e18);
     }
 
+    function testCanaryControlsStageValueActionsIndependently() public {
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
+        usdg.approve(address(brain), type(uint256).max);
+        vm.stopPrank();
+
+        vm.startPrank(admin);
+        basket.reinitializeV4(false, false, false);
+        brain.reinitializeV2(false);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        vm.expectRevert("buys disabled");
+        basket.deposit(100e18, 1, block.timestamp + 1 hours);
+        vm.prank(alice);
+        vm.expectRevert("sells disabled");
+        basket.redeem(100e18, 1, block.timestamp + 1 hours);
+        vm.prank(alice);
+        vm.expectRevert("purchases disabled");
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        address[] memory noAssets = new address[](0);
+        uint16[] memory noWeights = new uint16[](0);
+        vm.prank(admin);
+        vm.expectRevert("rebalances disabled");
+        basket.rebalance(noAssets, noWeights, keccak256("paused"));
+
+        vm.startPrank(admin);
+        basket.setCanaryControls(true, false, false);
+        brain.setPurchasesEnabled(true);
+        vm.stopPrank();
+        vm.prank(alice);
+        basket.deposit(100e18, 1, block.timestamp + 1 hours);
+        vm.prank(alice);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+
+        vm.prank(admin);
+        basket.setCanaryControls(true, true, true);
+        vm.prank(alice);
+        basket.redeem(100e18, 1, block.timestamp + 1 hours);
+    }
+
     function testEventOnlyUpgradePreservesPoolStateAndEmitsRebalanceTrades() public {
         vm.startPrank(alice);
         usdg.approve(address(basket), type(uint256).max);

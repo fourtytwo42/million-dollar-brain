@@ -5,8 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source_dir="$repo_root/infrastructure/systemd"
 target_dir="/etc/systemd/system"
 
-[[ -f /etc/mdb/local.env ]] || {
-  echo "/etc/mdb/local.env must exist before service installation" >&2
+[[ -f /etc/mdb/devnet.env ]] || {
+  echo "/etc/mdb/devnet.env must exist before service installation" >&2
   exit 1
 }
 [[ -f /etc/mdb/testnet.env ]] || {
@@ -22,11 +22,12 @@ for unit in "$source_dir"/*; do
   install -o root -g root -m 0644 "$unit" "$target_dir/$name"
 done
 systemctl daemon-reload
-systemctl enable mdb-web.service mdb-cycle.timer mdb-market-collector.timer
-systemctl disable mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer 2>/dev/null || true
-systemctl restart mdb-web.service
-systemctl restart mdb-cycle.timer mdb-market-collector.timer
-systemctl is-active mdb-web.service mdb-cycle.timer mdb-market-collector.timer
-for unit in mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer; do
-  [[ "$(systemctl is-enabled "$unit" 2>/dev/null || true)" == "disabled" ]]
-done
+systemctl disable mdb-web.service mdb-cycle.timer mdb-market-collector.timer mdb-deploy.service 2>/dev/null || true
+systemctl enable mdb-web-devnet.service mdb-cycle-devnet.timer mdb-market-collector-devnet.timer mdb-runtime-health.timer
+systemctl enable mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer
+systemctl disable mdb-web-mainnet.service mdb-cycle-mainnet.timer mdb-market-collector-mainnet.timer 2>/dev/null || true
+systemctl stop mdb-web.service mdb-cycle.timer mdb-market-collector.timer 2>/dev/null || true
+systemctl restart mdb-web-devnet.service mdb-cycle-devnet.timer mdb-market-collector-devnet.timer mdb-runtime-health.timer
+systemctl restart mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer
+systemctl is-active mdb-web-devnet.service mdb-cycle-devnet.timer mdb-market-collector-devnet.timer mdb-runtime-health.timer
+systemctl is-active mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer

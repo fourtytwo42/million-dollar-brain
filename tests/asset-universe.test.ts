@@ -117,10 +117,13 @@ function asset(
       kind === "crypto" || kind === "token" ? address(102) : null,
     canonicalSource: "official-fixture",
     qualification: {
+      schemaVersion: 2,
       evidenceHash: `hash-${value}`,
       observedAt: new Date().toISOString(),
       validUntil: new Date(Date.now() + 86_400_000).toISOString(),
-      consecutiveDays: 30,
+      qualificationHours: 48,
+      regularMarketSessions: 2,
+      lastFailureAt: null,
       marketCapOrAumUsdWad: (100_000_000n * 10n ** 18n).toString(),
       executableDepthUsdWad: (250_000n * 10n ** 18n).toString(),
       buyImpactBps: 100,
@@ -136,21 +139,19 @@ function asset(
   };
 }
 
-test("qualification enforces 30-day cap, liquidity, and supply evidence", () => {
+test("qualification enforces 48 hours, market sessions, liquidity, and supply evidence", () => {
   const crypto = asset(1, "crypto", "high_volatility");
-  assert.equal(
-    qualificationStatus(crypto, crypto.qualification).eligible,
-    true,
+  assert.ok(
+    crypto.qualification && "qualificationHours" in crypto.qualification,
   );
-  crypto.qualification!.consecutiveDays = 29;
-  assert.equal(
-    qualificationStatus(crypto, crypto.qualification).eligible,
-    false,
-  );
-  crypto.qualification!.consecutiveDays = 30;
+  const qualification = crypto.qualification;
+  assert.equal(qualificationStatus(crypto, qualification).eligible, true);
+  qualification.qualificationHours = 47;
+  assert.equal(qualificationStatus(crypto, qualification).eligible, false);
+  qualification.qualificationHours = 48;
   crypto.circulatingSupplyAdapter = null;
   assert.match(
-    qualificationStatus(crypto, crypto.qualification).reasons.join(" "),
+    qualificationStatus(crypto, qualification).reasons.join(" "),
     /circulating supply/,
   );
 });
@@ -233,7 +234,7 @@ test("full compact universe is retained while details are capped at 64", () => {
     volatility30dBps: null,
     liquidityScoreBps: index,
     spreadBps: 10,
-    qualificationDays: 30,
+    qualificationHours: 48,
     maximumWeightBps: 2_000,
   }));
   const context = compileUniverseContext(

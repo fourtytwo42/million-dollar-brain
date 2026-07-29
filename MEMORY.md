@@ -4,19 +4,18 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Keep the mainnet-edge release advancing while the public
-  testnet and mainnet Coming Soon surfaces remain available.
-- Last meaningful change: Added and deployed one owner-selected portrait
-  change per brain-piece ownership on local devnet and Robinhood Testnet.
-  Exact image hashes are on-chain; validated WebP bytes remain self-hosted.
-- Next step: Keep the read-only mainnet shadow collecting qualification
-  evidence. Supply Chainlink mappings, 0x credentials, and official
-  capitalization/history evidence before the 30-consecutive-day qualification
-  clock can advance.
+- Current task: Deploy and verify the isolated devnet, testnet, and paused
+  mainnet-canary graduation pipeline.
+- Last meaningful change: Added staged on-chain canary controls, 48-hour
+  per-asset qualification with two regular sessions for stocks/ETFs, isolated
+  runtime paths and systemd units, exact-artifact release records, migration,
+  backup, alert, rehearsal, and activation tooling.
+- Next step: Commit/push the verified checkpoint, migrate the authoritative VM,
+  upgrade devnet/testnet proxies, rebuild, and run live acceptance.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
-  funded gas, an audit, legal approval, and 30 consecutive mainnet-shadow
-  qualification days.
+  funded gas, an audit, legal approval, and 48 continuous qualification hours
+  with two regular sessions for every launch stock or ETF.
 
 ## Current State
 
@@ -49,6 +48,11 @@ Durable project context lives here. Update this file whenever information should
 - `PRD.md` v1.0 plus its ten linked normative specifications is the authoritative requirements set.
 - `PRODUCT_BRIEF.md` is superseded historical context.
 - No internal MVP implementation decision remains open. `BUILD_READINESS.md` distinguishes locked engineering defaults from external production inputs and release gates.
+- Devnet, testnet, and mainnet have normalized isolated manifests, state
+  directories, databases, services, and timers. Promotion records the exact
+  pushed Git SHA, full web-build hash, contract bytecode hashes, manifest hash,
+  schema version, and source acceptance. Mainnet first deploys with all
+  value-changing controls paused and remains LAN-only until staged activation.
 
 ## User Preferences
 
@@ -396,6 +400,29 @@ When sources conflict, use this order:
   `Light Metals`, approved and bought 100 USDG of MDBS, sold 25% atomically,
   claimed rewards, reconciled NAV exactly, and recorded zero browser errors or
   allowance failures.
+
+### 2026-07-28 - Graduation Pipeline Implementation Checkpoint
+
+- Context: Devnet, testnet, and mainnet needed an exact-artifact promotion path
+  and mainnet needed a paused canary rather than direct activation.
+- Decision: Use `local-v3.json`/`var/devnet`/`milliondollarbrain_devnet`,
+  `testnet-v3.json`/`var/testnet-v3`/`milliondollarbrain_testnet`, and
+  `mainnet-v3.json`/`var/mainnet`/`milliondollarbrain_mainnet`. Require 48
+  continuous hourly asset checks and two regular US sessions for stocks/ETFs.
+- Files: `config/networks.json`, `packages/contracts/src/BasketVault.sol`,
+  `packages/contracts/src/BrainMarketplace.sol`,
+  `packages/contracts/src/AssetRegistry.sol`, `scripts/check-release.sh`,
+  `scripts/migrate-environment-isolation.sh`, and `infrastructure/systemd/`.
+- Commands/tests: Eight graduation tests, eight dynamic-universe tests,
+  thirteen network tests, the complete existing Node unit suites, Next
+  production build, and 27 Foundry tests including 256 fuzz runs passed in an
+  isolated VM worktree. Manual storage-layout inspection confirmed all old
+  Basket, Brain, and Registry fields keep their existing slots.
+- Result: Engineering code is ready for the live VM migration and proxy
+  upgrades. No mainnet deployment or activation occurred.
+- Follow-up: Push the checkpoint, migrate the live VM, upgrade both non-mainnet
+  environments, rebuild, and produce fresh two-hour testnet evidence because
+  contract and execution-facing code changed.
 
 ## Decisions
 

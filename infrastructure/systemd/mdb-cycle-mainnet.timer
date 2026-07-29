@@ -1,0 +1,11 @@
+[Unit]
+Description=Run 42 Braincells mainnet cycle hourly after activation
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+AccuracySec=1s
+Unit=mdb-cycle-mainnet.service
+
+[Install]
+WantedBy=timers.target

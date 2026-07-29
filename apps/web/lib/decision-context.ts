@@ -871,7 +871,10 @@ export async function buildDecisionContext(
         volatility30dBps: dossier?.performance.volatility30dBps ?? null,
         liquidityScoreBps: dossier?.execution.liquidityScoreBps ?? null,
         spreadBps: dossier?.quote.spreadBps ?? null,
-        qualificationDays: asset.qualification?.consecutiveDays ?? 0,
+        qualificationHours:
+          asset.qualification && "qualificationHours" in asset.qualification
+            ? asset.qualification.qualificationHours
+            : 0,
         maximumWeightBps: asset.maximumWeightBps,
       };
     });

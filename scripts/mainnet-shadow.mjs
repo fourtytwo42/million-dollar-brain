@@ -8,6 +8,10 @@ import {
 } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { createPublicClient, http, isAddress, parseAbi } from "viem";
+import {
+  continuousPassingWindow,
+  qualificationWindowPassed,
+} from "./lib/qualification-window.mjs";
 
 const CHAIN_ID = 4663;
 const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
@@ -23,7 +27,7 @@ const statePath =
   resolve(repoRoot, "var/mainnet-shadow/state.json");
 const evidencePath =
   process.env.MDB_MAINNET_SHADOW_EVIDENCE ??
-  resolve(repoRoot, "var/mainnet-shadow/daily-evidence.jsonl");
+  resolve(repoRoot, "var/mainnet-shadow/qualification-evidence.jsonl");
 const rpcUrl = process.env.MDB_MAINNET_SHADOW_RPC_URL ?? PUBLIC_RPC;
 const apiKey = process.env.ZEROX_API_KEY ?? "";
 const taker = process.env.MDB_MAINNET_SHADOW_TAKER ?? "";
@@ -44,6 +48,7 @@ const IMPACT_NOTIONAL_USD = 25_000;
 const DEPTH_NOTIONAL_USD = 250_000;
 const MAXIMUM_IMPACT_BPS = 100;
 const MAXIMUM_CAPITALIZATION_EVIDENCE_AGE_SECONDS = 172_800;
+const QUALIFICATION_HOURS = 48;
 
 if (process.env.MDB_MAINNET_BROADCAST === "true") {
   throw new Error("mainnet shadow refuses broadcast mode");
@@ -355,7 +360,7 @@ function inspectHistory(asset) {
   };
 }
 
-function priorDailyEvidence() {
+function priorQualificationEvidence() {
   if (!existsSync(evidencePath)) return [];
   return readFileSync(evidencePath, "utf8")
     .trim()
@@ -368,22 +373,6 @@ function priorDailyEvidence() {
         return [];
       }
     });
-}
-
-function consecutivePassingDays(rows) {
-  const byDate = new Map();
-  for (const row of rows) {
-    const date = String(row.at ?? "").slice(0, 10);
-    if (date) byDate.set(date, Boolean(row.passed));
-  }
-  let cursor = new Date();
-  cursor.setUTCHours(0, 0, 0, 0);
-  let count = 0;
-  while (byDate.get(cursor.toISOString().slice(0, 10)) === true) {
-    count += 1;
-    cursor.setUTCDate(cursor.getUTCDate() - 1);
-  }
-  return count;
 }
 
 async function parallelMap(items, concurrency, worker) {
@@ -508,7 +497,7 @@ const feedEvidence = await parallelMap(
   6,
   inspectFeed,
 );
-const priorEvidence = priorDailyEvidence();
+const priorEvidence = priorQualificationEvidence();
 const qualification = inspected
   .filter((asset) => nominated.has(asset.symbol) && asset.symbol !== "USDG")
   .map((asset) => {
@@ -547,17 +536,29 @@ const qualification = inspected
       market?.capitalization?.valid === true &&
       market?.history?.valid === true;
     const assetId = `${CHAIN_ID}:${asset.address.toLowerCase()}`;
-    const qualificationDays = consecutivePassingDays([
+    const window = continuousPassingWindow([
       ...priorEvidence
-        .flatMap((row) => row.assets ?? [])
+        .flatMap((row) =>
+          (row.assets ?? []).map((candidate) => ({
+            ...candidate,
+            at: candidate.at ?? row.at,
+          })),
+        )
         .filter((row) => row.assetId === assetId),
       { at: new Date().toISOString(), passed },
     ]);
+    const windowPassed = qualificationWindowPassed({
+      ...window,
+      requiredHours: QUALIFICATION_HOURS,
+      requiresMarketSessions: asset.symbol !== "WETH",
+    });
     return {
       assetId,
       symbol: asset.symbol,
       passed,
-      qualificationDays,
+      qualificationHours: window.qualificationHours,
+      regularMarketSessions: window.regularMarketSessions,
+      qualificationWindowPassed: windowPassed,
       checks: {
         identityValid,
         oracleActive: asset.oraclePaused !== true,
@@ -573,13 +574,16 @@ const qualification = inspected
   });
 const currentQualificationPass =
   qualification.length > 0 && qualification.every((row) => row.passed);
-const qualificationDays =
+const qualificationHours =
   qualification.length > 0
-    ? Math.min(...qualification.map((row) => row.qualificationDays))
+    ? Math.min(...qualification.map((row) => row.qualificationHours))
     : 0;
+const qualificationWindowPassed =
+  qualification.length > 0 &&
+  qualification.every((row) => row.qualificationWindowPassed);
 
 const result = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   mode: "robinhood-mainnet-shadow",
   startedAt,
   completedAt: new Date().toISOString(),
@@ -593,7 +597,9 @@ const result = {
   feedEvidence,
   marketEvidence,
   qualification,
-  qualificationDays,
+  qualificationHours,
+  qualificationRequiredHours: QUALIFICATION_HOURS,
+  qualificationWindowPassed,
   gates: {
     noSigningKey: true,
     canonicalIdentityChecked: inspected.every(
@@ -616,7 +622,7 @@ const result = {
       ),
     chainlinkMappingsConfigured:
       feedEvidence.length > 0 && feedEvidence.every((row) => row.valid),
-    thirtyDailyPasses: qualificationDays >= 30,
+    qualificationWindowPassed,
   },
 };
 result.sourceHash = hash(result);
@@ -631,13 +637,17 @@ appendFileSync(
     sourceHash: result.sourceHash,
     gates: result.gates,
     passed: currentQualificationPass,
-    qualificationDays,
+    qualificationHours,
+    qualificationRequiredHours: QUALIFICATION_HOURS,
+    qualificationWindowPassed,
     canonicalAssetCount: result.canonicalAssetCount,
     assets: qualification.map((row) => ({
       assetId: row.assetId,
       symbol: row.symbol,
       passed: row.passed,
-      qualificationDays: row.qualificationDays,
+      qualificationHours: row.qualificationHours,
+      regularMarketSessions: row.regularMarketSessions,
+      qualificationWindowPassed: row.qualificationWindowPassed,
     })),
   })}\n`,
   { mode: 0o640 },

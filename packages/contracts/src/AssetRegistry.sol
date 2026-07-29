@@ -14,7 +14,8 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     uint256 public constant BPS = 10_000;
     uint256 public constant MINIMUM_MARKET_CAP_USD = 100_000_000e18;
     uint256 public constant MINIMUM_EXECUTABLE_DEPTH_USD = 250_000e18;
-    uint32 public constant MINIMUM_QUALIFICATION_DAYS = 30;
+    uint32 public constant MINIMUM_QUALIFICATION_HOURS = 48;
+    uint8 public constant MINIMUM_REGULAR_MARKET_SESSIONS = 2;
 
     enum AssetKind {
         RESERVE,
@@ -47,7 +48,8 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         bytes32 evidenceHash;
         uint64 observedAt;
         uint64 validUntil;
-        uint32 consecutiveDays;
+        uint32 consecutiveHours;
+        uint8 regularMarketSessions;
         uint128 marketCapOrAumUsdWad;
         uint128 executableDepthUsdWad;
         bool identityValid;
@@ -67,7 +69,11 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     event AssetRegistered(address indexed token, bytes32 indexed robinhoodUid, AssetKind kind);
     event AssetConfigurationUpdated(address indexed token);
     event QualificationRecorded(
-        address indexed token, bytes32 indexed evidenceHash, uint32 consecutiveDays, bool eligible
+        address indexed token,
+        bytes32 indexed evidenceHash,
+        uint32 consecutiveHours,
+        uint8 regularMarketSessions,
+        bool eligible
     );
     event AssetActivationChanged(address indexed token, bool active);
 
@@ -133,7 +139,8 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         emit QualificationRecorded(
             token,
             qualification.evidenceHash,
-            qualification.consecutiveDays,
+            qualification.consecutiveHours,
+            qualification.regularMarketSessions,
             _eligible(record, qualification)
         );
     }
@@ -194,9 +201,13 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     {
         if (!record.registered || qualification.validUntil <= block.timestamp) return false;
         if (
-            qualification.consecutiveDays < MINIMUM_QUALIFICATION_DAYS
+            qualification.consecutiveHours < MINIMUM_QUALIFICATION_HOURS
                 || qualification.marketCapOrAumUsdWad < MINIMUM_MARKET_CAP_USD
                 || qualification.executableDepthUsdWad < MINIMUM_EXECUTABLE_DEPTH_USD
+        ) return false;
+        if (
+            (record.kind == AssetKind.STOCK || record.kind == AssetKind.ETF)
+                && qualification.regularMarketSessions < MINIMUM_REGULAR_MARKET_SESSIONS
         ) return false;
         if (
             !qualification.identityValid || !qualification.oracleValid

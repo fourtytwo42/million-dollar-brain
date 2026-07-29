@@ -9,7 +9,7 @@ case "$mode" in
   local)
     env_file="${MDB_LOCAL_ENV_FILE:-/etc/mdb/local.env}"
     rpc="${MDB_LOCAL_RPC_URL:-http://127.0.0.1:8545}"
-    manifest="$repo_root/packages/contracts/deployments/local.json"
+    manifest="$repo_root/packages/contracts/deployments/local-v3.json"
     ;;
   testnet)
     env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"

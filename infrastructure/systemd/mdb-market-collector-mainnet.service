@@ -1,0 +1,9 @@
+[Unit]
+Description=Collect official 42 Braincells market observations (mainnet)
+After=mdb-web-mainnet.service
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mdb/mainnet.env
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 120 -H "x-mdb-collector-token:${MDB_COLLECTOR_TOKEN}" -X POST http://127.0.0.1:3003/api/collect-market

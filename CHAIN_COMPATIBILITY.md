@@ -95,9 +95,9 @@ The architecture supports:
 The protocol maintains two separate universes:
 
 1. **Discoverable universe:** every asset found through the official Robinhood Stock Token API, official Robinhood Chain contract registry, and permitted on-chain token discovery.
-2. **Qualified decision universe:** every contract with 30 consecutive passing
-   qualification days and an explicitly committed, on-chain-active registry
-   record.
+2. **Qualified decision universe:** every contract with 48 continuous passing
+   hourly observations, two regular US market sessions for stocks and ETFs,
+   and an explicitly committed, on-chain-active registry record.
 
 Ornith sees every qualified asset in a compact directory and may assign
 non-zero weight to no more than nine risk positions plus USDG.

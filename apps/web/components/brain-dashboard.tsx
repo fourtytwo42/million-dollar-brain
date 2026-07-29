@@ -81,6 +81,14 @@ type Cycle = {
   };
 };
 type Data = {
+  activation: {
+    basketControlsConfigured: boolean;
+    brainControlsConfigured: boolean;
+    buysEnabled: boolean;
+    sellsEnabled: boolean;
+    rebalancesEnabled: boolean;
+    brainPurchasesEnabled: boolean;
+  };
   network: {
     mode: "local" | "testnet" | "mainnet";
     chainId: number;

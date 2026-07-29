@@ -41,6 +41,8 @@ contract BrainMarketplace is
     mapping(uint256 => bytes32) public portraitHash;
     mapping(uint256 => uint64) public ownershipSerial;
     mapping(uint256 => uint64) public portraitChangeSerialPlusOne;
+    bool public marketControlsConfigured;
+    bool public purchasesEnabled;
 
     event PiecePurchased(
         uint256 indexed pieceId,
@@ -56,6 +58,7 @@ contract BrainMarketplace is
         uint64 indexed ownershipSerial,
         bytes32 portraitHash
     );
+    event PurchaseControlConfigured(bool purchasesEnabled);
 
     function initialize(
         address admin,
@@ -105,6 +108,7 @@ contract BrainMarketplace is
     }
 
     function buy(uint256 pieceId, uint256 maximumPrice, uint256 deadline) external {
+        require(!marketControlsConfigured || purchasesEnabled, "purchases disabled");
         _validPiece(pieceId);
         require(block.timestamp <= deadline, "expired");
         address seller = ownerOf(pieceId);
@@ -161,6 +165,19 @@ contract BrainMarketplace is
         emit PortraitChanged(pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash);
     }
 
+    function reinitializeV2(bool purchasesEnabled_)
+        external
+        reinitializer(2)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _setPurchaseControl(purchasesEnabled_);
+    }
+
+    function setPurchasesEnabled(bool purchasesEnabled_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(marketControlsConfigured, "controls not configured");
+        _setPurchaseControl(purchasesEnabled_);
+    }
+
     function _validPiece(uint256 pieceId) private pure {
         require(pieceId > 0 && pieceId <= PIECE_COUNT, "invalid piece");
     }
@@ -183,4 +200,10 @@ contract BrainMarketplace is
     }
 
     function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
+
+    function _setPurchaseControl(bool purchasesEnabled_) private {
+        marketControlsConfigured = true;
+        purchasesEnabled = purchasesEnabled_;
+        emit PurchaseControlConfigured(purchasesEnabled_);
+    }
 }

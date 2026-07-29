@@ -1,0 +1,15 @@
+[Unit]
+Description=42 Braincells isolated local Anvil devnet
+After=network.target
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+ExecStartPre=/usr/bin/mkdir -p /home/hendo420/projects/million-dollar-brain/var/devnet/anvil
+ExecStart=/home/hendo420/.foundry/bin/anvil --host 0.0.0.0 --port 8545 --chain-id 31337 --state /home/hendo420/projects/million-dollar-brain/var/devnet/anvil/state.json --state-interval 5
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

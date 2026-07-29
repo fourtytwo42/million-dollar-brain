@@ -147,6 +147,7 @@ contract DeployTestnetV3 is Script {
                 )
             )
         );
+        brain.reinitializeV2(true);
         rewards.grantRole(rewards.BRAIN_ROLE(), address(brain));
 
         address[] memory basketAssets = new address[](riskAssets.length);
@@ -184,6 +185,7 @@ contract DeployTestnetV3 is Script {
         }
         basket.reinitializeV2(address(valuation), 120, 100, bootstrapAssets, bootstrapWeights);
         basket.reinitializeV3(address(registry), address(execution));
+        basket.reinitializeV4(true, true, true);
         execution.grantRole(execution.VAULT_ROLE(), address(basket));
         usdg.mint(deployer, 1_000_000e18);
 
@@ -216,10 +218,11 @@ contract DeployTestnetV3 is Script {
         return AssetRegistry.AssetQualification({
             evidenceHash: evidenceHash,
             observedAt: uint64(block.timestamp),
-            // Daily publisher refreshes this in normal operation; seven days keeps the
-            // 72-hour acceptance run fail-closed without expiring mid-rehearsal.
+            // The replica publisher refreshes this in normal operation; seven days keeps
+            // the two-hour acceptance run fail-closed without expiring mid-rehearsal.
             validUntil: uint64(block.timestamp + 7 days),
-            consecutiveDays: 30,
+            consecutiveHours: 48,
+            regularMarketSessions: 2,
             marketCapOrAumUsdWad: uint128(100_000_000e18),
             executableDepthUsdWad: uint128(250_000e18),
             identityValid: true,

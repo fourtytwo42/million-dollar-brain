@@ -2,7 +2,7 @@
 Description=MillionDollar Brain Robinhood Testnet web application
 After=network-online.target postgresql.service
 Wants=network-online.target
-ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet.json
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet-v3.json
 
 [Service]
 Type=simple
@@ -17,7 +17,7 @@ RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var/testnet /home/hendo420/projects/million-dollar-brain/apps/web/.next/cache
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var/testnet-v3 /home/hendo420/projects/million-dollar-brain/apps/web/.next/cache
 
 [Install]
 WantedBy=multi-user.target

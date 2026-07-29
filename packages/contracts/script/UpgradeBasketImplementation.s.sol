@@ -8,7 +8,7 @@ contract UpgradeBasketImplementation is Script {
     function run() external {
         uint256 key = vm.envUint("DEPLOYER_PRIVATE_KEY");
         string memory deployment =
-            vm.readFile(string.concat(vm.projectRoot(), "/deployments/local.json"));
+            vm.readFile(string.concat(vm.projectRoot(), "/deployments/local-v3.json"));
         BasketVault basket = BasketVault(vm.parseJsonAddress(deployment, ".basket"));
         vm.startBroadcast(key);
         BasketVault implementation = new BasketVault();

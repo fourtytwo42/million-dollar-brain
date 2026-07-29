@@ -586,6 +586,23 @@ Failure must not trigger an unapproved provider or model automatically unless th
   not use the shared Robyn LAN node.
 - Robinhood Chain mainnet uses chain ID 4663.
 - The public testnet RPC is acceptable for testnet but must not be the sole mainnet RPC because it is rate-limited and not production-grade.
+- Devnet uses port 3000, `local-v3.json`, `var/devnet`, and
+  `milliondollarbrain_devnet`. Testnet uses port 3001, `testnet-v3.json`,
+  `var/testnet-v3`, and `milliondollarbrain_testnet`. Mainnet canary uses port
+  3003, `mainnet-v3.json`, `var/mainnet`, and
+  `milliondollarbrain_mainnet`.
+- Each environment has isolated history, portrait storage, RPCs, secrets,
+  operator identity, services, and timers. Promotion uses the exact same clean
+  pushed Git SHA and web/contract artifact hashes; testnet or mainnet is never
+  independently patched.
+- Devnet acceptance creates a release candidate. Contract, wallet, valuation,
+  execution, or accounting changes require a fresh two-hour testnet
+  acceptance. Mainnet additionally requires fork rehearsal and 48 continuous
+  qualification hours, including two regular US market sessions for every
+  launch stock or ETF.
+- Mainnet first deploys as a LAN-only paused canary. Basket buys, sells,
+  autonomous rebalancing, and brain purchases activate in separately recorded
+  stages. The apex domain remains Coming Soon until explicit activation.
 - Contracts, ABIs, data schemas, and service behavior remain identical between environments; versioned network configuration supplies addresses and endpoints.
 - Local Anvil provides mock USDG, ERC-20, ERC-8056 Stock Token, Chainlink, sequencer, router, liquidity, halt, and corporate-action behavior.
 - The complete network specification is defined in `CHAIN_COMPATIBILITY.md`.

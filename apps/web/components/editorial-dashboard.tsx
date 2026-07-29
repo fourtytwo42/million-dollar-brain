@@ -134,6 +134,14 @@ type CycleRecord = {
 };
 
 export type EditorialData = {
+  activation: {
+    basketControlsConfigured: boolean;
+    brainControlsConfigured: boolean;
+    buysEnabled: boolean;
+    sellsEnabled: boolean;
+    rebalancesEnabled: boolean;
+    brainPurchasesEnabled: boolean;
+  };
   assets: {
     id: string;
     symbol: string;
@@ -626,6 +634,22 @@ export function EditorialDashboard({
         <div className="editorial-banner">{message}</div>
       )}
 
+      {network?.mode === "mainnet" &&
+        data &&
+        (!data.activation.buysEnabled ||
+          !data.activation.sellsEnabled ||
+          !data.activation.rebalancesEnabled ||
+          !data.activation.brainPurchasesEnabled) && (
+          <div className="canary-banner" role="status">
+            <strong>Mainnet canary is paused.</strong>
+            <span>
+              Read-only verification is live. User trading, brain purchases, and
+              autonomous rebalancing activate only through separate, recorded
+              release stages.
+            </span>
+          </div>
+        )}
+
       {walletSource === "built-in" &&
         network?.mode === "local" &&
         network?.builtInWalletEnabled &&
@@ -800,6 +824,12 @@ export function EditorialDashboard({
                   ) : (
                     <button
                       className="primary-action"
+                      disabled={!data?.activation.brainPurchasesEnabled}
+                      title={
+                        data?.activation.brainPurchasesEnabled
+                          ? undefined
+                          : "Brain purchases are paused during canary verification"
+                      }
                       onClick={() => onBuy(selected)}
                     >
                       {selected.unowned ? "Buy piece" : "Buy next"} · $
@@ -1110,6 +1140,7 @@ export function EditorialDashboard({
                     className="primary-action trade-submit"
                     disabled={
                       !data ||
+                      !data.activation.buysEnabled ||
                       Number(amount) <= 0 ||
                       Number(amount) >
                         Number(formatUnits(BigInt(data.walletUsdg), 18))
@@ -1172,6 +1203,7 @@ export function EditorialDashboard({
                     className="primary-action trade-submit"
                     disabled={
                       !data ||
+                      !data.activation.sellsEnabled ||
                       Number(sellAmount) <= 0 ||
                       Number(sellAmount) >
                         Number(formatUnits(BigInt(data.shares), 18))

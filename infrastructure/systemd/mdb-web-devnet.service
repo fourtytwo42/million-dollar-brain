@@ -1,0 +1,23 @@
+[Unit]
+Description=42 Braincells isolated devnet web application
+After=network-online.target mdb-anvil.service mdb-deploy-devnet.service postgresql.service
+Wants=network-online.target
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/local-v3.json
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/devnet.env
+Environment=MDB_NETWORK_MODE=local
+Environment=PORT=3000
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/start-web.sh
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var/devnet /home/hendo420/projects/million-dollar-brain/apps/web/.next/cache
+
+[Install]
+WantedBy=multi-user.target

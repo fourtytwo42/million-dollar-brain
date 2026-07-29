@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect official 42 Braincells devnet market data every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+AccuracySec=1s
+Unit=mdb-market-collector-devnet.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,9 @@
+[Unit]
+Description=42 Braincells constrained AI allocation cycle (mainnet)
+After=mdb-web-mainnet.service
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mdb/mainnet.env
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 300 -H "x-mdb-cycle-token:${MDB_CYCLE_TOKEN}" -X POST http://127.0.0.1:3003/api/cycle

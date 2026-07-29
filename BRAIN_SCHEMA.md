@@ -346,8 +346,9 @@ The model sees every active asset as an option. It does not search Robinhood Cha
 The decision universe contains every qualified registry asset; it has no fixed
 candidate-count ceiling. Ornith may assign non-zero weight to no more than nine
 risk assets plus USDG. Candidates are synchronized from canonical metadata but
-become active only after 30 consecutive qualification passes and an explicit
-committed manifest plus on-chain registry update.
+become active only after 48 continuous hourly qualification passes, two
+regular US market sessions for stocks and ETFs, and an explicit committed
+manifest plus on-chain registry update.
 
 Each active asset is accompanied by a structured dossier containing its identity, registry tags, trade permissions, basket position, price, returns, volatility, drawdown, trend metrics, liquidity, spread, price impact, correlation, applicable SEC-derived fundamentals, corporate-action status, source timestamps, formula versions, and validity flags.
 

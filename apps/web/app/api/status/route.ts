@@ -15,6 +15,7 @@ import {
   portfolioPerformanceHistory,
 } from "@/lib/portfolio-accounting";
 import { localPriceSyncHealth } from "@/lib/market-price-sync";
+import { releaseStatus } from "@/lib/release-status";
 
 export const runtime = "nodejs";
 function tokenAmount(value: string, decimals = 18) {
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
         : null;
     return NextResponse.json({
       ...current,
+      release: releaseStatus(current.activation),
       navChange24hBps,
       dataAvailability:
         history[0]?.decisionContext?.dataAvailability ?? DATA_AVAILABILITY,

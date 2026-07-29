@@ -247,6 +247,36 @@ export async function dashboard(
     {
       address: d.basket,
       abi: basketAbi,
+      functionName: "canaryControlsConfigured",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "buysEnabled",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "sellsEnabled",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "rebalancesEnabled",
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "marketControlsConfigured",
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "purchasesEnabled",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
       functionName: "totalAssetsUsd",
     },
     {
@@ -385,6 +415,12 @@ export async function dashboard(
     publicClient.getBlock(),
   ]);
   let cursor = 0;
+  const basketControlsConfigured = results[cursor++] as boolean;
+  const buysEnabled = results[cursor++] as boolean;
+  const sellsEnabled = results[cursor++] as boolean;
+  const rebalancesEnabled = results[cursor++] as boolean;
+  const brainControlsConfigured = results[cursor++] as boolean;
+  const brainPurchasesEnabled = results[cursor++] as boolean;
   const nav = results[cursor++] as bigint;
   const navPerShare = results[cursor++] as bigint;
   const supply = results[cursor++] as bigint;
@@ -504,6 +540,16 @@ export async function dashboard(
   );
   return {
     network: publicNetworkConfig(networkConfig),
+    activation: {
+      basketControlsConfigured,
+      brainControlsConfigured,
+      buysEnabled: !basketControlsConfigured || Boolean(buysEnabled),
+      sellsEnabled: !basketControlsConfigured || Boolean(sellsEnabled),
+      rebalancesEnabled:
+        !basketControlsConfigured || Boolean(rebalancesEnabled),
+      brainPurchasesEnabled:
+        !brainControlsConfigured || Boolean(brainPurchasesEnabled),
+    },
     deployment: d,
     blockNumber: latestBlock.number.toString(),
     nav: nav.toString(),

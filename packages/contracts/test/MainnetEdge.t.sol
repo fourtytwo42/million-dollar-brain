@@ -120,22 +120,25 @@ contract MainnetEdgeTest is Test {
             active: false
         });
         registry.registerAsset(record);
-        registry.recordQualification(
-            address(tokenOut),
-            AssetRegistry.AssetQualification({
-                evidenceHash: keccak256("qualified"),
-                observedAt: uint64(block.timestamp),
-                validUntil: uint64(block.timestamp + 2 days),
-                consecutiveDays: 30,
-                marketCapOrAumUsdWad: uint128(100_000_000e18),
-                executableDepthUsdWad: uint128(250_000e18),
-                identityValid: true,
-                oracleValid: true,
-                liquidityValid: true,
-                transferBehaviorValid: true,
-                corporateActionClear: true
-            })
-        );
+        AssetRegistry.AssetQualification memory qualification = AssetRegistry.AssetQualification({
+            evidenceHash: keccak256("qualified"),
+            observedAt: uint64(block.timestamp),
+            validUntil: uint64(block.timestamp + 2 days),
+            consecutiveHours: 47,
+            regularMarketSessions: 2,
+            marketCapOrAumUsdWad: uint128(100_000_000e18),
+            executableDepthUsdWad: uint128(250_000e18),
+            identityValid: true,
+            oracleValid: true,
+            liquidityValid: true,
+            transferBehaviorValid: true,
+            corporateActionClear: true
+        });
+        registry.recordQualification(address(tokenOut), qualification);
+        vm.expectRevert("asset not qualified");
+        registry.setActive(address(tokenOut), true);
+        qualification.consecutiveHours = 48;
+        registry.recordQualification(address(tokenOut), qualification);
         registry.setActive(address(tokenOut), true);
         assertTrue(registry.isActive(address(tokenOut)));
         vm.warp(block.timestamp + 3 days);
@@ -269,7 +272,8 @@ contract MainnetEdgeTest is Test {
                 evidenceHash: keccak256("qualified-stock"),
                 observedAt: uint64(block.timestamp),
                 validUntil: uint64(block.timestamp + 2 days),
-                consecutiveDays: 30,
+                consecutiveHours: 48,
+                regularMarketSessions: 2,
                 marketCapOrAumUsdWad: uint128(100_000_000e18),
                 executableDepthUsdWad: uint128(250_000e18),
                 identityValid: true,

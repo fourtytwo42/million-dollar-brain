@@ -1,0 +1,11 @@
+[Unit]
+Description=Check 42 Braincells runtimes every five minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:20
+Persistent=true
+AccuracySec=10s
+Unit=mdb-runtime-health.service
+
+[Install]
+WantedBy=timers.target

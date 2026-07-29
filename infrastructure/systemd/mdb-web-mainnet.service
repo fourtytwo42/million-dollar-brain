@@ -1,0 +1,23 @@
+[Unit]
+Description=42 Braincells Robinhood mainnet canary web application
+After=network-online.target postgresql.service
+Wants=network-online.target
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/mainnet.env
+Environment=MDB_NETWORK_MODE=mainnet
+Environment=PORT=3003
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/start-web.sh
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/var/mainnet /home/hendo420/projects/million-dollar-brain/apps/web/.next/cache
+
+[Install]
+WantedBy=multi-user.target

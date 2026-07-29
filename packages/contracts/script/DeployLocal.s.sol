@@ -90,6 +90,7 @@ contract DeployLocal is Script {
             )
         );
         BrainMarketplace brain = BrainMarketplace(address(brainProxy));
+        brain.reinitializeV2(true);
         rewards.grantRole(rewards.BRAIN_ROLE(), address(brain));
 
         address[] memory assets = new address[](3);
@@ -124,6 +125,7 @@ contract DeployLocal is Script {
         bootstrapWeights[2] = 2_500;
         bootstrapWeights[3] = 2_500;
         basket.reinitializeV2(address(oracle), 120, 100, bootstrapAssets, bootstrapWeights);
+        basket.reinitializeV4(true, true, true);
 
         usdg.mint(deployer, 1_000_000e18);
         vm.serializeAddress("local", "usdg", address(usdg));
@@ -136,7 +138,7 @@ contract DeployLocal is Script {
         vm.serializeAddress("local", "creatorVault", address(creatorVault));
         vm.serializeAddress("local", "brain", address(brain));
         string memory output = vm.serializeAddress("local", "basket", address(basketProxy));
-        vm.writeJson(output, "./deployments/local.json");
+        vm.writeJson(output, "./deployments/local-v3.json");
         vm.stopBroadcast();
     }
 }
