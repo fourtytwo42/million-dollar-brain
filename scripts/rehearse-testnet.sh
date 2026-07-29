@@ -46,12 +46,13 @@ jq -e \
   '.schemaVersion == 3 and .environment == "robinhood-testnet-replica" and
    .chainId == 46630 and .productionParityReplicas == true and
    .canonicalAssets == false and .automaticFreshness == false and
-   (.assets | length) == 12' \
+   ([.usdg, .aapl, .nvda, .msft, .amzn, .googl, .meta, .tsla, .spy, .qqq, .soxx, .weth]
+      | all(type == "string"))' \
   "$manifest" >/dev/null
-basket="$(jq -er '.contracts.basket' "$manifest")"
-brain="$(jq -er '.contracts.brain' "$manifest")"
-registry="$(jq -er '.contracts.assetRegistry // .contracts.registry' "$manifest")"
-oracle="$(jq -er '.contracts.valuation' "$manifest")"
+basket="$(jq -er '.basket' "$manifest")"
+brain="$(jq -er '.brain' "$manifest")"
+registry="$(jq -er '.assetRegistry' "$manifest")"
+oracle="$(jq -er '.oracle' "$manifest")"
 [[ "$(cast call "$oracle" 'automaticFreshness()(bool)' --rpc-url "$rpc")" == "false" ]]
 [[ "$(cast call "$basket" 'canaryControlsConfigured()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$basket" 'buysEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
