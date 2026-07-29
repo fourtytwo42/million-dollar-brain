@@ -40,7 +40,7 @@ cd "$repo_root/packages/contracts"
 MDB_DEPLOYER_ADDRESS="$deployer" \
 MDB_DEPLOYMENT_OUTPUT="./deployments/.rehearsal-v3-46630.json" \
   forge script script/DeployTestnetV3.s.sol:DeployTestnetV3 \
-  --rpc-url "$rpc" --private-key "$deployer_key" --broadcast --slow >/dev/null
+  --rpc-url "$rpc" --private-key "$deployer_key" --broadcast --slow
 
 jq -e \
   '.schemaVersion == 3 and .environment == "robinhood-testnet-replica" and
