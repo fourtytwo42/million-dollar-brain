@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { Script } from "forge-std/Script.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import { AssetRegistry } from "../src/AssetRegistry.sol";
-import { ChainlinkValuationAdapter } from "../src/ChainlinkValuationAdapter.sol";
-import { ZeroExExecutionAdapter } from "../src/ZeroExExecutionAdapter.sol";
-import { RewardDistributor } from "../src/RewardDistributor.sol";
-import { CreatorVault } from "../src/CreatorVault.sol";
-import { BrainMarketplace } from "../src/BrainMarketplace.sol";
-import { BasketVault } from "../src/BasketVault.sol";
+import {Script} from "forge-std/Script.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {AssetRegistry} from "../src/AssetRegistry.sol";
+import {ChainlinkValuationAdapter} from "../src/ChainlinkValuationAdapter.sol";
+import {ZeroExExecutionAdapter} from "../src/ZeroExExecutionAdapter.sol";
+import {RewardDistributor} from "../src/RewardDistributor.sol";
+import {CreatorVault} from "../src/CreatorVault.sol";
+import {BrainMarketplace} from "../src/BrainMarketplace.sol";
+import {BasketVault} from "../src/BasketVault.sol";
 
 interface IRobinhoodIdentity {
     function uid() external view returns (bytes32);
@@ -33,17 +33,18 @@ contract DeployMainnet is Script {
         address[] memory riskAssets = vm.envAddress("MDB_MAINNET_RISK_ASSETS", ",");
         address[] memory feeds = vm.envAddress("MDB_MAINNET_CHAINLINK_FEEDS", ",");
         uint256[] memory heartbeats = vm.envUint("MDB_MAINNET_FEED_HEARTBEATS", ",");
+        uint256[] memory assetKinds = vm.envUint("MDB_MAINNET_ASSET_KINDS", ",");
+        uint256[] memory riskClasses = vm.envUint("MDB_MAINNET_RISK_CLASSES", ",");
+        uint256[] memory maximumWeights = vm.envUint("MDB_MAINNET_MAX_WEIGHTS_BPS", ",");
         address zeroExTarget = vm.envAddress("MDB_ZEROEX_TARGET");
         address zeroExAllowanceTarget = vm.envAddress("MDB_ZEROEX_ALLOWANCE_TARGET");
         bytes4 zeroExSelector = bytes4(vm.envBytes32("MDB_ZEROEX_SELECTOR"));
         address wethSupplyAdapter = vm.envAddress("MDB_WETH_SUPPLY_ADAPTER");
+        require(deployer != address(0) && quoteAuthorizer != address(0) && sequencerFeed != address(0), "zero role");
         require(
-            deployer != address(0) && quoteAuthorizer != address(0) && sequencerFeed != address(0),
-            "zero role"
-        );
-        require(
-            riskAssets.length > 0 && riskAssets.length == feeds.length
-                && feeds.length == heartbeats.length,
+            riskAssets.length > 0 && riskAssets.length == feeds.length && feeds.length == heartbeats.length
+                && feeds.length == assetKinds.length && feeds.length == riskClasses.length
+                && feeds.length == maximumWeights.length,
             "feed manifest"
         );
         vm.startBroadcast();
@@ -51,8 +52,7 @@ contract DeployMainnet is Script {
         AssetRegistry registry = AssetRegistry(
             address(
                 new ERC1967Proxy(
-                    address(new AssetRegistry()),
-                    abi.encodeCall(AssetRegistry.initialize, (deployer, CHAIN_ID))
+                    address(new AssetRegistry()), abi.encodeCall(AssetRegistry.initialize, (deployer, CHAIN_ID))
                 )
             )
         );
@@ -60,10 +60,7 @@ contract DeployMainnet is Script {
             address(
                 new ERC1967Proxy(
                     address(new ChainlinkValuationAdapter()),
-                    abi.encodeCall(
-                        ChainlinkValuationAdapter.initialize,
-                        (deployer, sequencerFeed, uint32(3_600))
-                    )
+                    abi.encodeCall(ChainlinkValuationAdapter.initialize, (deployer, sequencerFeed, uint32(3_600)))
                 )
             )
         );
@@ -72,8 +69,7 @@ contract DeployMainnet is Script {
                 new ERC1967Proxy(
                     address(new ZeroExExecutionAdapter()),
                     abi.encodeCall(
-                        ZeroExExecutionAdapter.initialize,
-                        (deployer, address(valuation), quoteAuthorizer, 100, 600)
+                        ZeroExExecutionAdapter.initialize, (deployer, address(valuation), quoteAuthorizer, 100, 600)
                     )
                 )
             )
@@ -88,19 +84,20 @@ contract DeployMainnet is Script {
             require(token.code.length > 0 && feeds[i].code.length > 0, "canonical code");
             require(IERC20Metadata(token).decimals() <= 36, "token decimals");
             bool isWeth = token == CANONICAL_WETH;
+            require(assetKinds[i] > 0 && assetKinds[i] <= uint8(AssetRegistry.AssetKind.TOKEN), "kind");
+            require(riskClasses[i] > 0 && riskClasses[i] <= uint8(AssetRegistry.RiskClass.HIGH_VOLATILITY), "risk");
+            require(maximumWeights[i] > 0 && maximumWeights[i] <= 2_000, "weight");
             bytes32 uid = isWeth ? bytes32(0) : IRobinhoodIdentity(token).uid();
             registry.registerAsset(
                 AssetRegistry.AssetRecord({
                     token: token,
                     robinhoodUid: uid,
-                    kind: isWeth ? AssetRegistry.AssetKind.CRYPTO : AssetRegistry.AssetKind.STOCK,
-                    riskClass: isWeth
-                        ? AssetRegistry.RiskClass.HIGH_VOLATILITY
-                        : AssetRegistry.RiskClass.STANDARD,
+                    kind: AssetRegistry.AssetKind(assetKinds[i]),
+                    riskClass: AssetRegistry.RiskClass(riskClasses[i]),
                     valuationAdapter: address(valuation),
                     executionAdapter: address(execution),
                     circulatingSupplyAdapter: isWeth ? wethSupplyAdapter : address(0),
-                    maximumWeightBps: 2_000,
+                    maximumWeightBps: uint16(maximumWeights[i]),
                     registered: false,
                     active: false
                 })
@@ -120,8 +117,7 @@ contract DeployMainnet is Script {
         CreatorVault creatorVault = CreatorVault(
             address(
                 new ERC1967Proxy(
-                    address(new CreatorVault()),
-                    abi.encodeCall(CreatorVault.initialize, (deployer, CANONICAL_USDG))
+                    address(new CreatorVault()), abi.encodeCall(CreatorVault.initialize, (deployer, CANONICAL_USDG))
                 )
             )
         );
@@ -130,8 +126,7 @@ contract DeployMainnet is Script {
                 new ERC1967Proxy(
                     address(new RewardDistributor()),
                     abi.encodeCall(
-                        RewardDistributor.initialize,
-                        (deployer, CANONICAL_USDG, rewardWeights, address(creatorVault))
+                        RewardDistributor.initialize, (deployer, CANONICAL_USDG, rewardWeights, address(creatorVault))
                     )
                 )
             )

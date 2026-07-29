@@ -782,6 +782,19 @@ const qualification = inspected
             .filter(([, valid]) => !valid)
             .map(([name]) => name)
             .join(", "),
+      evidenceHash: hash({
+        assetId,
+        identity: {
+          uid: asset.uid,
+          onchainUid: asset.onchainUid,
+          decimals: asset.decimals,
+        },
+        feed,
+        quote,
+        market,
+        tradingAvailable,
+        noCorporateActionTransition,
+      }),
       checks: {
         identityValid,
         oracleActive: asset.oraclePaused !== true,
@@ -904,6 +917,7 @@ appendFileSync(
       qualificationStartedAt: row.qualificationStartedAt,
       latestSuccessfulCheckAt: row.latestSuccessfulCheckAt,
       resetReason: row.resetReason,
+      evidenceHash: row.evidenceHash,
     })),
   })}\n`,
   { mode: 0o640 },

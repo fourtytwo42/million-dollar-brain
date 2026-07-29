@@ -64,6 +64,24 @@ const candidateAssets = [
     state.assets.find((asset) => asset.symbol === symbol),
   ),
 ].filter(Boolean);
+const assetPolicy = Object.fromEntries(
+  includedSymbols.map((symbol) => [
+    symbol,
+    {
+      kind:
+        symbol === "WETH"
+          ? "CRYPTO"
+          : ["SPY", "QQQ", "SOXX"].includes(symbol)
+            ? "ETF"
+            : "STOCK",
+      riskClass: symbol === "WETH" ? "HIGH_VOLATILITY" : "STANDARD",
+      maximumWeightBps: 2_000,
+      qualificationEvidenceHash:
+        state.qualification.find((row) => row.symbol === symbol)
+          ?.evidenceHash ?? null,
+    },
+  ]),
+);
 const feeds = Object.fromEntries(
   state.feedEvidence
     .filter((feed) => includedSymbols.includes(feed.symbol))
@@ -119,6 +137,7 @@ const payload = {
   optionalSymbols: [...MAINNET_OPTIONAL_SYMBOLS],
   includedSymbols,
   assets: candidateAssets,
+  assetPolicy,
   oracleMappings: feeds,
   venueMappings: venues,
   qualificationEvidenceHash: state.sourceHash,
