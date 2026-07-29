@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 interface ITestPriceOracle {
     function setPrice(address token, uint256 priceWad) external;
@@ -26,7 +26,10 @@ contract TestnetPricePublisher is Ownable {
         router = ITestPriceRouter(router_);
     }
 
-    function publish(address[] calldata tokens, uint256[] calldata prices, bytes32 evidenceHash) external onlyOwner {
+    function publish(address[] calldata tokens, uint256[] calldata prices, bytes32 evidenceHash)
+        external
+        onlyOwner
+    {
         require(tokens.length > 0 && tokens.length == prices.length, "batch length");
         for (uint256 i; i < tokens.length; ++i) {
             oracle.setPrice(tokens[i], prices[i]);
@@ -35,7 +38,10 @@ contract TestnetPricePublisher is Ownable {
         emit PriceBatchPublished(evidenceHash, tokens.length);
     }
 
-    function setOracleStatus(address token, uint256 price, uint256 updatedAt, bool valid) external onlyOwner {
+    function setOracleStatus(address token, uint256 price, uint256 updatedAt, bool valid)
+        external
+        onlyOwner
+    {
         oracle.setPriceStatus(token, price, updatedAt, valid);
     }
 

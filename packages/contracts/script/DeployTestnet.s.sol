@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MockToken} from "../src/MockToken.sol";
-import {MockRouter} from "../src/MockRouter.sol";
-import {MockValuationOracle} from "../src/MockValuationOracle.sol";
-import {RewardDistributor} from "../src/RewardDistributor.sol";
-import {CreatorVault} from "../src/CreatorVault.sol";
-import {BrainMarketplace} from "../src/BrainMarketplace.sol";
-import {BasketVault} from "../src/BasketVault.sol";
+import { Script } from "forge-std/Script.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockToken } from "../src/MockToken.sol";
+import { MockRouter } from "../src/MockRouter.sol";
+import { MockValuationOracle } from "../src/MockValuationOracle.sol";
+import { RewardDistributor } from "../src/RewardDistributor.sol";
+import { CreatorVault } from "../src/CreatorVault.sol";
+import { BrainMarketplace } from "../src/BrainMarketplace.sol";
+import { BasketVault } from "../src/BasketVault.sol";
 
 /// @notice Broadcast-ready chain-46630 mock-asset deployment.
 /// @dev The shell release gate supplies either an isolated Anvil key or an encrypted Foundry account.
@@ -72,7 +72,8 @@ contract DeployTestnet is Script {
                 new ERC1967Proxy(
                     address(rewardImplementation),
                     abi.encodeCall(
-                        RewardDistributor.initialize, (deployer, address(usdg), weights, address(creatorVault))
+                        RewardDistributor.initialize,
+                        (deployer, address(usdg), weights, address(creatorVault))
                     )
                 )
             )
@@ -155,7 +156,9 @@ contract DeployTestnet is Script {
         vm.serializeAddress(root, "creatorVault", address(creatorVault));
         vm.serializeAddress(root, "brain", address(brain));
         string memory output = vm.serializeAddress(root, "basket", address(basket));
-        vm.writeJson(output, vm.envOr("MDB_DEPLOYMENT_OUTPUT", string("./deployments/testnet.json")));
+        vm.writeJson(
+            output, vm.envOr("MDB_DEPLOYMENT_OUTPUT", string("./deployments/testnet.json"))
+        );
         vm.stopBroadcast();
     }
 }

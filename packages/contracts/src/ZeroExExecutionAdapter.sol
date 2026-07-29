@@ -1,18 +1,29 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    EIP712Upgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { SignatureChecker } from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 interface IExecutionValuation {
-    function quoteStatus(address token) external view returns (uint256 priceWad, uint256 updatedAt, bool valid);
+    function quoteStatus(address token)
+        external
+        view
+        returns (uint256 priceWad, uint256 updatedAt, bool valid);
 }
 
 /// @notice Validates an authorizer-bound 0x execution before making an allowlisted call.
@@ -68,7 +79,11 @@ contract ZeroExExecutionAdapter is
     event QuoteAuthorizerChanged(address indexed authorizer);
     event ExecutionLimitsChanged(uint16 maximumDeviationBps, uint32 maximumBlockDelay);
     event SwapExecuted(
-        bytes32 indexed digest, address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut
+        bytes32 indexed digest,
+        address indexed tokenIn,
+        address indexed tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
     );
 
     function initialize(
@@ -92,7 +107,10 @@ contract ZeroExExecutionAdapter is
         maximumBlockDelay = blockDelay;
     }
 
-    function configureVenue(address target, address allowanceTarget, bool allowed) external onlyRole(VENUE_ADMIN_ROLE) {
+    function configureVenue(address target, address allowanceTarget, bool allowed)
+        external
+        onlyRole(VENUE_ADMIN_ROLE)
+    {
         require(target != address(0) && allowanceTarget != address(0), "zero venue");
         allowedTarget[target] = allowed;
         allowedAllowanceTarget[allowanceTarget] = allowed;
@@ -117,7 +135,10 @@ contract ZeroExExecutionAdapter is
         emit QuoteAuthorizerChanged(authorizer);
     }
 
-    function setExecutionLimits(uint16 maximumDeviationBps, uint32 blockDelay) external onlyRole(VENUE_ADMIN_ROLE) {
+    function setExecutionLimits(uint16 maximumDeviationBps, uint32 blockDelay)
+        external
+        onlyRole(VENUE_ADMIN_ROLE)
+    {
         require(maximumDeviationBps <= 100, "unsafe deviation");
         require(blockDelay > 0 && blockDelay <= 7_200, "unsafe block delay");
         maximumOracleDeviationBps = maximumDeviationBps;
@@ -126,8 +147,12 @@ contract ZeroExExecutionAdapter is
     }
 
     function currentReferenceBlock() public view returns (uint256) {
-        if (block.chainid == ROBINHOOD_MAINNET_CHAIN_ID || block.chainid == ROBINHOOD_TESTNET_CHAIN_ID) {
-            (bool ok, bytes memory result) = ARBSYS.staticcall(abi.encodeWithSignature("arbBlockNumber()"));
+        if (
+            block.chainid == ROBINHOOD_MAINNET_CHAIN_ID
+                || block.chainid == ROBINHOOD_TESTNET_CHAIN_ID
+        ) {
+            (bool ok, bytes memory result) =
+                ARBSYS.staticcall(abi.encodeWithSignature("arbBlockNumber()"));
             require(ok && result.length >= 32, "ArbSys unavailable");
             return abi.decode(result, (uint256));
         }
@@ -156,12 +181,11 @@ contract ZeroExExecutionAdapter is
         );
     }
 
-    function execute(ExecutionIntent calldata intent, bytes calldata executionData, bytes calldata authorizerSignature)
-        external
-        onlyRole(VAULT_ROLE)
-        nonReentrant
-        returns (uint256 amountOut)
-    {
+    function execute(
+        ExecutionIntent calldata intent,
+        bytes calldata executionData,
+        bytes calldata authorizerSignature
+    ) external onlyRole(VAULT_ROLE) nonReentrant returns (uint256 amountOut) {
         require(intent.vault == msg.sender && intent.recipient == msg.sender, "wrong vault");
         require(intent.tokenIn != intent.tokenOut && intent.amountIn > 0, "invalid pair");
         require(allowedToken[intent.tokenIn] && allowedToken[intent.tokenOut], "token not allowed");
@@ -180,7 +204,8 @@ contract ZeroExExecutionAdapter is
         bytes32 digest = intentDigest(intent);
         require(!usedIntent[digest], "intent already used");
         require(
-            SignatureChecker.isValidSignatureNow(quoteAuthorizer, digest, authorizerSignature), "invalid authorizer"
+            SignatureChecker.isValidSignatureNow(quoteAuthorizer, digest, authorizerSignature),
+            "invalid authorizer"
         );
         usedIntent[digest] = true;
 
@@ -201,16 +226,20 @@ contract ZeroExExecutionAdapter is
         }
         amountOut = tokenOut.balanceOf(address(this)) - outputBefore;
         require(amountOut >= intent.minimumAmountOut, "output below minimum");
-        require(_withinOracleDeviation(intent.tokenIn, intent.amountIn, intent.tokenOut, amountOut), "oracle deviation");
+        require(
+            _withinOracleDeviation(intent.tokenIn, intent.amountIn, intent.tokenOut, amountOut),
+            "oracle deviation"
+        );
         tokenOut.safeTransfer(msg.sender, amountOut);
         emit SwapExecuted(digest, intent.tokenIn, intent.tokenOut, intent.amountIn, amountOut);
     }
 
-    function _withinOracleDeviation(address tokenIn, uint256 amountIn, address tokenOut, uint256 amountOut)
-        private
-        view
-        returns (bool)
-    {
+    function _withinOracleDeviation(
+        address tokenIn,
+        uint256 amountIn,
+        address tokenOut,
+        uint256 amountOut
+    ) private view returns (bool) {
         (uint256 priceIn,, bool validIn) = valuation.quoteStatus(tokenIn);
         (uint256 priceOut,, bool validOut) = valuation.quoteStatus(tokenOut);
         if (!validIn || !validOut || priceIn == 0 || priceOut == 0) return false;
@@ -222,5 +251,5 @@ contract ZeroExExecutionAdapter is
         return valueOut * BPS >= valueIn * (BPS - maximumOracleDeviationBps);
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

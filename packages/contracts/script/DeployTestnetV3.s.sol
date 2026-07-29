@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {MockToken} from "../src/MockToken.sol";
-import {MockRouter} from "../src/MockRouter.sol";
-import {MockValuationOracle} from "../src/MockValuationOracle.sol";
-import {ParityAssetToken} from "../src/ParityAssetToken.sol";
-import {AssetRegistry} from "../src/AssetRegistry.sol";
-import {ZeroExExecutionAdapter} from "../src/ZeroExExecutionAdapter.sol";
-import {TestnetPricePublisher} from "../src/TestnetPricePublisher.sol";
-import {RewardDistributor} from "../src/RewardDistributor.sol";
-import {CreatorVault} from "../src/CreatorVault.sol";
-import {BrainMarketplace} from "../src/BrainMarketplace.sol";
-import {BasketVault} from "../src/BasketVault.sol";
+import { Script } from "forge-std/Script.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { MockToken } from "../src/MockToken.sol";
+import { MockRouter } from "../src/MockRouter.sol";
+import { MockValuationOracle } from "../src/MockValuationOracle.sol";
+import { ParityAssetToken } from "../src/ParityAssetToken.sol";
+import { AssetRegistry } from "../src/AssetRegistry.sol";
+import { ZeroExExecutionAdapter } from "../src/ZeroExExecutionAdapter.sol";
+import { TestnetPricePublisher } from "../src/TestnetPricePublisher.sol";
+import { RewardDistributor } from "../src/RewardDistributor.sol";
+import { CreatorVault } from "../src/CreatorVault.sol";
+import { BrainMarketplace } from "../src/BrainMarketplace.sol";
+import { BasketVault } from "../src/BasketVault.sol";
 
 /// @notice Fresh production-interface replica deployment for Robinhood Testnet.
 /// @dev These are explicitly non-canonical replicas. Real token/feed/0x validation occurs in
@@ -38,7 +38,8 @@ contract DeployTestnetV3 is Script {
         riskAssets[7] = _asset("Test Replica SPY ETF", "trSPY", "TEST-REPLICA-SPY", deployer);
         riskAssets[8] = _asset("Test Replica QQQ ETF", "trQQQ", "TEST-REPLICA-QQQ", deployer);
         riskAssets[9] = _asset("Test Replica SOXX ETF", "trSOXX", "TEST-REPLICA-SOXX", deployer);
-        riskAssets[10] = _asset("Test Replica Wrapped Ether", "trWETH", "TEST-REPLICA-WETH", deployer);
+        riskAssets[10] =
+            _asset("Test Replica Wrapped Ether", "trWETH", "TEST-REPLICA-WETH", deployer);
 
         uint256[] memory prices = new uint256[](11);
         prices[0] = 225e18;
@@ -63,14 +64,16 @@ contract DeployTestnetV3 is Script {
         }
         valuation.setAutomaticFreshness(false);
         usdg.mint(address(venue), 100_000_000e18);
-        TestnetPricePublisher pricePublisher = new TestnetPricePublisher(deployer, address(valuation), address(venue));
+        TestnetPricePublisher pricePublisher =
+            new TestnetPricePublisher(deployer, address(valuation), address(venue));
         valuation.transferOwnership(address(pricePublisher));
         venue.transferOwnership(address(pricePublisher));
 
         AssetRegistry registry = AssetRegistry(
             address(
                 new ERC1967Proxy(
-                    address(new AssetRegistry()), abi.encodeCall(AssetRegistry.initialize, (deployer, block.chainid))
+                    address(new AssetRegistry()),
+                    abi.encodeCall(AssetRegistry.initialize, (deployer, block.chainid))
                 )
             )
         );
@@ -79,7 +82,8 @@ contract DeployTestnetV3 is Script {
                 new ERC1967Proxy(
                     address(new ZeroExExecutionAdapter()),
                     abi.encodeCall(
-                        ZeroExExecutionAdapter.initialize, (deployer, address(valuation), quoteAuthorizer, 100, 600)
+                        ZeroExExecutionAdapter.initialize,
+                        (deployer, address(valuation), quoteAuthorizer, 100, 600)
                     )
                 )
             )
@@ -94,8 +98,9 @@ contract DeployTestnetV3 is Script {
             AssetRegistry.AssetKind kind = i >= 7 && i <= 9
                 ? AssetRegistry.AssetKind.ETF
                 : i == 10 ? AssetRegistry.AssetKind.CRYPTO : AssetRegistry.AssetKind.STOCK;
-            AssetRegistry.RiskClass riskClass =
-                i == 6 || i == 10 ? AssetRegistry.RiskClass.HIGH_VOLATILITY : AssetRegistry.RiskClass.STANDARD;
+            AssetRegistry.RiskClass riskClass = i == 6 || i == 10
+                ? AssetRegistry.RiskClass.HIGH_VOLATILITY
+                : AssetRegistry.RiskClass.STANDARD;
             _registerRisk(
                 registry,
                 riskAssets[i],
@@ -113,7 +118,8 @@ contract DeployTestnetV3 is Script {
         CreatorVault creatorVault = CreatorVault(
             address(
                 new ERC1967Proxy(
-                    address(new CreatorVault()), abi.encodeCall(CreatorVault.initialize, (deployer, address(usdg)))
+                    address(new CreatorVault()),
+                    abi.encodeCall(CreatorVault.initialize, (deployer, address(usdg)))
                 )
             )
         );
@@ -122,7 +128,8 @@ contract DeployTestnetV3 is Script {
                 new ERC1967Proxy(
                     address(new RewardDistributor()),
                     abi.encodeCall(
-                        RewardDistributor.initialize, (deployer, address(usdg), rewardWeights, address(creatorVault))
+                        RewardDistributor.initialize,
+                        (deployer, address(usdg), rewardWeights, address(creatorVault))
                     )
                 )
             )
@@ -214,7 +221,11 @@ contract DeployTestnetV3 is Script {
         return new ParityAssetToken(name, symbol, keccak256(bytes(uid)), owner);
     }
 
-    function _qualification(bytes32 evidenceHash) private view returns (AssetRegistry.AssetQualification memory) {
+    function _qualification(bytes32 evidenceHash)
+        private
+        view
+        returns (AssetRegistry.AssetQualification memory)
+    {
         return AssetRegistry.AssetQualification({
             evidenceHash: evidenceHash,
             observedAt: uint64(block.timestamp),
@@ -275,7 +286,9 @@ contract DeployTestnetV3 is Script {
                 active: false
             })
         );
-        registry.recordQualification(address(token), _qualification(keccak256(abi.encode(token.uid()))));
+        registry.recordQualification(
+            address(token), _qualification(keccak256(abi.encode(token.uid())))
+        );
         registry.setActive(address(token), true);
     }
 
@@ -343,6 +356,8 @@ contract DeployTestnetV3 is Script {
         vm.serializeAddress(root, "creatorVault", address(creatorVault));
         vm.serializeAddress(root, "brain", address(brain));
         string memory output = vm.serializeAddress(root, "basket", address(basket));
-        vm.writeJson(output, vm.envOr("MDB_DEPLOYMENT_OUTPUT", string("./deployments/testnet-v3-flat.json")));
+        vm.writeJson(
+            output, vm.envOr("MDB_DEPLOYMENT_OUTPUT", string("./deployments/testnet-v3-flat.json"))
+        );
     }
 }

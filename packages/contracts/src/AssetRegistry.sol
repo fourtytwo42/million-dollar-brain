@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 /// @notice Governance-controlled identity and risk registry for assets the allocator may hold.
 /// @dev Symbols are presentation metadata only. Chain ID, token address and optional Robinhood UID
@@ -93,7 +97,9 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         require(record.maximumWeightBps <= 2_000, "weight above protocol maximum");
         require(!_records[record.token].registered, "already registered");
         if (record.robinhoodUid != bytes32(0)) {
-            require(tokenByRobinhoodUid[record.robinhoodUid] == address(0), "uid already registered");
+            require(
+                tokenByRobinhoodUid[record.robinhoodUid] == address(0), "uid already registered"
+            );
             tokenByRobinhoodUid[record.robinhoodUid] = record.token;
         }
         AssetRecord memory stored = record;
@@ -226,5 +232,5 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         return true;
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

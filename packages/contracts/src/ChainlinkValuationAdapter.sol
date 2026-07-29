@@ -1,16 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 interface IAggregatorV3 {
     function decimals() external view returns (uint8);
     function latestRoundData()
         external
         view
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound);
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
 }
 
 interface IRobinhoodOraclePause {
@@ -18,11 +28,7 @@ interface IRobinhoodOraclePause {
 }
 
 /// @notice Chainlink valuation adapter with per-asset heartbeat and Robinhood pause checks.
-contract ChainlinkValuationAdapter is
-    Initializable,
-    UUPSUpgradeable,
-    AccessControlUpgradeable
-{
+contract ChainlinkValuationAdapter is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     bytes32 public constant ORACLE_ADMIN_ROLE = keccak256("ORACLE_ADMIN_ROLE");
 
     struct FeedConfig {
@@ -91,11 +97,7 @@ contract ChainlinkValuationAdapter is
             }
         }
         try IAggregatorV3(config.feed).latestRoundData() returns (
-            uint80 roundId,
-            int256 answer,
-            uint256,
-            uint256 observedAt,
-            uint80 answeredInRound
+            uint80 roundId, int256 answer, uint256, uint256 observedAt, uint80 answeredInRound
         ) {
             if (
                 answer <= 0 || observedAt == 0 || observedAt > block.timestamp
@@ -117,11 +119,7 @@ contract ChainlinkValuationAdapter is
     function _sequencerReady() private view returns (bool) {
         if (address(sequencerUptimeFeed) == address(0)) return true;
         try sequencerUptimeFeed.latestRoundData() returns (
-            uint80,
-            int256 answer,
-            uint256 startedAt,
-            uint256,
-            uint80
+            uint80, int256 answer, uint256 startedAt, uint256, uint80
         ) {
             return answer == 0 && startedAt <= block.timestamp
                 && block.timestamp - startedAt > sequencerGracePeriod;
@@ -130,5 +128,5 @@ contract ChainlinkValuationAdapter is
         }
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

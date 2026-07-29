@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     bytes32 public constant BRAIN_ROLE = keccak256("BRAIN_ROLE");
@@ -23,14 +27,21 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
     event Funded(uint256 amount, uint256 accRewardPerWeight);
     event Claimed(address indexed account, uint256 amount);
 
-    function initialize(address admin, address usdg_, uint256[] calldata weights, address fallbackRecipient_) external initializer {
+    function initialize(
+        address admin,
+        address usdg_,
+        uint256[] calldata weights,
+        address fallbackRecipient_
+    ) external initializer {
         require(fallbackRecipient_ != address(0), "fallback");
         __AccessControl_init();
         __UUPSUpgradeable_init();
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         usdg = IERC20(usdg_);
         fallbackRecipient = fallbackRecipient_;
-        for (uint256 i; i < weights.length; ++i) weightByPiece[i + 1] = weights[i];
+        for (uint256 i; i < weights.length; ++i) {
+            weightByPiece[i + 1] = weights[i];
+        }
     }
 
     function fund(uint256 amount) external {
@@ -55,7 +66,11 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
         emit OwnerUpdated(pieceId, oldOwner, newOwner);
     }
 
-    function pendingRewards(address account, uint256[] calldata pieceIds) external view returns (uint256 amount) {
+    function pendingRewards(address account, uint256[] calldata pieceIds)
+        external
+        view
+        returns (uint256 amount)
+    {
         amount = claimable[account];
         for (uint256 i; i < pieceIds.length; ++i) {
             uint256 pieceId = pieceIds[i];
@@ -87,5 +102,5 @@ contract RewardDistributor is Initializable, UUPSUpgradeable, AccessControlUpgra
         rewardDebt[pieceId] = accrued;
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

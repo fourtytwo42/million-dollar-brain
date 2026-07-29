@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {ZeroExExecutionAdapter} from "../src/ZeroExExecutionAdapter.sol";
+import { Script } from "forge-std/Script.sol";
+import { ZeroExExecutionAdapter } from "../src/ZeroExExecutionAdapter.sol";
 
 contract UpgradeTestnetExecution is Script {
     function run() external {
@@ -15,7 +15,9 @@ contract UpgradeTestnetExecution is Script {
         ZeroExExecutionAdapter(proxy)
             .upgradeToAndCall(
                 address(implementation),
-                abi.encodeCall(ZeroExExecutionAdapter.setExecutionLimits, (uint16(100), uint32(600)))
+                abi.encodeCall(
+                    ZeroExExecutionAdapter.setExecutionLimits, (uint16(100), uint32(600))
+                )
             );
         vm.stopBroadcast();
     }
