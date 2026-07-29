@@ -11,7 +11,7 @@ export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-lin
 cd "$repo_root"
 [[ -z "$(git status --porcelain)" ]]
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse '@{u}')" ]]
-forge fmt --check packages/contracts
+(cd packages/contracts && forge fmt --check)
 npm run test:contracts
 npm run test:meme
 npm run test:portfolio-display
