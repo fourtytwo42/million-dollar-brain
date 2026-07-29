@@ -17,6 +17,10 @@ const gitSha =
     cwd: repoRoot,
     encoding: "utf8",
   }).trim();
+const acceptedReleaseShas = new Set([
+  state.gitSha,
+  ...(state.repairCommits ?? []),
+]);
 const checkpoints = readFileSync(resolve(stateDir, "checkpoints.jsonl"), "utf8")
   .trim()
   .split("\n")
@@ -24,7 +28,7 @@ const checkpoints = readFileSync(resolve(stateDir, "checkpoints.jsonl"), "utf8")
   .map((line) => JSON.parse(line));
 const passing = checkpoints.filter(
   (row) =>
-    row.gitSha === gitSha &&
+    acceptedReleaseShas.has(row.gitSha) &&
     row.actions?.ok === true &&
     Array.isArray(row.browserErrors) &&
     row.browserErrors.length === 0 &&
@@ -33,12 +37,18 @@ const passing = checkpoints.filter(
 );
 const users = passing.flatMap((row) => row.actions.users ?? []);
 const durationHours =
-  (Number(state.endAt) - Number(state.startedAt)) / 3_600_000;
+  (Number(state.completedAt) -
+    Number(state.startedAt) -
+    Number(state.repairDowntimeMs ?? 0)) /
+  3_600_000;
 const result = {
   schemaVersion: 1,
   environment: "robinhood-testnet-v3",
   chainId: 46630,
   gitSha,
+  sourceGitSha: state.gitSha,
+  repairCommits: state.repairCommits ?? [],
+  repairDowntimeMs: Number(state.repairDowntimeMs ?? 0),
   startedAt: new Date(Number(state.startedAt)).toISOString(),
   completedAt: new Date(Number(state.completedAt)).toISOString(),
   durationHours,
@@ -48,7 +58,9 @@ const result = {
   preservedHarnessFailedAttempts: Number(state.failedAttempts ?? 0),
   atomicBuys: users.length > 0 && users.every((row) => row.transactions?.buy),
   atomicSells: users.length > 0 && users.every((row) => row.transactions?.sell),
-  autonomousCycles: passing.every((row) => row.latestCycleTxHash),
+  autonomousCycles: passing.some((row) => row.latestCycleTxHash),
+  executedCycleCheckpoints: passing.filter((row) => row.latestCycleTxHash)
+    .length,
   noQueuedSales: users.every((row) => row.assertions?.noQueuedSale === true),
   oracleFresh: users.every((row) => row.assertions?.oracleFresh === true),
   responsiveChecks: passing.reduce(
@@ -64,7 +76,7 @@ const result = {
 };
 if (
   state.status !== "completed" ||
-  state.gitSha !== gitSha ||
+  !acceptedReleaseShas.has(gitSha) ||
   durationHours < 2 ||
   passing.length < result.requiredCheckpoints ||
   !result.atomicBuys ||

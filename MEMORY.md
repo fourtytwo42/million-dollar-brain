@@ -4,16 +4,14 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete the active two-hour Control Catalog v1 Robinhood
-  Testnet acceptance run and publish its final evidence.
-- Last meaningful change: Checkpoint 5 exposed a test-harness funding defect
-  after repeated 20% brain-piece resales exceeded the actor's fixed USDG
-  top-up. The protocol reverted atomically as designed. The acceptance route
-  now funds the exact purchase plus basket-buy requirement and a bounded
-  buffer; the same checkpoint passed on retry.
-- Next step: Deploy the repaired test harness, run the failed scenario as a
-  focused check, resume the preserved acceptance clock, then complete final
-  browser UAT and release evidence.
+- Current task: Control Catalog v1 testnet promotion and acceptance are
+  complete; continue mainnet-edge qualification and external release gates.
+- Last meaningful change: The repaired two-hour Robinhood Testnet acceptance
+  completed with seven passing checkpoints, 21 three-actor scenarios, 2.000
+  active hours, zero browser errors, and final live responsive UAT.
+- Next step: Continue 48-hour per-asset mainnet-shadow qualification and supply
+  the paid RPC, 0x, Chainlink, role/Safe, gas, audit, and legal inputs required
+  before a paused mainnet canary.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -65,22 +63,46 @@ Durable project context lives here. Update this file whenever information should
   recurring as resale prices continue rising.
 - Follow-up: Record the final repair SHA in the preserved run state, resume the
   two-hour acceptance run, and complete final browser/release evidence.
+
+### 2026-07-29 - Control Catalog v1 testnet acceptance complete
+
+- Context: The state-preserving Control Catalog v1 UUPS promotion required a
+  fresh two-hour Robinhood Testnet acceptance and final live browser audit.
+- Decision: Bind evidence to source candidate
+  `8a13b8f798dd9df1b7f99d6dc0d76eadc59a01fb` plus explicitly recorded repair
+  commits `848b234f0d2324b6b8753b9845f9047e234cf8fa` and
+  `5dbabb0995b1dc07a7c1a39eb5011fff9aaf82c8`; exclude repair/idle downtime.
+- Files: `var/testnet-v3-endurance/state.json`,
+  `var/testnet-v3-endurance/checkpoints.jsonl`,
+  `var/testnet-v3-endurance/summary.json`,
+  `scripts/generate-testnet-acceptance.mjs`, `TESTNET_READINESS.md`,
+  `MAINNET_EDGE_RELEASE.md`.
+- Commands/tests: Seven 20-minute checkpoints; 21 actor scenarios; final
+  in-app Browser UAT at 1440x900, 768x1024, and 390x844; light/dark Brain,
+  Basket, and Decisions checks; 15/15 network-policy tests; production build.
+- Result: 2.000478 active hours passed. Every final actor completed a
+  ControlBundle update, brain purchase or resale, MDBS buy, atomic sell, claim,
+  and oversized-exit rejection. NAV remained positive and reconciled, oracles
+  stayed fresh, queued sales remained zero, V5 Ornith execution stayed fresh,
+  RPC failover and HTTPS stayed healthy, and browser logs remained empty.
+- Follow-up: Keep testnet web, collector, and cycle timers active. The endurance
+  runner is stopped, disabled, and disarmed.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
-- Last verified 2026-07-29: Control Catalog v1 is deployed and enabled on
-  devnet. The new UUPS `BrainControlRegistry`, appended stable asset IDs and
-  tags, upgraded marketplace gate, all 42 migrated bundles, DecisionContext V5
-  compiler, cadence eligibility scheduler, preview API, and data-driven
-  control editor are live. Catalog v3 remains stored for history and emergency
-  rollback. Testnet remains on catalog v3 until devnet acceptance is complete.
+- Last verified 2026-07-29: Control Catalog v1 is deployed, enabled, and
+  accepted on devnet and Robinhood Testnet. The UUPS
+  `BrainControlRegistry`, appended stable asset IDs and tags, upgraded
+  marketplace gate, all 42 migrated bundles, DecisionContext V5 compiler,
+  cadence eligibility scheduler, preview API, and data-driven control editor
+  are live. Catalog v3 remains stored for history and emergency rollback.
 - Every new allocation persists one deterministic `memeRecap` in `cycles.jsonl` using the recorded brain snapshot and actual target allocation. No additional model call is made, and legacy cycles remain readable without invented dialogue.
 - `PRD.md` v1.2 plus its linked normative specifications is the authoritative
   requirements set. `BRAIN_CONTROL_CATALOG.md` is normative for the target
   control system; `BRAIN_PRESET_CATALOG.md` is normative for deployed
   catalog-v3 behavior and migration.
 - `PRODUCT_BRIEF.md` is superseded historical context.
-- No product decision remains open for Control Catalog v1. Its coordinated
-  implementation and acceptance remain open. `BUILD_READINESS.md`
+- No product decision or engineering acceptance remains open for Control
+  Catalog v1. `BUILD_READINESS.md`
   distinguishes locked engineering defaults from deployed state and external
   production gates.
 - Devnet, testnet, and mainnet have normalized isolated manifests, state

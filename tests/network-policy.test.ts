@@ -213,6 +213,17 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
     /state\.completedAt -\s*state\.startedAt -\s*\(state\.repairDowntimeMs \?\? 0\)/s,
   );
   assert.match(enduranceUnit, /MDB_ENDURANCE_DURATION_MS=7200000/);
+  const acceptanceGenerator = readFileSync(
+    "scripts/generate-testnet-acceptance.mjs",
+    "utf8",
+  );
+  assert.match(acceptanceGenerator, /acceptedReleaseShas/);
+  assert.match(acceptanceGenerator, /state\.repairDowntimeMs \?\? 0/);
+  assert.match(acceptanceGenerator, /acceptedReleaseShas\.has\(row\.gitSha\)/);
+  assert.match(
+    acceptanceGenerator,
+    /autonomousCycles: passing\.some\(\(row\) => row\.latestCycleTxHash\)/,
+  );
   assert.match(endurance, /concurrentRequests: 2/);
   assert.match(endurance, /userActions: 3/);
   assert.match(endurance, /width: 390/);

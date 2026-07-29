@@ -27,15 +27,19 @@ rejected oversized exit, concurrent authenticated requests, NAV and oracle
 invariants, autonomous-cycle freshness, browser errors, and mobile/tablet/
 desktop overflow.
 
-The V3 endurance rehearsal completed on 2026-07-28 with seven passing
-checkpoints on the original two-hour clock. It exercised 15 user scenarios,
-including 15 MDBS buys and atomic sells, 12 brain purchases split evenly
-between initial sales and 120% resales, 15 presets and claims, 12 rejected
-oversized exits, eight concurrent requests, and 15 responsive checks with zero
-browser errors. Two preserved failed attempts were caused by an overly strict
-test assertion around a documented deterministic Hold; the harness was
-corrected, the checkpoint was rerun successfully, and the evidence clock was
-not reset. The completed endurance service is disabled.
+The Control Catalog v1 acceptance completed on 2026-07-29 with seven passing
+checkpoints across 2.000 active hours. It exercised 21 three-actor scenarios
+with real chain-46630 ControlBundle updates, MDBS buys, atomic sells, reward
+claims, initial brain purchases and compounded 120% resales, oversized-exit
+rejections, concurrency, and 21 responsive checks with zero browser errors.
+One preserved checkpoint initially exhausted a test actor's fixed USDG top-up
+after repeated resales pushed a piece above 15,000 USDG. The protocol reverted
+atomically as designed. Repair commits made actor funding price-aware and
+excluded 1,313,207 ms of repair/idle time without resetting the source clock.
+The repaired checkpoint and every later checkpoint passed. Final live in-app
+Browser UAT passed on desktop, tablet, mobile, light, and dark views with no
+horizontal overflow or console warnings/errors. The completed endurance
+service is disabled and disarmed.
 
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
 across the pinned wallet and Next.js dependency graph. The available aggregate
@@ -94,9 +98,11 @@ The canonical acceptance summary is generated with:
 node scripts/generate-testnet-acceptance.mjs
 ```
 
-It records the exact tested Git SHA. A contract, wallet, valuation, execution,
-or accounting change invalidates older acceptance and requires a new two-hour
-run. Presentation-only releases use focused testnet browser UAT.
+It records the source candidate, explicitly allowlisted repair commits, final
+release SHA, and repair-excluded active duration. Unrecorded commit changes are
+rejected. A contract, wallet, valuation, execution, or accounting change
+invalidates older acceptance and requires a new two-hour run. Presentation-only
+releases use focused testnet browser UAT.
 
 ## Graduation path
 

@@ -1,7 +1,7 @@
 # MillionDollar Brain Build-Readiness Baseline
 
 **Version:** 1.1
-**Status:** Control Catalog v1 implemented and accepted on devnet; exact-commit testnet promotion pending
+**Status:** Control Catalog v1 accepted on devnet and Robinhood Testnet
 
 ## Local-devnet implementation status
 
@@ -14,12 +14,12 @@ owner reward claims, atomic proportional redemptions with no queue, structured
 allocator context, deterministic output validation, keeper authentication, and
 systemd scheduling.
 
-Control Catalog v1 is enabled on devnet with a versioned UUPS bundle registry,
+Control Catalog v1 is enabled on devnet and Robinhood Testnet with a versioned UUPS bundle registry,
 dynamic bounded cadence, registry-scoped asset directives, optional
 evidence-attention controls, DecisionContext V5, and a data-driven control
 editor. Catalog v3 remains stored for historical rendering, deterministic
-migration, and emergency rollback. Testnet changes only through exact-commit
-promotion after devnet acceptance.
+migration, and emergency rollback. The state-preserving Robinhood Testnet
+promotion and its fresh two-hour, three-actor acceptance passed on 2026-07-29.
 
 The frontend implements an accessible interactive 42-path SVG Brain marketplace with one continuous anatomically traced lateral-brain silhouette, 42 individually generated roster-v4 portraits, roving keyboard navigation, map zoom, a searchable mobile list, character-led Brain Pulse, and a complete selected-piece right rail. Roster v4 contains 10 diverse humans and 32 creatures, machines, supernatural beings, or sentient objects without changing economic catalog v3. Completed cycles persist deterministic Brain Drama and support client-generated recap cards plus prefilled X, Farcaster, and Telegram sharing. Cerebrum, cerebellum, and brainstem metadata guide portrait placement without producing separate blob outlines. Both editorial light and dark modes are validated against live normative screenshots.
 
