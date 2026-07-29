@@ -77,9 +77,9 @@ Durable project context lives here. Update this file whenever information should
   disposable-wallet controls, responsive layout, and zero browser errors.
 - Operations: Devnet and all testnet web, cycle, collector, and RPC-failover
   services are active. The LAN RPC was primary and two blocks ahead of the
-  healthy secondary at final verification. Operator gas was
-  `326683572651000` wei; top it up before another contract deployment or
-  extended operator-funded acceptance run.
+  healthy secondary at final verification. Last verified 2026-07-29: the
+  operator was replenished to `10288963502651000` wei
+  (`0.010288963502651000 ETH`).
 
 ### 2026-07-29 - BRAINS basket-share rebrand
 
