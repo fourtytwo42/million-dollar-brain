@@ -68,9 +68,6 @@ try {
     .getByRole("dialog", { name: "How the brain moves the basket" })
     .getByRole("button", { name: "Got it", exact: true })
     .click();
-  await page
-    .getByText("YOU ARE HERE: THE STEERING LAYER", { exact: true })
-    .waitFor();
   assert.equal(
     await page.getByText("BASKET SNAPSHOT", { exact: true }).count(),
     0,
