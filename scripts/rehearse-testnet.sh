@@ -55,6 +55,8 @@ registry="$(jq -er '.assetRegistry' "$manifest")"
 oracle="$(jq -er '.oracle' "$manifest")"
 [[ "$(cast call "$oracle" 'automaticFreshness()(bool)' --rpc-url "$rpc")" == "false" ]]
 [[ "$(cast call "$basket" 'canaryControlsConfigured()(bool)' --rpc-url "$rpc")" == "true" ]]
+[[ "$(cast call "$basket" 'name()(string)' --rpc-url "$rpc")" == '"42 Braincells"' ]]
+[[ "$(cast call "$basket" 'symbol()(string)' --rpc-url "$rpc")" == '"BRAINS"' ]]
 [[ "$(cast call "$basket" 'buysEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$basket" 'sellsEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$basket" 'rebalancesEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]

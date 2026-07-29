@@ -36,7 +36,7 @@ test("mainnet services stay disabled until explicit activation", () => {
   const installer = read("scripts/install-systemd.sh");
   assert.match(
     installer,
-    /disable mdb-web-mainnet\.service mdb-cycle-mainnet\.timer mdb-market-collector-mainnet\.timer/,
+    /disable [^\n]*mdb-web-mainnet\.service mdb-cycle-mainnet\.timer mdb-market-collector-mainnet\.timer/,
   );
   assert.match(
     read("scripts/set-mainnet-activation.sh"),
