@@ -10,10 +10,8 @@ import {
 } from "../lib/brain-presentation";
 import { pieceDisplayName, profileUrlLabel } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
-import {
-  summarizeControlBundle,
-  type BrainControlBundle,
-} from "../lib/brain-controls";
+import { type BrainControlBundle } from "../lib/brain-controls";
+import { experienceSummary } from "../lib/brain-control-experience";
 
 type MapPiece = {
   id: number;
@@ -64,7 +62,7 @@ function ownershipState(piece: MapPiece, account: string | null) {
 
 function pieceLabel(piece: MapPiece, account: string | null) {
   const name = pieceDisplayName(piece);
-  const controls = summarizeControlBundle(piece.id, piece.controlBundle);
+  const controls = experienceSummary(piece.id, piece.controlBundle);
   const state = ownershipState(piece, account);
   const website = profileUrlLabel(piece.profileUrl);
   return `${name}. ${piece.crew}. ${piece.affinity}. Controls: ${controls}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.${website ? ` Website ${website}.` : ""}`;
@@ -91,7 +89,7 @@ export function BrainMap({
   );
   const previewPiece = hoveredId ? pieceById.get(hoveredId) : undefined;
   const filteredPieces = pieces.filter((piece) => {
-    const controls = summarizeControlBundle(piece.id, piece.controlBundle);
+    const controls = experienceSummary(piece.id, piece.controlBundle);
     return [
       pieceDisplayName(piece),
       piece.name,
@@ -336,7 +334,7 @@ export function BrainMap({
                     <b>{pieceDisplayName(previewPiece)}</b>
                     <span>
                       {previewPiece.crew} ·{" "}
-                      {summarizeControlBundle(
+                      {experienceSummary(
                         previewPiece.id,
                         previewPiece.controlBundle,
                       )}
@@ -387,7 +385,7 @@ export function BrainMap({
                 <span>
                   <b>{pieceDisplayName(piece)}</b>
                   <small>
-                    {summarizeControlBundle(piece.id, piece.controlBundle)} ·{" "}
+                    {experienceSummary(piece.id, piece.controlBundle)} ·{" "}
                     {piece.weight / 100}%
                   </small>
                 </span>

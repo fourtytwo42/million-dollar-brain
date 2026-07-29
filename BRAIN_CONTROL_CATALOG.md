@@ -1,14 +1,39 @@
 # 42 Braincells Control Catalog
 
-**Version:** 1.0
+**Version:** 1.1
 
-**Status:** Normative target specification; not yet deployed
+**Status:** Control Catalog v1 is deployed; Braincell Controls Experience v2 is active on devnet
 
 **Pieces:** 42
 
 **Supersedes for new development:** The single `-2` through `+2` selection model
 
 **Preserves:** NFT IDs, affinities, influence weights, ownership, pricing, rewards, and profile customization
+
+## Braincell Controls Experience v2
+
+The packed Control Catalog v1 contract schema remains the stable on-chain
+format. Experience v2 is the owner-facing interpretation of that schema:
+
+- Every braincell exposes two or three character-specific levers. A tagged
+  sector cell may also expose one qualified-asset picker.
+- A choice shows no more than four meaningful options. Low-level institutional
+  labels such as `Desk status`, `Preferred sleeve`, and `Desk lens` are never
+  presented to users.
+- Each option pairs meme copy with a plain-English allocator effect.
+- Opening the editor prepares a normalized bundle. When the owner confirms,
+  retired hidden knobs return to their canonical safe defaults, so invisible
+  legacy choices cannot continue steering the allocator.
+- Sector pieces select one chosen asset rather than three favorites plus a
+  separate champion. Direct orders are limited to no order, prefer, reduce, or
+  exit.
+- Every proposed and confirmed bundle renders a deterministic, copyable
+  `braincell decree`. It is entertainment and steering commentary; its factual
+  settings remain derived from the exact on-chain bundle.
+
+Experience v2 does not change contract addresses, packed storage, NFT state,
+economics, eligibility rules, or safety precedence. It is versioned separately
+as `BRAIN_CONTROL_EXPERIENCE_VERSION = 2`.
 
 ## 1. Product rule
 

@@ -2,7 +2,7 @@
 
 ## Product Requirements Document
 
-**Version:** 1.2
+**Version:** 1.3
 **Status:** Mainnet-edge engineering candidate; real-value activation disabled
 **Date:** 2026-07-29
 **Implementation status:** Local Anvil remains usable. A fresh public
@@ -10,27 +10,27 @@ chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
 RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
 A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
 broadcast mode. Control Catalog v1 is implemented, enabled, and accepted on
-local Anvil; the exact accepted commit is promoted to testnet only after its
-contract, AI, economic, and responsive gates pass. No mainnet deployment or
-real-value activation has occurred.
+local Anvil and Robinhood Testnet. Braincell Controls Experience v2 is under
+devnet acceptance and must promote through the exact-commit pipeline before
+testnet changes. No mainnet deployment or real-value activation has occurred.
 
 ### Normative PRD set
 
 This PRD is the top-level product authority. The following linked specifications are normative parts of the PRD and contain details that would make this file unnecessarily repetitive:
 
-| Specification              | Authority                                                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `BRAIN_CONTROL_CATALOG.md` | Control Catalog v1: all 42 multi-control panels, defaults, compiler effects, cadence, data attention, migration, and acceptance |
-| `BRAIN_PRESET_CATALOG.md`  | Historical catalog-v3 five-mood record and normative migration/rollback source; not the active control UX                       |
-| `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                   |
-| `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                         |
-| `AI_EXPLAINABILITY.md`     | Brain-to-proposal-to-execution attribution and public explanation requirements                                                  |
-| `KEEPER_GAS_POLICY.md`     | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation                               |
-| `UX_SCREENS.md`            | Screen consolidation, drawers, modals, system states, and mobile behavior                                                       |
-| `TECH_STACK.md`            | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                                            |
-| `CHAIN_COMPATIBILITY.md`   | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT                            |
-| `DESIGN_SYSTEM.md`         | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility                             |
-| `BUILD_READINESS.md`       | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates                       |
+| Specification              | Authority                                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BRAIN_CONTROL_CATALOG.md` | Stable packed Control Catalog v1 plus the two-or-three-lever Braincell Controls Experience v2, defaults, compiler effects, cadence, migration, and acceptance |
+| `BRAIN_PRESET_CATALOG.md`  | Historical catalog-v3 five-mood record and normative migration/rollback source; not the active control UX                                                     |
+| `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                                                 |
+| `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                                                       |
+| `AI_EXPLAINABILITY.md`     | Brain-to-proposal-to-execution attribution and public explanation requirements                                                                                |
+| `KEEPER_GAS_POLICY.md`     | Server wallet, Automation Reserve, ETH refilling, reimbursements, permissions, and key separation                                                             |
+| `UX_SCREENS.md`            | Screen consolidation, drawers, modals, system states, and mobile behavior                                                                                     |
+| `TECH_STACK.md`            | Frontend libraries, SVG brain, testing, and native Ubuntu deployment                                                                                          |
+| `CHAIN_COMPATIBILITY.md`   | Local Anvil, Robinhood networks, asset adapters, wallets, oracles, execution venues, and browser UAT                                                          |
+| `DESIGN_SYSTEM.md`         | Accepted light and dark mockups, exact design tokens, typography, theme behavior, and accessibility                                                           |
+| `BUILD_READINESS.md`       | Locked economics, limits, model settings, infrastructure, release criteria, and external production gates                                                     |
 
 If an older concept note conflicts with this PRD set, this PRD set controls. `PRODUCT_BRIEF.md` is retained only as historical product context.
 
@@ -1174,10 +1174,12 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The PRD and its ten linked normative specifications form one authoritative requirements set.
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
 - The private source repository is `fourtytwo42/million-dollar-brain`.
-- Control Catalog v1 replaces the target one-mood-per-piece UX with 42 bespoke
-  multi-control panels. Catalog v3 remains the deployed state and migration
-  source until the coordinated contract, compiler, UI, replay, and testnet
-  rollout passes.
+- Control Catalog v1 replaces the historical one-mood-per-piece model with
+  versioned on-chain bundles. Braincell Controls Experience v2 presents only
+  two or three character-specific levers per piece, no more than four choices
+  per choice control, and one chosen asset where relevant. Confirming an
+  Experience v2 update normalizes retired hidden knobs to canonical defaults
+  and produces a deterministic shareable braincell decree.
 - Owners may steer optional evidence attention and bounded structured research,
   but mandatory safety, valuation, execution, and accounting data are always
   supplied.

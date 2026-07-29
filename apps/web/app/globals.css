@@ -3037,6 +3037,29 @@ footer {
   margin: 4px 0 12px;
   font-size: 18px;
 }
+.braincell-decree {
+  margin: 0 0 10px;
+  padding: 13px 14px;
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  border-left: 4px solid var(--primary);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+  color: var(--text);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.35;
+}
+.braincell-decree.compact {
+  margin: 8px 0 0;
+  padding: 9px 10px;
+  font-size: 12px;
+}
+.decree-copy {
+  width: 100%;
+  min-height: 34px;
+  margin-bottom: 10px;
+}
 .control-preview-comparison {
   display: grid;
   gap: 8px;

@@ -4,14 +4,16 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Control Catalog v1 testnet promotion and acceptance are
-  complete; continue mainnet-edge qualification and external release gates.
-- Last meaningful change: The repaired two-hour Robinhood Testnet acceptance
-  completed with seven passing checkpoints, 21 three-actor scenarios, 2.000
-  active hours, zero browser errors, and final live responsive UAT.
-- Next step: Continue 48-hour per-asset mainnet-shadow qualification and supply
-  the paid RPC, 0x, Chainlink, role/Safe, gas, audit, and legal inputs required
-  before a paused mainnet canary.
+- Current task: Braincell Controls Experience v2 is implemented and accepted
+  on devnet; testnet intentionally remains on the accepted Control Catalog v1
+  release until a new exact-commit promotion is authorized.
+- Last meaningful change: All 42 owner editors were reduced to two or three
+  character-specific levers, choice controls were capped at four options,
+  sector cells received one chosen-asset picker, and deterministic copyable
+  braincell decrees were added.
+- Next step: Commit and push the accepted devnet release candidate, then decide
+  whether to run the required testnet promotion/acceptance or continue
+  mainnet-edge qualification first.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -43,6 +45,34 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - Braincell Controls Experience v2 devnet acceptance
+
+- Context: Owners found the raw Control Catalog v1 language repetitive,
+  institutional, and overloaded, especially `Desk status`, `Preferred sleeve`,
+  and `Desk lens`.
+- Decision: Preserve the deployed packed schema and add a separately versioned
+  owner-facing experience. Each piece exposes two or three character-specific
+  levers; choice controls show at most four options; sector pieces select one
+  chosen asset; retired hidden values normalize to safe defaults on the next
+  confirmed owner update.
+- Files: `apps/web/lib/brain-control-experience.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/components/brain-map.tsx`, `apps/web/app/globals.css`,
+  `tests/brain-control-experience.test.ts`,
+  `tests/brain-control-experience-uat.mjs`, `BRAIN_CONTROL_CATALOG.md`,
+  `PRD.md`.
+- Commands/tests: 3/3 Experience v2 unit tests; 6/6 Control Catalog tests; 4/4
+  compiler tests; production Next.js build; focused Playwright purchase/editor
+  UAT at 1440x900, 768x1024, and 390x844; live in-app Browser purchase,
+  bundle update, reload persistence, screenshot, and empty browser logs.
+- Result: Devnet shows natural character language, no legacy desk/sleeve terms,
+  deterministic copyable decrees, no page/dialog horizontal overflow, and a
+  successful single-transaction update. The broader legacy UAT still has an
+  unrelated pre-existing Decisions assertion waiting for `Data behind this
+decision`; the focused Experience v2 suite passes.
+- Follow-up: Do not patch testnet independently. Promote only the exact clean
+  pushed candidate through the established devnet-to-testnet pipeline.
 
 ### 2026-07-29 - Dynamic acceptance-actor funding
 

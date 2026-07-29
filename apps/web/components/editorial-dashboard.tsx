@@ -4,10 +4,17 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { formatUnits } from "viem";
 import {
   controlSpec,
-  summarizeControlBundle,
   validateControlBundle,
   type BrainControlBundle,
 } from "../lib/brain-controls";
+import {
+  BRAIN_CONTROL_EXPERIENCE_VERSION,
+  braincellDecree,
+  experienceControls,
+  experienceSpec,
+  experienceSummary,
+  prepareExperienceBundle,
+} from "../lib/brain-control-experience";
 import { compileBrainV1 } from "../lib/compiled-brain";
 import {
   allocationSummary,
@@ -41,18 +48,24 @@ function describeBundleAssets(
   const byId = new Map(
     assets.map((asset, index) => [asset.controlId ?? index + 1, asset.symbol]),
   );
-  const favorites = bundle.assetIds
-    .slice(0, 3)
-    .filter(Boolean)
-    .map((assetId) => byId.get(assetId) ?? `Asset ${assetId}`);
   const directive = spec.controls[4]?.options?.[bundle.values[4] ?? 0]?.label;
   const targetId = bundle.assetIds[3] ?? 0;
   const target = targetId ? (byId.get(targetId) ?? `Asset ${targetId}`) : null;
-  const parts = [
-    favorites.length ? `Favorites: ${favorites.join(", ")}` : null,
-    target && directive ? `${target}: ${directive}` : null,
-  ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : "No asset-specific order";
+  return target && directive
+    ? `${experienceSpec(pieceId).assetTargetLabel ?? "Chosen asset"}: ${target} · ${directive}`
+    : "No asset-specific order";
+}
+
+function bundleTargetAssetName(
+  bundle: BrainControlBundle,
+  assets: EditorialData["assets"],
+): string | null {
+  const targetId = bundle.assetIds[3] ?? 0;
+  if (!targetId) return null;
+  const target = assets.find(
+    (asset, index) => (asset.controlId ?? index + 1) === targetId,
+  );
+  return target?.symbol ?? `Asset ${targetId}`;
 }
 
 export type EditorialPiece = {
@@ -500,11 +513,9 @@ export function EditorialDashboard({
   );
   const openControlEditor = () => {
     if (!selected || !mine || !data?.activation.controlBundlesEnabled) return;
-    setControlDraft({
-      schemaVersion: 1,
-      values: [...selected.controlBundle.values],
-      assetIds: [...selected.controlBundle.assetIds],
-    });
+    setControlDraft(
+      prepareExperienceBundle(selected.id, selected.controlBundle),
+    );
     setControlEditorOpen(true);
   };
   const closeControlEditor = () => {
@@ -1031,8 +1042,10 @@ export function EditorialDashboard({
                 <p className="section-kicker">
                   PIECE {String(selected.id).padStart(2, "0")} · ONE TRANSACTION
                 </p>
-                <h2 id="control-editor-title">Tune {selectedDisplayName}</h2>
-                <p>{controlSpec(selected.id).summary}</p>
+                <h2 id="control-editor-title">
+                  Give {selectedDisplayName} new orders
+                </h2>
+                <p>{experienceSpec(selected.id).summary}</p>
               </div>
               <button
                 type="button"
@@ -1046,41 +1059,46 @@ export function EditorialDashboard({
             </header>
             <div className="control-editor-body">
               <div className="control-form">
-                {controlSpec(selected.id).controls.map((control, index) => {
-                  const value = controlDraft.values[index] ?? 0;
+                {experienceControls(selected.id).map((control) => {
+                  const value = controlDraft.values[control.rawIndex] ?? 0;
                   return (
                     <fieldset className="control-field" key={control.key}>
                       <legend>{control.label}</legend>
                       {control.kind === "choice" && (
                         <div className="control-segments">
-                          {control.options?.map((choice, optionIndex) => (
-                            <button
-                              type="button"
-                              key={choice.label}
-                              aria-pressed={value === optionIndex}
-                              className={
-                                value === optionIndex ? "selected" : ""
-                              }
-                              onClick={() =>
-                                setControlDraft((current) =>
-                                  current
-                                    ? {
-                                        ...current,
-                                        values: current.values.map(
-                                          (entry, valueIndex) =>
-                                            valueIndex === index
-                                              ? optionIndex
-                                              : entry,
-                                        ),
-                                      }
-                                    : current,
-                                )
-                              }
-                            >
-                              <b>{choice.label}</b>
-                              <span>{choice.meaning}</span>
-                            </button>
-                          ))}
+                          {control.options?.map((choice, optionIndex) => {
+                            const rawOptionValue =
+                              control.optionValues?.[optionIndex] ??
+                              optionIndex;
+                            return (
+                              <button
+                                type="button"
+                                key={choice.label}
+                                aria-pressed={value === rawOptionValue}
+                                className={
+                                  value === rawOptionValue ? "selected" : ""
+                                }
+                                onClick={() =>
+                                  setControlDraft((current) =>
+                                    current
+                                      ? {
+                                          ...current,
+                                          values: current.values.map(
+                                            (entry, valueIndex) =>
+                                              valueIndex === control.rawIndex
+                                                ? rawOptionValue
+                                                : entry,
+                                          ),
+                                        }
+                                      : current,
+                                  )
+                                }
+                              >
+                                <b>{choice.label}</b>
+                                <span>{choice.meaning}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       )}
                       {control.kind === "multi" && (
@@ -1101,7 +1119,7 @@ export function EditorialDashboard({
                                           ...current,
                                           values: current.values.map(
                                             (entry, valueIndex) =>
-                                              valueIndex === index
+                                              valueIndex === control.rawIndex
                                                 ? entry ^ (1 << optionIndex)
                                                 : entry,
                                           ),
@@ -1132,7 +1150,7 @@ export function EditorialDashboard({
                                       ...current,
                                       values: current.values.map(
                                         (entry, valueIndex) =>
-                                          valueIndex === index
+                                          valueIndex === control.rawIndex
                                             ? Number(event.target.value)
                                             : entry,
                                       ),
@@ -1150,15 +1168,21 @@ export function EditorialDashboard({
                 {controlSpec(selected.id).assetTag && (
                   <fieldset className="control-field asset-control-field">
                     <legend>
-                      {controlSpec(selected.id).assetLabel ??
-                        "Qualified assets"}
+                      {experienceSpec(selected.id).assetTargetLabel ??
+                        "The chosen one"}
                     </legend>
                     <p>
-                      Only active assets tagged{" "}
-                      <b>{controlSpec(selected.id).assetTag}</b> can be chosen.
+                      Choose one qualified{" "}
+                      <b>
+                        {selected.affinity
+                          .replace(/\bPreference\b/gi, "")
+                          .trim()
+                          .toLowerCase()}
+                      </b>{" "}
+                      asset. No token addresses or free text are accepted.
                     </p>
                     <div className="asset-picker-grid">
-                      {[0, 1, 2, 3].map((slot) => {
+                      {[3].map((slot) => {
                         const eligible =
                           data?.assets.filter((asset) =>
                             (asset.tags ?? []).includes(
@@ -1168,9 +1192,8 @@ export function EditorialDashboard({
                         return (
                           <label key={slot}>
                             <span>
-                              {slot < 3
-                                ? `Favorite ${slot + 1}`
-                                : "Direct-order target"}
+                              {experienceSpec(selected.id).assetTargetLabel ??
+                                "Direct-order target"}
                             </span>
                             <select
                               value={controlDraft.assetIds[slot] ?? 0}
@@ -1209,14 +1232,33 @@ export function EditorialDashboard({
               </div>
               <aside className="control-preview" aria-live="polite">
                 <p className="section-kicker">COMPILED PREVIEW</p>
-                <h3>What changes next review</h3>
+                <h3>The braincell decree</h3>
+                <blockquote className="braincell-decree">
+                  {braincellDecree(
+                    selected.id,
+                    controlDraft,
+                    bundleTargetAssetName(controlDraft, data?.assets ?? []),
+                  )}
+                </blockquote>
+                <button
+                  type="button"
+                  className="secondary-action decree-copy"
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      braincellDecree(
+                        selected.id,
+                        controlDraft,
+                        bundleTargetAssetName(controlDraft, data?.assets ?? []),
+                      ),
+                    )
+                  }
+                >
+                  Copy decree
+                </button>
                 <div className="control-preview-comparison">
                   <span>
                     <small>Current</small>
-                    {summarizeControlBundle(
-                      selected.id,
-                      selected.controlBundle,
-                    )}
+                    {experienceSummary(selected.id, selected.controlBundle)}
                     {describeBundleAssets(
                       selected.id,
                       selected.controlBundle,
@@ -1233,7 +1275,7 @@ export function EditorialDashboard({
                   </span>
                   <span>
                     <small>Proposed</small>
-                    {summarizeControlBundle(selected.id, controlDraft)}
+                    {experienceSummary(selected.id, controlDraft)}
                     {describeBundleAssets(
                       selected.id,
                       controlDraft,
@@ -1299,10 +1341,10 @@ export function EditorialDashboard({
             </div>
             <footer className="control-editor-footer">
               <div>
-                <b>One wallet confirmation updates every setting above.</b>
+                <b>One wallet confirmation publishes this braincell decree.</b>
                 <span>
-                  No free text, prompts, URLs, or arbitrary token addresses
-                  reach the allocator.
+                  Retired low-level knobs return to safe defaults. No prompts or
+                  arbitrary token addresses reach the allocator.
                 </span>
               </div>
               <button
@@ -1442,10 +1484,7 @@ export function EditorialDashboard({
                 <div className="control-summary-card">
                   <span>COMPILED STEERING</span>
                   <strong>
-                    {summarizeControlBundle(
-                      selected.id,
-                      selected.controlBundle,
-                    )}
+                    {experienceSummary(selected.id, selected.controlBundle)}
                   </strong>
                   {describeBundleAssets(
                     selected.id,
@@ -1460,10 +1499,21 @@ export function EditorialDashboard({
                       )}
                     </p>
                   )}
-                  <p>{controlSpec(selected.id).summary}</p>
+                  <p>{experienceSpec(selected.id).summary}</p>
+                  <blockquote className="braincell-decree compact">
+                    {braincellDecree(
+                      selected.id,
+                      selected.controlBundle,
+                      bundleTargetAssetName(
+                        selected.controlBundle,
+                        data?.assets ?? [],
+                      ),
+                    )}
+                  </blockquote>
                   <div>
                     <small>
-                      Bundle v{selected.controlSelectionVersion || 1}
+                      Braincell Controls v{BRAIN_CONTROL_EXPERIENCE_VERSION} ·
+                      on-chain bundle v{selected.controlSelectionVersion || 1}
                     </small>
                     {mine && (
                       <button
