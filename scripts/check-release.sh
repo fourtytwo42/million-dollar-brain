@@ -25,7 +25,7 @@ npm run test:graduation
 npm --workspace apps/web run build
 case "$environment" in
   devnet)
-    npm run test:uat
+    MDB_UAT_SCREENSHOT_DIR="$repo_root/var/release-uat/$(git rev-parse HEAD)/devnet" npm run test:uat
     export MDB_RELEASE_ACCEPTANCE="devnet-browser-uat"
     ;;
   testnet)

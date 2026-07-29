@@ -3,6 +3,9 @@ import { mkdir, readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 
 const baseUrl = process.env.MDB_UAT_URL ?? "http://127.0.0.1:3000";
+const screenshotDir =
+  process.env.MDB_UAT_SCREENSHOT_DIR ?? "design/mockups";
+const screenshotPath = (name) => `${screenshotDir}/${name}`;
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 const errors = [];
@@ -11,6 +14,7 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await mkdir("var", { recursive: true });
+  await mkdir(screenshotDir, { recursive: true });
   const guide = page.getByRole("dialog", {
     name: "How the brain moves the basket",
   });
@@ -302,7 +306,7 @@ try {
     "Reset must restore the 1x scale",
   );
   await page.screenshot({
-    path: "design/mockups/brain-screen-v3-refined.png",
+    path: screenshotPath("brain-screen-v3-refined.png"),
     fullPage: true,
   });
 
@@ -350,7 +354,7 @@ try {
     `mobile and 200%-equivalent layouts must not create page-level horizontal scrolling (${mobileOverflow}px)`,
   );
   await mobile.screenshot({
-    path: "design/mockups/brain-screen-v3-mobile.png",
+    path: screenshotPath("brain-screen-v3-mobile.png"),
     fullPage: true,
   });
   await mobile.close();
@@ -813,24 +817,24 @@ try {
     .waitFor();
   await page.screenshot({ path: "var/uat-decisions.png", fullPage: true });
   await page.screenshot({
-    path: "design/mockups/decisions-screen-v2-editorial.png",
+    path: screenshotPath("decisions-screen-v2-editorial.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await page.screenshot({
-    path: "design/mockups/decisions-screen-v2-editorial-dark.png",
+    path: screenshotPath("decisions-screen-v2-editorial-dark.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page.screenshot({ path: "var/uat-basket.png", fullPage: true });
   await page.screenshot({
-    path: "design/mockups/basket-screen-v2-editorial.png",
+    path: screenshotPath("basket-screen-v2-editorial.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await page.screenshot({
-    path: "design/mockups/basket-screen-v2-editorial-dark.png",
+    path: screenshotPath("basket-screen-v2-editorial-dark.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Light", exact: true }).click();
@@ -891,7 +895,7 @@ try {
   await page.getByRole("button", { name: "Dark" }).click();
   await page.screenshot({ path: "var/uat-dashboard-dark.png", fullPage: true });
   await page.screenshot({
-    path: "design/mockups/brain-screen-v3-refined-dark.png",
+    path: screenshotPath("brain-screen-v3-refined-dark.png"),
     fullPage: true,
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
