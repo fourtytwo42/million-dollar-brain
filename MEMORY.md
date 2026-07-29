@@ -4,15 +4,12 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Roll out animated braincell media, an optional on-chain profile
-  link, link moderation, and the compact selected-piece inspector.
-- Last meaningful change: Implemented and tested the combined name, media hash,
-  and optional HTTPS-link transaction while preserving GIF and animated WebP
-  bytes. Contract tests, focused media/link tests, and the production web build
-  pass on the authoritative VM.
-- Next step: Commit and push the implementation, upgrade the existing devnet
-  and valueless testnet Brain proxies, restart both web runtimes, and complete
-  live desktop/mobile browser UAT.
+- Current task: None; animated braincell profiles, optional links, link
+  moderation, and the compact selected-piece inspector are live and verified.
+- Last meaningful change: Upgraded the existing devnet and valueless testnet
+  Brain proxies, restarted both web runtimes, and completed a live devnet GIF,
+  custom-name, and HTTPS-link transaction through the browser.
+- Next step: None for this feature.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -161,13 +158,20 @@ When sources conflict, use this order:
 - Commands/tests: Focused portrait tests 3/3; profile-name/link tests 3/3;
   Foundry tests 29/29; Next.js production build passed; changed files pass
   Prettier, `forge fmt --check`, `bash -n`, and `git diff --check`.
-- Result: The inspector now uses a compact two-column 132-pixel desktop and
-  96-pixel mobile media header, displays a safe external link, and omits the
-  redundant active/partly-inactive data chip. Tooltip/focus previews show the
-  link label without making the hover overlay interactive.
-- Follow-up: Upgrade the existing devnet and valueless testnet proxies and
-  complete live animated-media, URL, moderation, responsive-layout, and
-  accessibility UAT.
+- Result: Commit `1ce7b45` is pushed. Devnet proxy upgrade transaction
+  `0xb1a37ebaffc8dbe4756d8e82135063141db29f49b004f9071177e4f218a60079`
+  and testnet proxy upgrade transaction
+  `0xfa3f39966e2cc7199ac06dfd35b93e24d8b0f4f2a401f1edef63e082fb90e4dc`
+  succeeded. Browser UAT purchased devnet piece 38 and committed the display
+  name `Looping Gas Goblin`, a 12-frame GIF, and
+  `https://42braincells.com/lab` in one transaction. The API serves the exact
+  hash-keyed bytes as `image/gif` with `nosniff`; the map accessible label and
+  inspector expose the link, the inspector omits the inactive-data chip, and
+  the allowance is consumed. Mobile at 390 by 844 has no page-level horizontal
+  overflow and the inspector has no internal scroll. Devnet and testnet
+  browser logs contain zero warnings or errors.
+- Follow-up: None. Both web services are active with HTTP 200; the completed
+  endurance service remains inactive and disabled.
 
 - 2026-07-28: At the user's request, stopped and disabled
   `mdb-endurance-testnet.service`, removed its armed state, verified no
