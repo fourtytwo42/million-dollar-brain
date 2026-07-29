@@ -1516,20 +1516,6 @@ footer {
   width: 138px;
   height: 124px;
 }
-.basket-token-art::before {
-  content: "";
-  position: absolute;
-  inset: 19% 5% 3%;
-  border: 1px solid color-mix(in srgb, var(--primary) 36%, var(--border));
-  border-radius: 50%;
-  background:
-    radial-gradient(
-      circle at 48% 42%,
-      color-mix(in srgb, var(--warning) 18%, var(--surface)) 0 32%,
-      transparent 68%
-    ),
-    color-mix(in srgb, var(--primary) 6%, var(--surface));
-}
 .basket-token-art img {
   position: relative;
   z-index: 1;

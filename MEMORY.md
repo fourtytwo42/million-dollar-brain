@@ -73,6 +73,9 @@ Durable project context lives here. Update this file whenever information should
   to implementation `0xd22a7f4672a38e2b955f914a5c62be6f056fe731`.
   Supply remained exactly `8201263061803647320397`. The 768px mascot and
   384px icon have transparent corners and are self-hosted WebP assets.
+- Visual follow-up: Removed the decorative oval behind the Basket hero mascot.
+  Production build and live in-app Browser verification pass with the
+  transparent asset loaded, no horizontal overflow, and no console errors.
 - Follow-up: Testnet was intentionally not changed. Promote only through the
   established exact-commit release pipeline when explicitly requested.
 
