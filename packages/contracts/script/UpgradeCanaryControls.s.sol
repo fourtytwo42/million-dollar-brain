@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Script} from "forge-std/Script.sol";
-import {BasketVault} from "../src/BasketVault.sol";
-import {BrainMarketplace} from "../src/BrainMarketplace.sol";
-import {AssetRegistry} from "../src/AssetRegistry.sol";
+import { Script } from "forge-std/Script.sol";
+import { BasketVault } from "../src/BasketVault.sol";
+import { BrainMarketplace } from "../src/BrainMarketplace.sol";
+import { AssetRegistry } from "../src/AssetRegistry.sol";
 
 contract UpgradeCanaryControls is Script {
     function run() external {
@@ -40,13 +40,13 @@ contract UpgradeCanaryControls is Script {
             basketCallOk && basketResult.length >= 32 && abi.decode(basketResult, (bool));
         if (!basketConfigured) {
             BasketVault basketImplementation = new BasketVault();
-            BasketVault(basketProxy).upgradeToAndCall(
-                address(basketImplementation),
-                abi.encodeCall(
-                    BasketVault.reinitializeV4,
-                    (buysEnabled, sellsEnabled, rebalancesEnabled)
-                )
-            );
+            BasketVault(basketProxy)
+                .upgradeToAndCall(
+                    address(basketImplementation),
+                    abi.encodeCall(
+                        BasketVault.reinitializeV4, (buysEnabled, sellsEnabled, rebalancesEnabled)
+                    )
+                );
         }
         (bool brainCallOk, bytes memory brainResult) =
             brainProxy.staticcall(abi.encodeCall(BrainMarketplace.marketControlsConfigured, ()));
@@ -54,10 +54,11 @@ contract UpgradeCanaryControls is Script {
             brainCallOk && brainResult.length >= 32 && abi.decode(brainResult, (bool));
         if (!brainConfigured) {
             BrainMarketplace brainImplementation = new BrainMarketplace();
-            BrainMarketplace(brainProxy).upgradeToAndCall(
-                address(brainImplementation),
-                abi.encodeCall(BrainMarketplace.reinitializeV2, (brainPurchasesEnabled))
-            );
+            BrainMarketplace(brainProxy)
+                .upgradeToAndCall(
+                    address(brainImplementation),
+                    abi.encodeCall(BrainMarketplace.reinitializeV2, (brainPurchasesEnabled))
+                );
         }
         vm.stopBroadcast();
     }
