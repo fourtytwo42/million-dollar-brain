@@ -797,12 +797,19 @@ export function EditorialDashboard({
           </button>
         </nav>
         <div className="market-strip">
-          <span className="share-price">
-            MDBS ${data ? usd(data.navPerShare) : "1.00"}
+          <span
+            className="share-price"
+            aria-label={`MDBS $${data ? usd(data.navPerShare) : "1.00"}`}
+          >
+            <span>MDBS</span>
+            <b>${data ? usd(data.navPerShare) : "1.00"}</b>
           </span>
-          <span className="market-health healthy">● System healthy</span>
           <span className="market-next-decision">
-            Next decision <b>{countdownText}</b>
+            <span className="decision-orbit" aria-hidden="true">
+              ✦
+            </span>
+            <span>Next decision</span>
+            <b>{countdownText}</b>
           </span>
           <button className="theme-control" onClick={onToggleTheme}>
             {dark ? "Light" : "Dark"}

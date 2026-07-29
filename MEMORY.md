@@ -213,6 +213,22 @@ decision`; the focused Experience v2 suite passes.
   mathematically centered on devnet.
 - Follow-up: None.
 
+### 2026-07-29 - Branded header market strip
+
+- Context: The top navigation looked visually plain and included a redundant
+  `System healthy` label.
+- Decision: Remove the health label, present MDBS price and the next-decision
+  countdown as compact themed capsules, and add restrained oxblood, warning,
+  and positive accents to the header and 42 mark.
+- Files: `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/app/globals.css`.
+- Commands/tests: Prettier; production Next.js build; live Browser review at
+  1920, 1366, 768, and 390 pixel widths; no page-level horizontal overflow or
+  browser errors.
+- Result: The header is more visually distinctive while preserving the
+  established editorial palette and keeping the brain as the primary focus.
+- Follow-up: None.
+
 ### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failover
 
 - Context: A new Robinhood Mainnet Nitro RPC became available on the LAN and
