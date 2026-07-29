@@ -48,10 +48,9 @@ if [[ "$mode" == "devnet" ]]; then
   signer=(--private-key "$private_key")
 else
   [[ -z "$(git -c safe.directory="$repo_root" -C "$repo_root" status --porcelain)" ]]
-  [[
-    "$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse HEAD)"
-      == "$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse '@{u}')"
-  ]]
+  local_sha="$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse HEAD)"
+  upstream_sha="$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse '@{u}')"
+  [[ "$local_sha" == "$upstream_sha" ]]
   signer=(--keystore "${MDB_OPERATOR_KEYSTORE:?}" --password-file "${MDB_OPERATOR_PASSWORD_FILE:?}")
 fi
 

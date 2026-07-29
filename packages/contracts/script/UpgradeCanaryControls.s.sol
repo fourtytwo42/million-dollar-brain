@@ -35,7 +35,7 @@ contract UpgradeCanaryControls is Script {
             }
         }
         (bool basketCallOk, bytes memory basketResult) =
-            basketProxy.staticcall(abi.encodeCall(BasketVault.canaryControlsConfigured, ()));
+            basketProxy.staticcall(abi.encodeWithSignature("canaryControlsConfigured()"));
         bool basketConfigured =
             basketCallOk && basketResult.length >= 32 && abi.decode(basketResult, (bool));
         if (!basketConfigured) {
@@ -49,7 +49,7 @@ contract UpgradeCanaryControls is Script {
                 );
         }
         (bool brainCallOk, bytes memory brainResult) =
-            brainProxy.staticcall(abi.encodeCall(BrainMarketplace.marketControlsConfigured, ()));
+            brainProxy.staticcall(abi.encodeWithSignature("marketControlsConfigured()"));
         bool brainConfigured =
             brainCallOk && brainResult.length >= 32 && abi.decode(brainResult, (bool));
         if (!brainConfigured) {
