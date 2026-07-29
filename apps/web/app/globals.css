@@ -2937,28 +2937,6 @@ footer {
   padding: 18px 20px 28px;
   overflow-y: auto;
 }
-.control-dashboard-reaction {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 38px;
-  padding: 8px 10px;
-  border: 1px dashed color-mix(in srgb, var(--primary) 55%, var(--border));
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
-  font-size: 10px;
-}
-.control-dashboard-reaction span {
-  padding: 4px 6px;
-  border-radius: 999px;
-  background: var(--primary);
-  color: var(--primary-contrast);
-  font:
-    800 8px/1 "IBM Plex Mono",
-    "DM Mono",
-    monospace;
-  letter-spacing: 0.08em;
-}
 .control-field {
   min-width: 0;
   margin: 0;

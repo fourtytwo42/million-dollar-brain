@@ -10,7 +10,6 @@ import {
 import {
   BRAIN_CONTROL_EXPERIENCE_VERSION,
   braincellDecree,
-  dashboardReaction,
   experienceControls,
   experienceSpec,
   experienceSummary,
@@ -504,9 +503,6 @@ export function EditorialDashboard({
     null,
   );
   const [controlSaving, setControlSaving] = useState(false);
-  const [controlDashboardReaction, setControlDashboardReaction] = useState(
-    "The dashboard is pretending to be normal.",
-  );
   const controlDialogRef = useRef<HTMLElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
@@ -542,14 +538,12 @@ export function EditorialDashboard({
     setControlDraft(
       prepareExperienceBundle(selected.id, selected.controlBundle),
     );
-    setControlDashboardReaction("The dashboard is pretending to be normal.");
     setControlEditorOpen(true);
   };
   const closeControlEditor = () => {
     if (controlSaving) return;
     setControlEditorOpen(false);
     setControlDraft(null);
-    setControlDashboardReaction("The dashboard is pretending to be normal.");
   };
   useEffect(() => {
     if (!controlEditorOpen) return;
@@ -1091,14 +1085,6 @@ export function EditorialDashboard({
             </header>
             <div className="control-editor-body">
               <div className="control-form">
-                <div
-                  className="control-dashboard-reaction"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <span aria-hidden="true">SIGNAL</span>
-                  <b>{controlDashboardReaction}</b>
-                </div>
                 {experienceControls(selected.id).map((control) => {
                   const value = controlDraft.values[control.rawIndex] ?? 0;
                   return (
@@ -1119,13 +1105,6 @@ export function EditorialDashboard({
                                   value === rawOptionValue ? "selected" : ""
                                 }
                                 onClick={() => {
-                                  setControlDashboardReaction(
-                                    dashboardReaction(
-                                      selected.id,
-                                      control.rawIndex,
-                                      optionIndex,
-                                    ),
-                                  );
                                   setControlDraft((current) =>
                                     current
                                       ? {
@@ -1160,13 +1139,6 @@ export function EditorialDashboard({
                                 aria-pressed={selectedOption}
                                 className={selectedOption ? "selected" : ""}
                                 onClick={() => {
-                                  setControlDashboardReaction(
-                                    dashboardReaction(
-                                      selected.id,
-                                      control.rawIndex,
-                                      optionIndex,
-                                    ),
-                                  );
                                   setControlDraft((current) =>
                                     current
                                       ? {
@@ -1199,12 +1171,6 @@ export function EditorialDashboard({
                             aria-label={`${control.label} attention`}
                             onChange={(event) => {
                               const nextValue = Number(event.target.value);
-                              setControlDashboardReaction(
-                                `The gauge now reads “${mysteryGauge(
-                                  nextValue,
-                                  control.maximum,
-                                )}.”`,
-                              );
                               setControlDraft((current) =>
                                 current
                                   ? {
@@ -1261,11 +1227,6 @@ export function EditorialDashboard({
                             <select
                               value={controlDraft.assetIds[slot] ?? 0}
                               onChange={(event) => {
-                                setControlDashboardReaction(
-                                  event.target.value === "0"
-                                    ? "The chosen-one seat is now empty."
-                                    : "A name appears on the dashboard in crayon.",
-                                );
                                 setControlDraft((current) =>
                                   current
                                     ? {
