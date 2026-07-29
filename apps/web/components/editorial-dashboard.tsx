@@ -8,6 +8,11 @@ import {
   positiveAllocationEntries,
   positiveBalanceSymbols,
 } from "../lib/portfolio-display";
+import {
+  MAX_CUSTOM_PIECE_NAME_BYTES,
+  pieceDisplayName,
+  validateCustomPieceName,
+} from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
 import { BrainMap } from "./brain-map";
 
@@ -24,7 +29,8 @@ export type EditorialPiece = {
   preset: number;
   portraitHash: string;
   ownershipSerial: number;
-  portraitChangeAvailable: boolean;
+  profileChangeAvailable: boolean;
+  customName: string;
   weight: number;
   affinity: string;
   name: string;
@@ -347,7 +353,7 @@ export function EditorialDashboard({
   onRedeem,
   onBuy,
   onPreset,
-  onPortrait,
+  onProfile,
   onClaim,
 }: {
   data: EditorialData | null;
@@ -384,7 +390,7 @@ export function EditorialDashboard({
   onRedeem: () => void;
   onBuy: (piece: EditorialPiece) => void;
   onPreset: (piece: EditorialPiece, preset: number) => void;
-  onPortrait: (piece: EditorialPiece, file: File) => void;
+  onProfile: (piece: EditorialPiece, file: File, name: string) => Promise<void>;
   onClaim: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
@@ -393,7 +399,13 @@ export function EditorialDashboard({
   );
   const [showGuide, setShowGuide] = useState(false);
   const [tradeSide, setTradeSide] = useState<"buy" | "sell">("buy");
-  const portraitInputRef = useRef<HTMLInputElement>(null);
+  const profileInputRef = useRef<HTMLInputElement>(null);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
   const reserveMoney = (value: string | bigint) =>
@@ -417,11 +429,32 @@ export function EditorialDashboard({
   }, []);
   const selected =
     data?.pieces.find((piece) => piece.id === selectedId) ?? data?.pieces[0];
+  const selectedDisplayName = selected ? pieceDisplayName(selected) : "";
   const mine = Boolean(
     selected &&
     account &&
     selected.owner.toLowerCase() === account.toLowerCase(),
   );
+  const openProfileEditor = () => {
+    if (!selected || !mine || !selected.profileChangeAvailable) return;
+    setProfileName(selectedDisplayName);
+    setProfileFile(null);
+    setProfilePreview(null);
+    setProfileError("");
+    setProfileEditorOpen(true);
+  };
+  const closeProfileEditor = () => {
+    if (profileSaving) return;
+    setProfileEditorOpen(false);
+    setProfileFile(null);
+    setProfilePreview(null);
+    setProfileError("");
+  };
+  useEffect(() => {
+    return () => {
+      if (profilePreview) URL.revokeObjectURL(profilePreview);
+    };
+  }, [profilePreview]);
   const owned =
     data?.pieces.filter(
       (piece) => account && piece.owner.toLowerCase() === account.toLowerCase(),
@@ -674,6 +707,143 @@ export function EditorialDashboard({
         />
       )}
 
+      {profileEditorOpen && selected && (
+        <div
+          className="profile-editor-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeProfileEditor();
+          }}
+        >
+          <section
+            className="profile-editor-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-editor-title"
+          >
+            <div className="profile-editor-heading">
+              <div>
+                <p className="section-kicker">ONE CHANGE PER OWNERSHIP</p>
+                <h2 id="profile-editor-title">Customize braincell</h2>
+              </div>
+              <button
+                type="button"
+                className="profile-editor-close"
+                onClick={closeProfileEditor}
+                disabled={profileSaving}
+                aria-label="Close profile editor"
+              >
+                ×
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="profile-image-picker"
+              onClick={() => profileInputRef.current?.click()}
+              disabled={profileSaving}
+            >
+              <img
+                src={profilePreview ?? portraitUrl(selected)}
+                alt="New braincell portrait preview"
+              />
+              <span>
+                {profileFile ? "Choose a different image" : "Choose image"}
+              </span>
+            </button>
+            <input
+              ref={profileInputRef}
+              className="sr-only"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={profileSaving}
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                event.target.value = "";
+                if (profilePreview) URL.revokeObjectURL(profilePreview);
+                setProfileFile(file);
+                setProfilePreview(file ? URL.createObjectURL(file) : null);
+                setProfileError("");
+              }}
+            />
+
+            <label className="profile-name-field">
+              <span>Braincell name</span>
+              <input
+                value={profileName}
+                disabled={profileSaving}
+                maxLength={MAX_CUSTOM_PIECE_NAME_BYTES}
+                onChange={(event) => {
+                  setProfileName(event.target.value);
+                  setProfileError("");
+                }}
+                autoComplete="off"
+                spellCheck
+              />
+              <small>
+                {new TextEncoder().encode(profileName).length}/
+                {MAX_CUSTOM_PIECE_NAME_BYTES} UTF-8 bytes
+              </small>
+            </label>
+
+            <div className="profile-editor-notice">
+              <strong>Name + image use one on-chain change.</strong>
+              <span>
+                Your wallet commits both together. You cannot edit either again
+                until someone else purchases this braincell. Moderators may
+                restore an image to the original without restoring this change.
+              </span>
+            </div>
+            {profileError && (
+              <p className="profile-editor-error" role="alert">
+                {profileError}
+              </p>
+            )}
+            <div className="profile-editor-actions">
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={closeProfileEditor}
+                disabled={profileSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                disabled={profileSaving || !profileFile}
+                onClick={async () => {
+                  if (!profileFile) {
+                    setProfileError("Choose an image.");
+                    return;
+                  }
+                  const validationError = validateCustomPieceName(profileName);
+                  if (validationError) {
+                    setProfileError(validationError);
+                    return;
+                  }
+                  setProfileSaving(true);
+                  setProfileError("");
+                  try {
+                    await onProfile(selected, profileFile, profileName);
+                    setProfileSaving(false);
+                    closeProfileEditor();
+                  } catch (error) {
+                    setProfileSaving(false);
+                    setProfileError(
+                      error instanceof Error
+                        ? error.message
+                        : "Profile change failed.",
+                    );
+                  }
+                }}
+              >
+                {profileSaving ? "Confirming…" : "Confirm in wallet"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {screen === "Brain" && (
         <div className="editorial-page brain-page">
           <section className="brain-pulse-strip" aria-label="Brain pulse">
@@ -709,48 +879,45 @@ export function EditorialDashboard({
                 className="piece-ledger piece-inspector"
                 id="piece-inspector"
                 aria-live="polite"
-                aria-label={`Selected brain piece: ${selected.name}`}
+                aria-label={`Selected brain piece: ${selectedDisplayName}`}
               >
                 <div className="piece-ledger-head">
                   <button
                     type="button"
                     className="detail-portrait portrait-change-button"
-                    disabled={!mine}
+                    disabled={!mine || !selected.profileChangeAvailable}
                     aria-label={
-                      mine
-                        ? selected.portraitChangeAvailable
-                          ? `Replace ${selected.name}'s portrait`
-                          : "Re-upload the portrait already committed on chain"
-                        : "Only the current owner can replace this portrait"
+                      mine && selected.profileChangeAvailable
+                        ? `Customize ${selectedDisplayName}'s name and portrait`
+                        : "This braincell profile cannot be customized right now"
                     }
-                    onClick={() => portraitInputRef.current?.click()}
+                    onClick={openProfileEditor}
                   >
                     <img
                       src={portraitUrl(selected)}
-                      alt={`${selected.name} portrait`}
+                      alt={`${selectedDisplayName} portrait`}
                     />
-                    {mine && selected.portraitChangeAvailable && (
-                      <span className="portrait-change-hint">Change once</span>
+                    {mine && selected.profileChangeAvailable && (
+                      <span className="portrait-change-hint">Customize</span>
                     )}
                   </button>
-                  <input
-                    ref={portraitInputRef}
-                    className="sr-only"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    disabled={!mine}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      event.target.value = "";
-                      if (file) onPortrait(selected, file);
-                    }}
-                  />
                   <div>
                     <p className="section-kicker">
                       PIECE {String(selected.id).padStart(2, "0")} ·{" "}
                       {selected.crew}
                     </p>
-                    <h2>{selected.name}</h2>
+                    <button
+                      type="button"
+                      className="piece-name-button"
+                      disabled={!mine || !selected.profileChangeAvailable}
+                      onClick={openProfileEditor}
+                      aria-label={`Customize ${selectedDisplayName}'s name and portrait`}
+                    >
+                      <h2>{selectedDisplayName}</h2>
+                      {mine && selected.profileChangeAvailable && (
+                        <span aria-hidden="true">✎</span>
+                      )}
+                    </button>
                     <p>
                       Steers {selected.affinity} · {selected.weight / 100}% of
                       the brain&apos;s influence
@@ -760,9 +927,9 @@ export function EditorialDashboard({
                     </p>
                     {mine && (
                       <p className="portrait-change-status">
-                        {selected.portraitChangeAvailable
-                          ? "Click the portrait to replace it. One change per ownership."
-                          : "Portrait change used. The next purchaser gets one new change."}
+                        {selected.profileChangeAvailable
+                          ? "Customize this braincell's name and portrait once."
+                          : "Profile customization used. The next purchaser gets one new change."}
                       </p>
                     )}
                   </div>

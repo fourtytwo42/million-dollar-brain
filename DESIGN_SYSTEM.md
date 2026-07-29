@@ -177,16 +177,22 @@ Automated and manual testing still validates rendered contrast after font weight
 - Unselected portraits are intentionally subdued. Hover and keyboard focus preview; only click, tap, Enter, or Space commits selection.
 - The inspector permanently owns the desktop right rail and Brain Pulse is a compact full-width summary strip. The Brain screen ends after the primary map and inspector; basket information belongs on the dedicated Basket screen.
 - The selected-piece portrait is a prominent 104-pixel square on desktop and an
-  84-pixel square on mobile. When the connected wallet owns the piece, the
-  portrait is the file-picker trigger and clearly states whether that
-  ownership's single portrait change remains available.
+  84-pixel square on mobile. When the connected wallet owns the piece and its
+  single profile customization remains available, both the portrait and name
+  visibly open one focused editor card. The card previews the image and name,
+  explains that they are committed together, and requires one wallet
+  transaction.
 - Custom portraits use the same map clipping as canonical portraits. The
   application normalizes uploads to transparent-capable 384-by-384 WebP and
   serves them from a content-hash cache-safe URL after the on-chain commitment
   confirms.
 - A connected wallet's pieces retain a positive-color double-outline halo on the map. The textual `Yours (n) · double outline` key is interactive: selecting it mutes non-owned pieces like a crew filter, and selecting it again clears the filter. This makes the treatment discoverable and ensures color is not the only ownership signal.
 - Mobile provides Map and searchable List views. Zoom is clamped to 1 through 2.5 times inside a native scrolling viewport.
-- The map does not overlay piece numbers or generic glyphs on the portraits. Catalog names remain available through accessible labels and the selected-piece ledger.
+- The map does not overlay piece numbers or generic glyphs on the portraits.
+  Owner-selected display names appear in accessible labels, tooltips, search,
+  and the selected-piece ledger. Immutable catalog names remain separate from
+  untrusted display aliases and continue to identify the canonical character
+  for AI context.
 - The generated art direction and canonical asset paths are defined in `design/brain-art/README.md`.
 
 ## 9. Motion

@@ -280,23 +280,29 @@ Owners may not:
 
 A change made after the current AI snapshot affects the next scheduled cycle.
 
-### 8.2.1 Owner portrait change
+### 8.2.1 Owner profile customization
 
-- Each purchaser receives one portrait change for that ownership period.
+- Each purchaser receives one combined name-and-portrait customization for that
+  ownership period.
 - The owner may use it at any time after purchase; it is not part of the buy
   transaction.
 - The application center-crops the chosen PNG, JPEG, or WebP to a 384-by-384
-  WebP, commits its exact content hash on-chain, and self-hosts the matching
-  bytes.
-- The contract accepts one nonzero portrait hash per ownership serial. A second
-  different hash reverts.
+  WebP, validates a nonempty name of at most 48 UTF-8 bytes, and commits the
+  name and exact image-content hash together in one wallet transaction. It then
+  self-hosts the matching image bytes.
+- The contract accepts one profile update per ownership serial. A second name
+  or image change reverts.
 - A completed always-for-sale purchase advances the ownership serial and gives
-  the new purchaser one new portrait change. The existing portrait remains
-  visible until that purchaser changes it.
-- Portraits are presentation only. They never enter the allocator prompt,
-  change affinity, alter influence, grant asset permissions, or affect fees.
+  the new purchaser one fresh combined customization. The existing name and
+  portrait remain visible until that purchaser changes them.
+- Custom names and portraits are presentation only. They never enter the
+  allocator prompt, replace the immutable character identity, change affinity,
+  alter influence, grant asset permissions, or affect fees.
 - The UI validates file type and size. The image service stores bytes only when
   their hash equals the piece's current on-chain commitment.
+- The contract admin may moderate an image by resetting its portrait hash to
+  the canonical image. Moderation does not change the custom name, ownership,
+  ownership serial, or consumed profile-customization allowance.
 
 ### 8.3 Initial brain-piece purchase
 
@@ -870,17 +876,22 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 5. Registry records the new selection and brain version.
 6. The change applies to the next cycle snapshot and does not trigger an immediate rebalance.
 
-### 17.7 Change a brain portrait
+### 17.7 Customize a braincell profile
 
-1. Owner selects their piece and clicks its portrait.
-2. Owner chooses a PNG, JPEG, or WebP.
-3. Application previews and normalizes it to a square 384-by-384 WebP.
-4. Owner confirms the one-time on-chain portrait-hash transaction and pays gas.
+1. Owner selects their piece and clicks its portrait, name, or Customize affordance.
+2. A focused editor card lets the owner choose a PNG, JPEG, or WebP and enter
+   the braincell's new name.
+3. Application previews and normalizes the image to a square 384-by-384 WebP
+   and validates the bounded name.
+4. Owner confirms one transaction committing both the name and portrait hash
+   and pays gas.
 5. After confirmation, the application uploads only the exact hash-matching
    bytes to self-hosted storage.
-6. The map and inspector switch to the cache-safe custom portrait URL.
-7. Further different portrait changes revert until another purchaser buys the
-   piece at its increased price.
+6. The map, searchable list, tooltip, and inspector switch to the new display
+   name and cache-safe custom portrait URL.
+7. Further name or portrait changes revert until another purchaser buys the
+   piece at its increased price. An admin image reset does not restore this
+   allowance.
 
 ### 17.8 Claim brain-owner rewards
 

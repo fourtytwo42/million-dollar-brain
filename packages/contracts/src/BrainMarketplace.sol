@@ -43,6 +43,8 @@ contract BrainMarketplace is
     mapping(uint256 => uint64) public portraitChangeSerialPlusOne;
     bool public marketControlsConfigured;
     bool public purchasesEnabled;
+    // Appended storage for the combined one-profile-change-per-ownership feature.
+    mapping(uint256 => string) public customName;
 
     event PiecePurchased(
         uint256 indexed pieceId,
@@ -52,11 +54,18 @@ contract BrainMarketplace is
         uint256 nextPrice
     );
     event PresetChanged(uint256 indexed pieceId, uint8 preset, address indexed owner);
-    event PortraitChanged(
+    event ProfileChanged(
         uint256 indexed pieceId,
         address indexed owner,
         uint64 indexed ownershipSerial,
-        bytes32 portraitHash
+        bytes32 portraitHash,
+        string customName
+    );
+    event PortraitModerated(
+        uint256 indexed pieceId,
+        address indexed moderator,
+        address indexed owner,
+        uint64 ownershipSerial
     );
     event PurchaseControlConfigured(bool purchasesEnabled);
 
@@ -154,15 +163,29 @@ contract BrainMarketplace is
         return portraitChangeSerialPlusOne[pieceId] != ownershipSerial[pieceId] + 1;
     }
 
-    function setPortrait(uint256 pieceId, bytes32 newPortraitHash) external {
+    function canChangeProfile(uint256 pieceId, address account) public view returns (bool) {
+        return canChangePortrait(pieceId, account);
+    }
+
+    function setProfile(uint256 pieceId, bytes32 newPortraitHash, string calldata newName)
+        external
+    {
         _validPiece(pieceId);
         require(ownerOf(pieceId) == msg.sender, "not owner");
         require(newPortraitHash != bytes32(0), "empty portrait");
-        require(canChangePortrait(pieceId, msg.sender), "portrait already changed");
+        require(canChangeProfile(pieceId, msg.sender), "profile already changed");
+        _validateName(newName);
 
         portraitHash[pieceId] = newPortraitHash;
+        customName[pieceId] = newName;
         portraitChangeSerialPlusOne[pieceId] = ownershipSerial[pieceId] + 1;
-        emit PortraitChanged(pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash);
+        emit ProfileChanged(pieceId, msg.sender, ownershipSerial[pieceId], newPortraitHash, newName);
+    }
+
+    function resetPortrait(uint256 pieceId) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _validPiece(pieceId);
+        portraitHash[pieceId] = bytes32(0);
+        emit PortraitModerated(pieceId, msg.sender, ownerOf(pieceId), ownershipSerial[pieceId]);
     }
 
     function reinitializeV2(bool purchasesEnabled_)
@@ -180,6 +203,17 @@ contract BrainMarketplace is
 
     function _validPiece(uint256 pieceId) private pure {
         require(pieceId > 0 && pieceId <= PIECE_COUNT, "invalid piece");
+    }
+
+    function _validateName(string calldata value) private pure {
+        bytes calldata raw = bytes(value);
+        require(raw.length > 0, "empty name");
+        require(raw.length <= 48, "name too long");
+        require(raw[0] != 0x20 && raw[raw.length - 1] != 0x20, "name whitespace");
+        for (uint256 i; i < raw.length; ++i) {
+            uint8 character = uint8(raw[i]);
+            require(character >= 0x20 && character != 0x7f, "invalid name");
+        }
     }
 
     function transferFrom(address, address, uint256) public pure override {

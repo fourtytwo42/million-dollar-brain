@@ -4,13 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: None; the testnet acceptance run is stopped at the user's
-  request.
-- Last meaningful change: Stopped and disarmed the exact-commit testnet
-  acceptance run after five successful checkpoints and zero failed attempts.
-  The service is disabled, no endurance process remains, and the evidence is
-  preserved under `var/testnet-v3-endurance`.
-- Next step: Resume acceptance only if the user explicitly requests it.
+- Current task: Deploy and verify combined one-time braincell profile
+  customization plus admin portrait moderation.
+- Last meaningful change: Implemented one transaction that commits a custom
+  name and portrait hash together, a focused profile editor, display aliases
+  isolated from AI context, and an admin-only canonical portrait reset that
+  does not restore the owner's consumed allowance. Contract tests and the web
+  production build pass.
+- Next step: Commit and push, upgrade the existing devnet and testnet Brain
+  proxies, restart both web runtimes, and complete live browser UAT.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -705,6 +707,28 @@ When sources conflict, use this order:
 - Commands/tests: `npm run test:portrait` passed 2/2; `npm run test:contracts` passed 26/26; Next.js production build passed and includes the dynamic brain-image route. UUPS upgrades completed on chains 31337 and 46630.
 - Result: Commit `f9aba60` is pushed. The local and testnet web apps, public testnet domain, cycle timers, and collectors are active. Live local-browser UAT funded a disposable wallet, bought piece 1, committed and uploaded a custom portrait, verified the map and 112-pixel inspector use the hash-keyed image, and rejected a second different portrait. The +2 mood is fully visible at 1920, 768, and 390 pixel widths with no page-level horizontal overflow. The only browser diagnostics were MetaMask extension warnings; no application console error was observed.
 - Follow-up: None for the portrait feature. Mainnet activation will inherit the implementation through the release manifest and still requires the existing external gates.
+
+### 2026-07-28 - Combined Braincell Profile and Portrait Moderation
+
+- Context: Owners need to change a braincell's name and image through one clear
+  interaction, while the creator needs a way to remove an inappropriate image.
+- Decision: Replace separate portrait editing with one name-plus-image profile
+  change per ownership serial. Store the bounded display name and image hash
+  on-chain in one transaction. Keep the immutable catalog identity in all AI
+  context. Permit only `DEFAULT_ADMIN_ROLE` to zero the portrait hash; this
+  leaves the custom name, owner, serial, and consumed allowance unchanged.
+- Files: `packages/contracts/src/BrainMarketplace.sol`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/components/brain-dashboard.tsx`, `apps/web/lib/piece-name.ts`,
+  `scripts/moderate-brain-portrait.sh`.
+- Commands/tests: `npm run test:contracts` passed 28/28; profile-name tests
+  passed 2/2; portrait tests passed 2/2; portfolio-display tests passed 6/6;
+  Next.js production build, Prettier, Forge formatting, and storage-layout
+  inspection passed.
+- Result: Implementation is ready for proxy upgrade and live UAT.
+- Follow-up: Upgrade devnet and the existing valueless testnet proxy, then
+  verify the modal, one-transaction profile change, display alias, and admin
+  reset in the live app.
 
 ### 2026-07-27 - Live local valuation and user-facing performance
 

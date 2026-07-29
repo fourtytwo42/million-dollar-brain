@@ -426,27 +426,30 @@ contract BasketBrainTest is Test {
         assertEq(brain.ownerOf(1), bob);
     }
 
-    function testBrainOwnerCanChangePortraitOncePerOwnership() public {
+    function testBrainOwnerCanChangeProfileOncePerOwnership() public {
         bytes32 alicePortrait = keccak256("alice portrait");
         bytes32 bobPortrait = keccak256("bob portrait");
 
-        assertFalse(brain.canChangePortrait(1, alice));
+        assertFalse(brain.canChangeProfile(1, alice));
         vm.prank(alice);
         vm.expectRevert("not owner");
-        brain.setPortrait(1, alicePortrait);
+        brain.setProfile(1, alicePortrait, "Not mine");
 
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
         assertEq(brain.ownershipSerial(1), 1);
-        assertTrue(brain.canChangePortrait(1, alice));
+        assertTrue(brain.canChangeProfile(1, alice));
         vm.expectRevert("empty portrait");
-        brain.setPortrait(1, bytes32(0));
-        brain.setPortrait(1, alicePortrait);
+        brain.setProfile(1, bytes32(0), "Alice");
+        vm.expectRevert("empty name");
+        brain.setProfile(1, alicePortrait, "");
+        brain.setProfile(1, alicePortrait, "Exit Liquidity Department");
         assertEq(brain.portraitHash(1), alicePortrait);
-        assertFalse(brain.canChangePortrait(1, alice));
-        vm.expectRevert("portrait already changed");
-        brain.setPortrait(1, keccak256("second alice portrait"));
+        assertEq(brain.customName(1), "Exit Liquidity Department");
+        assertFalse(brain.canChangeProfile(1, alice));
+        vm.expectRevert("profile already changed");
+        brain.setProfile(1, keccak256("second alice portrait"), "Second name");
         vm.stopPrank();
 
         vm.startPrank(bob);
@@ -454,14 +457,16 @@ contract BasketBrainTest is Test {
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
         assertEq(brain.ownershipSerial(1), 2);
         assertEq(brain.portraitHash(1), alicePortrait);
-        assertTrue(brain.canChangePortrait(1, bob));
-        brain.setPortrait(1, bobPortrait);
+        assertEq(brain.customName(1), "Exit Liquidity Department");
+        assertTrue(brain.canChangeProfile(1, bob));
+        brain.setProfile(1, bobPortrait, unicode"Bob's Moon Bureau 🚀");
         assertEq(brain.portraitHash(1), bobPortrait);
-        assertFalse(brain.canChangePortrait(1, bob));
+        assertEq(brain.customName(1), unicode"Bob's Moon Bureau 🚀");
+        assertFalse(brain.canChangeProfile(1, bob));
         vm.stopPrank();
     }
 
-    function testExistingOwnerCanChangePortraitAfterImplementationUpgrade() public {
+    function testExistingOwnerCanChangeProfileAfterImplementationUpgrade() public {
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
@@ -471,7 +476,30 @@ contract BasketBrainTest is Test {
         // appended portrait slots. Its current owner must still receive one use.
         assertEq(brain.ownershipSerial(1), 1);
         assertEq(brain.portraitChangeSerialPlusOne(1), 0);
-        assertTrue(brain.canChangePortrait(1, alice));
+        assertTrue(brain.canChangeProfile(1, alice));
+    }
+
+    function testAdminCanModeratePortraitWithoutRestoringProfileChange() public {
+        bytes32 customPortrait = keccak256("moderated portrait");
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        brain.setProfile(1, customPortrait, "Still Valid Name");
+        vm.stopPrank();
+
+        vm.prank(bob);
+        vm.expectRevert();
+        brain.resetPortrait(1);
+
+        vm.prank(admin);
+        brain.resetPortrait(1);
+        assertEq(brain.portraitHash(1), bytes32(0));
+        assertEq(brain.customName(1), "Still Valid Name");
+        assertFalse(brain.canChangeProfile(1, alice));
+
+        vm.prank(alice);
+        vm.expectRevert("profile already changed");
+        brain.setProfile(1, keccak256("replacement"), "Replacement");
     }
 
     function testCurrentBrainOwnerCanClaimBasketFees() public {

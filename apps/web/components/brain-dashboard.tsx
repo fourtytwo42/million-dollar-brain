@@ -24,6 +24,7 @@ import {
 } from "wagmi";
 import { basketAbi, brainAbi, erc20Abi, rewardAbi } from "@/lib/abi";
 import { retryApprovalDependentWrite } from "@/lib/approval-retry";
+import { pieceDisplayName, validateCustomPieceName } from "@/lib/piece-name";
 import { preparePortrait } from "@/lib/portrait";
 import { EditorialDashboard } from "./editorial-dashboard";
 
@@ -40,7 +41,8 @@ type Piece = {
   preset: number;
   portraitHash: string;
   ownershipSerial: number;
-  portraitChangeAvailable: boolean;
+  profileChangeAvailable: boolean;
+  customName: string;
   weight: number;
   affinity: string;
   name: string;
@@ -667,29 +669,38 @@ export function BrainDashboard() {
       ),
     );
   }
-  async function changePortrait(piece: Piece, sourceFile: File) {
+  async function changeProfile(
+    piece: Piece,
+    sourceFile: File,
+    newName: string,
+  ) {
     if (!data) return;
+    const nameError = validateCustomPieceName(newName);
+    if (nameError) throw new Error(nameError);
     setMessage("Preparing a square 384 × 384 portrait…");
     const portrait = await preparePortrait(sourceFile);
     const bytes = new Uint8Array(await portrait.arrayBuffer());
     const hash = keccak256(bytes);
     const alreadyCommitted =
-      hash.toLowerCase() === piece.portraitHash.toLowerCase();
+      hash.toLowerCase() === piece.portraitHash.toLowerCase() &&
+      newName === piece.customName;
 
-    if (!piece.portraitChangeAvailable && !alreadyCommitted) {
+    if (!piece.profileChangeAvailable && !alreadyCommitted) {
       throw new Error(
-        "This ownership has already used its one portrait change. The next purchaser receives a new change.",
+        "This ownership has already used its one profile change. The next purchaser receives a new change.",
       );
     }
 
     const { wallet, publicClient } = clients();
     if (!alreadyCommitted) {
-      setMessage("Confirm the one-time portrait change in your wallet…");
+      setMessage(
+        "Confirm the one-time name and portrait change in your wallet…",
+      );
       const tx = await wallet.writeContract({
         address: data.deployment.brain,
         abi: brainAbi,
-        functionName: "setPortrait",
-        args: [BigInt(piece.id), hash],
+        functionName: "setProfile",
+        args: [BigInt(piece.id), hash, newName],
       });
       await publicClient.waitForTransactionReceipt({
         hash: tx,
@@ -710,7 +721,7 @@ export function BrainDashboard() {
         const refreshed = await refreshAfterConfirmedAction();
         setMessage(
           confirmedActionMessage(
-            `Piece ${piece.id} now uses your custom portrait. This ownership's one portrait change has been used.`,
+            `Piece ${piece.id} is now ${newName} and uses your custom portrait. This ownership's one profile change has been used.`,
             refreshed,
           ),
         );
@@ -724,7 +735,7 @@ export function BrainDashboard() {
     }
     await refreshAfterConfirmedAction();
     throw new Error(
-      `The portrait is committed on chain, but its image upload failed: ${uploadError}. Click the portrait and choose the same file to retry.`,
+      `The name and portrait hash are committed on chain, but the image upload failed: ${uploadError}. Open Customize and choose the same file and name to retry.`,
     );
   }
   async function redeem() {
@@ -866,10 +877,11 @@ export function BrainDashboard() {
             setMessage(error.shortMessage ?? error.message),
           )
         }
-        onPortrait={(piece, file) =>
-          changePortrait(piece, file).catch((error) =>
-            setMessage(error.shortMessage ?? error.message),
-          )
+        onProfile={(piece, file, name) =>
+          changeProfile(piece, file, name).catch((error) => {
+            setMessage(error.shortMessage ?? error.message);
+            throw error;
+          })
         }
         onClaim={() =>
           claimRewards().catch((error) =>
@@ -1119,7 +1131,7 @@ export function BrainDashboard() {
                   <div className="piece-character">
                     <span className="glyph">{piece.glyph}</span>
                     <div>
-                      <h3>{piece.name}</h3>
+                      <h3>{pieceDisplayName(piece)}</h3>
                       <span className="affinity-label">{piece.affinity}</span>
                     </div>
                   </div>
@@ -1142,7 +1154,7 @@ export function BrainDashboard() {
                   </p>
                   {mine ? (
                     <select
-                      aria-label={`Mood for ${piece.name}`}
+                      aria-label={`Mood for ${pieceDisplayName(piece)}`}
                       value={piece.preset}
                       onChange={(e) =>
                         preset(piece, Number(e.target.value)).catch((err) =>

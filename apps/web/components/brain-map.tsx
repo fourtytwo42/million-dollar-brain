@@ -8,6 +8,7 @@ import {
   BRAIN_SILHOUETTE_PATH,
   type BrainDirection,
 } from "../lib/brain-presentation";
+import { pieceDisplayName } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
 
 type MapPiece = {
@@ -22,7 +23,8 @@ type MapPiece = {
   weight: number;
   portraitHash: string;
   ownershipSerial: number;
-  portraitChangeAvailable: boolean;
+  profileChangeAvailable: boolean;
+  customName: string;
   options: readonly { label: string; value: number }[];
 };
 
@@ -55,9 +57,10 @@ function ownershipState(piece: MapPiece, account: string | null) {
 }
 
 function pieceLabel(piece: MapPiece, account: string | null) {
+  const name = pieceDisplayName(piece);
   const mood = piece.options[piece.preset]?.label ?? "Unknown";
   const state = ownershipState(piece, account);
-  return `${piece.name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.`;
+  return `${name}. ${piece.crew}. ${piece.affinity}. Mood ${mood}. ${piece.weight / 100}% influence. ${state === "mine" ? "Owned by you" : state}. Price $${displayPrice(piece.price)}.`;
 }
 
 export function BrainMap({
@@ -82,7 +85,13 @@ export function BrainMap({
   const previewPiece = hoveredId ? pieceById.get(hoveredId) : undefined;
   const filteredPieces = pieces.filter((piece) => {
     const mood = piece.options[piece.preset]?.label ?? "";
-    return [piece.name, piece.crew, piece.affinity, mood]
+    return [
+      pieceDisplayName(piece),
+      piece.name,
+      piece.crew,
+      piece.affinity,
+      mood,
+    ]
       .join(" ")
       .toLowerCase()
       .includes(query.trim().toLowerCase());
@@ -316,7 +325,7 @@ export function BrainMap({
                       top: `${(presentation.center.y / 435) * 100}%`,
                     }}
                   >
-                    <b>{previewPiece.name}</b>
+                    <b>{pieceDisplayName(previewPiece)}</b>
                     <span>
                       {previewPiece.crew} ·{" "}
                       {previewPiece.options[previewPiece.preset]?.label}
@@ -360,7 +369,7 @@ export function BrainMap({
               >
                 <img src={portraitUrl(piece)} alt="" />
                 <span>
-                  <b>{piece.name}</b>
+                  <b>{pieceDisplayName(piece)}</b>
                   <small>
                     {piece.options[piece.preset]?.label} · {piece.weight / 100}%
                   </small>
