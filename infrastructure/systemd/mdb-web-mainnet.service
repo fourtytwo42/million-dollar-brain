@@ -1,7 +1,8 @@
 [Unit]
 Description=42 Braincells Robinhood mainnet canary web application
-After=network-online.target postgresql.service
+After=network-online.target postgresql.service mdb-rpc-failover-mainnet.service
 Wants=network-online.target
+Requires=mdb-rpc-failover-mainnet.service
 ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json
 
 [Service]

@@ -10,7 +10,7 @@ chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
 RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
 A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
 broadcast mode. Control Catalog v1 is implemented, enabled, and accepted on
-local Anvil and Robinhood Testnet. Braincell Controls Experience v2 is under
+local Anvil and Robinhood Testnet. Braincell Controls Experience v2 is unde
 devnet acceptance and must promote through the exact-commit pipeline before
 testnet changes. No mainnet deployment or real-value activation has occurred.
 
@@ -110,25 +110,25 @@ The AI does not custody assets or control a private key. It proposes portfolio t
 
 A user who deposits the base asset, receives basket shares, transfers shares, or requests redemption.
 
-### 5.2 Brain-piece owner
+### 5.2 Brain-piece owne
 
 A wallet that owns one or more brain pieces, changes their allowed control
 bundles, receives reward accrual, and may be bought out at the displayed
 on-chain price.
 
-### 5.3 Creator
+### 5.3 Creato
 
 The initial owner of the Creator DAO Vault and protocol administrative roles. The creator may withdraw revenue belonging to the Creator DAO Vault but must not directly withdraw basket principal or brain-owner reward liabilities.
 
-### 5.4 AI allocator
+### 5.4 AI allocato
 
 An off-chain constrained model that receives a versioned decision package and returns proposed target weights for approved assets.
 
-### 5.5 Scheduler or keeper
+### 5.5 Scheduler or keepe
 
 An authorized or permissionless caller that submits a signed scheduled proposal and pays transaction gas before any permitted reimbursement.
 
-### 5.6 Upgrade administrator
+### 5.6 Upgrade administrato
 
 The authority that can upgrade protocol implementations. Creator-controlled development authority is permitted on local Anvil and early testnet. Before real value, upgrade authority moves to a 2-of-3 multisig with a 48-hour timelock for normal upgrades.
 
@@ -304,7 +304,7 @@ Owners may not:
 - Select a value or asset not defined for that control.
 - Change the piece's affinity or weight.
 - Override the asset registry or hard risk controls.
-- Hide mandatory identity, price, execution, safety, holdings, accounting, or
+- Hide mandatory identity, price, execution, safety, holdings, accounting, o
   halt data.
 
 A change made after the current AI snapshot affects the next scheduled cycle.
@@ -452,7 +452,7 @@ Automation Reserve USDG is committed operating revenue and is not creator-withdr
 - A scheduler eligibility worker wakes every five minutes.
 - Time-Horizon Time Machine selects a bounded base review cadence from 15
   minutes, 30 minutes, one hour, four hours, six hours, or 24 hours.
-- Caffeinated Hummingbird may temporarily shorten the review cadence after
+- Caffeinated Hummingbird may temporarily shorten the review cadence afte
   validated volatility or drawdown triggers.
 - Gas-Fee Furnace controls the bounded minimum time between executed trades and
   minimum allocation drift.
@@ -469,7 +469,7 @@ Automation Reserve USDG is committed operating revenue and is not creator-withdr
 - Deposits and redemptions after proposal creation do not change its percentage targets; deterministic execution applies accepted targets to the then-current balances and NAV.
 - A valid proposal expires when its deadline passes or a newer cycle supersedes it.
 - Cycle history records base and effective cadence, normal or panic mode,
-  eligibility reason, time since the previous review and trade, drift, Hold or
+  eligibility reason, time since the previous review and trade, drift, Hold o
   skip reason, and execution result.
 
 ### 10.2 Model providers
@@ -626,7 +626,7 @@ The model may not return:
 
 The explainability and attribution requirements are defined in `AI_EXPLAINABILITY.md`. Raw reasoning-stream content is not an authoritative decision artifact. The official model artifact is the final schema-valid `output_text`.
 
-### 10.5 Failure behavior
+### 10.5 Failure behavio
 
 The system holds the current allocation when:
 
@@ -674,7 +674,7 @@ Failure must not trigger an unapproved provider or model automatically unless th
 - Browser wallets always use the public HTTPS Robinhood Testnet RPC. LAN and
   credential-bearing provider URLs are never exposed to browser bundles.
 - Failback requires four consecutive healthy LAN samples within one block of
-  the remote head. Ambiguous raw-transaction transport failures are never
+  the remote head. Ambiguous raw-transaction transport failures are neve
   replayed automatically across providers.
 - Robinhood Chain mainnet uses chain ID 4663.
 - The public testnet RPC is acceptable for testnet but must not be the sole mainnet RPC because it is rate-limited and not production-grade.
@@ -685,7 +685,7 @@ Failure must not trigger an unapproved provider or model automatically unless th
   `milliondollarbrain_mainnet`.
 - Each environment has isolated history, portrait storage, RPCs, secrets,
   operator identity, services, and timers. Promotion uses the exact same clean
-  pushed Git SHA and web/contract artifact hashes; testnet or mainnet is never
+  pushed Git SHA and web/contract artifact hashes; testnet or mainnet is neve
   independently patched.
 - Devnet acceptance creates a release candidate. Contract, wallet, valuation,
   execution, or accounting changes require a fresh two-hour testnet
@@ -962,13 +962,13 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
    pays gas.
 7. Registry records the schema version, bundle, bundle hash, and selection
    version.
-8. The change applies to the next eligible cycle snapshot and does not trigger
+8. The change applies to the next eligible cycle snapshot and does not trigge
    an immediate rebalance.
 
 ### 17.7 Customize a braincell profile
 
 1. Owner selects their piece and clicks its portrait, name, or Customize affordance.
-2. A focused editor card lets the owner choose a PNG, JPEG, GIF, or WebP, enter
+2. A focused editor card lets the owner choose a PNG, JPEG, GIF, or WebP, ente
    the braincell's new name, and optionally add an HTTPS link.
 3. Application previews the media, normalizes static uploads to a square
    384-by-384 WebP, preserves animated GIF/WebP bytes, and validates the
@@ -1094,12 +1094,14 @@ The following are supplied production inputs or external approvals rather than d
 
 These gates do not block local Anvil or public-testnet implementation. Mainnet value-entry functions remain disabled until the applicable evidence is attached to the release checklist.
 
-## 21. Current decisions ledger
+## 21. Current decisions ledge
 
 - Robinhood Chain is the target network.
 - Local development uses native Foundry and Anvil on chain ID 31337.
 - Public integration uses Robinhood Chain testnet chain ID 46630 and its public RPC.
-- Production targets Robinhood Chain mainnet chain ID 4663 with Alchemy primary and QuickNode secondary RPC and WebSocket endpoints.
+- Production targets Robinhood Chain mainnet chain ID 4663 with the LAN Nitro
+  node at `192.168.50.173:8547` as server-side primary and Alchemy as
+  server-side secondary behind a loopback health-checking gateway.
 - Robinhood Chain uses ETH for gas and standard EVM JSON-RPC compatibility.
 - Basket shares use entry and redemption fees rather than a transfer tax.
 - MVP fees are 1% entry and 1% redemption.
@@ -1121,10 +1123,10 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The brain piece being transferred is excluded from the distribution generated by its own sale.
 - If a fee event has no eligible owned brain piece, its brain-owner portion goes to the Creator DAO Vault and is not claimable by future owners.
 - User actions remain available on-chain at any time and users pay their own gas.
-- AI allocation runs independently from user actions. A five-minute scheduler
+- AI allocation runs independently from user actions. A five-minute schedule
   eligibility worker evaluates the bounded compiled cadence.
 - Base review cadence ranges from 15 minutes to 24 hours. Adaptive panic
-  cadence, trade cooldown, drift, concurrency, expiry, and no-backlog behavior
+  cadence, trade cooldown, drift, concurrency, expiry, and no-backlog behavio
   are defined in `BRAIN_CONTROL_CATALOG.md`.
 - The automation server uses a registered native-ETH Keeper Wallet to submit scheduled decisions.
 - The Keeper Wallet is refueled and reimbursed from the isolated Automation Reserve and has no custody or administrative authority.
@@ -1169,7 +1171,10 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - There is no active redemption queue. A halted, stale, illiquid, expired, or out-of-slippage sale reverts completely, leaving MDBS and vault holdings unchanged.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
 - MDBS and MDBP have no governance rights; the MVP contains no voting, proposals, delegation, or quorum.
-- Mainnet uses Alchemy as primary RPC and WebSocket provider, QuickNode as secondary, and the public RPC only for tertiary read-only diagnostics.
+- Mainnet compares the LAN primary and Alchemy secondary every 15 seconds and
+  fails over for unreachability, wrong-chain responses, active sync lag, o
+  excessive head lag. Browser wallets use the official public HTTPS RPC; the
+  LAN and Alchemy URLs remain server-only.
 - Production monitoring uses Grafana Cloud with native Grafana Alloy; encrypted PostgreSQL backups use native tools and restic to Backblaze B2.
 - The PRD and its ten linked normative specifications form one authoritative requirements set.
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.

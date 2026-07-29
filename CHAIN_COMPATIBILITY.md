@@ -11,20 +11,28 @@ Development advances through three network stages without changing protocol beha
 | ----------------------- | -------: | ------------------------------------ | --------------------------------------------------------------------------------- |
 | Local Anvil             |    31337 | `http://127.0.0.1:8545`              | Fast development, deterministic integration tests, and destructive test scenarios |
 | Robinhood Chain testnet |    46630 | LAN primary, remote HTTPS failover   | Public integration, wallet, explorer, deployment, and keeper validation           |
-| Robinhood Chain mainnet |     4663 | Alchemy primary, QuickNode secondary | Audited real-value deployment                                                     |
+| Robinhood Chain mainnet |     4663 | LAN Nitro primary, Alchemy secondary | Audited real-value deployment                                                     |
 
 Testnet server processes use a loopback failover gateway. Its primary is the
 chain-46630 LAN RPC at `http://192.168.50.117:8547`; its secondary is a
 separately configured remote HTTPS endpoint. The gateway compares chain ID,
-sync state, and block heads every 15 seconds. It changes to the secondary after
+sync state, and block heads every 15 seconds. It changes to the secondary afte
 an immediate hard failure or two consecutive samples more than three blocks
-behind, and returns only after four healthy samples within one block. Browser
+behind, and returns only after four healthy samples within one block. Browse
 wallets continue using `https://rpc.testnet.chain.robinhood.com`, so neither the
 LAN endpoint nor a credential-bearing paid URL enters the browser bundle.
 Ambiguous `eth_sendRawTransaction` failures are returned to the caller and are
 not automatically replayed across upstreams.
 
-Mainnet uses dedicated Alchemy RPC and WebSocket endpoints as primary infrastructure and dedicated QuickNode endpoints as secondary infrastructure. The rate-limited public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure.
+Mainnet server processes use a loopback failover gateway. The LAN Nitro node at
+`192.168.50.173:8547` is primary and an HTTPS Alchemy Robinhood mainnet
+endpoint is secondary. Both heads are checked every 15 seconds; the gateway
+fails over when the LAN node is unreachable, reports the wrong chain, is
+actively behind, or exceeds the three-block lag threshold. It returns only
+after four healthy recovery samples within one block. Browser wallets continue
+using the official public HTTPS RPC and never receive either server endpoint.
+The public mainnet RPC remains diagnostic infrastructure, not the server-side
+backup.
 
 Robinhood Chain is an EVM-compatible Arbitrum L2. Contracts are written and tested as standard EVM contracts. ETH is the native gas asset.
 

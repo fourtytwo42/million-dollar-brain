@@ -58,6 +58,14 @@ export function validateNetworkConfig(
     );
   }
   if (
+    resolved.mode === "mainnet" &&
+    resolved.serverRpcUrl !== "http://127.0.0.1:18549"
+  ) {
+    throw new Error(
+      "Mainnet server RPC must use the loopback failover gateway",
+    );
+  }
+  if (
     resolved.mode === "testnet" &&
     resolved.browserRpcUrl !== "https://rpc.testnet.chain.robinhood.com"
   ) {
@@ -124,7 +132,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     networkLabel: "Robinhood Chain",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     browserRpcUrl: "https://rpc.mainnet.chain.robinhood.com",
-    serverRpcUrl: "https://rpc.mainnet.chain.robinhood.com",
+    serverRpcUrl: "http://127.0.0.1:18549",
     explorerUrl: "https://robinhoodchain.blockscout.com",
     confirmations: 12,
     decisionCadenceMinutes: 60,

@@ -31,14 +31,14 @@ Every candidate must pass each check for 48 continuous hourly observations.
 Stocks and ETFs must also span at least two distinct regular US market
 sessions; weekend-only observations cannot qualify:
 
-- Verified circulating market capitalization of at least $100 million for
+- Verified circulating market capitalization of at least $100 million fo
   stocks and crypto, or official AUM of at least $100 million for funds.
 - Non-stock ERC-20 supply comes from an explicitly approved circulating-supply
   adapter. `totalSupply * price` is not sufficient.
-- A valid two-sided $250,000 0x quote and no more than 1% estimated impact for
+- A valid two-sided $250,000 0x quote and no more than 1% estimated impact fo
   both sides of a $25,000 quote.
 - Fresh approved valuation feed, valid token code and identity, sufficient
-  official history, supported transfer behavior, and no halt, oracle pause, or
+  official history, supported transfer behavior, and no halt, oracle pause, o
   pending corporate-action multiplier transition.
 
 The hourly shadow runner writes per-asset checks and source hashes. A failed
@@ -92,7 +92,7 @@ Engineering acceptance requires:
 - A clean two-hour V3 Robinhood Testnet endurance run with 20-minute
   checkpoints. Each checkpoint drives three secret-derived test actors through
   varied MDBS buys and atomic sells, initial brain purchases and 120% resales,
-  preset changes, reward claims, rejected oversized exits, concurrent server
+  preset changes, reward claims, rejected oversized exits, concurrent serve
   requests, NAV reconciliation, autonomous-cycle freshness, and desktop,
   tablet, and mobile browser checks.
 - Completed 2026-07-29: Control Catalog v1 passed seven checkpoints across
@@ -116,14 +116,16 @@ non-broadcast release evidence. `scripts/deploy-mainnet.sh` remains
 fail-closed. It requires chain 4663, a clean
 pushed commit, encrypted signer, explicit broadcast flag, non-mock manifest,
 runtime-bytecode verification, storage checks, fork evidence, testnet
-acceptance, shadow evidence, and all external credentials. The shadow runner
+acceptance, shadow evidence, and all external credentials. The shadow runne
 rejects signing keys and broadcast mode.
 
 ## External activation gates
 
 The remaining inputs are intentionally not fabricated in the repository:
 
-- Redundant paid mainnet RPC and WebSocket endpoints.
+- A production Alchemy Robinhood mainnet HTTPS RPC endpoint for the configured
+  secondary and a production WebSocket endpoint. The LAN Nitro primary is
+  already fixed at `192.168.50.173:8547`.
 - Chainlink-supplied Robinhood tokenized-equity feed mappings and per-feed
   market-session freshness policies.
 - Production 0x API credentials and validated current venue contracts.

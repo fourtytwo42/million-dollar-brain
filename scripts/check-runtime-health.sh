@@ -36,6 +36,14 @@ check_app() {
     [[ "$(jq -r '.rpcFailover.expectedChainId' <<<"$response")" == "46630" ]] ||
       failures+=("testnet RPC chain mismatch")
   fi
+  if [[ "$environment" == "mainnet" ]]; then
+    systemctl is-active --quiet mdb-rpc-failover-mainnet.service ||
+      failures+=("mainnet RPC failover service inactive")
+    [[ "$(jq -r '.rpcFailover.status' <<<"$response")" == "ok" ]] ||
+      failures+=("mainnet RPC failover degraded")
+    [[ "$(jq -r '.rpcFailover.expectedChainId' <<<"$response")" == "4663" ]] ||
+      failures+=("mainnet RPC chain mismatch")
+  fi
 }
 
 check_app devnet 3000 mdb-web-devnet.service local

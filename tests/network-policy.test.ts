@@ -9,6 +9,7 @@ import {
 
 const officialTestnetRpc = "https://rpc.testnet.chain.robinhood.com";
 const testnetFailoverRpc = "http://127.0.0.1:18548";
+const mainnetFailoverRpc = "http://127.0.0.1:18549";
 
 function testnetConfig(
   overrides: Partial<MdbServerNetworkConfig> = {},
@@ -31,6 +32,29 @@ function testnetConfig(
     deploymentFile: "/tmp/mdb-testnet.json",
     stateDir: "/tmp/mdb-testnet",
     databaseName: "milliondollarbrain_testnet",
+    ...overrides,
+  };
+}
+
+function mainnetConfig(
+  overrides: Partial<MdbServerNetworkConfig> = {},
+): MdbServerNetworkConfig {
+  return {
+    ...testnetConfig(),
+    mode: "mainnet",
+    chainId: 4663,
+    chainName: "Robinhood Chain",
+    networkLabel: "Robinhood Chain",
+    browserRpcUrl: "https://rpc.mainnet.chain.robinhood.com",
+    serverRpcUrl: mainnetFailoverRpc,
+    confirmations: 12,
+    decisionCadenceMinutes: 60,
+    builtInWalletEnabled: false,
+    faucetEnabled: false,
+    mockAssets: false,
+    deploymentFile: "/tmp/mdb-mainnet.json",
+    stateDir: "/tmp/mdb-mainnet",
+    databaseName: "milliondollarbrain_mainnet",
     ...overrides,
   };
 }
@@ -92,6 +116,41 @@ test("mainnet cannot enable disposable wallets, faucets, or mocks", () => {
       }),
     /Mainnet cannot enable built-in wallets or faucets/,
   );
+});
+
+test("mainnet requires its isolated loopback failover gateway", () => {
+  assert.equal(
+    validateNetworkConfig(mainnetConfig()).serverRpcUrl,
+    mainnetFailoverRpc,
+  );
+  assert.throws(
+    () =>
+      validateNetworkConfig(
+        mainnetConfig({ serverRpcUrl: "http://192.168.50.173:8547" }),
+      ),
+    /loopback failover gateway/,
+  );
+});
+
+test("mainnet failover binds the LAN primary to an Alchemy secondary", () => {
+  const unit = readFileSync(
+    "infrastructure/systemd/mdb-rpc-failover-mainnet.service",
+    "utf8",
+  );
+  const configurator = readFileSync(
+    "scripts/configure-mainnet-rpc-failover.sh",
+    "utf8",
+  );
+  const manifest = readFileSync("config/networks.json", "utf8");
+  const deploy = readFileSync("scripts/deploy-mainnet.sh", "utf8");
+  assert.match(unit, /EnvironmentFile=\/etc\/mdb\/mainnet-rpc\.env/);
+  assert.match(configurator, /http:\/\/192\.168\.50\.173:8547/);
+  assert.match(configurator, /MDB_ALCHEMY_MAINNET_RPC_URL/);
+  assert.match(configurator, /MDB_RPC_CHECK_INTERVAL_MS=15000/);
+  assert.match(configurator, /MDB_RPC_LISTEN_PORT=18549/);
+  assert.match(manifest, /http:\/\/127\.0\.0\.1:18549/);
+  assert.match(deploy, /MDB_RPC_SECONDARY_URL/);
+  assert.match(deploy, /alchemy\\\.com/);
 });
 
 test("testnet collector retries transient public-RPC failures", () => {

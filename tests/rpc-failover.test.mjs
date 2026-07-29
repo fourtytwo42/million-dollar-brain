@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   createRpcFailover,
   isMutatingRpcBody,
+  syncingIsHealthy,
   startRpcFailoverServer,
 } from "../scripts/rpc-failover-proxy.mjs";
 
@@ -146,6 +147,48 @@ test("remote comparison remains valid when eth_syncing is unsupported", async (t
   assert.equal(failover.health().secondary.healthy, true);
   assert.equal(failover.health().secondary.syncing, null);
   assert.equal(failover.health().headLag, 0);
+});
+
+test("Nitro structured sync status is healthy when execution and consensus are caught up", () => {
+  assert.equal(
+    syncingIsHealthy({
+      blockNum: 22_516_809,
+      executionSyncTarget: 22_516_803,
+      consensusMaxMessageCount: 22_516_809,
+      consensusSyncTargetMsgCount: 22_516_794,
+      feedPendingMessageCount: 0,
+    }),
+    true,
+  );
+  assert.equal(
+    syncingIsHealthy({
+      blockNum: 22_516_700,
+      executionSyncTarget: 22_516_803,
+      consensusMaxMessageCount: 22_516_700,
+      consensusSyncTargetMsgCount: 22_516_794,
+      feedPendingMessageCount: 2,
+    }),
+    false,
+  );
+});
+
+test("the same gateway validates Robinhood mainnet chain 4663", async (t) => {
+  const primary = await mockRpc({ chainId: 4663, blockNumber: 500 });
+  const secondary = await mockRpc({ chainId: 4663, blockNumber: 501 });
+  t.after(() => Promise.all([primary.close(), secondary.close()]));
+  const failover = createRpcFailover({
+    primaryUrl: primary.url,
+    secondaryUrl: secondary.url,
+    expectedChainId: 4663,
+    checkIntervalMs: 60_000,
+    requestTimeoutMs: 1_000,
+    logger: { info() {} },
+  });
+  t.after(() => failover.stop());
+  await failover.start();
+  assert.equal(failover.health().status, "ok");
+  assert.equal(failover.health().expectedChainId, 4663);
+  assert.equal(failover.health().active, "primary");
 });
 
 test("ambiguous raw transaction failures are never replayed", async (t) => {

@@ -578,7 +578,7 @@ const qualificationHours =
   qualification.length > 0
     ? Math.min(...qualification.map((row) => row.qualificationHours))
     : 0;
-const qualificationWindowPassed =
+const allQualificationWindowsPassed =
   qualification.length > 0 &&
   qualification.every((row) => row.qualificationWindowPassed);
 
@@ -599,7 +599,7 @@ const result = {
   qualification,
   qualificationHours,
   qualificationRequiredHours: QUALIFICATION_HOURS,
-  qualificationWindowPassed,
+  qualificationWindowPassed: allQualificationWindowsPassed,
   gates: {
     noSigningKey: true,
     canonicalIdentityChecked: inspected.every(
@@ -622,7 +622,7 @@ const result = {
       ),
     chainlinkMappingsConfigured:
       feedEvidence.length > 0 && feedEvidence.every((row) => row.valid),
-    qualificationWindowPassed,
+    qualificationWindowPassed: allQualificationWindowsPassed,
   },
 };
 result.sourceHash = hash(result);
@@ -639,7 +639,7 @@ appendFileSync(
     passed: currentQualificationPass,
     qualificationHours,
     qualificationRequiredHours: QUALIFICATION_HOURS,
-    qualificationWindowPassed,
+    qualificationWindowPassed: allQualificationWindowsPassed,
     canonicalAssetCount: result.canonicalAssetCount,
     assets: qualification.map((row) => ({
       assetId: row.assetId,

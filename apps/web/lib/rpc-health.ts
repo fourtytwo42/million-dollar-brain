@@ -20,10 +20,14 @@ export type RpcFailoverHealth = {
 };
 
 export async function rpcFailoverHealth(): Promise<RpcFailoverHealth | null> {
-  if (process.env.MDB_NETWORK_MODE !== "testnet") return null;
+  const mode = process.env.MDB_NETWORK_MODE;
+  if (mode !== "testnet" && mode !== "mainnet") return null;
   try {
     const response = await fetch(
-      process.env.MDB_RPC_HEALTH_URL ?? "http://127.0.0.1:18548/health",
+      process.env.MDB_RPC_HEALTH_URL ??
+        (mode === "mainnet"
+          ? "http://127.0.0.1:18549/health"
+          : "http://127.0.0.1:18548/health"),
       {
         cache: "no-store",
         signal: AbortSignal.timeout(2_000),

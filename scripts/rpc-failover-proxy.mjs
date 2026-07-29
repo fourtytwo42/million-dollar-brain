@@ -58,6 +58,33 @@ function optionalResultFor(responses, id) {
   return row.result;
 }
 
+export function syncingIsHealthy(syncing, allowMissingSyncing = false) {
+  if (syncing === false) return true;
+  if (syncing === null) return allowMissingSyncing;
+  if (!syncing || typeof syncing !== "object") return false;
+
+  const currentBlock = Number(syncing.currentBlock ?? syncing.blockNum);
+  const highestBlock = Number(
+    syncing.highestBlock ?? syncing.executionSyncTarget,
+  );
+  const consensusCurrent = Number(
+    syncing.consensusMaxMessageCount ?? syncing.messageOfLastBlock,
+  );
+  const consensusTarget = Number(
+    syncing.consensusSyncTargetMsgCount ?? syncing.consensusMaxMessageCount,
+  );
+  const feedPending = Number(syncing.feedPendingMessageCount ?? 0);
+  return (
+    Number.isFinite(currentBlock) &&
+    Number.isFinite(highestBlock) &&
+    currentBlock >= highestBlock &&
+    (!Number.isFinite(consensusCurrent) ||
+      !Number.isFinite(consensusTarget) ||
+      consensusCurrent >= consensusTarget) &&
+    feedPending === 0
+  );
+}
+
 async function probeUpstream(
   url,
   expectedChainId,
@@ -83,8 +110,7 @@ async function probeUpstream(
     const chainId = Number(BigInt(resultFor(body, "chain")));
     const blockNumber = Number(BigInt(resultFor(body, "head")));
     const syncing = optionalResultFor(body, "sync");
-    const syncHealthy =
-      syncing === false || (allowMissingSyncing && syncing === null);
+    const syncHealthy = syncingIsHealthy(syncing, allowMissingSyncing);
     const healthy = chainId === expectedChainId && syncHealthy;
     return {
       healthy,
@@ -190,7 +216,7 @@ export function createRpcFailover({
     const primaryHardFailure =
       !primary.reachable ||
       primary.chainId !== expectedChainId ||
-      primary.syncing !== false;
+      !primary.healthy;
     const primaryLagged =
       secondary.healthy && state.headLag != null && state.headLag > maxHeadLag;
     const primaryUsable = primary.healthy && !primaryLagged;

@@ -4,17 +4,17 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Braincell Controls Experience v2 is implemented and accepted
-  on devnet; testnet intentionally remains on the accepted Control Catalog v1
-  release until a new exact-commit promotion is authorized.
-- Last meaningful change: All 42 owner editors were reduced to two or three
-  character-specific levers, choice controls were capped at four options,
-  sector cells received one chosen-asset picker, and deterministic copyable
-  braincell decrees were added.
-- Next step: Commit and push the accepted devnet release candidate, then decide
-  whether to run the required testnet promotion/acceptance or continue
-  mainnet-edge qualification first.
-- Blockers: Mainnet activation still requires paid redundant RPCs, canonical
+- Current task: Mainnet server RPC routing now uses the new LAN Robinhood
+  Mainnet Nitro node as primary, with a prepared local failover gateway for an
+  Alchemy backup.
+- Last meaningful change: Mainnet network policy, service units, environment
+  templates, deployment gates, runtime health, and the read-only mainnet
+  shadow were moved to the new LAN-primary topology.
+- Next step: Supply the server-only Alchemy Robinhood Mainnet HTTPS endpoint,
+  then run `scripts/configure-mainnet-rpc-failover.sh` to activate the gateway
+  on loopback port `18549`.
+- Blockers: Permanent mainnet failover cannot be enabled until its Alchemy
+  endpoint is configured. Mainnet activation still requires canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
   with two regular sessions for every launch stock or ETF.
@@ -147,6 +147,33 @@ decision`; the focused Experience v2 suite passes.
   `mainnet-v3.json`, `var/mainnet`, and `milliondollarbrain_mainnet`. Explicit
   devnet/testnet web, cycle, and collector units are active. Mainnet units are
   installed but disabled, and no mainnet deployment or broadcast occurred.
+
+### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failove
+
+- Context: A new Robinhood Mainnet Nitro RPC became available on the LAN and
+  must be the primary server endpoint, with Alchemy used only when the LAN node
+  is unhealthy or behind.
+- Decision: Use `http://192.168.50.173:8547` only behind the server-side
+  failover gateway on `http://127.0.0.1:18549`. Compare primary and secondary
+  every 15 seconds, fail over for reachability, wrong chain, unhealthy Nitro
+  sync state, or a three-block lag, and recover with hysteresis. Browse
+  clients continue using public HTTPS RPCs and never receive a LAN URL.
+- Files: `scripts/rpc-failover-proxy.mjs`,
+  `scripts/configure-mainnet-rpc-failover.sh`,
+  `infrastructure/systemd/mdb-rpc-failover-mainnet.service`,
+  `infrastructure/env/mainnet-rpc.env.example`, `config/networks.json`,
+  `apps/web/lib/network.ts`, `apps/web/lib/rpc-health.ts`.
+- Commands/tests: Verified chain ID `4663`; live gateway smoke selected the LAN
+  primary while it was ahead of the comparison endpoint; 7/7 RPC failove
+  tests; 17/17 network-policy tests; production Next.js build; mainnet shadow
+  worker completed successfully.
+- Result: Mainnet shadow reads the LAN primary directly as an interim measure.
+  The permanent failover service is installed but deliberately disabled
+  because no Alchemy endpoint is currently configured. A pre-existing
+  `mainnet-shadow.mjs` identifier collision was also repaired.
+- Follow-up: Configure `MDB_ALCHEMY_MAINNET_RPC_URL` outside Git and run the
+  root-only configuration script. Never substitute the public Robinhood RPC
+  while claiming the Alchemy backup is active.
 
 ## User Preferences
 
@@ -952,14 +979,13 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
-- 2026-07-29: Finish the remaining Control Catalog v1 devnet acceptance and
-  perform the exact-commit, state-preserving testnet UUPS promotion. Testnet
-  remains on catalog v3 until the accepted candidate is pushed.
-- 2026-07-29: The live migration, proxy upgrades, release rehearsal, devnet
-  release gate, and one live testnet AI execution pass. A fresh exact-commit
-  two-hour testnet acceptance run is still required before
-  `promote-to-testnet` can produce the final testnet promotion receipt or any
-  mainnet canary rehearsal may be treated as release evidence.
+- 2026-07-29: Supply the server-only Alchemy Robinhood Mainnet HTTPS endpoint
+  and run `scripts/configure-mainnet-rpc-failover.sh`. Until then, the
+  mainnet-shadow worker uses `192.168.50.173:8547` directly and the permanent
+  loopback failover service remains disabled.
+- 2026-07-29: Braincell Controls Experience v2 is accepted on devnet but has
+  not been promoted to testnet. Any promotion must use the exact clean pushed
+  candidate and the established testnet acceptance pipeline.
 - 2026-07-28: MDB testnet now uses the server-only LAN-primary,
   remote-failover gateway. The browser remains on public HTTPS. The current
   remote endpoint is the official rate-limited public RPC because no separate

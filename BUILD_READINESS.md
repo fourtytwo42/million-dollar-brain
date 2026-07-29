@@ -263,13 +263,17 @@ Future governance is outside the MVP and requires a new PRD revision rather than
 
 ## 13. Network and RPC
 
-| Environment    | Primary                                             | Secondary                                             |
-| -------------- | --------------------------------------------------- | ----------------------------------------------------- |
-| Local          | Anvil at `127.0.0.1:8545`                           | None                                                  |
-| Public testnet | Robinhood public testnet RPC                        | None                                                  |
-| Mainnet        | Alchemy dedicated Robinhood Chain RPC and WebSocket | QuickNode dedicated Robinhood Chain RPC and WebSocket |
+| Environment    | Primary                                                  | Secondary                           |
+| -------------- | -------------------------------------------------------- | ----------------------------------- |
+| Local          | Anvil at `127.0.0.1:8545`                                | None                                |
+| Public testnet | Robinhood public testnet RPC                             | None                                |
+| Mainnet        | LAN Nitro `192.168.50.173:8547` through loopback gateway | Alchemy Robinhood mainnet HTTPS RPC |
 
-The Robinhood public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure. It is not used as the sole production dependency.
+The gateway compares LAN and Alchemy heads every 15 seconds and uses hysteresis
+to avoid flapping. Alchemy credentials remain server-only. The Robinhood public
+mainnet RPC is reserved for browser wallets and incident diagnostics; it is not
+the server-side backup. Production WebSocket requirements remain an external
+input until the local node's WebSocket exposure is verified.
 
 During the current testnet-readiness phase, both MDB server and browser traffic
 use `https://rpc.testnet.chain.robinhood.com`. A hosted testnet provider is
@@ -322,8 +326,8 @@ The monorepo layout is locked:
 ```text
 apps/web
 services/api
-services/allocator
-services/keeper
+services/allocato
+services/keepe
 packages/contracts
 packages/shared
 packages/config
@@ -368,7 +372,7 @@ The following values cannot truthfully be invented during product design. They d
 1. Written counsel-approved jurisdiction, eligibility, transfer, disclosure, and entity policy.
 2. Final checksum addresses for multisig signers, keeper, allocator signer, treasury destination, and backup keeper.
 3. Funded creator seed capital, keeper ETH, and provider accounts.
-4. Alchemy, QuickNode, WalletConnect, Grafana Cloud, Backblaze B2, domain, and notification credentials.
+4. Alchemy mainnet RPC/WebSocket, WalletConnect, backup storage, domain, and notification credentials.
 5. Release-candidate canonical asset, oracle, venue, and contract manifests generated from then-current live registries.
 6. Independent audit report and remediation acceptance.
 

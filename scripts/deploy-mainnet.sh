@@ -23,12 +23,20 @@ source "$env_file"
 set +a
 
 [[ "${MDB_NETWORK_MODE:-}" == "mainnet" ]]
-[[ "${MDB_RPC_URL:-}" != "https://rpc.mainnet.chain.robinhood.com" ]] || {
-  echo "A paid redundant production RPC is required." >&2
+[[ "${MDB_RPC_URL:-}" == "http://127.0.0.1:18549" ]] || {
+  echo "Mainnet must use the loopback RPC failover gateway." >&2
   exit 1
 }
+[[ "${MDB_RPC_PRIMARY_URL:-}" == "http://192.168.50.173:8547" ]]
+[[ "${MDB_RPC_SECONDARY_URL:-}" =~ ^https://[^/]*alchemy\.com/ ]]
 [[ -n "${MDB_BACKUP_RPC_URL:-}" && "$MDB_BACKUP_RPC_URL" != "$MDB_RPC_URL" ]]
+[[ "$MDB_BACKUP_RPC_URL" == "$MDB_RPC_SECONDARY_URL" ]]
 [[ -n "${MDB_WEBSOCKET_URL:-}" && -n "${MDB_BACKUP_WEBSOCKET_URL:-}" ]]
+rpc_health="$(curl --fail --silent --show-error "${MDB_RPC_HEALTH_URL:?}")"
+[[ "$(jq -r '.status' <<<"$rpc_health")" == "ok" ]]
+[[ "$(jq -r '.expectedChainId' <<<"$rpc_health")" == "4663" ]]
+[[ "$(jq -r '.primary.chainId' <<<"$rpc_health")" == "4663" ]]
+[[ "$(jq -r '.secondary.chainId' <<<"$rpc_health")" == "4663" ]]
 [[ "$(cast chain-id --rpc-url "${MDB_RPC_URL:?}")" == "4663" ]]
 [[ "$(cast chain-id --rpc-url "$MDB_BACKUP_RPC_URL")" == "4663" ]]
 [[ -n "${ZEROX_API_KEY:-}" ]]

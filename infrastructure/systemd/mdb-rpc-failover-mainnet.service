@@ -1,0 +1,20 @@
+[Unit]
+Description=42 Braincells Robinhood Mainnet RPC failover gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/mainnet-rpc.env
+ExecStart=/home/hendo420/.local/node/bin/node /home/hendo420/projects/million-dollar-brain/scripts/rpc-failover-proxy.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
