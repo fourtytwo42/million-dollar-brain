@@ -65,9 +65,15 @@ export async function POST(request: NextRequest) {
     "direct";
   const addressRateKey = `address:${networkConfig.chainId}:${address.toLowerCase()}`;
   const ipRateKey = `ip:${networkConfig.chainId}:${forwarded}`;
-  const addressRateTaken = takeRate(addressRateKey, 1, 60 * 60 * 1000);
+  const localDevnet = networkConfig.mode === "local";
+  const addressRateTaken = takeRate(
+    addressRateKey,
+    localDevnet ? 1_000 : 1,
+    60 * 60 * 1000,
+  );
   const ipRateTaken =
-    addressRateTaken && takeRate(ipRateKey, 5, 60 * 60 * 1000);
+    addressRateTaken &&
+    takeRate(ipRateKey, localDevnet ? 1_000 : 5, 60 * 60 * 1000);
   if (!addressRateTaken || !ipRateTaken) {
     if (addressRateTaken) refundRate(addressRateKey);
     return NextResponse.json(

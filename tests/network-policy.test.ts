@@ -239,6 +239,12 @@ test("test-only wallet controls are visible locally but hidden on testnet", () =
   assert.match(controller, /fetch\("\/api\/faucet"/);
 });
 
+test("local faucet supports repeated disposable-wallet UAT without weakening testnet caps", () => {
+  const faucet = readFileSync("apps/web/app/api/faucet/route.ts", "utf8");
+  assert.match(faucet, /localDevnet \? 1_000 : 1/);
+  assert.match(faucet, /localDevnet \? 1_000 : 5/);
+});
+
 test("confirmed wallet actions survive temporary status refresh failures", () => {
   const dashboard = readFileSync(
     "apps/web/components/brain-dashboard.tsx",
