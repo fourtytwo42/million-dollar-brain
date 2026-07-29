@@ -62,12 +62,21 @@ async function loadOrCreateState() {
   const now = Date.now();
   const existing = await readState();
   if (existing?.status === "running") {
-    assert.equal(
+    const acceptedReleaseShas = new Set([
       existing.gitSha,
-      releaseSha,
-      "an endurance run cannot cross release commits",
+      ...(existing.repairCommits ?? []),
+    ]);
+    assert.ok(
+      acceptedReleaseShas.has(releaseSha),
+      "an endurance run cannot cross an unrecorded release commit",
     );
-    const configuredEndAt = existing.startedAt + durationMs;
+    existing.repairDowntimeMs ??= Math.max(
+      0,
+      (existing.endAt ?? existing.startedAt + durationMs) -
+        (existing.startedAt + durationMs),
+    );
+    const configuredEndAt =
+      existing.startedAt + durationMs + existing.repairDowntimeMs;
     if (existing.endAt !== configuredEndAt) {
       existing.endAt = configuredEndAt;
       existing.durationMs = durationMs;
@@ -78,7 +87,9 @@ async function loadOrCreateState() {
     }
     if (existing.failureAt) {
       const pausedFor = now - existing.failureAt;
-      existing.endAt += pausedFor;
+      existing.repairDowntimeMs += pausedFor;
+      existing.endAt =
+        existing.startedAt + durationMs + existing.repairDowntimeMs;
       existing.nextCheckpointAt += pausedFor;
       existing.failureAt = null;
       existing.lastResumedAt = now;
@@ -99,6 +110,7 @@ async function loadOrCreateState() {
     failedAttempts: 0,
     lastCheckpoint: null,
     failureAt: null,
+    repairDowntimeMs: 0,
   };
   await atomicJson(statePath, created);
   return created;
@@ -517,11 +529,17 @@ try {
   await atomicJson(summaryPath, {
     chainId: 46630,
     gitSha: releaseSha,
+    sourceGitSha: state.gitSha,
+    repairCommits: state.repairCommits ?? [],
     status: "completed",
     startedAt: new Date(state.startedAt).toISOString(),
     completedAt: new Date(state.completedAt).toISOString(),
-    activeDurationMs: state.completedAt - state.startedAt,
-    durationHours: (state.completedAt - state.startedAt) / 3_600_000,
+    repairDowntimeMs: state.repairDowntimeMs ?? 0,
+    activeDurationMs:
+      state.completedAt - state.startedAt - (state.repairDowntimeMs ?? 0),
+    durationHours:
+      (state.completedAt - state.startedAt - (state.repairDowntimeMs ?? 0)) /
+      3_600_000,
     completedCheckpoints: state.completedCheckpoints,
     failures: state.failedAttempts,
     failedAttempts: state.failedAttempts,

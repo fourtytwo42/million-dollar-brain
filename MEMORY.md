@@ -53,16 +53,18 @@ Durable project context lives here. Update this file whenever information should
   funding helper only maintained a fixed 5,000 USDG floor.
 - Decision: Keep testing high-price resales. Fund each actor to the exact brain
   purchase price plus its selected MDBS buy and a 1,000 USDG buffer instead of
-  using a fixed 10,000 USDG top-up.
+  using a fixed 10,000 USDG top-up. An endurance repair commit must be
+  explicitly recorded in `state.json`; repair downtime extends `endAt` and is
+  excluded from the final active-duration calculation.
 - Files: `apps/web/app/api/testnet-acceptance/route.ts`,
-  `tests/network-policy.test.ts`.
+  `tests/endurance-testnet.mjs`, `tests/network-policy.test.ts`.
 - Commands/tests: `node --test tests/network-policy.test.ts` (15/15);
   production Next.js build passed.
 - Result: The contract's atomic revert was correct; checkpoint 5 passed on the
   runner's retry. The harness fix prevents the same funding race from
   recurring as resale prices continue rising.
-- Follow-up: Commit/push the repair, deploy the exact build, run a focused
-  scenario, and resume the preserved two-hour acceptance run.
+- Follow-up: Record the final repair SHA in the preserved run state, resume the
+  two-hour acceptance run, and complete final browser/release evidence.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
 - Last verified 2026-07-29: Control Catalog v1 is deployed and enabled on

@@ -206,7 +206,12 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.match(acceptance, /functionName: "redeemWithPlan"/);
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
   assert.match(endurance, /2 \* 60 \* 60 \* 1000/);
-  assert.match(endurance, /existing\.startedAt \+ durationMs/);
+  assert.match(endurance, /existing\.repairDowntimeMs \?\?=/);
+  assert.match(endurance, /existing\.repairCommits \?\? \[\]/);
+  assert.match(
+    endurance,
+    /state\.completedAt -\s*state\.startedAt -\s*\(state\.repairDowntimeMs \?\? 0\)/s,
+  );
   assert.match(enduranceUnit, /MDB_ENDURANCE_DURATION_MS=7200000/);
   assert.match(endurance, /concurrentRequests: 2/);
   assert.match(endurance, /userActions: 3/);
