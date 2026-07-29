@@ -57,6 +57,33 @@ contract BasketVault is
     ReentrancyGuardUpgradeable
 {
     error QueuedExitsDisabled();
+    error InvalidConfiguration();
+    error InvalidAsset();
+    error UnsupportedAsset();
+    error AssetHasBalance();
+    error AssetMissing();
+    error ControlsNotConfigured();
+    error BuysDisabled();
+    error SellsDisabled();
+    error RebalancesDisabled();
+    error SwapPlanRequired();
+    error SwapPlansNotConfigured();
+    error Expired();
+    error MinimumDeposit();
+    error TvlCapExceeded();
+    error WalletCapExceeded();
+    error TransferFailed();
+    error NoValueAdded();
+    error SharesBelowMinimum();
+    error InvalidShares();
+    error NoSupply();
+    error MinimumRedemption();
+    error ProceedsBelowMinimum();
+    error InvalidSwapPlan();
+    error InvalidPrice();
+    error StalePrice();
+    error InvalidWeights();
+    error AllocationLimitExceeded();
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     uint256 public constant BPS = 10_000;
@@ -181,9 +208,9 @@ contract BasketVault is
         address[] calldata targetAssets,
         uint16[] calldata targetWeights
     ) external reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(valuation_ != address(0), "zero valuation");
-        require(maximumPriceAge_ > 0, "zero price age");
-        require(maximumSlippageBps_ <= 500, "slippage too high");
+        if (valuation_ == address(0) || maximumPriceAge_ == 0 || maximumSlippageBps_ > 500) {
+            revert InvalidConfiguration();
+        }
         valuation = IValuationAdapter(valuation_);
         maximumPriceAge = maximumPriceAge_;
         maximumSlippageBps = maximumSlippageBps_;
@@ -196,7 +223,9 @@ contract BasketVault is
         reinitializer(3)
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(assetRegistry_ != address(0) && executionAdapter_ != address(0), "zero V3");
+        if (assetRegistry_ == address(0) || executionAdapter_ == address(0)) {
+            revert InvalidConfiguration();
+        }
         assetRegistry = IAssetRegistryView(assetRegistry_);
         executionAdapter = IExecutionAdapterV3(executionAdapter_);
         swapPlansRequired = true;
@@ -215,22 +244,25 @@ contract BasketVault is
         external
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(canaryControlsConfigured, "controls not configured");
+        if (!canaryControlsConfigured) revert ControlsNotConfigured();
         _setCanaryControls(buysEnabled_, sellsEnabled_, rebalancesEnabled_);
     }
 
     function addSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(asset != address(0) && asset != address(usdg), "invalid asset");
-        require(!supportedAsset[asset], "already supported");
-        require(address(assetRegistry) != address(0) && assetRegistry.isActive(asset), "inactive");
+        if (asset == address(0) || asset == address(usdg) || supportedAsset[asset]) {
+            revert InvalidAsset();
+        }
+        if (address(assetRegistry) == address(0) || !assetRegistry.isActive(asset)) {
+            revert InvalidAsset();
+        }
         supportedAsset[asset] = true;
         assets.push(asset);
         emit SupportedAssetAdded(asset);
     }
 
     function removeSupportedAsset(address asset) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(supportedAsset[asset], "unsupported asset");
-        require(IERC20(asset).balanceOf(address(this)) == 0, "asset has balance");
+        if (!supportedAsset[asset]) revert UnsupportedAsset();
+        if (IERC20(asset).balanceOf(address(this)) != 0) revert AssetHasBalance();
         supportedAsset[asset] = false;
         latestTargetWeightBps[asset] = 0;
         for (uint256 i; i < assets.length; ++i) {
@@ -241,7 +273,7 @@ contract BasketVault is
                 return;
             }
         }
-        revert("asset missing");
+        revert AssetMissing();
     }
 
     function supportedAssets() external view returns (address[] memory) {
@@ -268,7 +300,7 @@ contract BasketVault is
         if (asset == address(usdg)) {
             return _reserveToUsdWad(usdg.balanceOf(address(this)));
         }
-        require(supportedAsset[asset], "unsupported asset");
+        if (!supportedAsset[asset]) revert UnsupportedAsset();
         return _quoteUsd(asset, IERC20(asset).balanceOf(address(this)));
     }
 
@@ -313,8 +345,8 @@ contract BasketVault is
         nonReentrant
         returns (uint256 shares)
     {
-        require(_buysEnabled(), "buys disabled");
-        require(!swapPlansRequired, "swap plan required");
+        if (!_buysEnabled()) revert BuysDisabled();
+        if (swapPlansRequired) revert SwapPlanRequired();
         return _depositLegacy(grossAmount, minimumShares, deadline);
     }
 
@@ -323,26 +355,26 @@ contract BasketVault is
         nonReentrant
         returns (uint256 shares)
     {
-        require(_buysEnabled(), "buys disabled");
-        require(swapPlansRequired, "V3 not configured");
-        require(block.timestamp <= deadline, "expired");
-        require(grossAmount >= _usdWadToReserve(10e18), "minimum deposit");
+        if (!_buysEnabled()) revert BuysDisabled();
+        if (!swapPlansRequired) revert SwapPlansNotConfigured();
+        if (block.timestamp > deadline) revert Expired();
+        if (grossAmount < _usdWadToReserve(10e18)) revert MinimumDeposit();
         uint256 beforeNav = totalAssetsUsd();
         uint256 beforeSupply = totalSupply();
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        require(beforeNav + _reserveToUsdWad(grossAmount) <= TVL_CAP, "TVL cap");
+        if (beforeNav + _reserveToUsdWad(grossAmount) > TVL_CAP) revert TvlCapExceeded();
         uint256 walletValue = beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
-        require(walletValue + netWad <= WALLET_VALUE_CAP, "wallet cap");
-        require(usdg.transferFrom(msg.sender, address(this), grossAmount), "deposit transfer failed");
+        if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
+        if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
         _routeFee(fee);
         _investDepositWithPlans(msg.sender, net, beforeNav, plans);
         uint256 afterNav = totalAssetsUsd();
-        require(afterNav > beforeNav, "no value added");
+        if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
         shares = beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
-        require(shares >= minimumShares, "shares below minimum");
+        if (shares < minimumShares) revert SharesBelowMinimum();
         _mint(msg.sender, shares);
         emit Deposited(msg.sender, grossAmount, shares, fee);
     }
@@ -351,33 +383,33 @@ contract BasketVault is
         private
         returns (uint256 shares)
     {
-        require(block.timestamp <= deadline, "expired");
-        require(grossAmount >= _usdWadToReserve(10e18), "minimum deposit");
+        if (block.timestamp > deadline) revert Expired();
+        if (grossAmount < _usdWadToReserve(10e18)) revert MinimumDeposit();
         uint256 beforeNav = totalAssetsUsd();
         uint256 beforeSupply = totalSupply();
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        require(beforeNav + _reserveToUsdWad(grossAmount) <= TVL_CAP, "TVL cap");
+        if (beforeNav + _reserveToUsdWad(grossAmount) > TVL_CAP) revert TvlCapExceeded();
         uint256 walletValue = beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
-        require(walletValue + netWad <= WALLET_VALUE_CAP, "wallet cap");
+        if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
 
-        require(usdg.transferFrom(msg.sender, address(this), grossAmount), "deposit transfer failed");
+        if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
         _routeFee(fee);
         _investDeposit(msg.sender, net, beforeNav);
 
         uint256 afterNav = totalAssetsUsd();
-        require(afterNav > beforeNav, "no value added");
+        if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
         shares = beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
-        require(shares >= minimumShares, "shares below minimum");
+        if (shares < minimumShares) revert SharesBelowMinimum();
         _mint(msg.sender, shares);
         emit Deposited(msg.sender, grossAmount, shares, fee);
     }
 
     function redeem(uint256 shares, uint256 minimumNet, uint256 deadline) external nonReentrant returns (uint256 net) {
-        require(_sellsEnabled(), "sells disabled");
-        require(!swapPlansRequired, "swap plan required");
+        if (!_sellsEnabled()) revert SellsDisabled();
+        if (swapPlansRequired) revert SwapPlanRequired();
         return _redeemLegacy(shares, minimumNet, deadline);
     }
 
@@ -386,39 +418,39 @@ contract BasketVault is
         nonReentrant
         returns (uint256 net)
     {
-        require(_sellsEnabled(), "sells disabled");
-        require(swapPlansRequired, "V3 not configured");
-        require(block.timestamp <= deadline, "expired");
+        if (!_sellsEnabled()) revert SellsDisabled();
+        if (!swapPlansRequired) revert SwapPlansNotConfigured();
+        if (block.timestamp > deadline) revert Expired();
         uint256 supply = totalSupply();
-        require(shares > 0 && shares <= balanceOf(msg.sender), "invalid shares");
-        require(supply > 0, "no supply");
+        if (shares == 0 || shares > balanceOf(msg.sender)) revert InvalidShares();
+        if (supply == 0) revert NoSupply();
         uint256 expectedGross = (shares * totalAssetsUsd()) / supply;
-        require(expectedGross >= MIN_REDEMPTION_VALUE, "minimum redemption");
+        if (expectedGross < MIN_REDEMPTION_VALUE) revert MinimumRedemption();
         uint256 gross = _liquidateProRataWithPlans(msg.sender, shares, supply, plans);
         uint256 fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
-        require(net >= minimumNet, "proceeds below minimum");
+        if (net < minimumNet) revert ProceedsBelowMinimum();
         _burn(msg.sender, shares);
         _routeFee(fee);
-        require(usdg.transfer(msg.sender, net), "redeem transfer failed");
+        if (!usdg.transfer(msg.sender, net)) revert TransferFailed();
         emit Redeemed(msg.sender, shares, net, fee);
     }
 
     function _redeemLegacy(uint256 shares, uint256 minimumNet, uint256 deadline) private returns (uint256 net) {
-        require(block.timestamp <= deadline, "expired");
+        if (block.timestamp > deadline) revert Expired();
         uint256 supply = totalSupply();
-        require(shares > 0 && shares <= balanceOf(msg.sender), "invalid shares");
-        require(supply > 0, "no supply");
+        if (shares == 0 || shares > balanceOf(msg.sender)) revert InvalidShares();
+        if (supply == 0) revert NoSupply();
         uint256 currentNav = totalAssetsUsd();
         uint256 expectedGross = (shares * currentNav) / supply;
-        require(expectedGross >= MIN_REDEMPTION_VALUE, "minimum redemption");
+        if (expectedGross < MIN_REDEMPTION_VALUE) revert MinimumRedemption();
         uint256 gross = _liquidateProRata(msg.sender, shares, supply);
         uint256 fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
-        require(net >= minimumNet, "proceeds below minimum");
+        if (net < minimumNet) revert ProceedsBelowMinimum();
         _burn(msg.sender, shares);
         _routeFee(fee);
-        require(usdg.transfer(msg.sender, net), "redeem transfer failed");
+        if (!usdg.transfer(msg.sender, net)) revert TransferFailed();
         emit Redeemed(msg.sender, shares, net, fee);
     }
 
@@ -445,8 +477,8 @@ contract BasketVault is
         onlyRole(KEEPER_ROLE)
         nonReentrant
     {
-        require(_rebalancesEnabled(), "rebalances disabled");
-        require(!swapPlansRequired, "swap plan required");
+        if (!_rebalancesEnabled()) revert RebalancesDisabled();
+        if (swapPlansRequired) revert SwapPlanRequired();
         _rebalanceLegacy(targetAssets, weights, cycleHash);
     }
 
@@ -456,8 +488,8 @@ contract BasketVault is
         bytes32 cycleHash,
         SwapPlan[] calldata plans
     ) external onlyRole(KEEPER_ROLE) nonReentrant {
-        require(_rebalancesEnabled(), "rebalances disabled");
-        require(swapPlansRequired, "V3 not configured");
+        if (!_rebalancesEnabled()) revert RebalancesDisabled();
+        if (!swapPlansRequired) revert SwapPlansNotConfigured();
         _validateTargetWeights(targetAssets, weights);
         uint256 totalNav = totalAssetsUsd();
         uint256 dustValue = (totalNav * DUST_BPS) / BPS;
@@ -469,7 +501,7 @@ contract BasketVault is
             if (currentValue <= targetValue || currentValue - targetValue <= dustValue) continue;
             uint256 sellAmount = ((currentValue - targetValue) * _unitAmount(asset)) / _unitPrice(asset);
             if (sellAmount == 0) continue;
-            require(planIndex < plans.length, "missing sell plan");
+            if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 expectedValue = _quoteUsd(asset, sellAmount);
             uint256 received = _executePlan(
                 plans[planIndex++],
@@ -488,13 +520,13 @@ contract BasketVault is
             uint256 buyValue = targetValue - currentValue;
             uint256 reserveIn = _usdWadToReserve(buyValue);
             if (reserveIn == 0) continue;
-            require(planIndex < plans.length, "missing buy plan");
+            if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 minimumOut =
                 (buyValue * _unitAmount(asset) * (BPS - maximumSlippageBps)) / (_unitPrice(asset) * BPS);
             uint256 received = _executePlan(plans[planIndex++], address(usdg), asset, reserveIn, minimumOut);
             emit RebalanceAssetTraded(cycleHash, asset, true, received, reserveIn, buyValue);
         }
-        require(planIndex == plans.length, "unused swap plan");
+        if (planIndex != plans.length) revert InvalidSwapPlan();
         _storeTargetWeights(targetAssets, weights, cycleHash);
         emit Rebalanced(cycleHash, totalAssetsUsd());
     }
@@ -585,13 +617,13 @@ contract BasketVault is
             uint256 weight = beforeNav == 0 ? latestTargetWeightBps[asset] : (assetValueUsd(asset) * BPS) / beforeNav;
             uint256 buyValue = (net * weight) / BPS;
             if (buyValue == 0 || buyValue <= dustValue) continue;
-            require(planIndex < plans.length, "missing deposit plan");
+            if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 minimumOut = (_reserveToUsdWad(buyValue) * _unitAmount(asset) * (BPS - maximumSlippageBps))
                 / (_unitPrice(asset) * BPS);
             uint256 received = _executePlan(plans[planIndex++], address(usdg), asset, buyValue, minimumOut);
             emit DepositAssetPurchased(account, asset, buyValue, received);
         }
-        require(planIndex == plans.length, "unused swap plan");
+        if (planIndex != plans.length) revert InvalidSwapPlan();
     }
 
     function _liquidateProRataWithPlans(address account, uint256 shares, uint256 supply, SwapPlan[] calldata plans)
@@ -604,7 +636,7 @@ contract BasketVault is
             address asset = assets[i];
             uint256 tokenAmount = (IERC20(asset).balanceOf(address(this)) * shares) / supply;
             if (tokenAmount == 0) continue;
-            require(planIndex < plans.length, "missing redemption plan");
+            if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 expectedValue = _quoteUsd(asset, tokenAmount);
             uint256 received = _executePlan(
                 plans[planIndex++],
@@ -616,7 +648,7 @@ contract BasketVault is
             gross += received;
             emit RedemptionAssetSold(account, asset, tokenAmount, received);
         }
-        require(planIndex == plans.length, "unused swap plan");
+        if (planIndex != plans.length) revert InvalidSwapPlan();
     }
 
     function _executePlan(
@@ -626,11 +658,13 @@ contract BasketVault is
         uint256 amountIn,
         uint256 protocolMinimumOut
     ) private returns (uint256 amountOut) {
-        require(plan.intent.vault == address(this), "plan vault");
-        require(plan.intent.recipient == address(this), "plan recipient");
-        require(plan.intent.tokenIn == tokenIn && plan.intent.tokenOut == tokenOut, "plan pair");
-        require(plan.intent.amountIn == amountIn, "plan input");
-        require(plan.intent.minimumAmountOut >= protocolMinimumOut, "plan minimum");
+        if (
+            plan.intent.vault != address(this) || plan.intent.recipient != address(this)
+                || plan.intent.tokenIn != tokenIn || plan.intent.tokenOut != tokenOut
+                || plan.intent.amountIn != amountIn || plan.intent.minimumAmountOut < protocolMinimumOut
+        ) {
+            revert InvalidSwapPlan();
+        }
         IERC20(tokenIn).approve(address(executionAdapter), amountIn);
         amountOut = executionAdapter.execute(plan.intent, plan.executionData, plan.authorizerSignature);
         IERC20(tokenIn).approve(address(executionAdapter), 0);
@@ -642,7 +676,7 @@ contract BasketVault is
 
     function _unitAmount(address asset) private view returns (uint256) {
         uint8 decimals = IERC20Metadata(asset).decimals();
-        require(decimals <= 36, "unsupported decimals");
+        if (decimals > 36) revert InvalidConfiguration();
         return 10 ** decimals;
     }
 
@@ -658,20 +692,26 @@ contract BasketVault is
         uint256 updatedAt;
         bool valid;
         (priceWad, updatedAt, valid) = valuation.quoteStatus(asset);
-        require(valid && priceWad > 0, "invalid price");
-        require(updatedAt <= block.timestamp && block.timestamp - updatedAt <= maximumPriceAge, "stale price");
+        if (!valid || priceWad == 0) revert InvalidPrice();
+        if (updatedAt > block.timestamp || block.timestamp - updatedAt > maximumPriceAge) {
+            revert StalePrice();
+        }
     }
 
     function _validateTargetWeights(address[] calldata targetAssets, uint16[] calldata weights) private view {
-        require(targetAssets.length == weights.length && targetAssets.length > 0, "target length");
+        if (targetAssets.length != weights.length || targetAssets.length == 0) {
+            revert InvalidWeights();
+        }
         uint256 totalWeight;
         uint256 usdgWeight;
         uint256 riskPositions;
         uint256 highVolatilityWeight;
         for (uint256 i; i < targetAssets.length; ++i) {
-            require(targetAssets[i] == address(usdg) || supportedAsset[targetAssets[i]], "unsupported asset");
+            if (targetAssets[i] != address(usdg) && !supportedAsset[targetAssets[i]]) {
+                revert UnsupportedAsset();
+            }
             for (uint256 j; j < i; ++j) {
-                require(targetAssets[j] != targetAssets[i], "duplicate asset");
+                if (targetAssets[j] == targetAssets[i]) revert InvalidWeights();
             }
             totalWeight += weights[i];
             if (targetAssets[i] == address(usdg)) {
@@ -679,20 +719,26 @@ contract BasketVault is
             } else if (weights[i] > 0) {
                 riskPositions++;
                 if (address(assetRegistry) != address(0)) {
-                    require(weights[i] <= MAX_ASSET_WEIGHT_BPS, "asset weight");
-                    require(assetRegistry.isActive(targetAssets[i]), "inactive asset");
+                    if (weights[i] > MAX_ASSET_WEIGHT_BPS) revert AllocationLimitExceeded();
+                    if (!assetRegistry.isActive(targetAssets[i])) revert InvalidAsset();
                     uint16 registryMaximum = assetRegistry.maximumWeightBps(targetAssets[i]);
-                    require(registryMaximum > 0 && weights[i] <= registryMaximum, "registry weight");
+                    if (registryMaximum == 0 || weights[i] > registryMaximum) {
+                        revert AllocationLimitExceeded();
+                    }
                     if (assetRegistry.isHighVolatility(targetAssets[i])) {
                         highVolatilityWeight += weights[i];
                     }
                 }
             }
         }
-        require(totalWeight == BPS && usdgWeight >= MIN_USDG_BPS, "invalid weights");
+        if (totalWeight != BPS || usdgWeight < MIN_USDG_BPS) revert InvalidWeights();
         if (address(assetRegistry) != address(0)) {
-            require(riskPositions <= MAX_RISK_POSITIONS, "too many positions");
-            require(highVolatilityWeight <= MAX_HIGH_VOLATILITY_BPS, "high volatility");
+            if (
+                riskPositions > MAX_RISK_POSITIONS
+                    || highVolatilityWeight > MAX_HIGH_VOLATILITY_BPS
+            ) {
+                revert AllocationLimitExceeded();
+            }
         }
     }
 
@@ -725,8 +771,8 @@ contract BasketVault is
         uint256 rewardShare = (fee * BRAIN_FEE_SHARE_BPS) / BPS;
         uint256 creatorShare = (fee * CREATOR_FEE_SHARE_BPS) / BPS;
         uint256 automationShare = fee - rewardShare - creatorShare;
-        require(usdg.transfer(creatorVault, creatorShare), "creator fee failed");
-        require(usdg.transfer(automationVault, automationShare), "automation fee failed");
+        if (!usdg.transfer(creatorVault, creatorShare)) revert TransferFailed();
+        if (!usdg.transfer(automationVault, automationShare)) revert TransferFailed();
         usdg.approve(address(rewards), rewardShare);
         rewards.fund(rewardShare);
     }

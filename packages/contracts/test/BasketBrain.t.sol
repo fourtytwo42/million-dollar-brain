@@ -186,10 +186,10 @@ contract BasketBrainTest is Test {
         vm.stopPrank();
 
         vm.prank(alice);
-        vm.expectRevert("buys disabled");
+        vm.expectRevert(BasketVault.BuysDisabled.selector);
         basket.deposit(100e18, 1, block.timestamp + 1 hours);
         vm.prank(alice);
-        vm.expectRevert("sells disabled");
+        vm.expectRevert(BasketVault.SellsDisabled.selector);
         basket.redeem(100e18, 1, block.timestamp + 1 hours);
         vm.prank(alice);
         vm.expectRevert("purchases disabled");
@@ -197,7 +197,7 @@ contract BasketBrainTest is Test {
         address[] memory noAssets = new address[](0);
         uint16[] memory noWeights = new uint16[](0);
         vm.prank(admin);
-        vm.expectRevert("rebalances disabled");
+        vm.expectRevert(BasketVault.RebalancesDisabled.selector);
         basket.rebalance(noAssets, noWeights, keccak256("paused"));
 
         vm.startPrank(admin);
@@ -362,7 +362,7 @@ contract BasketBrainTest is Test {
 
         vm.startPrank(alice);
         usdg.approve(address(basket), 10_000e18);
-        vm.expectRevert("stale price");
+        vm.expectRevert(BasketVault.StalePrice.selector);
         basket.deposit(10_000e18, 1, block.timestamp + 1 hours);
         vm.stopPrank();
     }
@@ -563,10 +563,10 @@ contract BasketBrainTest is Test {
     function testDepositAndRedemptionCapsAreEnforced() public {
         vm.startPrank(alice);
         usdg.approve(address(basket), type(uint256).max);
-        vm.expectRevert("wallet cap");
+        vm.expectRevert(BasketVault.WalletCapExceeded.selector);
         basket.deposit(26_000e18, 1, block.timestamp + 1 hours);
         basket.deposit(1_000e18, 990e18, block.timestamp + 1 hours);
-        vm.expectRevert("minimum redemption");
+        vm.expectRevert(BasketVault.MinimumRedemption.selector);
         basket.redeem(5e18, 1, block.timestamp + 1 hours);
         vm.expectRevert(BasketVault.QueuedExitsDisabled.selector);
         basket.requestRedemption(5e18, 1, block.timestamp + 1 hours);
