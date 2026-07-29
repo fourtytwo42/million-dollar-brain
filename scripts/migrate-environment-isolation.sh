@@ -47,6 +47,15 @@ if [[ ! -f "$contracts/local-v3.json" ]]; then
   install -o "$owner" -g "$group" -m 0644 "$contracts/local.json" "$contracts/local-v3.json"
 fi
 
+if sudo -u postgres psql -Atc "select 1 from pg_database where datname='milliondollarbrain_devnet'" | grep -qx 1; then
+  devnet_table_count="$(
+    sudo -u postgres psql -d milliondollarbrain_devnet -Atc \
+      "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='r' and n.nspname not in ('pg_catalog','information_schema')"
+  )"
+  if [[ "$devnet_table_count" == "0" ]]; then
+    sudo -u postgres dropdb milliondollarbrain_devnet
+  fi
+fi
 if ! sudo -u postgres psql -Atc "select 1 from pg_database where datname='milliondollarbrain_devnet'" | grep -qx 1; then
   dump="$(mktemp /tmp/mdb-devnet.XXXXXX.dump)"
   trap 'rm -f "$dump"' EXIT
