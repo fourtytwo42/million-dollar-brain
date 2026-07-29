@@ -4,14 +4,16 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Finish Control Catalog v1 devnet acceptance, then promote the
-  exact pushed release candidate to the existing Robinhood Testnet deployment.
-- Last meaningful change: Control Catalog v1 is deployed and enabled on devnet.
-  A disposable wallet purchased Piece 21 and atomically updated its filtered
-  semiconductor controls to target NVDA with `exit / disable`.
-- Next step: Verify the restrictive directive in a live Ornith cycle, complete
-  responsive browser and economic regression UAT, commit and push the accepted
-  candidate, then perform the state-preserving testnet UUPS promotion.
+- Current task: Complete the active two-hour Control Catalog v1 Robinhood
+  Testnet acceptance run and publish its final evidence.
+- Last meaningful change: Checkpoint 5 exposed a test-harness funding defect
+  after repeated 20% brain-piece resales exceeded the actor's fixed USDG
+  top-up. The protocol reverted atomically as designed. The acceptance route
+  now funds the exact purchase plus basket-buy requirement and a bounded
+  buffer; the same checkpoint passed on retry.
+- Next step: Deploy the repaired test harness, run the failed scenario as a
+  focused check, resume the preserved acceptance clock, then complete final
+  browser UAT and release evidence.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -43,6 +45,24 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - Dynamic acceptance-actor funding
+
+- Context: Robinhood Testnet acceptance checkpoint 5 initially failed when
+  Piece 2's repeated 20% resale price reached 15,603 USDG while the actor
+  funding helper only maintained a fixed 5,000 USDG floor.
+- Decision: Keep testing high-price resales. Fund each actor to the exact brain
+  purchase price plus its selected MDBS buy and a 1,000 USDG buffer instead of
+  using a fixed 10,000 USDG top-up.
+- Files: `apps/web/app/api/testnet-acceptance/route.ts`,
+  `tests/network-policy.test.ts`.
+- Commands/tests: `node --test tests/network-policy.test.ts` (15/15);
+  production Next.js build passed.
+- Result: The contract's atomic revert was correct; checkpoint 5 passed on the
+  runner's retry. The harness fix prevents the same funding race from
+  recurring as resale prices continue rising.
+- Follow-up: Commit/push the repair, deploy the exact build, run a focused
+  scenario, and resume the preserved two-hour acceptance run.
 - The current `/brain-art/v4/` meme-universe roster contains 10 diverse humans and 32 nonhumans with distinct species or silhouettes. It remains 42 transparent 384-by-384 WebPs totaling about 1.58 MB; v3 remains archived and runtime references moved atomically to v4.
 - Economic catalog v3 remains unchanged. Character roster v4 adds presentation copy, character kinds, visual archetypes, rivalries, five preset catchphrases, victory/objection/blame/fallback lines, and sharing hooks.
 - Last verified 2026-07-29: Control Catalog v1 is deployed and enabled on

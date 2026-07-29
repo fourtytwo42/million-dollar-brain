@@ -82,7 +82,7 @@ function enduranceActor(secret: string, index: number) {
 async function fundActor(
   actor: ReturnType<typeof enduranceActor>,
   usdg: `0x${string}`,
-  decimals: number,
+  requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
   const minimumGas = parseEther("0.00025");
@@ -103,13 +103,12 @@ async function fundActor(
     functionName: "balanceOf",
     args: [actor.account.address],
   });
-  const minimumUsdg = parseUnits("5000", decimals);
-  if (balance < minimumUsdg) {
+  if (balance < requiredUsdg) {
     transactions.usdgFunding = await write(adminClient, {
       address: usdg,
       abi: erc20Abi,
       functionName: "transfer",
-      args: [actor.account.address, parseUnits("10000", decimals)],
+      args: [actor.account.address, requiredUsdg - balance],
     });
   }
 }
@@ -144,8 +143,12 @@ export async function POST(request: NextRequest) {
       const actor = enduranceActor(expected, actorIndex);
       const otherActor = enduranceActor(expected, (actorIndex + 2) % 3);
       const transactions: Record<string, string> = {};
-      await fundActor(actor, reserve.address, reserve.decimals, transactions);
       const before = await dashboard(actor.account.address);
+      const grossOptions = ["125", "250", "500", "1000"];
+      const gross = parseUnits(
+        grossOptions[scenario % grossOptions.length],
+        reserve.decimals,
+      );
 
       const unowned = before.pieces.filter((candidate) => candidate.unowned);
       const piece =
@@ -163,13 +166,23 @@ export async function POST(request: NextRequest) {
         ) ??
         unowned[0];
       if (!piece) throw new Error("no brain piece is available for acceptance");
+      const brainPurchasePrice =
+        piece.owner.toLowerCase() === actor.account.address.toLowerCase()
+          ? 0n
+          : BigInt(piece.price);
+      const fundingBuffer = parseUnits("1000", reserve.decimals);
+      await fundActor(
+        actor,
+        reserve.address,
+        brainPurchasePrice + gross + fundingBuffer,
+        transactions,
+      );
       if (piece.owner.toLowerCase() !== actor.account.address.toLowerCase()) {
-        const price = BigInt(piece.price);
         transactions.brainApproval = await write(actor.client, {
           address: d.usdg,
           abi: erc20Abi,
           functionName: "approve",
-          args: [d.brain, price],
+          args: [d.brain, brainPurchasePrice],
         });
         transactions.brainPurchase = await write(actor.client, {
           address: d.brain,
@@ -177,7 +190,7 @@ export async function POST(request: NextRequest) {
           functionName: "buy",
           args: [
             BigInt(piece.id),
-            price,
+            brainPurchasePrice,
             BigInt(Math.floor(Date.now() / 1_000) + 300),
           ],
         });
@@ -225,11 +238,6 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const grossOptions = ["125", "250", "500", "1000"];
-      const gross = parseUnits(
-        grossOptions[scenario % grossOptions.length],
-        reserve.decimals,
-      );
       const depositPreview = await publicClient.readContract({
         address: d.basket,
         abi: basketAbi,

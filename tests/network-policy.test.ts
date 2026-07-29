@@ -215,6 +215,9 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.match(acceptance, /million-dollar-brain:endurance/);
   assert.match(acceptance, /purchaseType:/);
   assert.match(acceptance, /oversizedSellRejected/);
+  assert.match(acceptance, /brainPurchasePrice \+ gross \+ fundingBuffer/);
+  assert.match(acceptance, /requiredUsdg - balance/);
+  assert.doesNotMatch(acceptance, /const minimumUsdg = parseUnits\("5000"/);
 });
 
 test("test-only wallet controls are visible locally but hidden on testnet", () => {
