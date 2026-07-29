@@ -6,12 +6,14 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Deploy and verify the isolated devnet, testnet, and paused
   mainnet-canary graduation pipeline.
-- Last meaningful change: Added staged on-chain canary controls, 48-hour
-  per-asset qualification with two regular sessions for stocks/ETFs, isolated
-  runtime paths and systemd units, exact-artifact release records, migration,
-  backup, alert, rehearsal, and activation tooling.
-- Next step: Commit/push the verified checkpoint, migrate the authoritative VM,
-  upgrade devnet/testnet proxies, rebuild, and run live acceptance.
+- Last meaningful change: Migrated the authoritative VM to explicit isolated
+  devnet/testnet runtimes, upgraded both live proxies with staged canary
+  controls, upgraded testnet qualification to 48 hours/two sessions, repaired
+  the 46630 rehearsal and deterministic web restarts, and passed the complete
+  devnet release gate plus a live Ornith testnet rebalance.
+- Next step: Run a fresh two-hour multi-user Robinhood Testnet acceptance
+  rehearsal bound to the exact final pushed commit, generate its canonical
+  acceptance summary, then run the non-broadcast mainnet release checks.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -53,6 +55,12 @@ Durable project context lives here. Update this file whenever information should
   pushed Git SHA, full web-build hash, contract bytecode hashes, manifest hash,
   schema version, and source acceptance. Mainnet first deploys with all
   value-changing controls paused and remains LAN-only until staged activation.
+- Last verified 2026-07-29: devnet uses `local-v3.json`, `var/devnet`, and
+  `milliondollarbrain_devnet`; testnet uses `testnet-v3.json`,
+  `var/testnet-v3`, and `milliondollarbrain_testnet`; mainnet has reserved
+  `mainnet-v3.json`, `var/mainnet`, and `milliondollarbrain_mainnet`. Explicit
+  devnet/testnet web, cycle, and collector units are active. Mainnet units are
+  installed but disabled, and no mainnet deployment or broadcast occurred.
 
 ## User Preferences
 
@@ -131,6 +139,33 @@ When sources conflict, use this order:
 - The MVP DAO is a simple creator-controlled upgradeable revenue vault. The owner may withdraw creator-side revenue, but basket principal and brain-owner liabilities must remain outside its normal withdrawal authority.
 
 ## Verification Ledger
+
+- 2026-07-29: Completed the live graduation migration and non-mainnet proxy
+  upgrades on VM `192.168.50.135`. The migration archived and allowlisted-copy
+  migrated devnet state, cloned the devnet database, preserved testnet state,
+  and created the empty isolated mainnet database. Devnet and testnet Basket
+  and Brain controls are configured and enabled; the testnet AssetRegistry now
+  uses 48 qualification hours and two regular sessions. Both apps return HTTP
+  200, NAV reconciles to priced holdings, oracle data is fresh, persistence is
+  available, and queued redemptions remain zero.
+- 2026-07-29: Reduced `BasketVault` from 25,420 bytes to 22,805 bytes by
+  replacing revert strings with typed custom errors, preserving storage and
+  behavior. All 27 Foundry tests passed, including 256 fuzz runs, UUPS
+  preservation, canary staging, signed-plan execution, and atomic rollback.
+  The chain-46630 production-interface replica rehearsal then passed without a
+  public broadcast.
+- 2026-07-29: A live testnet Ornith cycle returned an AI allocation and executed
+  transaction
+  `0xb483eac439a0e831f8e9f59726f597a6a6421622395166f2d3f26ec334694d6e`.
+  The resulting target held 20% USDG and eight 10% risk positions. The exact
+  post-cycle NAV reconciled, prices were fresh, and no sale queue existed.
+- 2026-07-29: The complete devnet release gate passed: formatted contracts,
+  27 Foundry tests, all market/context/network/wallet/graduation suites,
+  production Next.js build, and full Chromium economic/autonomous/mobile/dark
+  UAT. Release UAT screenshots now write to commit-scoped `var/release-uat`
+  evidence so candidate generation retains a clean source tree. Direct Next.js
+  systemd execution and bounded stop behavior reduced verified dual-web restart
+  time to about five seconds and removed orphaned npm children.
 
 - 2026-07-28: Published the 42 Braincells domain split through a named
   Cloudflare Tunnel. `https://42braincells.com` returns the branded mainnet
@@ -671,6 +706,11 @@ build`; authenticated live `/api/collect-market`.
 
 ## Open Follow-ups
 
+- 2026-07-29: The live migration, proxy upgrades, release rehearsal, devnet
+  release gate, and one live testnet AI execution pass. A fresh exact-commit
+  two-hour testnet acceptance run is still required before
+  `promote-to-testnet` can produce the final testnet promotion receipt or any
+  mainnet canary rehearsal may be treated as release evidence.
 - 2026-07-28: MDB testnet uses only the official public RPC. Public rate limits
   are mitigated by Multicall3 batching, bounded retries, and reduced polling.
   The LAN endpoint at `192.168.50.117` has become mainnet and is prohibited for
