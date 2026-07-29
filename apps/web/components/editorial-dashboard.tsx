@@ -798,7 +798,7 @@ export function EditorialDashboard({
         </nav>
         <div className="market-strip">
           <span className="share-price">
-            MDBS NAV price ${data ? usd(data.navPerShare) : "1.00"}
+            MDBS ${data ? usd(data.navPerShare) : "1.00"}
           </span>
           <span className="market-health healthy">● System healthy</span>
           <span className="market-next-decision">
