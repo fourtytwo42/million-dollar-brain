@@ -12,6 +12,9 @@ import { promisify } from "node:util";
 import { chromium } from "playwright";
 
 const execFileAsync = promisify(execFile);
+const releaseSha = (
+  await execFileAsync("git", ["rev-parse", "HEAD"])
+).stdout.trim();
 const baseUrl = process.env.MDB_ENDURANCE_URL ?? "http://127.0.0.1:3001";
 const durationMs = Number(
   process.env.MDB_ENDURANCE_DURATION_MS ?? 2 * 60 * 60 * 1000,
@@ -27,11 +30,12 @@ const checkpointPath = `${stateDirectory}/checkpoints.jsonl`;
 const summaryPath = `${stateDirectory}/summary.json`;
 const armedPath = `${stateDirectory}/armed`;
 const services = [
-  "mdb-web.service",
+  "mdb-anvil.service",
+  "mdb-web-devnet.service",
   "mdb-web-testnet.service",
-  "mdb-market-collector.timer",
+  "mdb-market-collector-devnet.timer",
   "mdb-market-collector-testnet.timer",
-  "mdb-cycle.timer",
+  "mdb-cycle-devnet.timer",
   "mdb-cycle-testnet.timer",
 ];
 
@@ -57,6 +61,11 @@ async function loadOrCreateState() {
   const now = Date.now();
   const existing = await readState();
   if (existing?.status === "running") {
+    assert.equal(
+      existing.gitSha,
+      releaseSha,
+      "an endurance run cannot cross release commits",
+    );
     const configuredEndAt = existing.startedAt + durationMs;
     if (existing.endAt !== configuredEndAt) {
       existing.endAt = configuredEndAt;
@@ -79,6 +88,7 @@ async function loadOrCreateState() {
   const created = {
     version: 1,
     status: "running",
+    gitSha: releaseSha,
     startedAt: now,
     endAt: now + durationMs,
     durationMs,
@@ -421,6 +431,7 @@ async function runCheckpoint(page, checkpoint, browserErrors) {
   }
 
   return {
+    gitSha: releaseSha,
     checkpoint,
     startedAt: new Date(startedAt).toISOString(),
     completedAt: new Date().toISOString(),
@@ -505,6 +516,7 @@ try {
   await atomicJson(statePath, state);
   await atomicJson(summaryPath, {
     chainId: 46630,
+    gitSha: releaseSha,
     status: "completed",
     startedAt: new Date(state.startedAt).toISOString(),
     completedAt: new Date(state.completedAt).toISOString(),

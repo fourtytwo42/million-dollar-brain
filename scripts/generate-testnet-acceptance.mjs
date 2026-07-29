@@ -24,6 +24,7 @@ const checkpoints = readFileSync(resolve(stateDir, "checkpoints.jsonl"), "utf8")
   .map((line) => JSON.parse(line));
 const passing = checkpoints.filter(
   (row) =>
+    row.gitSha === gitSha &&
     row.actions?.ok === true &&
     Array.isArray(row.browserErrors) &&
     row.browserErrors.length === 0 &&
@@ -63,6 +64,7 @@ const result = {
 };
 if (
   state.status !== "completed" ||
+  state.gitSha !== gitSha ||
   durationHours < 2 ||
   passing.length < result.requiredCheckpoints ||
   !result.atomicBuys ||
