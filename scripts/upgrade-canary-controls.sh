@@ -35,7 +35,11 @@ set +a
 
 basket="$(jq -er '.contracts.basket // .basket' "$manifest")"
 brain="$(jq -er '.contracts.brain // .brain' "$manifest")"
-registry="$(jq -r '.contracts.registry // .registry // "0x0000000000000000000000000000000000000000"' "$manifest")"
+registry="$(
+  jq -r \
+    '.contracts.assetRegistry // .contracts.registry // .assetRegistry // .registry // "0x0000000000000000000000000000000000000000"' \
+    "$manifest"
+)"
 [[ "$(cast chain-id --rpc-url "$rpc")" == "$expected_chain" ]]
 
 if [[ "$mode" == "devnet" ]]; then
@@ -43,8 +47,11 @@ if [[ "$mode" == "devnet" ]]; then
   [[ -n "$private_key" ]]
   signer=(--private-key "$private_key")
 else
-  [[ -z "$(git -C "$repo_root" status --porcelain)" ]]
-  [[ "$(git -C "$repo_root" rev-parse HEAD)" == "$(git -C "$repo_root" rev-parse '@{u}')" ]]
+  [[ -z "$(git -c safe.directory="$repo_root" -C "$repo_root" status --porcelain)" ]]
+  [[
+    "$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse HEAD)"
+      == "$(git -c safe.directory="$repo_root" -C "$repo_root" rev-parse '@{u}')"
+  ]]
   signer=(--keystore "${MDB_OPERATOR_KEYSTORE:?}" --password-file "${MDB_OPERATOR_PASSWORD_FILE:?}")
 fi
 

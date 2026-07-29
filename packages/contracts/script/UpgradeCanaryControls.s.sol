@@ -34,19 +34,31 @@ contract UpgradeCanaryControls is Script {
                 registry.recordQualification(tokens[i], oldQualification);
             }
         }
-        BasketVault basketImplementation = new BasketVault();
-        BasketVault(basketProxy).upgradeToAndCall(
-            address(basketImplementation),
-            abi.encodeCall(
-                BasketVault.reinitializeV4,
-                (buysEnabled, sellsEnabled, rebalancesEnabled)
-            )
-        );
-        BrainMarketplace brainImplementation = new BrainMarketplace();
-        BrainMarketplace(brainProxy).upgradeToAndCall(
-            address(brainImplementation),
-            abi.encodeCall(BrainMarketplace.reinitializeV2, (brainPurchasesEnabled))
-        );
+        (bool basketCallOk, bytes memory basketResult) =
+            basketProxy.staticcall(abi.encodeCall(BasketVault.canaryControlsConfigured, ()));
+        bool basketConfigured =
+            basketCallOk && basketResult.length >= 32 && abi.decode(basketResult, (bool));
+        if (!basketConfigured) {
+            BasketVault basketImplementation = new BasketVault();
+            BasketVault(basketProxy).upgradeToAndCall(
+                address(basketImplementation),
+                abi.encodeCall(
+                    BasketVault.reinitializeV4,
+                    (buysEnabled, sellsEnabled, rebalancesEnabled)
+                )
+            );
+        }
+        (bool brainCallOk, bytes memory brainResult) =
+            brainProxy.staticcall(abi.encodeCall(BrainMarketplace.marketControlsConfigured, ()));
+        bool brainConfigured =
+            brainCallOk && brainResult.length >= 32 && abi.decode(brainResult, (bool));
+        if (!brainConfigured) {
+            BrainMarketplace brainImplementation = new BrainMarketplace();
+            BrainMarketplace(brainProxy).upgradeToAndCall(
+                address(brainImplementation),
+                abi.encodeCall(BrainMarketplace.reinitializeV2, (brainPurchasesEnabled))
+            );
+        }
         vm.stopBroadcast();
     }
 }
