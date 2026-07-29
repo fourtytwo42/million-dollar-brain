@@ -40,7 +40,7 @@ cd "$repo_root/packages/contracts"
 MDB_DEPLOYER_ADDRESS="$deployer" \
 MDB_DEPLOYMENT_OUTPUT="./deployments/.rehearsal-v3-46630.json" \
   forge script script/DeployTestnetV3.s.sol:DeployTestnetV3 \
-  --rpc-url "$rpc" --private-key "$deployer_key" --broadcast >/dev/null
+  --rpc-url "$rpc" --private-key "$deployer_key" --broadcast --slow >/dev/null
 
 jq -e \
   '.schemaVersion == 3 and .environment == "robinhood-testnet-replica" and
@@ -50,7 +50,7 @@ jq -e \
   "$manifest" >/dev/null
 basket="$(jq -er '.contracts.basket' "$manifest")"
 brain="$(jq -er '.contracts.brain' "$manifest")"
-registry="$(jq -er '.contracts.registry' "$manifest")"
+registry="$(jq -er '.contracts.assetRegistry // .contracts.registry' "$manifest")"
 oracle="$(jq -er '.contracts.valuation' "$manifest")"
 [[ "$(cast call "$oracle" 'automaticFreshness()(bool)' --rpc-url "$rpc")" == "false" ]]
 [[ "$(cast call "$basket" 'canaryControlsConfigured()(bool)' --rpc-url "$rpc")" == "true" ]]
@@ -59,7 +59,7 @@ oracle="$(jq -er '.contracts.valuation' "$manifest")"
 [[ "$(cast call "$basket" 'rebalancesEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$brain" 'marketControlsConfigured()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$brain" 'purchasesEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$registry" 'activeTokens()(address[])' --rpc-url "$rpc" | grep -o '0x[0-9a-fA-F]\\{40\\}' | wc -l)" == "12" ]]
+[[ "$(cast call "$registry" 'activeTokens()(address[])' --rpc-url "$rpc" | grep -o '0x[0-9a-fA-F]\\{40\\}' | wc -l)" == "11" ]]
 
 mkdir -p "$(dirname "$evidence")"
 jq -n \
