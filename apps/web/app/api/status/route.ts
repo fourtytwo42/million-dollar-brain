@@ -16,6 +16,7 @@ import {
 } from "@/lib/portfolio-accounting";
 import { localPriceSyncHealth } from "@/lib/market-price-sync";
 import { releaseStatus } from "@/lib/release-status";
+import { rpcFailoverHealth } from "@/lib/rpc-health";
 
 export const runtime = "nodejs";
 function tokenAmount(value: string, decimals = 18) {
@@ -63,6 +64,7 @@ export async function GET(request: NextRequest) {
       outcomes,
       performanceHistory,
       priceSync,
+      rpcFailover,
     ] = await Promise.all([
       dashboard(
         address && isAddress(address) ? address : undefined,
@@ -75,6 +77,7 @@ export async function GET(request: NextRequest) {
       decisionOutcomeMap(),
       portfolioPerformanceHistory(),
       localPriceSyncHealth(),
+      rpcFailoverHealth(),
     ]);
     const portfolioAccounting = await buildPortfolioAccounting(current);
     const enrichedHistory = history.map((cycle) => ({
@@ -109,6 +112,7 @@ export async function GET(request: NextRequest) {
       portfolioAccounting,
       performanceHistory,
       priceSync,
+      rpcFailover,
       benchmarks: REFERENCE_UNIVERSE.map((symbol) => ({
         symbol,
         executable: false,

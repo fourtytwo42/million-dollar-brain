@@ -41,7 +41,16 @@ if [[ ! -f "$testnet_env" ]]; then
     'PATH=/home/hendo420/.local/node/bin:/home/hendo420/.foundry/bin:/usr/bin:/bin' \
     'MDB_NETWORK_MODE=testnet' \
     "MDB_NETWORK_MANIFEST=$repo_root/config/networks.json" \
-    'MDB_RPC_URL=https://rpc.testnet.chain.robinhood.com' \
+    'MDB_RPC_URL=http://127.0.0.1:18548' \
+    'MDB_RPC_HEALTH_URL=http://127.0.0.1:18548/health' \
+    'MDB_RPC_PRIMARY_URL=http://192.168.50.117:8547' \
+    'MDB_RPC_SECONDARY_URL=https://rpc.testnet.chain.robinhood.com' \
+    'MDB_RPC_EXPECTED_CHAIN_ID=46630' \
+    'MDB_RPC_MAX_HEAD_LAG=3' \
+    'MDB_RPC_RECOVERY_HEAD_LAG=1' \
+    'MDB_RPC_CHECK_INTERVAL_MS=15000' \
+    'MDB_RPC_LAG_FAILURE_SAMPLES=2' \
+    'MDB_RPC_RECOVERY_SAMPLES=4' \
     'MDB_BROWSER_RPC_URL=https://rpc.testnet.chain.robinhood.com' \
     "MDB_DEPLOYMENT_FILE=$repo_root/packages/contracts/deployments/testnet.json" \
     "MDB_STATE_DIR=$repo_root/var/testnet" \

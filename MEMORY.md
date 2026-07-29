@@ -4,16 +4,15 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Deploy and verify the isolated devnet, testnet, and paused
-  mainnet-canary graduation pipeline.
-- Last meaningful change: Migrated the authoritative VM to explicit isolated
-  devnet/testnet runtimes, upgraded both live proxies with staged canary
-  controls, upgraded testnet qualification to 48 hours/two sessions, repaired
-  the 46630 rehearsal and deterministic web restarts, and passed the complete
-  devnet release gate plus a live Ornith testnet rebalance.
-- Next step: Run a fresh two-hour multi-user Robinhood Testnet acceptance
-  rehearsal bound to the exact final pushed commit, generate its canonical
-  acceptance summary, then run the non-broadcast mainnet release checks.
+- Current task: Restart exact-commit testnet acceptance after the RPC failover
+  migration.
+- Last meaningful change: Deployed and verified
+  `mdb-rpc-failover-testnet.service`. Testnet server traffic now uses loopback
+  `127.0.0.1:18548`, with `192.168.50.117:8547` as the chain-46630 primary and
+  the configured remote HTTPS RPC as secondary. A live Ornith cycle executed
+  successfully through the LAN primary.
+- Next step: Commit and push the RPC migration, then run a fresh two-hour
+  multi-user Robinhood Testnet acceptance rehearsal bound to that exact commit.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -38,8 +37,9 @@ Durable project context lives here. Update this file whenever information should
   basket is `0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B`; its atomic price
   publisher is `0x7FB986BDcFC23bF419af83BE4bFE4efDBff7407d`.
 - `packages/contracts/deployments/testnet-v3.json` is the active, committed
-  public-testnet manifest. Never use `192.168.50.117`; it belongs to another
-  mainnet workload.
+  public-testnet manifest. Last verified 2026-07-28:
+  `192.168.50.117:8547` is again a chain-46630 testnet RPC and is approved as
+  MDB's server-side primary. Browser wallets must never receive that LAN URL.
 - Local devnet visibly exposes its disposable wallet and funding controls.
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
@@ -101,12 +101,12 @@ When sources conflict, use this order:
   to `http://localhost:3001`, and unmatched hostnames to `http_status:404`.
   `mdb-coming-soon.service` serves the apex page and both units are enabled at
   boot. Last verified 2026-07-28.
-- Robinhood Testnet uses the official public RPC
-  `https://rpc.testnet.chain.robinhood.com` for both server and browser
-  traffic. `mdb-web-testnet.service` serves port `3001`;
+- Robinhood Testnet browser wallets use the official public RPC
+  `https://rpc.testnet.chain.robinhood.com`. Server processes use loopback
+  `127.0.0.1:18548`, backed by LAN primary `192.168.50.117:8547` and a
+  configured remote HTTPS secondary. `mdb-web-testnet.service` serves port `3001`;
   `mdb-market-collector-testnet.timer` and `mdb-cycle-testnet.timer` are
-  enabled. The former LAN testnet RPC at `192.168.50.117` is now mainnet and
-  must not be used by MDB testnet. Last verified 2026-07-28.
+  enabled. Last verified 2026-07-28.
 
 ## Project Map
 
@@ -140,6 +140,24 @@ When sources conflict, use this order:
 
 ## Verification Ledger
 
+- 2026-07-28: Verified the testnet RPC migration on VM `192.168.50.135`.
+  `192.168.50.117:8547` and the remote endpoint both reported chain `46630`
+  at zero measured lag. The gateway checks both every 15 seconds, switches
+  immediately on hard failure or after two samples more than three blocks
+  behind, and requires four recovery samples within one block before failback.
+  An isolated live proof with an unreachable primary selected the secondary
+  and served chain `46630`. Browser runtime configuration and the production
+  static bundle contain neither the LAN URL nor the loopback gateway.
+- 2026-07-28: Five failover tests pass, covering healthy primary operation,
+  lag hysteresis and recovery, wrong-chain rejection, remote providers without
+  `eth_syncing`, and no replay of ambiguous raw transactions. Fourteen network
+  policy tests, eight graduation tests, shell syntax checks, the Next.js
+  production build, `git diff --check`, and self-hosted runtime health pass.
+  The collector completed through the gateway. Ornith produced an AI
+  allocation and executed testnet transaction
+  `0xafde7146289417190315d8b389bb69c80a7f3f983937d07381b49cd8bcd6c71c`
+  in block `94782416`; the oracle remained fresh, NAV was positive, no queued
+  sale existed, and the gateway stayed on the LAN primary with zero lag.
 - 2026-07-29: Completed the live graduation migration and non-mainnet proxy
   upgrades on VM `192.168.50.135`. The migration archived and allowlisted-copy
   migrated devnet state, cloned the devnet database, preserved testnet state,
@@ -267,8 +285,8 @@ When sources conflict, use this order:
 - 2026-07-28: Installed and enabled the hourly read-only
   `mdb-mainnet-shadow.timer`. It inspected 98 canonical chain-4663 assets in one
   Multicall3 batch; callable token code and every Robinhood UID matched. The
-  runner rejects broadcast mode and signing keys, uses no MDB dependency on
-  `192.168.50.117`, and truthfully leaves qualification at zero until
+  runner rejects broadcast mode and signing keys and truthfully leaves
+  qualification at zero until
   Chainlink-supplied feed mappings, production 0x credentials, official
   capitalization/AUM evidence, official-history coverage, $25K impact, and
   $250K two-sided depth pass for every nominated asset.
@@ -711,10 +729,11 @@ build`; authenticated live `/api/collect-market`.
   two-hour testnet acceptance run is still required before
   `promote-to-testnet` can produce the final testnet promotion receipt or any
   mainnet canary rehearsal may be treated as release evidence.
-- 2026-07-28: MDB testnet uses only the official public RPC. Public rate limits
-  are mitigated by Multicall3 batching, bounded retries, and reduced polling.
-  The LAN endpoint at `192.168.50.117` has become mainnet and is prohibited for
-  this testnet application; do not modify or depend on it.
+- 2026-07-28: MDB testnet now uses the server-only LAN-primary,
+  remote-failover gateway. The browser remains on public HTTPS. The current
+  remote endpoint is the official rate-limited public RPC because no separate
+  paid testnet URL is stored on the VM; replace only `MDB_RPC_SECONDARY_URL`
+  when the paid URL is supplied.
 - 2026-07-27: Real-wallet support now uses pinned RainbowKit, wagmi, TanStack
   Query, viem, and MDB Reown project ID
   `5a4c41c8c461ca59724069d740760a2f`. External wallets take precedence over a

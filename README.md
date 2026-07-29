@@ -14,7 +14,8 @@ The local application remains a simulation. A separate V3 deployment is live
 on Robinhood Testnet with 12 clearly labelled production-interface replicas,
 dynamic registry identities, official-data price publishing, signed RFQ
 execution, atomic MDBS buys and sells, and autonomous DecisionContext V4 Ornith
-cycles. A read-only mainnet shadow inspects canonical chain-4663 assets and
+cycles. Testnet server traffic uses a LAN-primary, remote-failover RPC gateway;
+browser wallets remain on public HTTPS. A read-only mainnet shadow inspects canonical chain-4663 assets and
 cannot sign or broadcast. No mainnet contracts or real funds are enabled. See
 [TESTNET_READINESS.md](TESTNET_READINESS.md) and
 [MAINNET_EDGE_RELEASE.md](MAINNET_EDGE_RELEASE.md).

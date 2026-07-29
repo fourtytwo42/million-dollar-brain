@@ -1,7 +1,8 @@
 [Unit]
 Description=MillionDollar Brain Robinhood Testnet web application
-After=network-online.target postgresql.service
+After=network-online.target postgresql.service mdb-rpc-failover-testnet.service
 Wants=network-online.target
+Requires=mdb-rpc-failover-testnet.service
 ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet-v3.json
 
 [Service]

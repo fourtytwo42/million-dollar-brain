@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"
 official_rpc="https://rpc.testnet.chain.robinhood.com"
+runtime_rpc="http://127.0.0.1:18548"
 evidence="$repo_root/var/testnet-readiness/build-evidence.json"
 public_manifest="$repo_root/packages/contracts/deployments/testnet.json"
 export PATH="/home/hendo420/.local/node/bin:/home/hendo420/.foundry/bin:/usr/bin:/bin"
@@ -18,10 +19,14 @@ source "$env_file"
 set +a
 
 [[ "${MDB_NETWORK_MODE:-}" == "testnet" ]]
-[[ "${MDB_RPC_URL:-}" == "$official_rpc" ]]
+[[ "${MDB_RPC_URL:-}" == "$runtime_rpc" ]]
 [[ "${MDB_BROWSER_RPC_URL:-}" == "$official_rpc" ]]
+[[ "${MDB_RPC_PRIMARY_URL:-}" == "http://192.168.50.117:8547" ]]
+[[ -n "${MDB_RPC_SECONDARY_URL:-}" ]]
 [[ "${NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID:-}" =~ ^[0-9a-f]{32}$ ]]
-[[ "$(cast chain-id --rpc-url "$official_rpc")" == "46630" ]]
+[[ "$(cast chain-id --rpc-url "$runtime_rpc")" == "46630" ]]
+curl --fail --silent "$MDB_RPC_HEALTH_URL" |
+  jq -e '.status == "ok" and .expectedChainId == 46630' >/dev/null
 : "${MDB_OPERATOR_KEYSTORE:?MDB_OPERATOR_KEYSTORE is required}"
 : "${MDB_OPERATOR_PASSWORD_FILE:?MDB_OPERATOR_PASSWORD_FILE is required}"
 export MDB_OPERATOR_PRIVATE_KEY="$(
@@ -53,7 +58,8 @@ mkdir -p "$(dirname "$evidence")"
 jq -n \
   --arg builtAt "$(date -u +%FT%TZ)" \
   --arg gitSha "$(git rev-parse HEAD)" \
-  --arg rpc "$official_rpc" \
+  --arg serverRpc "$runtime_rpc" \
+  --arg browserRpc "$official_rpc" \
   --arg reownProjectIdHash "$(printf %s "$NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID" | sha256sum | awk '{print $1}')" \
   --argjson publicManifestPresent "$([[ -e "$public_manifest" ]] && echo true || echo false)" \
   '{
@@ -62,8 +68,9 @@ jq -n \
     gitSha: $gitSha,
     networkMode: "testnet",
     chainId: 46630,
-    serverRpc: $rpc,
-    browserRpc: $rpc,
+    serverRpc: $serverRpc,
+    browserRpc: $browserRpc,
+    rpcFailoverValidated: true,
     walletLayer: "wagmi-rainbowkit-reown",
     reownProjectIdHash: $reownProjectIdHash,
     browserBundleChecks: {

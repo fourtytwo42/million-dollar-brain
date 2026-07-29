@@ -7,13 +7,24 @@
 
 Development advances through three network stages without changing protocol behavior:
 
-| Stage                   | Chain ID | RPC                                       | Purpose                                                                           |
-| ----------------------- | -------: | ----------------------------------------- | --------------------------------------------------------------------------------- |
-| Local Anvil             |    31337 | `http://127.0.0.1:8545`                   | Fast development, deterministic integration tests, and destructive test scenarios |
-| Robinhood Chain testnet |    46630 | `https://rpc.testnet.chain.robinhood.com` | Public integration, wallet, explorer, deployment, and keeper validation           |
-| Robinhood Chain mainnet |     4663 | Alchemy primary, QuickNode secondary      | Audited real-value deployment                                                     |
+| Stage                   | Chain ID | RPC                                  | Purpose                                                                           |
+| ----------------------- | -------: | ------------------------------------ | --------------------------------------------------------------------------------- |
+| Local Anvil             |    31337 | `http://127.0.0.1:8545`              | Fast development, deterministic integration tests, and destructive test scenarios |
+| Robinhood Chain testnet |    46630 | LAN primary, remote HTTPS failover   | Public integration, wallet, explorer, deployment, and keeper validation           |
+| Robinhood Chain mainnet |     4663 | Alchemy primary, QuickNode secondary | Audited real-value deployment                                                     |
 
-The public Robinhood Chain testnet RPC is the selected RPC for the public-testnet phase. Mainnet uses dedicated Alchemy RPC and WebSocket endpoints as primary infrastructure and dedicated QuickNode endpoints as secondary infrastructure. The rate-limited public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure.
+Testnet server processes use a loopback failover gateway. Its primary is the
+chain-46630 LAN RPC at `http://192.168.50.117:8547`; its secondary is a
+separately configured remote HTTPS endpoint. The gateway compares chain ID,
+sync state, and block heads every 15 seconds. It changes to the secondary after
+an immediate hard failure or two consecutive samples more than three blocks
+behind, and returns only after four healthy samples within one block. Browser
+wallets continue using `https://rpc.testnet.chain.robinhood.com`, so neither the
+LAN endpoint nor a credential-bearing paid URL enters the browser bundle.
+Ambiguous `eth_sendRawTransaction` failures are returned to the caller and are
+not automatically replayed across upstreams.
+
+Mainnet uses dedicated Alchemy RPC and WebSocket endpoints as primary infrastructure and dedicated QuickNode endpoints as secondary infrastructure. The rate-limited public mainnet RPC is tertiary read-only and incident-diagnostic infrastructure.
 
 Robinhood Chain is an EVM-compatible Arbitrum L2. Contracts are written and tested as standard EVM contracts. ETH is the native gas asset.
 

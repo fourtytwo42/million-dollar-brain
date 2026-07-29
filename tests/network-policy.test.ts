@@ -8,6 +8,7 @@ import {
 } from "../apps/web/lib/network.ts";
 
 const officialTestnetRpc = "https://rpc.testnet.chain.robinhood.com";
+const testnetFailoverRpc = "http://127.0.0.1:18548";
 
 function testnetConfig(
   overrides: Partial<MdbServerNetworkConfig> = {},
@@ -19,7 +20,7 @@ function testnetConfig(
     networkLabel: "Robinhood Testnet",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     browserRpcUrl: officialTestnetRpc,
-    serverRpcUrl: officialTestnetRpc,
+    serverRpcUrl: testnetFailoverRpc,
     explorerUrl: "https://explorer.testnet.chain.robinhood.com",
     confirmations: 3,
     decisionCadenceMinutes: 15,
@@ -34,21 +35,21 @@ function testnetConfig(
   };
 }
 
-test("testnet accepts the official public RPC for server and browser", () => {
+test("testnet uses a loopback failover gateway and a public browser RPC", () => {
   const validated = validateNetworkConfig(testnetConfig());
   assert.equal(validated.chainId, 46630);
-  assert.equal(validated.serverRpcUrl, officialTestnetRpc);
+  assert.equal(validated.serverRpcUrl, testnetFailoverRpc);
   assert.equal(validated.browserRpcUrl, officialTestnetRpc);
   assert.equal(validated.decisionCadenceMinutes, 15);
 });
 
-test("testnet rejects a private server RPC", () => {
+test("testnet rejects bypassing the failover gateway", () => {
   assert.throws(
     () =>
       validateNetworkConfig(
         testnetConfig({ serverRpcUrl: "http://192.168.50.117:8547" }),
       ),
-    /official Robinhood public endpoint/,
+    /loopback failover gateway/,
   );
 });
 
@@ -101,6 +102,36 @@ test("testnet collector retries transient public-RPC failures", () => {
   assert.match(unit, /Restart=on-failure/);
   assert.match(unit, /RestartSec=10/);
   assert.match(unit, /StartLimitBurst=4/);
+});
+
+test("testnet failover compares LAN and remote heads without exposing LAN to browsers", () => {
+  const proxy = readFileSync("scripts/rpc-failover-proxy.mjs", "utf8");
+  const unit = readFileSync(
+    "infrastructure/systemd/mdb-rpc-failover-testnet.service",
+    "utf8",
+  );
+  const manifest = readFileSync("config/networks.json", "utf8");
+  const configurator = readFileSync(
+    "scripts/configure-testnet-rpc-failover.sh",
+    "utf8",
+  );
+  const runtimeHealth = readFileSync("scripts/check-runtime-health.sh", "utf8");
+  const endurance = readFileSync("tests/endurance-testnet.mjs", "utf8");
+  assert.match(proxy, /eth_blockNumber/);
+  assert.match(proxy, /eth_syncing/);
+  assert.match(proxy, /primary behind by/);
+  assert.match(proxy, /isMutatingRpcBody/);
+  assert.match(unit, /EnvironmentFile=\/etc\/mdb\/testnet\.env/);
+  assert.match(configurator, /MDB_RPC_SECONDARY_URL_OVERRIDE/);
+  assert.match(configurator, /MDB_RPC_CHECK_INTERVAL_MS=15000/);
+  assert.match(configurator, /pre-rpc-failover/);
+  assert.match(runtimeHealth, /rpcFailover\.status/);
+  assert.match(endurance, /mdb-rpc-failover-testnet\.service/);
+  assert.match(manifest, /http:\/\/127\.0\.0\.1:18548/);
+  assert.doesNotMatch(
+    testnetConfig().browserRpcUrl,
+    /192\.168\.50\.117|127\.0\.0\.1/,
+  );
 });
 
 test("testnet AI cycle runs every 15 minutes", () => {

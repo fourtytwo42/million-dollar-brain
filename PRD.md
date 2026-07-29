@@ -580,10 +580,17 @@ Failure must not trigger an unapproved provider or model automatically unless th
 ### 10.8 Network environments
 
 - Daily contract and integration development uses local Anvil on chain ID 31337.
-- Robinhood Chain testnet uses chain ID 46630 and the public RPC `https://rpc.testnet.chain.robinhood.com`.
-- Both native server processes and browser wallets use that official public
-  testnet RPC until measured rate limits justify a hosted provider. MDB does
-  not use the shared Robyn LAN node.
+- Robinhood Chain testnet uses chain ID 46630. Server processes use a
+  loopback failover gateway whose primary is the LAN testnet node at
+  `192.168.50.117:8547` and whose secondary is the configured remote HTTPS
+  provider. The gateway checks chain identity, sync state, and both heads every
+  15 seconds; it fails over when the LAN node is unavailable, on the wrong
+  chain, syncing, or more than three blocks behind.
+- Browser wallets always use the public HTTPS Robinhood Testnet RPC. LAN and
+  credential-bearing provider URLs are never exposed to browser bundles.
+- Failback requires four consecutive healthy LAN samples within one block of
+  the remote head. Ambiguous raw-transaction transport failures are never
+  replayed automatically across providers.
 - Robinhood Chain mainnet uses chain ID 4663.
 - The public testnet RPC is acceptable for testnet but must not be the sole mainnet RPC because it is rate-limited and not production-grade.
 - Devnet uses port 3000, `local-v3.json`, `var/devnet`, and

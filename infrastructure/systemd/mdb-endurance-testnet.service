@@ -1,8 +1,8 @@
 [Unit]
 Description=MillionDollar Brain two-hour Robinhood Testnet V3 endurance run
-After=network-online.target mdb-web-testnet.service
+After=network-online.target mdb-rpc-failover-testnet.service mdb-web-testnet.service
 Wants=network-online.target
-Requires=mdb-web-testnet.service
+Requires=mdb-rpc-failover-testnet.service mdb-web-testnet.service
 ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/testnet-v3.json
 ConditionPathExists=/home/hendo420/projects/million-dollar-brain/var/testnet-v3-endurance/armed
 

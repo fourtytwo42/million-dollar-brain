@@ -32,5 +32,6 @@ sudo sed -i \
 sudo sed -i \
   's#/milliondollarbrain_testnet\(_v3\)\?$#/milliondollarbrain_testnet_v3#' \
   "$env_file"
+sudo systemctl restart mdb-rpc-failover-testnet.service
 sudo systemctl restart mdb-web-testnet.service
 echo "V3 testnet web cutover complete; transaction timers remain stopped."

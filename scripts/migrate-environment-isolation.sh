@@ -95,15 +95,17 @@ systemctl daemon-reload
 systemctl stop mdb-web.service mdb-cycle.timer mdb-market-collector.timer mdb-anvil.service
 systemctl disable mdb-web.service mdb-cycle.timer mdb-market-collector.timer mdb-deploy.service 2>/dev/null || true
 systemctl enable mdb-anvil.service mdb-web-devnet.service mdb-cycle-devnet.timer mdb-market-collector-devnet.timer mdb-runtime-health.timer
-systemctl enable mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer
+systemctl enable mdb-rpc-failover-testnet.service mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer
 systemctl disable mdb-web-mainnet.service mdb-cycle-mainnet.timer mdb-market-collector-mainnet.timer 2>/dev/null || true
 systemctl restart mdb-anvil.service
 systemctl restart mdb-web-devnet.service mdb-cycle-devnet.timer mdb-market-collector-devnet.timer mdb-runtime-health.timer
+systemctl restart mdb-rpc-failover-testnet.service
 systemctl restart mdb-web-testnet.service mdb-cycle-testnet.timer mdb-market-collector-testnet.timer
 
 for unit in \
   mdb-anvil.service mdb-web-devnet.service mdb-cycle-devnet.timer \
-  mdb-market-collector-devnet.timer mdb-runtime-health.timer mdb-web-testnet.service \
+  mdb-market-collector-devnet.timer mdb-runtime-health.timer \
+  mdb-rpc-failover-testnet.service mdb-web-testnet.service \
   mdb-cycle-testnet.timer mdb-market-collector-testnet.timer; do
   systemctl is-active --quiet "$unit"
 done

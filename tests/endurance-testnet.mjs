@@ -33,6 +33,7 @@ const services = [
   "mdb-anvil.service",
   "mdb-web-devnet.service",
   "mdb-web-testnet.service",
+  "mdb-rpc-failover-testnet.service",
   "mdb-market-collector-devnet.timer",
   "mdb-market-collector-testnet.timer",
   "mdb-cycle-devnet.timer",

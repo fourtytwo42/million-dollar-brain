@@ -51,10 +51,10 @@ export function validateNetworkConfig(
   }
   if (
     resolved.mode === "testnet" &&
-    resolved.serverRpcUrl !== "https://rpc.testnet.chain.robinhood.com"
+    resolved.serverRpcUrl !== "http://127.0.0.1:18548"
   ) {
     throw new Error(
-      "Testnet server RPC must use the official Robinhood public endpoint",
+      "Testnet server RPC must use the loopback failover gateway",
     );
   }
   if (
@@ -105,7 +105,7 @@ const DEFAULT_MANIFEST: NetworkManifest = {
     networkLabel: "Robinhood Testnet",
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
     browserRpcUrl: "https://rpc.testnet.chain.robinhood.com",
-    serverRpcUrl: "https://rpc.testnet.chain.robinhood.com",
+    serverRpcUrl: "http://127.0.0.1:18548",
     explorerUrl: "https://explorer.testnet.chain.robinhood.com",
     confirmations: 3,
     decisionCadenceMinutes: 15,

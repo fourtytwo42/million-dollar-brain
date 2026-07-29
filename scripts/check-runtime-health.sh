@@ -28,6 +28,14 @@ check_app() {
     failures+=("$environment unexpected queued sale")
   [[ "$(jq -r '.nav | tonumber >= 0' <<<"$response")" == "true" ]] ||
     failures+=("$environment NAV invalid")
+  if [[ "$environment" == "testnet" ]]; then
+    systemctl is-active --quiet mdb-rpc-failover-testnet.service ||
+      failures+=("testnet RPC failover service inactive")
+    [[ "$(jq -r '.rpcFailover.status' <<<"$response")" == "ok" ]] ||
+      failures+=("testnet RPC failover degraded")
+    [[ "$(jq -r '.rpcFailover.expectedChainId' <<<"$response")" == "46630" ]] ||
+      failures+=("testnet RPC chain mismatch")
+  fi
 }
 
 check_app devnet 3000 mdb-web-devnet.service local

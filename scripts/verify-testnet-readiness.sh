@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"
 official_rpc="https://rpc.testnet.chain.robinhood.com"
+runtime_rpc="http://127.0.0.1:18548"
 report="$repo_root/var/testnet-readiness/readiness-report.json"
 export PATH="/home/hendo420/.local/node/bin:/home/hendo420/.foundry/bin:/usr/bin:/bin"
 
@@ -13,11 +14,14 @@ set -a
 source "$env_file"
 set +a
 
-[[ "${MDB_RPC_URL:-}" == "$official_rpc" ]]
+[[ "${MDB_RPC_URL:-}" == "$runtime_rpc" ]]
 [[ "${MDB_BROWSER_RPC_URL:-}" == "$official_rpc" ]]
-[[ "$(cast chain-id --rpc-url "$official_rpc")" == "46630" ]]
+[[ "$(cast chain-id --rpc-url "$runtime_rpc")" == "46630" ]]
+curl --fail --silent "${MDB_RPC_HEALTH_URL:?}" |
+  jq -e '.status == "ok" and .expectedChainId == 46630' >/dev/null
 [[ ! -e "$repo_root/packages/contracts/deployments/testnet.json" ]]
 ! systemctl is-enabled --quiet mdb-web-testnet.service
+! systemctl is-enabled --quiet mdb-rpc-failover-testnet.service
 ! systemctl is-enabled --quiet mdb-cycle-testnet.timer
 ! systemctl is-enabled --quiet mdb-market-collector-testnet.timer
 
@@ -47,6 +51,8 @@ jq -n \
     gitSha: $gitSha,
     chainId: 46630,
     publicRpc: $rpc,
+    serverRpc: "http://127.0.0.1:18548",
+    rpcFailoverValidated: true,
     operatorAddress: $operator,
     publicManifestPresent: false,
     publicBroadcastPerformed: false,

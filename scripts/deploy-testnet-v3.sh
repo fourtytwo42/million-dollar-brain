@@ -4,6 +4,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_TESTNET_ENV_FILE:-/etc/mdb/testnet.env}"
 official_rpc="https://rpc.testnet.chain.robinhood.com"
+runtime_rpc="http://127.0.0.1:18548"
 flat_manifest="$repo_root/packages/contracts/deployments/testnet-v3-flat.json"
 manifest="$repo_root/packages/contracts/deployments/testnet-v3.json"
 minimum_balance_wei="${MDB_TESTNET_V3_MINIMUM_BALANCE_WEI:-8000000000000000}"
@@ -21,9 +22,11 @@ source "$env_file"
 set +a
 
 [[ "${MDB_NETWORK_MODE:-}" == "testnet" ]]
-[[ "${MDB_RPC_URL:-}" == "$official_rpc" ]]
+[[ "${MDB_RPC_URL:-}" == "$runtime_rpc" ]]
 [[ "${MDB_BROWSER_RPC_URL:-}" == "$official_rpc" ]]
-[[ "$(cast chain-id --rpc-url "$official_rpc")" == "46630" ]]
+[[ "$(cast chain-id --rpc-url "$runtime_rpc")" == "46630" ]]
+curl --fail --silent "${MDB_RPC_HEALTH_URL:?}" |
+  jq -e '.status == "ok" and .expectedChainId == 46630' >/dev/null
 [[ ! -e "$flat_manifest" && ! -e "$manifest" ]] || {
   echo "Refusing to overwrite an existing V3 deployment manifest." >&2
   exit 1
@@ -48,7 +51,7 @@ deployer="$(cast wallet address --keystore "$MDB_OPERATOR_KEYSTORE" \
   echo "Configured deployer does not match the encrypted keystore." >&2
   exit 1
 }
-balance="$(cast balance "$deployer" --rpc-url "$official_rpc")"
+balance="$(cast balance "$deployer" --rpc-url "$runtime_rpc")"
 (( balance >= minimum_balance_wei )) || {
   echo "Operator requires at least $minimum_balance_wei wei; current balance is $balance." >&2
   exit 1
@@ -58,7 +61,7 @@ cd "$repo_root/packages/contracts"
 MDB_DEPLOYER_ADDRESS="$deployer" \
 MDB_QUOTE_AUTHORIZER="$deployer" \
   forge script script/DeployTestnetV3.s.sol:DeployTestnetV3 \
-    --rpc-url "$official_rpc" \
+    --rpc-url "$runtime_rpc" \
     --keystore "$MDB_OPERATOR_KEYSTORE" \
     --password-file "$MDB_OPERATOR_PASSWORD_FILE" \
     --broadcast \
@@ -79,7 +82,7 @@ jq -e '
 ' "$manifest" >/dev/null
 
 for address in $(jq -r '.contracts[] as $address | $address, (.assets[].address)' "$manifest" | sort -u); do
-  [[ "$(cast code "$address" --rpc-url "$official_rpc")" != "0x" ]] || {
+  [[ "$(cast code "$address" --rpc-url "$runtime_rpc")" != "0x" ]] || {
     echo "Deployment validation failed: no runtime code at $address" >&2
     exit 1
   }
@@ -87,7 +90,7 @@ done
 
 evidence="$repo_root/var/testnet-readiness/v3-public-deployment.json"
 mkdir -p "$(dirname "$evidence")"
-ending_balance="$(cast balance "$deployer" --rpc-url "$official_rpc")"
+ending_balance="$(cast balance "$deployer" --rpc-url "$runtime_rpc")"
 jq -n \
   --arg deployedAt "$(date -u +%FT%TZ)" \
   --arg gitSha "$head_sha" \
@@ -101,6 +104,8 @@ jq -n \
     gitSha: $gitSha,
     chainId: 46630,
     publicRpc: "https://rpc.testnet.chain.robinhood.com",
+    serverRpc: "http://127.0.0.1:18548",
+    rpcFailoverValidated: true,
     deployer: $deployer,
     manifestHash: $manifestHash,
     productionParityReplicas: true,
