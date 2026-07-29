@@ -60,7 +60,7 @@ oracle="$(jq -er '.oracle' "$manifest")"
 [[ "$(cast call "$basket" 'rebalancesEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$brain" 'marketControlsConfigured()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$brain" 'purchasesEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$registry" 'activeTokens()(address[])' --rpc-url "$rpc" | grep -Eo '0x[0-9a-fA-F]{40}' | wc -l)" == "11" ]]
+[[ "$(cast call "$registry" 'activeTokens()(address[])' --rpc-url "$rpc" | grep -Eo '0x[0-9a-fA-F]{40}' | wc -l)" == "12" ]]
 
 mkdir -p "$(dirname "$evidence")"
 jq -n \
