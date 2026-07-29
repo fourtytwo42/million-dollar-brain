@@ -4,15 +4,13 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Deploy and verify combined one-time braincell profile
-  customization plus admin portrait moderation.
-- Last meaningful change: Implemented one transaction that commits a custom
-  name and portrait hash together, a focused profile editor, display aliases
-  isolated from AI context, and an admin-only canonical portrait reset that
-  does not restore the owner's consumed allowance. Contract tests and the web
-  production build pass.
-- Next step: Commit and push, upgrade the existing devnet and testnet Brain
-  proxies, restart both web runtimes, and complete live browser UAT.
+- Current task: None; combined braincell profile customization and portrait
+  moderation are live and verified.
+- Last meaningful change: Upgraded the existing devnet and valueless testnet
+  Brain proxies, restarted both web runtimes, completed the one-transaction
+  name-and-image flow on devnet, and verified the admin portrait reset preserves
+  the custom name and consumed allowance.
+- Next step: None for this feature.
 - Blockers: Mainnet activation still requires paid redundant RPCs, canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
@@ -725,10 +723,24 @@ When sources conflict, use this order:
   passed 2/2; portrait tests passed 2/2; portfolio-display tests passed 6/6;
   Next.js production build, Prettier, Forge formatting, and storage-layout
   inspection passed.
-- Result: Implementation is ready for proxy upgrade and live UAT.
-- Follow-up: Upgrade devnet and the existing valueless testnet proxy, then
-  verify the modal, one-transaction profile change, display alias, and admin
-  reset in the live app.
+- Result: Commit `4717e01` is pushed. UUPS upgrades completed on chains 31337
+  and 46630. Devnet live UAT bought piece 42, opened the editor from the name,
+  committed `The Alpha Buffet` plus its image in one transaction, showed the
+  alias in the map and inspector, served the hash-keyed image, and disabled
+  further customization. The admin moderation command reset the image to
+  `/brain-art/v4/piece-42.webp` while preserving `The Alpha Buffet` and keeping
+  the allowance consumed. The modal fits a 390-by-844 viewport without
+  horizontal overflow and produced no application console errors. Both status
+  endpoints return HTTP 200. Last verified 2026-07-28.
+- Follow-up: None for this feature. Use
+  `scripts/moderate-brain-portrait.sh <local|testnet> <piece-id>` for a narrowly
+  scoped image reset. Mainnet inherits the implementation only through the
+  normal promotion and canary gates.
+- Operations note: `/etc/mdb/testnet.env` contained one invalid bare-value line
+  that prevented direct upgrade scripts from sourcing the file. It was removed,
+  the remaining entries were validated as assignments, and permissions were
+  restored to `root:hendo420` mode `0640`. No secret value was copied into the
+  repository. Last verified 2026-07-28.
 
 ### 2026-07-27 - Live local valuation and user-facing performance
 
