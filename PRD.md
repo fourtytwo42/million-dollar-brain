@@ -195,7 +195,7 @@ The MVP consists of the following upgradeable components:
 ### 7.1 Basket shares
 
 - The basket share must be a standard transferable ERC-20-compatible share.
-- The token name is `MillionDollar Basket Share`, symbol `MDBS`, with 18 decimals.
+- The token name is `42 Braincells`, symbol `BRAINS`, with 18 decimals.
 - Supply expands when deposits mint shares.
 - Supply contracts when redemptions burn shares.
 - Raw share transfers have no protocol transfer tax.
@@ -593,7 +593,7 @@ optional until configured.
 On local Anvil only, each successful collector pass also synchronizes the mock
 valuation oracle and mock execution router to the same fresh official AAPL,
 NVDA, and Coinbase ETH-USD prices. Both values are verified after mining and
-rolled back together if the paired update cannot complete. This makes local MDBS
+rolled back together if the paired update cannot complete. This makes local BRAINS
 NAV and P&L move with the market without presenting mock prices as production
 oracles. Testnet and mainnet use approved production valuation and execution
 adapters instead.
@@ -811,8 +811,8 @@ Because all contracts are upgradeable, users depend on the upgrade administrator
 The public application must show:
 
 - Basket NAV, supply, reserve, and current holdings as an accessible value-weighted donut chart with a textual legend containing each held asset's exact current percentage, USD value, and latest AI target.
-- Contract-calculated `MDBS NAV price`, 24-hour change, oracle timestamp and freshness, circulating supply, and contract-backed entry/redemption previews.
-- User-facing basket actions are always labelled `Buy MDBS`, `Sell MDBS`, and `Claim rewards`. Deposit, mint, redeem, and burn remain contract and accounting terms only, not primary wallet action labels.
+- Contract-calculated `BRAINS price`, 24-hour change, oracle timestamp and freshness, circulating supply, and contract-backed entry/redemption previews.
+- User-facing basket actions are always labelled `Buy BRAINS`, `Sell BRAINS`, and `Claim rewards`. Deposit, mint, redeem, and burn remain contract and accounting terms only, not primary wallet action labels.
 - Basket trading uses one compact launchpad-style Buy/Sell panel with wallet balance, custom amount, quick presets, an approximate receive quote, one primary action, and collapsed contract-backed details. Buy presets are fixed USDG amounts plus Max; sell presets are 25%, 50%, 75%, and Max.
 - Brain-piece ownership count, claimable brain revenue, fee explanation, and reward claiming appear only beneath the selected-piece inspector on Brain. They are not duplicated in the Basket trading panel.
 - Current AI target weights and drift.
@@ -827,7 +827,7 @@ The public application must show:
 - Current contract implementations and upgrade history.
 - Oracle, keeper, provider, and circuit-breaker status.
 - Clear separation between deposits, withdrawals, fees, and investment performance.
-- Basket presents an MDBS price-history chart, time-weighted returns, total,
+- Basket presents a BRAINS price-history chart, time-weighted returns, total,
   realized, and unrealized P&L, and user cash flows. It does not expose raw
   benchmark warm-up or observation-count diagnostics in the default portfolio
   view.
@@ -863,7 +863,7 @@ The implemented Brain map uses 42 individually generated character-roster-v4 por
 
 ![Decisions dark mode](design/mockups/decisions-screen-v2-editorial-dark.png)
 
-The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, legacy queued-redemption settlement transaction when one exists, V2 input hash, bounded context size, source validity, freshness status, and post-cycle MDBS NAV price when present. New cycles never process a redemption queue. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
+The Decisions screen is an archive rather than a latest-result-only view. It loads the 50 newest recorded cycles in reverse chronological order, selects the newest by default, and lets users inspect any cycle's timestamp, AI or fallback source, brain snapshot, target weights, rationale, execution block, rebalance transaction, legacy queued-redemption settlement transaction when one exists, V2 input hash, bounded context size, source validity, freshness status, and post-cycle BRAINS price when present. New cycles never process a redemption queue. Roster-v4 cycles also persist deterministic Brain Drama with a spokesperson, rival, scapegoat, supporting cast, exact mood and influence facts, fixed dialogue, and a satire disclaimer. This layer uses no additional model call. Users may download a 1200 by 630 recap card, copy the recap, or open prefilled X, Farcaster, and Telegram composers. Historical selection never changes the current basket or brain state, and legacy records receive no invented retroactive dialogue.
 
 ## 15. Security requirements
 
@@ -1000,7 +1000,7 @@ Robinhood Chain deployment does not imply Robinhood approval, listing, sponsorsh
 4. Basket shares are burned.
 5. The fee routes 50% to eligible brain owners, 40% to creator-withdrawable revenue, and 10% to the Automation Reserve.
 6. The proportional underlying sales, share burn, fee routing, and USDG payment all complete in the same transaction.
-7. If any step cannot complete safely, the transaction reverts and the user keeps their MDBS.
+7. If any step cannot complete safely, the transaction reverts and the user keeps their BRAINS.
 
 ### 17.10 Missed or failed AI cycle
 
@@ -1105,8 +1105,8 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - Robinhood Chain uses ETH for gas and standard EVM JSON-RPC compatibility.
 - Basket shares use entry and redemption fees rather than a transfer tax.
 - MVP fees are 1% entry and 1% redemption.
-- The share token is `MillionDollar Basket Share` (`MDBS`) with 18 decimals; the 42-piece NFT is `MillionDollar Brain Pieces` (`MDBP`).
-- Initial MDBS NAV is 1 USDG, creator seed capital is 10,000 USDG, audited-pilot TVL is capped at 100,000 USDG, and the per-wallet deposit cap is 25,000 USDG.
+- The share token is `42 Braincells` (`BRAINS`) with 18 decimals; the 42-piece NFT retains its existing on-chain identity for deployment compatibility.
+- Initial BRAINS NAV is 1 USDG, creator seed capital is 10,000 USDG, audited-pilot TVL is capped at 100,000 USDG, and the per-wallet deposit cap is 25,000 USDG.
 - Basket fees split equally between the Creator DAO Vault and brain owners.
 - Within the creator half of basket fees, 40% of the total fee is creator-withdrawable and 10% of the total fee funds the Automation Reserve.
 - Basket-share transfers, internal rebalances, managed NAV, investment gains,
@@ -1167,10 +1167,10 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - All protocol smart contracts are upgradeable.
 - Before real value, normal upgrades use a 2-of-3 multisig, 48-hour timelock, published upgrade details, and a user exit window; emergency pause cannot install code.
 - Initial brain-piece price equals initial total brain valuation multiplied by piece weight divided by 10,000; there is no price decay or selective per-piece repricing in the MVP.
-- Redemptions are atomic USDG exits at every valid size: the vault proportionally sells underlying assets, burns MDBS, routes the fee, and pays USDG in one transaction.
-- There is no active redemption queue. A halted, stale, illiquid, expired, or out-of-slippage sale reverts completely, leaving MDBS and vault holdings unchanged.
+- Redemptions are atomic USDG exits at every valid size: the vault proportionally sells underlying assets, burns BRAINS, routes the fee, and pays USDG in one transaction.
+- There is no active redemption queue. A halted, stale, illiquid, expired, or out-of-slippage sale reverts completely, leaving BRAINS and vault holdings unchanged.
 - The MVP DAO is a creator-controlled revenue vault with owner withdrawals and no governance.
-- MDBS and MDBP have no governance rights; the MVP contains no voting, proposals, delegation, or quorum.
+- BRAINS and the brain-piece NFT have no governance rights; the MVP contains no voting, proposals, delegation, or quorum.
 - Mainnet compares the LAN primary and Alchemy secondary every 15 seconds and
   fails over for unreachability, wrong-chain responses, active sync lag, or
   excessive head lag. Browser wallets use the official public HTTPS RPC; the

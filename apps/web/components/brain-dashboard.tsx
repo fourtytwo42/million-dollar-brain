@@ -587,7 +587,7 @@ export function BrainDashboard() {
       functionName: "previewDeposit",
       args: [value],
     });
-    setMessage("Approving USDG for your MDBS purchase…");
+    setMessage("Approving USDG for your BRAINS purchase…");
     const approve = await wallet.writeContract({
       address: data.deployment.usdg,
       abi: erc20Abi,
@@ -604,8 +604,8 @@ export function BrainDashboard() {
         : null;
     setMessage(
       quote
-        ? "Buying MDBS and atomically purchasing your share of the basket…"
-        : "Buying MDBS and adding your funds to the basket…",
+        ? "Buying BRAINS and atomically purchasing your share of the basket…"
+        : "Buying BRAINS and adding your funds to the basket…",
     );
     const deadline = BigInt(
       quote?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
@@ -633,7 +633,7 @@ export function BrainDashboard() {
     const refreshed = await refreshAfterConfirmedAction();
     setMessage(
       confirmedActionMessage(
-        `Purchase complete. You bought approximately ${money(preview[2])} MDBS, backed by your proportional share of the basket.`,
+        `Purchase complete. You bought approximately ${money(preview[2])} BRAINS, backed by your proportional share of the basket.`,
         refreshed,
       ),
     );
@@ -796,11 +796,11 @@ export function BrainDashboard() {
     if (!data || BigInt(data.shares) === 0n) return;
     const { wallet, publicClient } = clients();
     const shares = parseUnits(sellAmount || "0", 18);
-    if (!shares) throw new Error("Enter an MDBS amount to sell.");
+    if (!shares) throw new Error("Enter a BRAINS amount to sell.");
     if (shares > BigInt(data.shares)) {
-      throw new Error("You cannot sell more MDBS than you own.");
+      throw new Error("You cannot sell more BRAINS than you own.");
     }
-    setMessage("Selling MDBS for USDG…");
+    setMessage("Selling BRAINS for USDG…");
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
     const preview = await publicClient.readContract({
       address: data.deployment.basket,
@@ -836,7 +836,7 @@ export function BrainDashboard() {
       data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
     setMessage(
       confirmedActionMessage(
-        `Sale complete. You received approximately ${moneyAtDecimals(preview[2], reserveDecimals)} USDG for your MDBS.`,
+        `Sale complete. You received approximately ${moneyAtDecimals(preview[2], reserveDecimals)} USDG for your BRAINS.`,
         refreshed,
       ),
     );
@@ -994,7 +994,7 @@ export function BrainDashboard() {
             </small>
             <div>
               <b>{owned}</b> brain pieces ·{" "}
-              <b>{data ? money(data.shares) : "0"}</b> MDBS
+              <b>{data ? money(data.shares) : "0"}</b> BRAINS
               <br />
               <b>{data ? money(data.rewards.pending) : "0"}</b> USDG brain
               rewards
@@ -1064,7 +1064,7 @@ export function BrainDashboard() {
                   )
                 }
               >
-                Buy MDBS
+                Buy BRAINS
               </button>
             </div>
             <button
@@ -1073,7 +1073,7 @@ export function BrainDashboard() {
                 redeem().catch((e) => setMessage(e.shortMessage ?? e.message))
               }
             >
-              Sell MDBS
+              Sell BRAINS
             </button>
           </article>
           <article className="card agent">

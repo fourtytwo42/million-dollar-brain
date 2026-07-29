@@ -317,7 +317,7 @@ async function buyAndSellMdbs(page, checkpoint) {
   const amount = panel.getByLabel("USDG to spend");
   const spend = String(100 + (checkpoint % 4) * 25);
   await amount.fill(spend);
-  await panel.getByRole("button", { name: "Buy MDBS", exact: true }).click();
+  await panel.getByRole("button", { name: "Buy BRAINS", exact: true }).click();
   await waitForMessage(
     page,
     /Purchase complete\. You bought approximately/,
@@ -326,10 +326,10 @@ async function buyAndSellMdbs(page, checkpoint) {
 
   await panel.getByRole("tab", { name: "Sell", exact: true }).click();
   await panel.getByRole("button", { name: "25%", exact: true }).click();
-  await panel.getByRole("button", { name: "Sell MDBS", exact: true }).click();
+  await panel.getByRole("button", { name: "Sell BRAINS", exact: true }).click();
   await waitForMessage(
     page,
-    /Sale complete\. You received approximately .* USDG for your MDBS\./,
+    /Sale complete\. You received approximately .* USDG for your BRAINS\./,
     90_000,
   );
   return { spendUsdG: spend, soldSharePreset: "25%" };

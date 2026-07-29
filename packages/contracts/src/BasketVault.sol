@@ -202,7 +202,7 @@ contract BasketVault is
         address automationVault_,
         address[] calldata assets_
     ) external initializer {
-        __ERC20_init("MillionDollar Basket Share", "MDBS");
+        __ERC20_init("42 Braincells", "BRAINS");
         __AccessControl_init();
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
@@ -222,6 +222,14 @@ contract BasketVault is
             supportedAsset[assets_[i]] = true;
             assets.push(assets_[i]);
         }
+    }
+
+    function name() public pure override returns (string memory) {
+        return "42 Braincells";
+    }
+
+    function symbol() public pure override returns (string memory) {
+        return "BRAINS";
     }
 
     function reinitializeV2(

@@ -4,12 +4,12 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Braincell Controls Experience v4 is implemented and accepted
-  on devnet as a playful but understandable dashboard over the unchanged
-  Control Catalog v1 bundle.
-- Last meaningful change: Memorable labels and qualitative omens remain, but
-  every choice once again explains its direction or consequence in plain
-  language without exposing percentages, durations, dollar depths, or counts.
+- Current task: The basket share is rebranded and accepted on devnet as
+  `42 Braincells` with symbol `BRAINS`.
+- Last meaningful change: The devnet BasketVault implementation now reports the
+  new ERC-20 name and symbol without changing balances or storage. The global
+  header and Basket screen use a generated transparent BRAINS mascot and the
+  new product language throughout.
 - Next step: Promote this exact clean pushed candidate through the established
   testnet release pipeline only when testnet promotion is explicitly requested.
 - Blockers: Permanent mainnet failover still requires its Alchemy endpoint.
@@ -21,6 +21,9 @@ Durable project context lives here. Update this file whenever information should
 ## Current State
 
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
+- The basket share token's canonical product identity is `42 Braincells`
+  (`BRAINS`). Internal legacy field names may remain for compatibility, but
+  user-facing copy and new contract metadata use BRAINS.
 - The authoritative VM repository contains a working local Anvil release with upgradeable contracts, a Next.js application, session-scoped disposable and external wallet support, a five-minute eligibility scheduler, Ornith allocator, systemd services, and Playwright Chromium UAT.
 - A parallel valueless mock deployment is live on Robinhood Testnet chain
   `46630`. The testnet app runs on port `3001` while local Anvil remains on
@@ -44,6 +47,34 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - BRAINS basket-share rebrand
+
+- Context: The user retired the MillionDollar Basket Share identity and chose
+  the token name `42 Braincells` with symbol `BRAINS`.
+- Decision: Preserve the existing BasketVault proxy and storage while
+  overriding ERC-20 metadata in the implementation. Use a purpose-built,
+  transparent mascot in the global price pill and Basket hero; replace MDBS
+  wording with BRAINS across active application copy and normative docs.
+- Files: `packages/contracts/src/BasketVault.sol`,
+  `packages/contracts/test/BasketBrain.t.sol`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/components/brain-dashboard.tsx`,
+  `apps/web/app/globals.css`, `apps/web/public/token/`,
+  `tests/uat.mjs`, `tests/endurance-testnet.mjs`, `PRD.md`,
+  `BUILD_READINESS.md`, `UX_SCREENS.md`, `README.md`.
+- Commands/tests: 35/35 Foundry tests; storage-layout inspection; portfolio
+  display 6/6; control experience 4/4; production Next.js build; complete
+  Chromium economic/autonomous UAT; in-app Browser desktop, tablet, mobile,
+  light, and dark review with no horizontal overflow or console errors.
+- Result: Devnet proxy `0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f`
+  upgraded in transaction
+  `0xccb5f397fb5f7969d5e026a2e669d5f88d5f2159b02edcd43f366ec9fabbde67`
+  to implementation `0xd22a7f4672a38e2b955f914a5c62be6f056fe731`.
+  Supply remained exactly `8201263061803647320397`. The 768px mascot and
+  384px icon have transparent corners and are self-hosted WebP assets.
+- Follow-up: Testnet was intentionally not changed. Promote only through the
+  established exact-commit release pipeline when explicitly requested.
 
 ### 2026-07-29 - Braincell Controls Experience v2 devnet acceptance
 

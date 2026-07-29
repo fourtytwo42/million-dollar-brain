@@ -481,7 +481,7 @@ try {
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page
     .getByText(
-      "Buy MDBS with USDG to own a proportional share of the basket. Sell MDBS to receive USDG based on the basket's live value.",
+      "Buy BRAINS with USDG to own a proportional share of the portfolio. Sell BRAINS to receive USDG based on the basket's live value.",
       { exact: true },
     )
     .waitFor();
@@ -514,7 +514,7 @@ try {
   }
   assert.ok(
     BigInt(basketStatus.navPerShare) > 0n,
-    "the contract must expose a positive fixed-point MDBS NAV price",
+    "the contract must expose a positive fixed-point BRAINS price",
   );
   assert.ok(
     BigInt(basketStatus.walletUsdg) >= 0n,
@@ -537,7 +537,7 @@ try {
   );
   assert.ok(
     basketStatus.performanceHistory.length > 0,
-    "the status API must expose persisted MDBS price history",
+    "the status API must expose persisted BRAINS price history",
   );
   assert.notEqual(
     BigInt(basketStatus.portfolioAccounting.totalPnlUsdWad),
@@ -577,7 +577,7 @@ try {
     "the previous holdings bar table must not remain",
   );
   await page
-    .getByRole("region", { name: "MDBS portfolio performance" })
+    .getByRole("region", { name: "BRAINS portfolio performance" })
     .waitFor();
   await page.getByText("Portfolio gain / loss", { exact: true }).waitFor();
   assert.equal(
@@ -618,7 +618,7 @@ try {
   const amount = page.getByLabel("USDG to spend");
   await amount.fill("1000");
   await page
-    .getByRole("button", { name: "Buy MDBS", exact: true })
+    .getByRole("button", { name: "Buy BRAINS", exact: true })
     .last()
     .click();
   await page
@@ -628,7 +628,7 @@ try {
 
   await amount.fill("100");
   await page
-    .getByRole("button", { name: "Buy MDBS", exact: true })
+    .getByRole("button", { name: "Buy BRAINS", exact: true })
     .last()
     .click();
   await page
@@ -757,9 +757,18 @@ try {
     "every returned historical cycle must be selectable",
   );
   const historyDetail = page.getByTestId("decision-history-detail");
-  await historyItems.nth(0).click();
+  const executedCycleIndex = historyStatus.cycleHistory.findIndex(
+    (cycle) => typeof cycle.txHash === "string" && cycle.txHash.length > 0,
+  );
+  assert.ok(
+    executedCycleIndex >= 0,
+    "decision archive must retain at least one executed cycle",
+  );
+  await historyItems.nth(executedCycleIndex).click();
   await historyDetail
-    .getByText(historyStatus.cycleHistory[0].txHash, { exact: true })
+    .getByText(historyStatus.cycleHistory[executedCycleIndex].txHash, {
+      exact: true,
+    })
     .waitFor();
   const renderedDecisionSymbols = async () =>
     page
@@ -875,12 +884,12 @@ try {
   await page.getByRole("tab", { name: "Sell", exact: true }).click();
   await page.getByRole("button", { name: "50%", exact: true }).click();
   await page
-    .getByRole("button", { name: "Sell MDBS", exact: true })
+    .getByRole("button", { name: "Sell BRAINS", exact: true })
     .last()
     .click();
   await page
     .getByText(
-      /Sale complete\. You received approximately .* USDG for your MDBS\./,
+      /Sale complete\. You received approximately .* USDG for your BRAINS\./,
     )
     .first()
     .waitFor({ timeout: 45000 });
@@ -918,7 +927,7 @@ try {
     .getByRole("heading", { name: "Returns separated from cash flows." })
     .waitFor();
   await page
-    .getByRole("region", { name: "MDBS portfolio performance" })
+    .getByRole("region", { name: "BRAINS portfolio performance" })
     .waitFor();
   await page.getByRole("tab", { name: "Sell", exact: true }).click();
   await page.getByText("View quote details", { exact: true }).last().click();
@@ -934,7 +943,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: Control Catalog v1 ownership and atomic bundle updates, DecisionContext V5 evidence, official market collection, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live MDBS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
+    "UAT PASS: Control Catalog v1 ownership and atomic bundle updates, DecisionContext V5 evidence, official market collection, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live BRAINS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

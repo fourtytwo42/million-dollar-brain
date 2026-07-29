@@ -49,8 +49,8 @@ External legal findings, audit findings, live contract addresses, signer address
 | Item                                       | Locked value               |
 | ------------------------------------------ | -------------------------- |
 | Product                                    | MillionDollar Brain        |
-| Basket share name                          | MillionDollar Basket Share |
-| Basket share symbol                        | `MDBS`                     |
+| Basket share name                          | 42 Braincells              |
+| Basket share symbol                        | `BRAINS`                   |
 | Basket share decimals                      | 18                         |
 | Brain NFT name                             | MillionDollar Brain Pieces |
 | Brain NFT symbol                           | `MDBP`                     |
@@ -59,13 +59,13 @@ External legal findings, audit findings, live contract addresses, signer address
 | Native gas asset                           | ETH                        |
 | Additional fungible governance token       | None                       |
 
-`MDBS` is a custom ERC-20-compatible share in a multi-asset vault. It is not marketed or implemented as an ERC-4626 vault.
+`BRAINS` is a custom ERC-20-compatible share in a multi-asset vault. It is not marketed or implemented as an ERC-4626 vault.
 
 ## 3. Launch economics
 
 | Parameter                            |               Locked MVP value |
 | ------------------------------------ | -----------------------------: |
-| Initial MDBS NAV                     |                  1.000000 USDG |
+| Initial BRAINS NAV                   |                  1.000000 USDG |
 | Creator seed deposit                 |                    10,000 USDG |
 | Minimum deposit                      |                        10 USDG |
 | Minimum redemption request           |       10 USDG of estimated NAV |
@@ -121,10 +121,10 @@ Rewards never expire. Ownership changes checkpoint rewards before settlement. Se
 ### Redemption
 
 - Every sale liquidates the holder's proportional claim, charges the acting
-  holder's fee, burns MDBS, and returns USDG in one transaction.
+  holder's fee, burns BRAINS, and returns USDG in one transaction.
 - The user supplies minimum proceeds and a deadline.
 - If any required sale cannot satisfy freshness, halt, liquidity, or slippage
-  rules, the entire transaction reverts and the user retains MDBS.
+  rules, the entire transaction reverts and the user retains BRAINS.
 - New queued sales and queue processing are permanently disabled. Legacy
   cancellation storage exists only for upgrade compatibility.
 - Stock Tokens are not distributed in kind.
@@ -257,7 +257,7 @@ Local Anvil and early testnet may use development EOAs. Before real value:
 
 ## 12. Governance
 
-There is no token voting, proposal system, delegation, quorum, or protocol governance in the MVP. Neither MDBS nor MDBP is a governance token.
+There is no token voting, proposal system, delegation, quorum, or protocol governance in the MVP. Neither BRAINS nor the brain-piece NFT is a governance token.
 
 Future governance is outside the MVP and requires a new PRD revision rather than a latent implementation hook beyond normal upgradeability.
 

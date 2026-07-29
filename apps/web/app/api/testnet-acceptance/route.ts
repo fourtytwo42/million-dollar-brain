@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
       const sellDivisors = [10n, 4n, 2n];
       const sellShares =
         ownedShares / sellDivisors[scenario % sellDivisors.length];
-      if (sellShares === 0n) throw new Error("buy did not mint MDBS");
+      if (sellShares === 0n) throw new Error("buy did not mint BRAINS");
       const redeemPreview = await publicClient.readContract({
         address: d.basket,
         abi: basketAbi,

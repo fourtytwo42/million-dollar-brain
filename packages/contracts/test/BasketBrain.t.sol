@@ -142,6 +142,11 @@ contract BasketBrainTest is Test {
         vm.stopPrank();
     }
 
+    function testBasketShareUses42BraincellsIdentity() public view {
+        assertEq(basket.name(), "42 Braincells");
+        assertEq(basket.symbol(), "BRAINS");
+    }
+
     function testDepositRebalanceAndRedeem() public {
         uint256 creatorBefore = usdg.balanceOf(address(creatorVault));
         vm.startPrank(alice);

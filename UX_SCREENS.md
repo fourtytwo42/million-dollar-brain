@@ -55,7 +55,7 @@ Opening the wallet menu shows the Account drawer:
 - Brain pieces owned.
 - Claimable brain rewards.
 - Pending transactions.
-- Buy MDBS, Sell MDBS, and Claim rewards actions. Deposit and redeem terminology is reserved for technical contract detail, not primary user controls.
+- Buy BRAINS, Sell BRAINS, and Claim rewards actions. Deposit and redeem terminology is reserved for technical contract detail, not primary user controls.
 - Network and wallet controls.
 - Personal transaction history.
 
@@ -136,7 +136,7 @@ The brain itself is the NFT marketplace. There is no separate marketplace page.
 - Change the selected cell's control bundle when owned.
 - Claim brain-owner rewards.
 
-MDBS trading, holdings, and allocation detail belong on Basket and are not duplicated on Brain. Brain-piece finances remain on Brain beneath the selected-piece inspector:
+BRAINS trading, holdings, and allocation detail belong on Basket and are not duplicated on Brain. Brain-piece finances remain on Brain beneath the selected-piece inspector:
 
 - Number of pieces owned.
 - Total claimable brain-owner rewards.
@@ -221,14 +221,14 @@ This combines the previous Portfolio and My Account screens.
 - Total basket NAV.
 - Share price.
 - Connected wallet's shares and value, when connected.
-- Buy MDBS and Sell MDBS shortcuts that select and scroll to the matching trade tab without submitting a transaction.
+- Buy BRAINS and Sell BRAINS shortcuts that select and scroll to the matching trade tab without submitting a transaction.
 
 ### Overview section
 
 - Current allocation chart.
 - Ornith target allocation.
 - Stable reserve and required minimum.
-- MDBS NAV-price history with one-hour, 24-hour, seven-day, and since-activation
+- BRAINS price history with one-hour, 24-hour, seven-day, and since-activation
   time-weighted returns as each window becomes available.
 - Total, realized, and unrealized basket P&L.
 - User buys and sells shown separately from investment results.
@@ -263,7 +263,7 @@ When connected:
 - Current sell estimate.
 - Average entry value where available.
 - Personal realized and unrealized result.
-- MDBS buy and sell history.
+- BRAINS buy and sell history.
 
 Brain-piece ownership and rewards are intentionally excluded and remain on Brain.
 
@@ -296,15 +296,15 @@ With no shares:
 - Plain-language reason it is held, not held, increased, or reduced.
 - Recent basket trades involving the asset.
 
-## 7. Buy MDBS panel
+## 7. Buy BRAINS panel
 
 **Available on:** Basket
 
 - USDG wallet balance.
 - Buy/Sell segmented control.
 - Custom USDG amount plus 100, 500, 1,000, and Max presets.
-- Compact approximate MDBS received.
-- One `Buy MDBS` action.
+- Compact approximate BRAINS received.
+- One `Buy BRAINS` action.
 - Collapsed quote details containing current NAV per share, 1% buy fee, net basket contribution, proportional underlying purchases, minimum-shares protection, and freshness.
 
 States:
@@ -315,16 +315,16 @@ States:
 - Confirmed.
 - Failed with a specific recovery action.
 
-## 8. Sell MDBS panel
+## 8. Sell BRAINS panel
 
 **Available on:** Basket
 
-- MDBS wallet balance.
+- BRAINS wallet balance.
 - Custom share amount plus 25%, 50%, 75%, and Max presets.
 - Compact approximate USDG received.
-- One `Sell MDBS` action.
+- One `Sell BRAINS` action.
 - Collapsed quote details containing gross NAV value, 1% sell fee, estimated net proceeds, atomic settlement, minimum-proceeds protection, and freshness.
-- The form explains that all proportional underlying sales, the MDBS burn, and the USDG payment either succeed together or leave the user and vault unchanged.
+- The form explains that all proportional underlying sales, the BRAINS burn, and the USDG payment either succeed together or leave the user and vault unchanged.
 
 The interface must show a specific failure when fresh pricing, trading availability, liquidity, deadline, or slippage protections prevent atomic settlement.
 
@@ -519,7 +519,7 @@ flow or pushing the Brain, Basket, or Decisions content down. The compact
 desktop panel sits beside the product and becomes a mobile bottom sheet. It
 shows one focused concept at a time while exposing all four steps:
 
-1. Own the basket by depositing USDG for redeemable MDBS.
+1. Own the basket by buying redeemable BRAINS with USDG.
 2. Steer preferences, bounded asset directives, timing, and optional evidence
    attention through the 42 braincells' closed controls.
 3. Let the constrained AI propose target weights on the next eligible bounded
@@ -527,7 +527,7 @@ shows one focused concept at a time while exposing all four steps:
 4. Let deterministic contracts enforce the allowlist, reserve, and limits
    before execution.
 
-The optional collapsed glossary defines MDBS, brain piece, mood, influence, and
+The optional collapsed glossary defines BRAINS, brain piece, mood, influence, and
 NAV without making the panel taller by default. Dismissing the tour persists on
 that device, while the header action always reopens it. Brain, Basket, and
 Decisions each retain a one-sentence purpose statement so users do not lose the

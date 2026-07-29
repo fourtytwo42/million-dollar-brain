@@ -797,6 +797,13 @@ footer {
   color: var(--primary);
   letter-spacing: 0.13em;
 }
+.share-price > img {
+  width: 27px;
+  height: 27px;
+  margin: -3px 0 -3px -6px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--text) 28%, transparent));
+}
 .share-price > b {
   color: var(--text);
   font-size: 14px;
@@ -1493,6 +1500,49 @@ footer {
 }
 .page-title-row h1 {
   margin: 0;
+}
+.basket-title-row {
+  align-items: center;
+}
+.basket-token-intro {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 20px;
+}
+.basket-token-art {
+  position: relative;
+  flex: 0 0 138px;
+  width: 138px;
+  height: 124px;
+}
+.basket-token-art::before {
+  content: "";
+  position: absolute;
+  inset: 19% 5% 3%;
+  border: 1px solid color-mix(in srgb, var(--primary) 36%, var(--border));
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle at 48% 42%,
+      color-mix(in srgb, var(--warning) 18%, var(--surface)) 0 32%,
+      transparent 68%
+    ),
+    color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+.basket-token-art img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(
+    0 6px 5px color-mix(in srgb, var(--text) 18%, transparent)
+  );
+}
+.basket-title-row h1 {
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 0.95;
 }
 .page-explainer {
   max-width: 760px;
@@ -3907,6 +3957,18 @@ footer {
     align-items: flex-start;
     gap: 15px;
     flex-direction: column;
+  }
+  .basket-token-intro {
+    align-items: center;
+    gap: 12px;
+  }
+  .basket-token-art {
+    flex-basis: 92px;
+    width: 92px;
+    height: 92px;
+  }
+  .basket-title-row h1 {
+    font-size: 34px;
   }
   .editorial-footer {
     flex-direction: column;

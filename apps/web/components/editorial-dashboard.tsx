@@ -799,9 +799,14 @@ export function EditorialDashboard({
         <div className="market-strip">
           <span
             className="share-price"
-            aria-label={`MDBS $${data ? usd(data.navPerShare) : "1.00"}`}
+            aria-label={`BRAINS $${data ? usd(data.navPerShare) : "1.00"}`}
           >
-            <span>MDBS</span>
+            <img
+              src="/token/42-braincells-icon.webp"
+              alt=""
+              aria-hidden="true"
+            />
+            <span>BRAINS</span>
             <b>${data ? usd(data.navPerShare) : "1.00"}</b>
           </span>
           <span className="market-next-decision">
@@ -1624,8 +1629,8 @@ export function EditorialDashboard({
                     </span>
                   </div>
                   <p>
-                    Brain-piece owners share the brain side of MDBS buy and sell
-                    fees. Rewards accrue until you claim them.
+                    Brain-piece owners share the brain side of BRAINS buy and
+                    sell fees. Rewards accrue until you claim them.
                   </p>
                   <button
                     className="primary-action full-button"
@@ -1648,16 +1653,22 @@ export function EditorialDashboard({
 
       {screen === "Basket" && (
         <div className="editorial-page">
-          <section className="page-title-row">
-            <div>
-              <p className="section-kicker">BASKET LEDGER</p>
-              <h1>The portfolio, without the mystery.</h1>
-              <p className="page-explainer">
-                Buy MDBS with USDG to own a proportional share of the basket.
-                Sell MDBS to receive USDG based on the basket&apos;s live value.
-                {network?.mode === "testnet" &&
-                  " Testnet uses clearly labelled production-interface replicas priced from official mainnet market data."}
-              </p>
+          <section className="page-title-row basket-title-row">
+            <div className="basket-token-intro">
+              <div className="basket-token-art" aria-hidden="true">
+                <img src="/token/42-braincells-token.webp" alt="" />
+              </div>
+              <div>
+                <p className="section-kicker">THE BASKET TOKEN · BRAINS</p>
+                <h1>42 Braincells</h1>
+                <p className="page-explainer">
+                  Buy BRAINS with USDG to own a proportional share of the
+                  portfolio. Sell BRAINS to receive USDG based on the
+                  basket&apos;s live value.
+                  {network?.mode === "testnet" &&
+                    " Testnet uses clearly labelled production-interface replicas priced from official mainnet market data."}
+                </p>
+              </div>
             </div>
             <div className="title-actions">
               <button
@@ -1669,7 +1680,7 @@ export function EditorialDashboard({
                     ?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
-                Buy MDBS
+                Buy BRAINS
               </button>
               <button
                 onClick={() => {
@@ -1679,7 +1690,7 @@ export function EditorialDashboard({
                     ?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
-                Sell MDBS
+                Sell BRAINS
               </button>
             </div>
           </section>
@@ -1687,7 +1698,7 @@ export function EditorialDashboard({
             <article className="large-ledger-card">
               <div className="snapshot-metrics nav-metrics">
                 <Metric
-                  label="MDBS NAV price"
+                  label="BRAINS price"
                   value={`$${data ? usd(data.navPerShare) : "—"}`}
                 />
                 <Metric
@@ -1703,7 +1714,7 @@ export function EditorialDashboard({
                   value={`$${data ? usd(data.nav) : "—"}`}
                 />
                 <Metric
-                  label="Circulating MDBS"
+                  label="Circulating BRAINS"
                   value={data ? money(data.supply) : "—"}
                 />
                 <Metric
@@ -1794,7 +1805,7 @@ export function EditorialDashboard({
             <aside
               className="transaction-card launchpad-trade"
               id="basket-trade"
-              aria-label="Buy or sell MDBS"
+              aria-label="Buy or sell BRAINS"
             >
               <div
                 className="trade-side-tabs"
@@ -1828,7 +1839,7 @@ export function EditorialDashboard({
                       ? reserveMoney(data.walletUsdg)
                       : money(data.shares)
                     : "0"}{" "}
-                  {tradeSide === "buy" ? "USDG" : "MDBS"}
+                  {tradeSide === "buy" ? "USDG" : "BRAINS"}
                 </strong>
               </div>
 
@@ -1872,7 +1883,7 @@ export function EditorialDashboard({
                     <div className="compact-quote">
                       <span>YOU RECEIVE APPROXIMATELY</span>
                       <strong>
-                        {money(data.previews.deposit.expectedShares)} MDBS
+                        {money(data.previews.deposit.expectedShares)} BRAINS
                       </strong>
                       <details key="buy-quote-details">
                         <summary>View quote details</summary>
@@ -1882,7 +1893,7 @@ export function EditorialDashboard({
                           enters the basket
                         </p>
                         <p>
-                          MDBS NAV price ${usd(data.navPerShare)} · minimum
+                          BRAINS price ${usd(data.navPerShare)} · minimum
                           received is 99% of this quote
                         </p>
                         <b>Your USDG buys</b>
@@ -1913,19 +1924,19 @@ export function EditorialDashboard({
                     }
                     onClick={onDeposit}
                   >
-                    Buy MDBS
+                    Buy BRAINS
                   </button>
                 </>
               ) : (
                 <>
                   <label className="trade-amount-box">
                     <input
-                      aria-label="MDBS to sell"
+                      aria-label="BRAINS to sell"
                       inputMode="decimal"
                       value={sellAmount}
                       onChange={(event) => setSellAmount(event.target.value)}
                     />
-                    <b>MDBS</b>
+                    <b>BRAINS</b>
                   </label>
                   <div
                     className="quick-trade-presets"
@@ -1950,7 +1961,7 @@ export function EditorialDashboard({
                       <details key="sell-quote-details">
                         <summary>View quote details</summary>
                         <p>
-                          You sell {money(data.previews.redeem.shares)} MDBS ·
+                          You sell {money(data.previews.redeem.shares)} BRAINS ·
                           current value $
                           {reserveMoney(data.previews.redeem.gross)}
                         </p>
@@ -1976,7 +1987,7 @@ export function EditorialDashboard({
                     }
                     onClick={onRedeem}
                   >
-                    Sell MDBS
+                    Sell BRAINS
                   </button>
                 </>
               )}
@@ -1987,7 +1998,7 @@ export function EditorialDashboard({
           {data && (
             <section
               className="portfolio-performance"
-              aria-label="MDBS portfolio performance"
+              aria-label="BRAINS portfolio performance"
             >
               <div className="performance-heading">
                 <div>
@@ -2004,7 +2015,7 @@ export function EditorialDashboard({
                 <article className="nav-history-chart">
                   <div>
                     <div>
-                      <b>MDBS performance</b>
+                      <b>BRAINS performance</b>
                       <strong>${data ? usd(data.navPerShare) : "—"}</strong>
                     </div>
                     <small>{navSeries.length} live price observations</small>
@@ -2012,7 +2023,7 @@ export function EditorialDashboard({
                   <svg
                     viewBox="0 0 100 52"
                     role="img"
-                    aria-label={`MDBS performance history. Current price $${usd(data.navPerShare)}. All-time return ${percentBps(allTimeReturnBps)}.`}
+                    aria-label={`BRAINS performance history. Current price $${usd(data.navPerShare)}. All-time return ${percentBps(allTimeReturnBps)}.`}
                     preserveAspectRatio="none"
                   >
                     <polyline points={navPoints} />
@@ -2263,7 +2274,7 @@ export function EditorialDashboard({
                       </b>
                     </div>
                     <div>
-                      <span>MDBS NAV price</span>
+                      <span>BRAINS price</span>
                       <b>
                         $
                         {selectedCycle.portfolioAfter
@@ -2283,7 +2294,7 @@ export function EditorialDashboard({
                       </b>
                     </div>
                   </section>
-                  {selectedCycle.schemaVersion === 3 && (
+                  {(selectedCycle.schemaVersion ?? 0) >= 3 && (
                     <details className="decision-data-details">
                       <summary>Data behind this decision</summary>
                       <div>
@@ -2470,7 +2481,7 @@ export function EditorialDashboard({
                   </div>
                   {selectedCycle?.redemptionTxHash && (
                     <div className="execution-record">
-                      <b>Legacy queued MDBS sale settlement</b>
+                      <b>Legacy queued BRAINS sale settlement</b>
                       <code>{selectedCycle.redemptionTxHash}</code>
                     </div>
                   )}
@@ -2628,7 +2639,7 @@ function HowItWorks({
       eyebrow: "01 · OWN",
       actor: "You",
       title: "Own a share of the basket",
-      copy: "Buy MDBS with USDG. Each MDBS token represents your share of the entire portfolio. Sell MDBS whenever you want to exit.",
+      copy: "Buy BRAINS with USDG. Each BRAINS token represents your share of the entire portfolio. Sell BRAINS whenever you want to exit.",
       action: "See the basket",
       destination: "Basket" as const,
     },
@@ -2737,7 +2748,7 @@ function HowItWorks({
         <summary>Plain-language glossary</summary>
         <div>
           <span>
-            <b>MDBS</b> your basket shares
+            <b>BRAINS</b> your basket shares
           </span>
           <span>
             <b>Brain piece</b> a steering NFT
