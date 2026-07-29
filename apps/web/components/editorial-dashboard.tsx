@@ -1395,11 +1395,6 @@ export function EditorialDashboard({
                         </dd>
                       </div>
                     </dl>
-                    <p className="control-safety-note">
-                      The dashboard is vague. The guardrails are not. Pricing,
-                      holdings, liquidity, execution, and accounting checks
-                      remain mandatory underneath the clown car.
-                    </p>
                     {!!controlPreview.compiled.conflicts.length && (
                       <div className="control-conflicts">
                         <b>Who won the argument</b>

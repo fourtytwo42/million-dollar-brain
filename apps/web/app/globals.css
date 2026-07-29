@@ -3144,13 +3144,6 @@ footer {
     "DM Mono",
     monospace;
 }
-.control-safety-note {
-  padding: 10px;
-  border-left: 3px solid var(--positive);
-  background: color-mix(in srgb, var(--positive) 7%, var(--surface));
-  font-size: 10px;
-  line-height: 1.45;
-}
 .control-conflicts,
 .control-errors {
   display: grid;
