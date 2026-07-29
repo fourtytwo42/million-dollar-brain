@@ -57,7 +57,27 @@ try {
     await dialog.getByText(/Desk status|Preferred sleeve|Desk lens/).count(),
     0,
   );
-  assert.ok(await dialog.getByText("The braincell decree").isVisible());
+  assert.ok(
+    await dialog.getByText("What the machine thinks you said").isVisible(),
+  );
+  const literalMachineValues = await dialog
+    .locator("button b, .control-chips button, output")
+    .allTextContents();
+  assert.equal(
+    literalMachineValues.some((text) =>
+      /\$|%|\+\d|\b\d+(?:m|h|d)\b|\btop \d+\b/i.test(text),
+    ),
+    false,
+    "owner-facing controls hide literal machine values",
+  );
+  const firstChoice = dialog.locator(".control-segments button").first();
+  if (await firstChoice.count()) {
+    await firstChoice.click();
+    assert.ok(
+      await dialog.locator(".control-dashboard-reaction").isVisible(),
+      "the clown-car dashboard reacts to a control",
+    );
+  }
 
   for (const viewport of [
     { name: "desktop", width: 1440, height: 900 },

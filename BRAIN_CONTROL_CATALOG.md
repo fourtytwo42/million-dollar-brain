@@ -1,8 +1,8 @@
 # 42 Braincells Control Catalog
 
-**Version:** 1.1
+**Version:** 1.2
 
-**Status:** Control Catalog v1 is deployed; Braincell Controls Experience v2 is active on devnet
+**Status:** Control Catalog v1 is deployed; Braincell Controls Experience v3 is active on devnet
 
 **Pieces:** 42
 
@@ -10,30 +10,37 @@
 
 **Preserves:** NFT IDs, affinities, influence weights, ownership, pricing, rewards, and profile customization
 
-## Braincell Controls Experience v2
+## Braincell Controls Experience v3
 
 The packed Control Catalog v1 contract schema remains the stable on-chain
-format. Experience v2 is the owner-facing interpretation of that schema:
+format. Experience v3 is the owner-facing interpretation of that schema:
 
 - Every braincell exposes two or three character-specific levers. A tagged
   sector cell may also expose one qualified-asset picker.
 - A choice shows no more than four meaningful options. Low-level institutional
   labels such as `Desk status`, `Preferred sleeve`, and `Desk lens` are never
   presented to users.
-- Each option pairs meme copy with a plain-English allocator effect.
+- Exact percentages, time windows, dollar depths, position counts, and research
+  limits stay under the hood. Owners see character-specific metaphors such as
+  `Bird sees time`, `Airport hangar`, or `The corkboard has become self-aware`.
+- Option descriptions are intentionally unreliable dashboard reactions, not
+  technical disclosures. A control may look like a turn signal and respond
+  with a honk. The compiled contract value remains exact and deterministic.
+- The preview uses qualitative dashboard omens instead of literal compiler
+  numbers. Safety validation and historical evidence retain the exact values.
 - Opening the editor prepares a normalized bundle. When the owner confirms,
   retired hidden knobs return to their canonical safe defaults, so invisible
   legacy choices cannot continue steering the allocator.
 - Sector pieces select one chosen asset rather than three favorites plus a
-  separate champion. Direct orders are limited to no order, prefer, reduce, or
-  exit.
+  separate champion. The four vague dashboard positions still map
+  deterministically to no order, prefer, reduce, or exit.
 - Every proposed and confirmed bundle renders a deterministic, copyable
   `braincell decree`. It is entertainment and steering commentary; its factual
   settings remain derived from the exact on-chain bundle.
 
-Experience v2 does not change contract addresses, packed storage, NFT state,
+Experience v3 does not change contract addresses, packed storage, NFT state,
 economics, eligibility rules, or safety precedence. It is versioned separately
-as `BRAIN_CONTROL_EXPERIENCE_VERSION = 2`.
+as `BRAIN_CONTROL_EXPERIENCE_VERSION = 3`.
 
 ## 1. Product rule
 

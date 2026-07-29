@@ -6,7 +6,7 @@ import {
   type ControlOption,
 } from "./brain-controls.ts";
 
-export const BRAIN_CONTROL_EXPERIENCE_VERSION = 2;
+export const BRAIN_CONTROL_EXPERIENCE_VERSION = 3;
 
 export type BrainExperienceControl = BrainControlDefinition & {
   rawIndex: number;
@@ -56,7 +56,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
           "No helmet",
         ],
       },
-      { rawIndex: 2, label: "How much pain before HR gets involved?" },
+      { rawIndex: 2, label: "When does HR unplug the machine?" },
     ],
   ),
   e(
@@ -69,7 +69,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
         label: "Which head gets the keyboard?",
         optionLabels: ["The suit", "Shared custody", "The hoodie"],
       },
-      { rawIndex: 1, label: "How much crypto is allowed indoors?" },
+      { rawIndex: 1, label: "How wet may the hoodie get?" },
       {
         rawIndex: 3,
         label: "Who is banned from the meeting?",
@@ -82,8 +82,8 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "The Basket Case",
     "Chooses how many eggs enter the basket and how large any one egg may become.",
     [
-      { rawIndex: 0, label: "How many bags are we juggling?" },
-      { rawIndex: 1, label: "How big can one bag get?" },
+      { rawIndex: 0, label: "How crowded is the clown car?" },
+      { rawIndex: 1, label: "Which luggage fits in the trunk?" },
       { rawIndex: 2, label: "How allergic are we to matching charts?" },
     ],
   ),
@@ -92,7 +92,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Time-Horizon Time Machine",
     "Controls when the machine wakes up and how far into the future it squints.",
     [
-      { rawIndex: 0, label: "How often do we press the button?" },
+      { rawIndex: 0, label: "Which clock are we ignoring?" },
       { rawIndex: 1, label: "Which timeline are we trading?" },
     ],
   ),
@@ -101,7 +101,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Dry-Powder Goblin",
     "Hoard cash, deploy cash, and decide how dramatic the scoop should be.",
     [
-      { rawIndex: 0, label: "How full is the emergency sock?" },
+      { rawIndex: 0, label: "How powerful is the emergency sock?" },
       { rawIndex: 1, label: "What makes the goblin spend?" },
       {
         rawIndex: 2,
@@ -121,7 +121,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Lets panic wake the brain early without bypassing safety checks.",
     [
       { rawIndex: 0, label: "What wakes the bird?" },
-      { rawIndex: 1, label: "How fast does it flap?" },
+      { rawIndex: 1, label: "How caffeinated is time?" },
       { rawIndex: 3, label: "Caffeine level" },
     ],
   ),
@@ -174,7 +174,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     [
       { rawIndex: 0, label: "How thirsty are we?" },
       { rawIndex: 2, label: "What does a drawdown taste like?" },
-      { rawIndex: 3, label: "Maximum chaos in the cellar" },
+      { rawIndex: 3, label: "Which glass does chaos drink from?" },
     ],
   ),
   e(
@@ -201,7 +201,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Mean-Reversion Pigeon",
     "Decides how far price must wander before the pigeon bets it comes home.",
     [
-      { rawIndex: 0, label: "How long is the flight?" },
+      { rawIndex: 0, label: "Which pigeon newspaper is current?" },
       { rawIndex: 1, label: "How lost before we bet on home?" },
       { rawIndex: 3, label: "What happens at the birdhouse?" },
     ],
@@ -211,7 +211,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Green-Candle Salamander",
     "Chooses which breakout catches fire and what happens when the flame goes out.",
     [
-      { rawIndex: 0, label: "How old must the flame be?" },
+      { rawIndex: 0, label: "How seasoned is the flame?" },
       { rawIndex: 2, label: "How hard do we chase it?" },
       { rawIndex: 3, label: "When the flame dies" },
     ],
@@ -241,7 +241,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Bag-Management Golem",
     "Tells the golem when a bag has won and what to do with the excess rocks.",
     [
-      { rawIndex: 0, label: "When is the bag officially winning?" },
+      { rawIndex: 0, label: "When does the bag demand a parade?" },
       { rawIndex: 1, label: "What does the golem do with winners?" },
       { rawIndex: 2, label: "May winners get heavier?" },
     ],
@@ -603,7 +603,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
           "Give puppet the treasury",
         ],
       },
-      { rawIndex: 2, label: "Maximum meme allocation" },
+      { rawIndex: 2, label: "How much string does the puppet get?" },
       { rawIndex: 4, label: "Puppet-master order" },
     ],
     "Meme of the moment",
@@ -625,7 +625,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     [
       { rawIndex: 0, label: "Which headlines can ruin lunch?" },
       { rawIndex: 1, label: "Before the headline drops" },
-      { rawIndex: 2, label: "How long until we believe the follow-up?" },
+      { rawIndex: 2, label: "When does the newsroom stop smoking?" },
     ],
   ),
   e(
@@ -633,8 +633,8 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Exit-Liquidity Unicorn",
     "Sets the minimum market depth and what happens when the magical exit door shrinks.",
     [
-      { rawIndex: 0, label: "How real must the exit door be?" },
-      { rawIndex: 1, label: "How much hoofprint is acceptable?" },
+      { rawIndex: 0, label: "Does the exit door look painted on?" },
+      { rawIndex: 1, label: "How loud are the hoofprints?" },
       { rawIndex: 3, label: "When the unicorn stops being liquid" },
     ],
   ),
@@ -643,8 +643,8 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Gas-Fee Furnace",
     "Controls when trades may fire and how far the basket must drift before feeding the furnace.",
     [
-      { rawIndex: 0, label: "How long until the furnace may eat again?" },
-      { rawIndex: 1, label: "How crooked before we rebalance?" },
+      { rawIndex: 0, label: "When does the furnace wake up?" },
+      { rawIndex: 1, label: "Is the picture hanging straight?" },
       { rawIndex: 3, label: "How much gas-fee pain is acceptable?" },
     ],
   ),
@@ -655,7 +655,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     [
       { rawIndex: 0, label: "Which receipts does the owl demand?" },
       { rawIndex: 2, label: "What if the receipts fight?" },
-      { rawIndex: 4, label: "How many suspects get investigated?" },
+      { rawIndex: 4, label: "How crowded is the corkboard?" },
     ],
   ),
   e(
@@ -663,7 +663,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Victory-Lap Racehorse",
     "Decides when a winner earns champagne and whether the horse keeps running.",
     [
-      { rawIndex: 0, label: "When do we pop champagne?" },
+      { rawIndex: 0, label: "Is this champagne weather?" },
       { rawIndex: 1, label: "What happens on the victory lap?" },
       { rawIndex: 3, label: "Can the horse race again?" },
     ],
@@ -674,7 +674,7 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
     "Controls how skeptical the first date is, the starter position, and the breakup rule.",
     [
       { rawIndex: 0, label: "How suspicious is the first date?" },
-      { rawIndex: 1, label: "How expensive is the first drink?" },
+      { rawIndex: 1, label: "Who pays for the first drink?" },
       { rawIndex: 4, label: "When do we block the number?" },
     ],
   ),
@@ -692,17 +692,173 @@ export const BRAIN_CONTROL_EXPERIENCE: readonly BrainControlExperienceSpec[] = [
           "All-you-can-eat evidence",
         ],
       },
-      { rawIndex: 9, label: "Which leftovers are still edible?" },
-      { rawIndex: 11, label: "How many dossiers leave the kitchen?" },
+      { rawIndex: 9, label: "Which leftovers smell legal?" },
+      { rawIndex: 11, label: "How crowded is the serving cart?" },
     ],
   ),
 ];
+
+const MYSTERY_OPTION_LABELS: Readonly<Record<string, readonly string[]>> = {
+  "1:2": ["Stubbed toe", "Bad haircut", "Call legal", "Delete the calendar"],
+  "2:1": ["Shoes stay dry", "One toe in", "Both feet damp", "Ask no questions"],
+  "3:0": [
+    "Two clowns, probably",
+    "Back-seat clowns",
+    "Roof-rack clowns",
+    "Clowns everywhere",
+  ],
+  "3:1": ["Lunchbox", "Carry-on", "Checked bag", "Unattended luggage"],
+  "4:0": [
+    "Touch grass",
+    "Take the scenic route",
+    "Committee purgatory",
+    "When the clock blinks",
+    "Doomscroll",
+    "Refresh goblin",
+  ],
+  "5:0": [
+    "Coin in the sock",
+    "Sock has shape",
+    "Suspiciously lumpy",
+    "Sock has authority",
+    "Sock owns the building",
+  ],
+  "6:1": ["Espresso shot", "Double espresso", "Bird sees time"],
+  "7:0": [
+    "Still warm",
+    "Recently haunted",
+    "Yesterday's newspaper",
+    "Last week's prophecy",
+    "Ancient scroll",
+    "Geological record",
+  ],
+  "10:3": ["Juice box", "Wine glass", "Blood bank"],
+  "13:0": [
+    "Fresh breadcrumbs",
+    "Familiar rooftops",
+    "Old migration route",
+    "Pigeon decides",
+  ],
+  "14:0": ["Match spark", "Campfire story", "Old torch", "Eternal flame"],
+  "16:0": [
+    "Fresh red paint",
+    "Pelican noticed",
+    "Deep end of the pond",
+    "Fell off the dock",
+  ],
+  "17:0": ["Tiny parade", "Local parade", "Ticker tape", "Bag writes memoir"],
+  "34:2": [
+    "No strings",
+    "One loose thread",
+    "Visible strings",
+    "Puppet drives",
+  ],
+  "36:2": ["Smoke clears", "Editor blinks", "Second edition", "Old news"],
+  "37:0": ["Cardboard door", "Door-ish", "Real hinges", "Airport hangar"],
+  "37:1": ["Tiptoe", "Tap shoes", "Work boots", "Horse in the kitchen"],
+  "38:0": [
+    "Still digesting",
+    "Pilot light",
+    "Hungry again",
+    "Rattling the door",
+    "Forgot your name",
+  ],
+  "38:1": [
+    "Picture looks fine",
+    "Slightly haunted",
+    "Guests notice",
+    "Call the landlord",
+    "Wall is sideways",
+  ],
+  "39:4": ["Owl naps", "One red string", "Corkboard", "Conspiracy wall"],
+  "40:0": ["Paper cup", "One cork pops", "Balcony wave", "Horse has a speech"],
+  "41:1": [
+    "Tap water",
+    "One suspicious cocktail",
+    "Dinner happened",
+    "Joint account",
+  ],
+  "42:9": [
+    "Still steaming",
+    "Counter leftovers",
+    "Yesterday's soup",
+    "Fridge archaeology",
+    "Freezer mystery",
+    "Family heirloom",
+    "Since the chef arrived",
+  ],
+  "42:11": [
+    "Chef's favorites",
+    "Friends of the chef",
+    "Serving cart",
+    "Entire walk-in freezer",
+  ],
+};
+
+const ASSET_DIRECTIVE_LABELS: Readonly<Record<number, string>> = {
+  0: "Do not touch the red button",
+  2: "Put its name on a sticky note",
+  5: "Move its chair away",
+  7: "Open the trapdoor",
+};
+
+const DASHBOARD_REACTIONS = [
+  [
+    "A dashboard light quietly gives up.",
+    "Something clicks behind the glovebox.",
+    "The turn signal begins negotiating.",
+    "HONK. The machine has taken a position.",
+  ],
+  [
+    "The cup holder stops humming.",
+    "A tiny bell rings somewhere expensive.",
+    "The rear-view mirror nods once.",
+    "Confetti exits an unidentified vent.",
+  ],
+  [
+    "One clown leaves the group chat.",
+    "The trunk makes a thoughtful noise.",
+    "A clown in the back seat takes notes.",
+    "All dashboard clowns point forward.",
+  ],
+  [
+    "The warning label looks relieved.",
+    "A lever moves, though not this lever.",
+    "The horn clears its throat.",
+    "The steering wheel whispers, “interesting.”",
+  ],
+] as const;
+
+export function dashboardReaction(
+  pieceId: number,
+  rawIndex: number,
+  optionIndex: number,
+): string {
+  const reactions =
+    DASHBOARD_REACTIONS[(pieceId + rawIndex) % DASHBOARD_REACTIONS.length];
+  const position =
+    optionIndex <= 0
+      ? 0
+      : optionIndex >= 3
+        ? 3
+        : Math.min(optionIndex, reactions.length - 1);
+  return reactions[position];
+}
+
+export function mysteryGauge(value: number, maximum = 100): string {
+  const ratio = maximum > 0 ? value / maximum : 0;
+  if (ratio <= 0) return "dashboard asleep";
+  if (ratio < 0.34) return "small suspicious glow";
+  if (ratio < 0.67) return "glovebox is humming";
+  if (ratio < 1) return "warning light has opinions";
+  return "horn stuck on";
+}
 
 if (
   BRAIN_CONTROL_EXPERIENCE.length !== 42 ||
   BRAIN_CONTROL_EXPERIENCE.some((piece, index) => piece.id !== index + 1)
 ) {
-  throw new Error("Brain Control Experience v2 must contain IDs 1 through 42");
+  throw new Error("Brain Control Experience v3 must contain IDs 1 through 42");
 }
 
 export function experienceSpec(pieceId: number): BrainControlExperienceSpec {
@@ -733,31 +889,32 @@ export function experienceControls(pieceId: number): BrainExperienceControl[] {
               ]
             : control.options.map((_, index) => index)
         : undefined;
+    const mysteryLabels =
+      MYSTERY_OPTION_LABELS[`${pieceId}:${display.rawIndex}`];
     const options: readonly ControlOption[] | undefined = allOptionValues
-      ? allOptionValues.map((rawValue) => {
+      ? allOptionValues.map((rawValue, optionIndex) => {
           const current = control.options![rawValue];
-          const label = display.optionLabels?.[rawValue] ?? current.label;
-          const meaning =
-            control.key === "asset_directive"
-              ? current.meaning
-              : control.key === "sector_status"
-                ? [
-                    "Ignore this theme.",
-                    "Watch it without adding weight.",
-                    "Let it compete normally.",
-                    "Give it a meaningful preference.",
-                    "Give it the strongest preference allowed by safety caps.",
-                  ][rawValue]
-                : control.key === "desk_lens"
-                  ? `Rank eligible assets using the ${label.toLowerCase()} lens.`
-                  : `The allocator treats this choice as ${label.toLowerCase()}.`;
+          const label =
+            display.optionLabels?.[rawValue] ??
+            mysteryLabels?.[rawValue] ??
+            (control.key === "asset_directive"
+              ? ASSET_DIRECTIVE_LABELS[rawValue]
+              : undefined) ??
+            current.label;
           return {
             ...current,
             label,
-            meaning,
+            meaning: dashboardReaction(pieceId, display.rawIndex, optionIndex),
           };
         })
-      : control.options;
+      : control.options?.map((current, optionIndex) => ({
+          ...current,
+          label:
+            display.optionLabels?.[optionIndex] ??
+            mysteryLabels?.[optionIndex] ??
+            current.label,
+          meaning: dashboardReaction(pieceId, display.rawIndex, optionIndex),
+        }));
     return {
       ...control,
       rawIndex: display.rawIndex,
@@ -814,7 +971,8 @@ export function experienceSummary(
             .map((entry) => entry.label) ?? [];
         return `${control.label}: ${selected.join(", ") || "None"}`;
       }
-      if (control.kind === "attention") return `${control.label}: ${value}%`;
+      if (control.kind === "attention")
+        return `${control.label}: ${mysteryGauge(value, control.maximum)}`;
       const optionIndex = control.optionValues?.indexOf(value) ?? value;
       return `${control.label}: ${control.options?.[optionIndex]?.label ?? value}`;
     })
@@ -836,7 +994,8 @@ export function braincellDecree(
           .map((entry) => entry.label.toLowerCase()) ?? [];
       return selected.join(", ") || "no optional signals";
     }
-    if (control.kind === "attention") return `${value}%`;
+    if (control.kind === "attention")
+      return mysteryGauge(value, control.maximum);
     const optionIndex = control.optionValues?.indexOf(value) ?? value;
     return (
       control.options?.[optionIndex]?.label ?? String(value)

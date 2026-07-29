@@ -10,9 +10,11 @@ import {
 import {
   BRAIN_CONTROL_EXPERIENCE_VERSION,
   braincellDecree,
+  dashboardReaction,
   experienceControls,
   experienceSpec,
   experienceSummary,
+  mysteryGauge,
   prepareExperienceBundle,
 } from "../lib/brain-control-experience";
 import { compileBrainV1 } from "../lib/compiled-brain";
@@ -386,6 +388,27 @@ function calculateCountdown() {
   return `${String(minutes).padStart(2, "0")}:${String(Math.floor((next.getTime() - Date.now()) / 1000) % 60).padStart(2, "0")}`;
 }
 
+function clockOmen(minutes: number): string {
+  if (minutes <= 15) return "The clock is vibrating";
+  if (minutes <= 60) return "The clock keeps glancing over";
+  if (minutes <= 240) return "The clock has plans later";
+  return "The clock left the building";
+}
+
+function reserveOmen(basisPoints: number): string {
+  if (basisPoints <= 2_000) return "The emergency sock feels light";
+  if (basisPoints <= 3_000) return "The emergency sock has shape";
+  if (basisPoints <= 4_000) return "The emergency sock looks important";
+  return "The emergency sock owns the building";
+}
+
+function researchOmen(assetLimit: number): string {
+  if (assetLimit <= 0) return "The owl has closed the case";
+  if (assetLimit === 1) return "One photo is pinned to the wall";
+  if (assetLimit <= 2) return "Red string has appeared";
+  return "The corkboard has become self-aware";
+}
+
 export function EditorialDashboard({
   data,
   account,
@@ -481,6 +504,9 @@ export function EditorialDashboard({
     null,
   );
   const [controlSaving, setControlSaving] = useState(false);
+  const [controlDashboardReaction, setControlDashboardReaction] = useState(
+    "The dashboard is pretending to be normal.",
+  );
   const controlDialogRef = useRef<HTMLElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
@@ -516,12 +542,14 @@ export function EditorialDashboard({
     setControlDraft(
       prepareExperienceBundle(selected.id, selected.controlBundle),
     );
+    setControlDashboardReaction("The dashboard is pretending to be normal.");
     setControlEditorOpen(true);
   };
   const closeControlEditor = () => {
     if (controlSaving) return;
     setControlEditorOpen(false);
     setControlDraft(null);
+    setControlDashboardReaction("The dashboard is pretending to be normal.");
   };
   useEffect(() => {
     if (!controlEditorOpen) return;
@@ -1059,6 +1087,14 @@ export function EditorialDashboard({
             </header>
             <div className="control-editor-body">
               <div className="control-form">
+                <div
+                  className="control-dashboard-reaction"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <span aria-hidden="true">HONK</span>
+                  <b>{controlDashboardReaction}</b>
+                </div>
                 {experienceControls(selected.id).map((control) => {
                   const value = controlDraft.values[control.rawIndex] ?? 0;
                   return (
@@ -1078,7 +1114,14 @@ export function EditorialDashboard({
                                 className={
                                   value === rawOptionValue ? "selected" : ""
                                 }
-                                onClick={() =>
+                                onClick={() => {
+                                  setControlDashboardReaction(
+                                    dashboardReaction(
+                                      selected.id,
+                                      control.rawIndex,
+                                      optionIndex,
+                                    ),
+                                  );
                                   setControlDraft((current) =>
                                     current
                                       ? {
@@ -1091,8 +1134,8 @@ export function EditorialDashboard({
                                           ),
                                         }
                                       : current,
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 <b>{choice.label}</b>
                                 <span>{choice.meaning}</span>
@@ -1112,7 +1155,14 @@ export function EditorialDashboard({
                                 key={choice.label}
                                 aria-pressed={selectedOption}
                                 className={selectedOption ? "selected" : ""}
-                                onClick={() =>
+                                onClick={() => {
+                                  setControlDashboardReaction(
+                                    dashboardReaction(
+                                      selected.id,
+                                      control.rawIndex,
+                                      optionIndex,
+                                    ),
+                                  );
                                   setControlDraft((current) =>
                                     current
                                       ? {
@@ -1125,8 +1175,8 @@ export function EditorialDashboard({
                                           ),
                                         }
                                       : current,
-                                  )
-                                }
+                                  );
+                                }}
                               >
                                 {choice.label}
                               </button>
@@ -1143,7 +1193,14 @@ export function EditorialDashboard({
                             step="5"
                             value={value}
                             aria-label={`${control.label} attention`}
-                            onChange={(event) =>
+                            onChange={(event) => {
+                              const nextValue = Number(event.target.value);
+                              setControlDashboardReaction(
+                                `The gauge now reads “${mysteryGauge(
+                                  nextValue,
+                                  control.maximum,
+                                )}.”`,
+                              );
                               setControlDraft((current) =>
                                 current
                                   ? {
@@ -1151,15 +1208,17 @@ export function EditorialDashboard({
                                       values: current.values.map(
                                         (entry, valueIndex) =>
                                           valueIndex === control.rawIndex
-                                            ? Number(event.target.value)
+                                            ? nextValue
                                             : entry,
                                       ),
                                     }
                                   : current,
-                              )
-                            }
+                              );
+                            }}
                           />
-                          <output>{value}%</output>
+                          <output>
+                            {mysteryGauge(value, control.maximum)}
+                          </output>
                         </label>
                       )}
                     </fieldset>
@@ -1197,7 +1256,12 @@ export function EditorialDashboard({
                             </span>
                             <select
                               value={controlDraft.assetIds[slot] ?? 0}
-                              onChange={(event) =>
+                              onChange={(event) => {
+                                setControlDashboardReaction(
+                                  event.target.value === "0"
+                                    ? "The chosen-one seat is now empty."
+                                    : "A name appears on the dashboard in crayon.",
+                                );
                                 setControlDraft((current) =>
                                   current
                                     ? {
@@ -1210,8 +1274,8 @@ export function EditorialDashboard({
                                         ),
                                       }
                                     : current,
-                                )
-                              }
+                                );
+                              }}
                             >
                               <option value={0}>None</option>
                               {eligible.map((asset, assetIndex) => (
@@ -1231,8 +1295,8 @@ export function EditorialDashboard({
                 )}
               </div>
               <aside className="control-preview" aria-live="polite">
-                <p className="section-kicker">COMPILED PREVIEW</p>
-                <h3>The braincell decree</h3>
+                <p className="section-kicker">DASHBOARD INTERPRETATION</p>
+                <h3>What the machine thinks you said</h3>
                 <blockquote className="braincell-decree">
                   {braincellDecree(
                     selected.id,
@@ -1295,34 +1359,46 @@ export function EditorialDashboard({
                   <>
                     <dl>
                       <div>
-                        <dt>Base review</dt>
-                        <dd>{controlPreview.compiled.baseCadenceMinutes}m</dd>
-                      </div>
-                      <div>
-                        <dt>Panic review</dt>
-                        <dd>{controlPreview.compiled.panicCadenceMinutes}m</dd>
-                      </div>
-                      <div>
-                        <dt>USDG floor</dt>
+                        <dt>Dashboard clock</dt>
                         <dd>
-                          {controlPreview.compiled.reserveMinimumBps / 100}%
+                          {clockOmen(
+                            controlPreview.compiled.baseCadenceMinutes,
+                          )}
                         </dd>
                       </div>
                       <div>
-                        <dt>Research</dt>
+                        <dt>Emergency clock</dt>
                         <dd>
-                          {controlPreview.compiled.researchAssetLimit} assets
+                          {clockOmen(
+                            controlPreview.compiled.panicCadenceMinutes,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Emergency sock</dt>
+                        <dd>
+                          {reserveOmen(
+                            controlPreview.compiled.reserveMinimumBps,
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Corkboard situation</dt>
+                        <dd>
+                          {researchOmen(
+                            controlPreview.compiled.researchAssetLimit,
+                          )}
                         </dd>
                       </div>
                     </dl>
                     <p className="control-safety-note">
-                      Safety, pricing, holdings, liquidity, execution, and
-                      accounting data remain mandatory. These controls only
-                      steer bounded choices.
+                      The dashboard is vague. The guardrails are not. Pricing,
+                      holdings, liquidity, execution, and accounting checks
+                      remain mandatory underneath the clown car.
                     </p>
                     {!!controlPreview.compiled.conflicts.length && (
                       <div className="control-conflicts">
-                        <b>Conflict winners</b>
+                        <b>Who won the argument</b>
                         {controlPreview.compiled.conflicts.map((conflict) => (
                           <span key={conflict}>{conflict}</span>
                         ))}

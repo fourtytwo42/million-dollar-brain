@@ -4,8 +4,10 @@ import {
   BRAIN_CONTROL_EXPERIENCE,
   BRAIN_CONTROL_EXPERIENCE_VERSION,
   braincellDecree,
+  dashboardReaction,
   experienceControls,
   experienceSummary,
+  mysteryGauge,
   prepareExperienceBundle,
 } from "../apps/web/lib/brain-control-experience.ts";
 import {
@@ -13,8 +15,8 @@ import {
   validateControlBundle,
 } from "../apps/web/lib/brain-controls.ts";
 
-test("experience v2 exposes two or three distinct levers for all 42 pieces", () => {
-  assert.equal(BRAIN_CONTROL_EXPERIENCE_VERSION, 2);
+test("experience v3 exposes two or three mysterious levers for all 42 pieces", () => {
+  assert.equal(BRAIN_CONTROL_EXPERIENCE_VERSION, 3);
   assert.equal(BRAIN_CONTROL_EXPERIENCE.length, 42);
   for (const piece of BRAIN_CONTROL_EXPERIENCE) {
     const controls = experienceControls(piece.id);
@@ -37,10 +39,19 @@ test("experience v2 exposes two or three distinct levers for all 42 pieces", () 
         .every((control) => (control.options?.length ?? 0) <= 4),
       `piece ${piece.id} exposes too many choices`,
     );
+    for (const control of controls) {
+      for (const option of control.options ?? []) {
+        assert.doesNotMatch(
+          option.label,
+          /\$|%|\+\d|\b\d+(?:m|h|d)\b|\btop \d+\b/i,
+          `piece ${piece.id} exposes a literal machine value`,
+        );
+      }
+    }
   }
 });
 
-test("opening experience v2 retires hidden knobs to canonical defaults", () => {
+test("opening experience v3 retires hidden knobs to canonical defaults", () => {
   const noisy = defaultControlBundle(21);
   noisy.values = [4, 4, 0, 0, 7, 3];
   noisy.assetIds = [1, 2, 3, 4];
@@ -65,4 +76,11 @@ test("decrees use character language and remain deterministic", () => {
   assert.match(first, /NVDA is the chosen one/);
   assert.match(experienceSummary(21, bundle), /How devoted are we/);
   assert.deepEqual(validateControlBundle(21, bundle), []);
+});
+
+test("dashboard reactions are deterministic but reveal no machine values", () => {
+  assert.equal(dashboardReaction(38, 0, 3), dashboardReaction(38, 0, 3));
+  assert.doesNotMatch(dashboardReaction(38, 0, 3), /\d|%|\$/);
+  assert.equal(mysteryGauge(0), "dashboard asleep");
+  assert.equal(mysteryGauge(100), "horn stuck on");
 });

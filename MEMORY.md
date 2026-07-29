@@ -4,17 +4,17 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Mainnet server RPC routing now uses the new LAN Robinhood
-  Mainnet Nitro node as primary, with a prepared local failover gateway for an
-  Alchemy backup.
-- Last meaningful change: Mainnet network policy, service units, environment
-  templates, deployment gates, runtime health, and the read-only mainnet
-  shadow were moved to the new LAN-primary topology.
-- Next step: Supply the server-only Alchemy Robinhood Mainnet HTTPS endpoint,
-  then run `scripts/configure-mainnet-rpc-failover.sh` to activate the gateway
-  on loopback port `18549`.
-- Blockers: Permanent mainnet failover cannot be enabled until its Alchemy
-  endpoint is configured. Mainnet activation still requires canonical
+- Current task: Braincell Controls Experience v3 is implemented and accepted
+  on devnet as a deliberately vague clown-car dashboard over the unchanged
+  Control Catalog v1 bundle.
+- Last meaningful change: Owner controls no longer expose literal percentages,
+  durations, dollar depths, or research counts. Character metaphors,
+  dashboard reactions, qualitative omens, and deterministic decrees now drive
+  the presentation while exact packed values remain on-chain.
+- Next step: Promote this exact clean pushed candidate through the established
+  testnet release pipeline only when testnet promotion is explicitly requested.
+- Blockers: Permanent mainnet failover still requires its Alchemy endpoint.
+  Mainnet activation also requires canonical
   Chainlink mappings, production 0x credentials, final roles/Safe addresses,
   funded gas, an audit, legal approval, and 48 continuous qualification hours
   with two regular sessions for every launch stock or ETF.
@@ -148,7 +148,33 @@ decision`; the focused Experience v2 suite passes.
   devnet/testnet web, cycle, and collector units are active. Mainnet units are
   installed but disabled, and no mainnet deployment or broadcast occurred.
 
-### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failove
+### 2026-07-29 - Braincell Controls Experience v3 clown-car dashboard
+
+- Context: The owner-facing controls were still too literal, exposing machine
+  values such as percentages, minutes, dollar liquidity, and dossier counts.
+- Decision: Keep Control Catalog v1 and every packed value unchanged, but make
+  the presentation intentionally vague and character-specific. The UI behaves
+  like an unreliable clown-car dashboard: controls use metaphors, option
+  descriptions are absurd reactions, selection produces a visible `HONK`
+  status, and compiled preview numbers become qualitative omens.
+- Files: `apps/web/lib/brain-control-experience.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/app/globals.css`, `tests/brain-control-experience.test.ts`,
+  `tests/brain-control-experience-uat.mjs`,
+  `BRAIN_CONTROL_CATALOG.md`, `PRD.md`.
+- Commands/tests: 4/4 Experience v3 tests; 6/6 Control Catalog tests; 4/4
+  compiler tests; 5/5 DecisionContext tests; production Next.js build;
+  responsive Playwright UAT at desktop, tablet, and mobile; live browser buy,
+  control selection, wallet confirmation, persistence check, and overflow
+  review.
+- Result: Devnet presents no literal machine values in the owner control
+  choices, has no page or dialog horizontal overflow, and persisted the same
+  exact on-chain bundle through one wallet transaction. Contracts, AI context,
+  safety precedence, economics, and testnet were unchanged.
+- Follow-up: Testnet remains on its accepted prior presentation until this
+  exact pushed candidate is explicitly promoted.
+
+### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failover
 
 - Context: A new Robinhood Mainnet Nitro RPC became available on the LAN and
   must be the primary server endpoint, with Alchemy used only when the LAN node
@@ -156,7 +182,7 @@ decision`; the focused Experience v2 suite passes.
 - Decision: Use `http://192.168.50.173:8547` only behind the server-side
   failover gateway on `http://127.0.0.1:18549`. Compare primary and secondary
   every 15 seconds, fail over for reachability, wrong chain, unhealthy Nitro
-  sync state, or a three-block lag, and recover with hysteresis. Browse
+  sync state, or a three-block lag, and recover with hysteresis. Browser
   clients continue using public HTTPS RPCs and never receive a LAN URL.
 - Files: `scripts/rpc-failover-proxy.mjs`,
   `scripts/configure-mainnet-rpc-failover.sh`,
@@ -164,7 +190,7 @@ decision`; the focused Experience v2 suite passes.
   `infrastructure/env/mainnet-rpc.env.example`, `config/networks.json`,
   `apps/web/lib/network.ts`, `apps/web/lib/rpc-health.ts`.
 - Commands/tests: Verified chain ID `4663`; live gateway smoke selected the LAN
-  primary while it was ahead of the comparison endpoint; 7/7 RPC failove
+  primary while it was ahead of the comparison endpoint; 7/7 RPC failover
   tests; 17/17 network-policy tests; production Next.js build; mainnet shadow
   worker completed successfully.
 - Result: Mainnet shadow reads the LAN primary directly as an interim measure.
@@ -983,7 +1009,7 @@ build`; authenticated live `/api/collect-market`.
   and run `scripts/configure-mainnet-rpc-failover.sh`. Until then, the
   mainnet-shadow worker uses `192.168.50.173:8547` directly and the permanent
   loopback failover service remains disabled.
-- 2026-07-29: Braincell Controls Experience v2 is accepted on devnet but has
+- 2026-07-29: Braincell Controls Experience v3 is accepted on devnet but has
   not been promoted to testnet. Any promotion must use the exact clean pushed
   candidate and the established testnet acceptance pipeline.
 - 2026-07-28: MDB testnet now uses the server-only LAN-primary,
