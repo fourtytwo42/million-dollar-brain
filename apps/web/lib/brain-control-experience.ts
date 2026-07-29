@@ -6,7 +6,7 @@ import {
   type ControlOption,
 } from "./brain-controls.ts";
 
-export const BRAIN_CONTROL_EXPERIENCE_VERSION = 3;
+export const BRAIN_CONTROL_EXPERIENCE_VERSION = 4;
 
 export type BrainExperienceControl = BrainControlDefinition & {
   rawIndex: number;
@@ -829,6 +829,43 @@ const DASHBOARD_REACTIONS = [
   ],
 ] as const;
 
+const ORDERED_CONTROL_KEYS = new Set([
+  "risk",
+  "drawdown",
+  "crypto_budget",
+  "positions",
+  "max_position",
+  "cadence",
+  "reserve",
+  "deploy_amount",
+  "panic_cadence",
+  "sensitivity",
+  "discount",
+  "passes",
+  "appetite",
+  "budget",
+  "distance",
+  "entry",
+  "leader",
+  "size",
+  "winner",
+  "tolerance",
+  "diversifier",
+  "sector_status",
+  "sector_exposure",
+  "weight",
+  "depth",
+  "impact",
+  "cooldown",
+  "drift",
+  "minimum",
+  "research",
+  "trigger",
+  "starter",
+  "confidence",
+  "detail",
+]);
+
 export function dashboardReaction(
   pieceId: number,
   rawIndex: number,
@@ -845,6 +882,44 @@ export function dashboardReaction(
   return reactions[position];
 }
 
+function qualitativeMeaning({
+  control,
+  label,
+  rawValue,
+  optionIndex,
+  optionCount,
+  hasMysteryScale,
+}: {
+  control: BrainControlDefinition;
+  label: string;
+  rawValue: number;
+  optionIndex: number;
+  optionCount: number;
+  hasMysteryScale: boolean;
+}): string {
+  if (control.key === "asset_directive") {
+    return (
+      {
+        0: "Leaves the selected asset to the rest of the brain.",
+        2: "Gives the selected asset a modest preference.",
+        5: "Asks the AI to shrink an existing position.",
+        7: "Asks the AI to remove the asset when execution allows.",
+      }[rawValue] ?? "Applies a bounded instruction to the selected asset."
+    );
+  }
+  if (control.kind === "multi")
+    return "Includes this signal in the evidence the AI considers.";
+  if (hasMysteryScale || ORDERED_CONTROL_KEYS.has(control.key)) {
+    if (optionIndex === 0) return "The lightest setting on this control.";
+    if (optionIndex === optionCount - 1)
+      return "The strongest setting available here.";
+    return optionIndex < optionCount / 2
+      ? "A restrained setting."
+      : "A stronger setting.";
+  }
+  return `Steers the AI toward “${label}” when this braincell is considered.`;
+}
+
 export function mysteryGauge(value: number, maximum = 100): string {
   const ratio = maximum > 0 ? value / maximum : 0;
   if (ratio <= 0) return "dashboard asleep";
@@ -858,7 +933,7 @@ if (
   BRAIN_CONTROL_EXPERIENCE.length !== 42 ||
   BRAIN_CONTROL_EXPERIENCE.some((piece, index) => piece.id !== index + 1)
 ) {
-  throw new Error("Brain Control Experience v3 must contain IDs 1 through 42");
+  throw new Error("Brain Control Experience v4 must contain IDs 1 through 42");
 }
 
 export function experienceSpec(pieceId: number): BrainControlExperienceSpec {
@@ -904,7 +979,14 @@ export function experienceControls(pieceId: number): BrainExperienceControl[] {
           return {
             ...current,
             label,
-            meaning: dashboardReaction(pieceId, display.rawIndex, optionIndex),
+            meaning: qualitativeMeaning({
+              control,
+              label,
+              rawValue,
+              optionIndex,
+              optionCount: allOptionValues.length,
+              hasMysteryScale: Boolean(mysteryLabels),
+            }),
           };
         })
       : control.options?.map((current, optionIndex) => ({
@@ -913,7 +995,17 @@ export function experienceControls(pieceId: number): BrainExperienceControl[] {
             display.optionLabels?.[optionIndex] ??
             mysteryLabels?.[optionIndex] ??
             current.label,
-          meaning: dashboardReaction(pieceId, display.rawIndex, optionIndex),
+          meaning: qualitativeMeaning({
+            control,
+            label:
+              display.optionLabels?.[optionIndex] ??
+              mysteryLabels?.[optionIndex] ??
+              current.label,
+            rawValue: optionIndex,
+            optionIndex,
+            optionCount: control.options?.length ?? 1,
+            hasMysteryScale: Boolean(mysteryLabels),
+          }),
         }));
     return {
       ...control,

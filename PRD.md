@@ -10,7 +10,7 @@ chain-46630 V3 replica deployment is live with a dynamic asset registry, signed
 RFQ plans, atomic buys/sells, and autonomous DecisionContext V4 Ornith cycles.
 A separate chain-4663 mainnet shadow is read-only and rejects signing keys and
 broadcast mode. Control Catalog v1 is implemented, enabled, and accepted on
-local Anvil and Robinhood Testnet. Braincell Controls Experience v3 is under
+local Anvil and Robinhood Testnet. Braincell Controls Experience v4 is under
 devnet acceptance and must promote through the exact-commit pipeline before
 testnet changes. No mainnet deployment or real-value activation has occurred.
 
@@ -20,7 +20,7 @@ This PRD is the top-level product authority. The following linked specifications
 
 | Specification              | Authority                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BRAIN_CONTROL_CATALOG.md` | Stable packed Control Catalog v1 plus the two-or-three-lever Braincell Controls Experience v3, defaults, compiler effects, cadence, migration, and acceptance |
+| `BRAIN_CONTROL_CATALOG.md` | Stable packed Control Catalog v1 plus the two-or-three-lever Braincell Controls Experience v4, defaults, compiler effects, cadence, migration, and acceptance |
 | `BRAIN_PRESET_CATALOG.md`  | Historical catalog-v3 five-mood record and normative migration/rollback source; not the active control UX                                                     |
 | `BRAIN_SCHEMA.md`          | Brain compilation, conflict resolution, Asset Registry, model input, and model output schemas                                                                 |
 | `AI_DATA_POLICY.md`        | Free data sources, deterministic calculations, asset dossiers, no-browsing policy, and failure behavior                                                       |
@@ -1180,13 +1180,14 @@ These gates do not block local Anvil or public-testnet implementation. Mainnet v
 - The application VM is Ubuntu 24.04 LTS at `192.168.50.135`; the GPU45 model appliance is separate at `192.168.50.189`.
 - The private source repository is `fourtytwo42/million-dollar-brain`.
 - Control Catalog v1 replaces the historical one-mood-per-piece model with
-  versioned on-chain bundles. Braincell Controls Experience v3 presents only
+  versioned on-chain bundles. Braincell Controls Experience v4 presents only
   two or three character-specific levers per piece, no more than four choices
   per choice control, and one chosen asset where relevant. Exact machine
   values remain deterministic but are represented by vague, character-specific
-  clown-car labels and dashboard reactions. Confirming an Experience v3 update
-  normalizes retired hidden knobs to canonical defaults and produces a
-  deterministic shareable braincell decree.
+  labels. Each choice also provides a short qualitative explanation of
+  direction or consequence. Confirming an Experience v4 update normalizes
+  retired hidden knobs to canonical defaults and produces a deterministic
+  shareable braincell decree.
 - Owners may steer optional evidence attention and bounded structured research,
   but mandatory safety, valuation, execution, and accounting data are always
   supplied.

@@ -4,13 +4,12 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Braincell Controls Experience v3 is implemented and accepted
-  on devnet as a deliberately vague clown-car dashboard over the unchanged
+- Current task: Braincell Controls Experience v4 is implemented and accepted
+  on devnet as a playful but understandable dashboard over the unchanged
   Control Catalog v1 bundle.
-- Last meaningful change: Owner controls no longer expose literal percentages,
-  durations, dollar depths, or research counts. Character metaphors,
-  dashboard reactions, qualitative omens, and deterministic decrees now drive
-  the presentation while exact packed values remain on-chain.
+- Last meaningful change: Memorable labels and qualitative omens remain, but
+  every choice once again explains its direction or consequence in plain
+  language without exposing percentages, durations, dollar depths, or counts.
 - Next step: Promote this exact clean pushed candidate through the established
   testnet release pipeline only when testnet promotion is explicitly requested.
 - Blockers: Permanent mainnet failover still requires its Alchemy endpoint.
@@ -173,6 +172,29 @@ decision`; the focused Experience v2 suite passes.
   safety precedence, economics, and testnet were unchanged.
 - Follow-up: Testnet remains on its accepted prior presentation until this
   exact pushed candidate is explicitly promoted.
+
+### 2026-07-29 - Braincell Controls Experience v4 guided dashboard
+
+- Context: Experience v3 made the control labels memorable but allowed absurd
+  dashboard reactions to replace the explanation under every option, making
+  the controls difficult to understand.
+- Decision: Keep the character metaphors and shared dashboard reaction, but
+  restore one concise qualitative effect beneath every choice. Ordered
+  controls say lightest, restrained, stronger, or strongest. Categorical,
+  evidence, and asset-directive controls describe their actual bounded effect
+  without exposing raw machine values.
+- Files: `apps/web/lib/brain-control-experience.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `tests/brain-control-experience.test.ts`,
+  `tests/brain-control-experience-uat.mjs`,
+  `BRAIN_CONTROL_CATALOG.md`, `PRD.md`.
+- Commands/tests: 4/4 Experience v4 tests; production Next.js build;
+  responsive Playwright UAT; live browser visual review.
+- Result: The modal keeps its memetic personality while making the selected
+  direction understandable at a glance. No contracts, bundles, AI behavior,
+  safety rules, economics, or testnet state changed.
+- Follow-up: Promote only through the exact-commit testnet pipeline when
+  explicitly requested.
 
 ### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failover
 
@@ -1009,7 +1031,7 @@ build`; authenticated live `/api/collect-market`.
   and run `scripts/configure-mainnet-rpc-failover.sh`. Until then, the
   mainnet-shadow worker uses `192.168.50.173:8547` directly and the permanent
   loopback failover service remains disabled.
-- 2026-07-29: Braincell Controls Experience v3 is accepted on devnet but has
+- 2026-07-29: Braincell Controls Experience v4 is accepted on devnet but has
   not been promoted to testnet. Any promotion must use the exact clean pushed
   candidate and the established testnet acceptance pipeline.
 - 2026-07-28: MDB testnet now uses the server-only LAN-primary,

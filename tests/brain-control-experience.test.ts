@@ -15,8 +15,8 @@ import {
   validateControlBundle,
 } from "../apps/web/lib/brain-controls.ts";
 
-test("experience v3 exposes two or three mysterious levers for all 42 pieces", () => {
-  assert.equal(BRAIN_CONTROL_EXPERIENCE_VERSION, 3);
+test("experience v4 exposes two or three playful but guided levers for all 42 pieces", () => {
+  assert.equal(BRAIN_CONTROL_EXPERIENCE_VERSION, 4);
   assert.equal(BRAIN_CONTROL_EXPERIENCE.length, 42);
   for (const piece of BRAIN_CONTROL_EXPERIENCE) {
     const controls = experienceControls(piece.id);
@@ -46,12 +46,16 @@ test("experience v3 exposes two or three mysterious levers for all 42 pieces", (
           /\$|%|\+\d|\b\d+(?:m|h|d)\b|\btop \d+\b/i,
           `piece ${piece.id} exposes a literal machine value`,
         );
+        assert.ok(
+          /AI|setting|control|signal|asset|brain/i.test(option.meaning),
+          `piece ${piece.id} does not explain the qualitative effect`,
+        );
       }
     }
   }
 });
 
-test("opening experience v3 retires hidden knobs to canonical defaults", () => {
+test("opening experience v4 retires hidden knobs to canonical defaults", () => {
   const noisy = defaultControlBundle(21);
   noisy.values = [4, 4, 0, 0, 7, 3];
   noisy.assetIds = [1, 2, 3, 4];

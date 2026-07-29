@@ -1092,7 +1092,7 @@ export function EditorialDashboard({
                   role="status"
                   aria-live="polite"
                 >
-                  <span aria-hidden="true">HONK</span>
+                  <span aria-hidden="true">SIGNAL</span>
                   <b>{controlDashboardReaction}</b>
                 </div>
                 {experienceControls(selected.id).map((control) => {
@@ -1295,8 +1295,8 @@ export function EditorialDashboard({
                 )}
               </div>
               <aside className="control-preview" aria-live="polite">
-                <p className="section-kicker">DASHBOARD INTERPRETATION</p>
-                <h3>What the machine thinks you said</h3>
+                <p className="section-kicker">STEERING PREVIEW</p>
+                <h3>How the AI interprets this</h3>
                 <blockquote className="braincell-decree">
                   {braincellDecree(
                     selected.id,

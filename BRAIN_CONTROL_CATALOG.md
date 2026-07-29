@@ -2,7 +2,7 @@
 
 **Version:** 1.2
 
-**Status:** Control Catalog v1 is deployed; Braincell Controls Experience v3 is active on devnet
+**Status:** Control Catalog v1 is deployed; Braincell Controls Experience v4 is active on devnet
 
 **Pieces:** 42
 
@@ -10,10 +10,10 @@
 
 **Preserves:** NFT IDs, affinities, influence weights, ownership, pricing, rewards, and profile customization
 
-## Braincell Controls Experience v3
+## Braincell Controls Experience v4
 
 The packed Control Catalog v1 contract schema remains the stable on-chain
-format. Experience v3 is the owner-facing interpretation of that schema:
+format. Experience v4 is the owner-facing interpretation of that schema:
 
 - Every braincell exposes two or three character-specific levers. A tagged
   sector cell may also expose one qualified-asset picker.
@@ -23,9 +23,11 @@ format. Experience v3 is the owner-facing interpretation of that schema:
 - Exact percentages, time windows, dollar depths, position counts, and research
   limits stay under the hood. Owners see character-specific metaphors such as
   `Bird sees time`, `Airport hangar`, or `The corkboard has become self-aware`.
-- Option descriptions are intentionally unreliable dashboard reactions, not
-  technical disclosures. A control may look like a turn signal and respond
-  with a honk. The compiled contract value remains exact and deterministic.
+- Every option includes a short qualitative effect such as `a restrained
+setting`, `gives the selected asset a modest preference`, or `includes this
+signal`. It explains direction without exposing machine values.
+- The shared dashboard status may still react like a suspicious vehicle, but
+  absurd reactions no longer replace the explanation under each choice.
 - The preview uses qualitative dashboard omens instead of literal compiler
   numbers. Safety validation and historical evidence retain the exact values.
 - Opening the editor prepares a normalized bundle. When the owner confirms,
@@ -38,9 +40,9 @@ format. Experience v3 is the owner-facing interpretation of that schema:
   `braincell decree`. It is entertainment and steering commentary; its factual
   settings remain derived from the exact on-chain bundle.
 
-Experience v3 does not change contract addresses, packed storage, NFT state,
+Experience v4 does not change contract addresses, packed storage, NFT state,
 economics, eligibility rules, or safety precedence. It is versioned separately
-as `BRAIN_CONTROL_EXPERIENCE_VERSION = 3`.
+as `BRAIN_CONTROL_EXPERIENCE_VERSION = 4`.
 
 ## 1. Product rule
 

@@ -57,9 +57,7 @@ try {
     await dialog.getByText(/Desk status|Preferred sleeve|Desk lens/).count(),
     0,
   );
-  assert.ok(
-    await dialog.getByText("What the machine thinks you said").isVisible(),
-  );
+  assert.ok(await dialog.getByText("How the AI interprets this").isVisible());
   const literalMachineValues = await dialog
     .locator("button b, .control-chips button, output")
     .allTextContents();
