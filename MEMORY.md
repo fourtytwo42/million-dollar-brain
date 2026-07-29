@@ -62,10 +62,11 @@ Durable project context lives here. Update this file whenever information should
   `tests/brain-control-experience.test.ts`,
   `tests/brain-control-experience-uat.mjs`, `BRAIN_CONTROL_CATALOG.md`,
   `PRD.md`.
-- Commands/tests: 3/3 Experience v2 unit tests; 6/6 Control Catalog tests; 4/4
-  compiler tests; production Next.js build; focused Playwright purchase/editor
-  UAT at 1440x900, 768x1024, and 390x844; live in-app Browser purchase,
-  bundle update, reload persistence, screenshot, and empty browser logs.
+- Commands/tests: 34/34 Foundry tests; 3/3 Experience v2 unit tests; 6/6
+  Control Catalog tests; 4/4 compiler tests; 5/5 DecisionContext tests;
+  production Next.js build; focused Playwright purchase/editor UAT at 1440x900,
+  768x1024, and 390x844; live in-app Browser purchase, bundle update, reload
+  persistence, screenshot, and empty browser logs.
 - Result: Devnet shows natural character language, no legacy desk/sleeve terms,
   deterministic copyable decrees, no page/dialog horizontal overflow, and a
   successful single-transaction update. The broader legacy UAT still has an
