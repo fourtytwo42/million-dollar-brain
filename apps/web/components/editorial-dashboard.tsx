@@ -904,7 +904,9 @@ export function EditorialDashboard({
                 disabled={profileSaving}
                 aria-label="Close profile editor"
               >
-                ×
+                <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+                  <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
               </button>
             </div>
 
@@ -1082,7 +1084,9 @@ export function EditorialDashboard({
                 disabled={controlSaving}
                 aria-label="Close control editor"
               >
-                ×
+                <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+                  <path d="M3 3l10 10M13 3L3 13" />
+                </svg>
               </button>
             </header>
             <div className="control-editor-body">

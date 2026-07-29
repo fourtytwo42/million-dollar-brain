@@ -196,6 +196,23 @@ decision`; the focused Experience v2 suite passes.
 - Follow-up: Promote only through the exact-commit testnet pipeline when
   explicitly requested.
 
+### 2026-07-29 - Popup close icon alignment
+
+- Context: The multiplication-sign glyph in the circular profile and control
+  editor close buttons appeared off-center because native font metrics and
+  button padding controlled its placement.
+- Decision: Replace the font glyph with a geometric inline SVG and center it
+  with an explicit grid layout and zero padding in the shared close-button
+  style.
+- Files: `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/app/globals.css`.
+- Commands/tests: Prettier; production Next.js build; live devnet Browser UAT
+  of both dialogs; browser geometry measured each 14-by-14 icon at an exact
+  zero-pixel x/y offset from its 34-by-34 button center; zero browser errors.
+- Result: Profile and control popup close icons are visually and
+  mathematically centered on devnet.
+- Follow-up: None.
+
 ### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failover
 
 - Context: A new Robinhood Mainnet Nitro RPC became available on the LAN and

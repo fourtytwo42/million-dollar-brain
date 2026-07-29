@@ -2731,14 +2731,25 @@ footer {
     serif;
 }
 .profile-editor-close {
+  display: grid;
   width: 34px;
   height: 34px;
+  padding: 0;
+  place-items: center;
   border: 1px solid var(--border);
   border-radius: 50%;
   background: var(--surface-subtle);
   color: var(--text);
-  font-size: 23px;
-  line-height: 1;
+}
+.profile-editor-close svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.75;
+  vector-effect: non-scaling-stroke;
 }
 .profile-image-picker {
   display: grid;
