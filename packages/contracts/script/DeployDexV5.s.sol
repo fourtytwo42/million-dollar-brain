@@ -125,7 +125,7 @@ contract DeployDexV5 is Script {
 
         BasketVault basketImplementation = new BasketVault();
         (bool dexEnabledRead, bytes memory dexEnabledResult) =
-            basketAddress.staticcall(abi.encodeCall(BasketVault.dexExecutionEnabled, ()));
+            basketAddress.staticcall(abi.encodeWithSignature("dexExecutionEnabled()"));
         bool dexAlreadyEnabled =
             dexEnabledRead && dexEnabledResult.length >= 32 && abi.decode(dexEnabledResult, (bool));
         if (dexAlreadyEnabled) {
