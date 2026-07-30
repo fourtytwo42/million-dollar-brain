@@ -27,10 +27,13 @@ Durable project context lives here. Update this file whenever information should
   accessible question/value rows. Map tooltips and control-editor previews keep
   their compact summaries.
 - Files: `apps/web/components/editorial-dashboard.tsx`.
-- Commands/tests: Prettier, production build, and responsive devnet browser
-  verification.
+- Commands/tests: Prettier, production build, responsive devnet browser
+  verification at 1440x900, 768x1024, and 390x844, then focused public testnet
+  UAT at desktop and mobile widths.
 - Result: The inspector's `What this braincell tells the AI` section now shows
-  each choice once.
+  each choice once. The exact pushed presentation build is live on devnet and
+  `https://testnet.42braincells.com` with no horizontal overflow or browser
+  console errors.
 - Follow-up: None.
 
 ### 2026-07-30 - Profile V2 two-hour testnet acceptance complete
