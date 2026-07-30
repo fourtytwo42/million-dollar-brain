@@ -120,3 +120,21 @@ test("every accepted AI allocation carries a validated Brain Pulse", () => {
     /decision\.source === "ai" \? decision\.brainPulse : null/,
   );
 });
+
+test("review cadence advances only after a cycle is durably completed", () => {
+  const allocator = readFileSync(
+    new URL("../apps/web/lib/allocator.ts", import.meta.url),
+    "utf8",
+  );
+  const reviewStarted = allocator.indexOf('status: "review_started"');
+  const persisted = allocator.indexOf(
+    "await persistAccountingSnapshot(accountingAfter, stateAfter.blockNumber)",
+  );
+  const cadenceAdvanced = allocator.indexOf(
+    "eligibilityState.lastReviewAtMs = Date.now()",
+  );
+  assert.ok(reviewStarted >= 0);
+  assert.ok(persisted > reviewStarted);
+  assert.ok(cadenceAdvanced > persisted);
+  assert.match(allocator, /status: "review_completed"/);
+});

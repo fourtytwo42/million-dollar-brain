@@ -619,7 +619,6 @@ export async function runCycle() {
     };
   }
   if (state.activation.controlBundlesEnabled) {
-    eligibilityState.lastReviewAtMs = Date.now();
     saveEligibilityState(eligibilityState, {
       status: "review_started",
       inputHash: market.inputHash,
@@ -1021,5 +1020,15 @@ export async function runCycle() {
     receipt: serializable(receipt ?? { status: "held", block }),
   });
   await persistAccountingSnapshot(accountingAfter, stateAfter.blockNumber);
+  if (state.activation.controlBundlesEnabled) {
+    eligibilityState.lastReviewAtMs = Date.now();
+    saveEligibilityState(eligibilityState, {
+      status: "review_completed",
+      inputHash: market.inputHash,
+      source: decision.source,
+      executionStatus: record.executionStatus,
+      transactionHash: hash,
+    });
+  }
   return record;
 }

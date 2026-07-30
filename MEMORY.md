@@ -79,6 +79,26 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Run the required two-hour three-actor acceptance for this exact
   source release and attach the completed evidence.
 
+### 2026-07-30 - Interrupted cycle cadence repair
+
+- Context: Profile V2 acceptance checkpoint 0 rejected testnet because no
+  successful AI cycle existed inside 95 minutes. The 06:00 eligible V6 cycle
+  was interrupted by the planned web restart after the contract upgrade, but
+  `lastReviewAtMs` had already advanced before Ornith completed. The scheduler
+  then skipped every five-minute check until 07:00.
+- Decision: Persist `review_started` evidence without advancing cadence. Advance
+  `lastReviewAtMs` only after the complete cycle record, accounting snapshot,
+  and model evidence are durably stored. Recover the live eligibility state to
+  the timestamp of its latest completed cycle, then allow the normal timer to
+  run the overdue review.
+- Files: `apps/web/lib/allocator.ts`, `tests/decision-context.test.ts`.
+- Commands/tests: DecisionContext 10/10; Prettier; production Next.js build.
+- Result: A process restart or request interruption can no longer consume a
+  review interval without producing a recorded decision. The active acceptance
+  clock remains preserved and repair downtime is excluded.
+- Follow-up: Deploy the exact repair commit to devnet and testnet, confirm a
+  successful natural V6 Ornith cycle, then resume checkpoint 0.
+
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The basket share token's canonical product identity is `42 Braincells`
   (`BRAINS`). Internal legacy field names may remain for compatibility, but
