@@ -22,7 +22,8 @@ import type {
   DecisionContextV7,
 } from "./decision-context";
 import {
-  validateDynamicAllocation,
+  constrainDynamicAllocationProposal,
+  normalizeDynamicAllocationProposal,
   type DynamicAllocation,
 } from "./asset-universe.ts";
 import {
@@ -379,7 +380,12 @@ export async function runDynamicResearchAllocator(
       throw new Error("model returned neither research nor allocation");
     }
     if (!brainPulse) throw new Error("model returned an invalid Brain Pulse");
-    const allocationById = validateDynamicAllocation(
+    const rawAllocationById = normalizeDynamicAllocationProposal(
+      proposed,
+      context.assetRecords,
+      context.reserveAssetId,
+    );
+    const allocationById = constrainDynamicAllocationProposal(
       proposed,
       context.assetRecords,
       context.reserveAssetId,
@@ -428,7 +434,7 @@ export async function runDynamicResearchAllocator(
     );
     return {
       allocationById,
-      rawAllocationById: { ...allocationById },
+      rawAllocationById: { ...rawAllocationById },
       brainPulse,
       confidenceByAssetId,
       allocationPolicy: null,

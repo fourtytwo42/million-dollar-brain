@@ -6,6 +6,7 @@ import {
   assessDynamicFreshness,
   canonicalAssetId,
   compileUniverseContext,
+  constrainDynamicAllocationProposal,
   normalizeAssetId,
   qualificationStatus,
   validateAssetManifest,
@@ -204,6 +205,53 @@ test("allocation canonicalizes checksum asset IDs and rejects aliases", () => {
         reserve.id,
       ),
     /duplicate asset/,
+  );
+});
+
+test("allocation normalizes checksum IDs stored in the active manifest", () => {
+  const reserve = asset(1, "reserve", "reserve");
+  const risk = asset(0xabc, "stock", "standard");
+  reserve.id = `${reserve.chainId}:${getAddress(reserve.address)}`;
+  risk.id = `${risk.chainId}:${getAddress(risk.address)}`;
+  const normalizedReserveId = normalizeAssetId(reserve.id);
+  const normalizedRiskId = normalizeAssetId(risk.id);
+
+  assert.deepEqual(
+    validateDynamicAllocation(
+      { [normalizedReserveId]: 8_000, [normalizedRiskId]: 2_000 },
+      [reserve, risk],
+      reserve.id,
+    ),
+    { [normalizedReserveId]: 8_000, [normalizedRiskId]: 2_000 },
+  );
+});
+
+test("model proposals are deterministically constrained before execution", () => {
+  const reserve = asset(1, "reserve", "reserve");
+  const first = asset(2, "stock", "standard");
+  const second = asset(3, "stock", "standard");
+  const volatile = asset(4, "crypto", "high_volatility");
+  first.maximumWeightBps = 2_000;
+  second.maximumWeightBps = 2_000;
+  volatile.maximumWeightBps = 2_000;
+
+  assert.deepEqual(
+    constrainDynamicAllocationProposal(
+      {
+        [reserve.id]: 1_000,
+        [first.id]: 3_000,
+        [second.id]: 3_000,
+        [volatile.id]: 3_000,
+      },
+      [reserve, first, second, volatile],
+      reserve.id,
+    ),
+    {
+      [reserve.id]: 4_000,
+      [first.id]: 2_000,
+      [second.id]: 2_000,
+      [volatile.id]: 2_000,
+    },
   );
 });
 

@@ -367,15 +367,52 @@ export function validateDynamicAllocation(
   assets: AssetRecordV1[],
   reserveId: string,
 ): DynamicAllocation {
+  const { allocation, eligible, normalizedReserveId } =
+    normalizeDynamicAllocation(value, assets, reserveId);
+  let riskPositions = 0;
+  let highVolatility = 0;
+  for (const [id, weight] of Object.entries(allocation)) {
+    if (id === normalizedReserveId) continue;
+    if (weight > 0) riskPositions += 1;
+    const asset = eligible.get(id)!;
+    if (
+      weight >
+      Math.min(asset.maximumWeightBps, ASSET_POLICY.maximumAssetWeightBps)
+    ) {
+      throw new Error(`asset weight exceeds limit: ${id}`);
+    }
+    if (asset.riskClass === "high_volatility") highVolatility += weight;
+  }
+  if (
+    allocation[normalizedReserveId] < ASSET_POLICY.minimumReserveWeightBps
+  ) {
+    throw new Error("reserve is below 20%");
+  }
+  if (riskPositions > ASSET_POLICY.maximumRiskPositions) {
+    throw new Error("more than nine risk positions");
+  }
+  if (highVolatility > ASSET_POLICY.maximumHighVolatilityBps) {
+    throw new Error("high-volatility allocation exceeds 30%");
+  }
+  return allocation;
+}
+
+function normalizeDynamicAllocation(
+  value: unknown,
+  assets: AssetRecordV1[],
+  reserveId: string,
+) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("allocation is not an object");
   }
   const eligible = new Map(
     assets
       .filter((asset) => asset.active)
-      .map((asset) => [asset.id, asset] as const),
+      .map((asset) => [normalizeAssetId(asset.id), asset] as const),
   );
-  if (!eligible.has(reserveId)) throw new Error("reserve is not active");
+  const normalizedReserveId = normalizeAssetId(reserveId);
+  if (!eligible.has(normalizedReserveId))
+    throw new Error("reserve is not active");
   const source = value as Record<string, unknown>;
   const normalizedSource = new Map<string, unknown>();
   for (const [key, weight] of Object.entries(source)) {
@@ -400,36 +437,91 @@ export function validateDynamicAllocation(
     ]),
   );
   let total = 0;
-  let riskPositions = 0;
-  let highVolatility = 0;
   for (const [id, weight] of Object.entries(allocation)) {
     if (!Number.isInteger(weight) || weight < 0) {
       throw new Error(`invalid integer weight: ${id}`);
     }
     total += weight;
-    if (id === reserveId) continue;
-    if (weight > 0) riskPositions += 1;
-    const asset = eligible.get(id)!;
-    if (
-      weight >
-      Math.min(asset.maximumWeightBps, ASSET_POLICY.maximumAssetWeightBps)
-    ) {
-      throw new Error(`asset weight exceeds limit: ${id}`);
-    }
-    if (asset.riskClass === "high_volatility") highVolatility += weight;
   }
   if (total !== ASSET_POLICY.totalWeightBps)
     throw new Error("weights must total 10000");
-  if (allocation[reserveId] < ASSET_POLICY.minimumReserveWeightBps) {
-    throw new Error("reserve is below 20%");
+  return { allocation, eligible, normalizedReserveId };
+}
+
+export function normalizeDynamicAllocationProposal(
+  value: unknown,
+  assets: AssetRecordV1[],
+  reserveId: string,
+): DynamicAllocation {
+  return normalizeDynamicAllocation(value, assets, reserveId).allocation;
+}
+
+export function constrainDynamicAllocationProposal(
+  value: unknown,
+  assets: AssetRecordV1[],
+  reserveId: string,
+): DynamicAllocation {
+  const { allocation, eligible, normalizedReserveId } =
+    normalizeDynamicAllocation(value, assets, reserveId);
+  const result = { ...allocation };
+  const releaseToReserve = (id: string, amount: number) => {
+    result[id] -= amount;
+    result[normalizedReserveId] += amount;
+  };
+  const riskIds = [...eligible.keys()].filter(
+    (id) => id !== normalizedReserveId,
+  );
+
+  for (const id of riskIds) {
+    const maximum = Math.min(
+      eligible.get(id)!.maximumWeightBps,
+      ASSET_POLICY.maximumAssetWeightBps,
+    );
+    if (result[id] > maximum) releaseToReserve(id, result[id] - maximum);
   }
-  if (riskPositions > ASSET_POLICY.maximumRiskPositions) {
-    throw new Error("more than nine risk positions");
+
+  const heldRiskIds = riskIds
+    .filter((id) => result[id] > 0)
+    .sort((a, b) => result[b] - result[a] || a.localeCompare(b));
+  for (const id of heldRiskIds.slice(ASSET_POLICY.maximumRiskPositions)) {
+    releaseToReserve(id, result[id]);
   }
-  if (highVolatility > ASSET_POLICY.maximumHighVolatilityBps) {
-    throw new Error("high-volatility allocation exceeds 30%");
+
+  const highVolatilityIds = riskIds
+    .filter(
+      (id) =>
+        eligible.get(id)!.riskClass === "high_volatility" && result[id] > 0,
+    )
+    .sort((a, b) => result[a] - result[b] || b.localeCompare(a));
+  let highVolatility = highVolatilityIds.reduce(
+    (sum, id) => sum + result[id],
+    0,
+  );
+  for (const id of highVolatilityIds) {
+    if (highVolatility <= ASSET_POLICY.maximumHighVolatilityBps) break;
+    const reduction = Math.min(
+      result[id],
+      highVolatility - ASSET_POLICY.maximumHighVolatilityBps,
+    );
+    releaseToReserve(id, reduction);
+    highVolatility -= reduction;
   }
-  return allocation;
+
+  if (result[normalizedReserveId] < ASSET_POLICY.minimumReserveWeightBps) {
+    let needed =
+      ASSET_POLICY.minimumReserveWeightBps - result[normalizedReserveId];
+    const reducible = riskIds
+      .filter((id) => result[id] > 0)
+      .sort((a, b) => result[b] - result[a] || a.localeCompare(b));
+    for (const id of reducible) {
+      const reduction = Math.min(result[id], needed);
+      releaseToReserve(id, reduction);
+      needed -= reduction;
+      if (needed === 0) break;
+    }
+  }
+
+  return validateDynamicAllocation(result, assets, normalizedReserveId);
 }
 
 export function validateAssetManifest(

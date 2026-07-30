@@ -1925,3 +1925,25 @@ build`; authenticated live `/api/collect-market`.
 - Follow-up: Verify the first naturally eligible full DecisionContext V7 cycle,
   commit and push the exact devnet release, then promote that exact commit to
   testnet and run the required two-hour acceptance.
+
+### 2026-07-30 - V7 proposal constraint repair
+
+- Context: The first naturally eligible DecisionContext V7 run built a fresh
+  DEX-native context and received a valid AI Brain Pulse, but the model repeated
+  the previous 25% AAPL and 25% NVDA targets. Those raw weights exceed the
+  protocol's 20% per-asset maximum, so the pre-policy validator held safely.
+- Decision: Preserve the exact raw proposal, then deterministically constrain
+  known active-asset proposals before applying brain/evidence policy. Excess
+  per-asset weight, positions beyond nine, high-volatility exposure above 30%,
+  and reserve shortfalls move to USDG. Unknown assets, malformed values, and
+  weights that do not total 10,000 still fail closed.
+- Files: `apps/web/lib/asset-universe.ts`,
+  `apps/web/lib/allocator.ts`, `tests/asset-universe.test.ts`.
+- Commands/tests: Replayed the real 30/25/25/20 proposal shape, added checksum
+  manifest-ID and deterministic constraint regressions, ran asset-universe
+  10/10, DecisionContext 10/10, and a production build.
+- Result: Model judgment remains visible as raw evidence, while deterministic
+  protocol caps adjust an otherwise usable proposal instead of unnecessarily
+  turning it into a fallback Hold.
+- Follow-up: Verify the next naturally eligible live V7 cycle while completing
+  the exact-commit testnet migration and acceptance preparation.
