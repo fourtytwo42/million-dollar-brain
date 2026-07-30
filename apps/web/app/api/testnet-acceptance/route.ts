@@ -187,7 +187,11 @@ export async function POST(request: NextRequest) {
       }
 
       if (d.brainControlRegistry) {
-        const control = controlSpec(piece.id).controls[0];
+        // Cadence pieces feed the autonomous scheduler. Exercise their next
+        // control instead so an acceptance transaction cannot stretch the
+        // review interval beyond the acceptance freshness window.
+        const controlIndex = [4, 6, 38].includes(piece.id) ? 1 : 0;
+        const control = controlSpec(piece.id).controls[controlIndex];
         const nextBundle = {
           ...piece.controlBundle,
           values: [...piece.controlBundle.values],
@@ -199,14 +203,15 @@ export async function POST(request: NextRequest) {
           nextBundle.values[1] -= shift;
         } else if (control.kind === "multi") {
           const optionCount = control.options?.length ?? 1;
-          nextBundle.values[0] = 1 << ((scenario + piece.id) % optionCount);
+          nextBundle.values[controlIndex] =
+            1 << ((scenario + piece.id) % optionCount);
         } else {
           const optionCount =
             control.kind === "attention"
               ? (control.maximum ?? 0) + 1
               : (control.options?.length ?? 1);
-          nextBundle.values[0] =
-            ((nextBundle.values[0] ?? 0) + 1) % optionCount;
+          nextBundle.values[controlIndex] =
+            ((nextBundle.values[controlIndex] ?? 0) + 1) % optionCount;
         }
         transactions.controls = await write(actor.client, {
           address: d.brainControlRegistry,

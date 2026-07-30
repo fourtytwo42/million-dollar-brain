@@ -769,6 +769,7 @@ export async function dashboard(
     oracle: {
       assets: oracleRows,
       chainTimestamp: Number(latestBlock.timestamp),
+      maximumPriceAge: Number(maximumPriceAge),
       oldestTimestamp: Number.isFinite(oldestOracleTimestamp)
         ? oldestOracleTimestamp
         : 0,

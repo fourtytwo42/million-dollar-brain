@@ -7,18 +7,39 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
   BRAINS NAV, validate on devnet, then promote the exact accepted release to
   Robinhood Testnet.
-- Last meaningful change: The two-hour testnet acceptance found that a
-  transaction submitted immediately from a pinned DEX quote could land five
-  Robinhood L2 blocks later and exceed the three-block route-age limit. The
-  runner is paused with its original clock and evidence preserved while the
-  route window and acceptance gas funding are repaired.
-- Next step: Deploy the focused adapter repair, verify a transaction landing
-  beyond three L2 blocks remains bounded by the 30-second expiry, and resume the
-  preserved acceptance run.
+- Last meaningful change: Acceptance checkpoint 5 found that the synthetic
+  control-change path could change Piece 4's review cadence beyond the
+  95-minute acceptance freshness window. It also exposed a second legacy
+  120-second DecisionContext freshness check even though the DEX vault's
+  on-chain maximum price age is 900 seconds.
+- Next step: Keep cadence-affecting controls stable during synthetic
+  acceptance, use the vault-validated aggregate oracle freshness result, restore
+  Pieces 4, 6, and 38 to canonical scheduler defaults, verify a natural V6 AI
+  cycle, and resume the preserved acceptance run.
 - Blockers: The fresh two-hour acceptance remains incomplete. Mainnet
   deployment remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Acceptance scheduler and DEX freshness repair
+
+- Context: Recovery checkpoint 4 passed after faucet funding, but checkpoint 5
+  failed because the latest autonomous AI cycle was older than 95 minutes.
+- Decision: Acceptance control transactions must not mutate the scheduler slots
+  on Pieces 4, 6, or 38. The dynamic context must trust `oracle.fresh`, which
+  already validates all active DEX marks against the vault's configured
+  `maximumPriceAge`, rather than applying a conflicting hard-coded 120-second
+  age limit.
+- Files: `apps/web/app/api/testnet-acceptance/route.ts`,
+  `apps/web/lib/asset-universe.ts`,
+  `scripts/restore-testnet-acceptance-cadence.ts`.
+- Result: Diagnosis confirmed the timer was healthy and evaluating every five
+  minutes; the current six-hour cadence came from the synthetic Piece 4 update,
+  while the DEX vault correctly permits 900-second marks maintained by the
+  ten-minute observation heartbeat.
+- Follow-up: Deploy from devnet, restore the three scheduler pieces, verify a
+  natural AI-sourced DecisionContext V6 cycle, then continue the original
+  acceptance clock with repair time excluded.
 
 ### 2026-07-30 - Testnet acceptance gas-budget recovery
 
@@ -1695,6 +1716,7 @@ build`; authenticated live `/api/collect-market`.
 - Result: Most active testnet replicas have coverage score zero and no mature returns, spread, liquidity, or fundamentals. Only AAPL and NVDA currently have meaningful official dossiers, while AAPL is prohibited by the active brain directive. The dynamic validator treats every active manifest asset as allocatable and enforces at most nine positions; the four-position brain preference is not a hard validator limit.
 - Result: The current roughly 58% USDG portfolio is the last executed allocation. New 50% proposals are held because the selected four-hour cooldown remains active.
 - Follow-up: Before treating testnet behavior as representative, restore intentional post-endurance controls and require usable evidence for model selection. Consider making preferred position count more explicit in the prompt or deterministically bounded.
+
 ### 2026-07-30 - Self-hosted DEX execution implementation checkpoint
 
 - Context: The approved V5 migration replaces signed 0x calldata with structured self-hosted Uniswap routes and DEX TWAP NAV.

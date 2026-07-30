@@ -80,6 +80,7 @@ export type DynamicAllocation = Record<string, number>;
 export type DynamicOracleState = {
   fresh: boolean;
   chainTimestamp?: number;
+  maximumPriceAge?: number;
   assets: Record<
     string,
     { priceUsdWad: string; updatedAt: number; valid: boolean }
@@ -122,7 +123,8 @@ export function assessDynamicFreshness(
     }
     if (
       observation.updatedAt <= 0 ||
-      Math.max(0, nowSeconds - observation.updatedAt) > 120
+      Math.max(0, nowSeconds - observation.updatedAt) >
+        (oracle.maximumPriceAge ?? 120)
     ) {
       reasons.push(`${record.symbol} valuation is stale`);
     }
