@@ -72,12 +72,12 @@ MDB_REGISTRY="$registry" \
   forge script script/UpgradeCapacityV3.s.sol:UpgradeCapacityV3 \
     --rpc-url "$rpc" "${signer[@]}" --broadcast --slow --gas-estimate-multiplier 175
 
-[[ "$(cast call "$registry" 'qualificationSchemaVersion()(uint16)' --rpc-url "$rpc")" == "3" ]]
+[[ "$(cast call "$registry" 'qualificationSchemaVersion()(uint16)' --rpc-url "$rpc" | awk '{print $1}')" == "3" ]]
 [[ "$(cast call "$registry" 'qualificationV3Enabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$valuation" 'longTwapWindow()(uint32)' --rpc-url "$rpc")" == "14400" ]]
+[[ "$(cast call "$valuation" 'longTwapWindow()(uint32)' --rpc-url "$rpc" | awk '{print $1}')" == "14400" ]]
 [[ "$(cast call "$valuation" 'dexSafetyV2Enabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$execution" 'dexOnlySafetyEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$basket" 'tvlCapUsdWad()(uint256)' --rpc-url "$rpc")" == \
+[[ "$(cast call "$basket" 'tvlCapUsdWad()(uint256)' --rpc-url "$rpc" | awk '{print $1}')" == \
   "60000000000000000000000" ]]
 
 echo "DEX-native capacity V3 migration verified on chain $expected_chain."

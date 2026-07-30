@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "environment": "testnet",
   "chainId": 46630,
   "productionParityReplicas": true,
@@ -39,7 +39,9 @@
       "controlId": 2,
       "tags": [
         "technology"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x68dc0b849e708e289f9b16d84bf3cb2d4a115522",
@@ -57,7 +59,9 @@
       "tags": [
         "technology",
         "ai_semiconductor"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0xb634624fecf5acf61059ee7f9a7b0515cc3b09b9",
@@ -75,7 +79,9 @@
       "tags": [
         "technology",
         "ai_semiconductor"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x92d22f0ce08a8cbf2190b89700e91ffab28670af",
@@ -93,7 +99,9 @@
       "tags": [
         "technology",
         "consumer_discretionary"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x7277db3598e3fd1d3f2bab11d3973a31b1357b6b",
@@ -111,7 +119,9 @@
       "tags": [
         "technology",
         "communications"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0xd8dc444dc2454a630b15c795a837cf36b575aaf2",
@@ -129,7 +139,9 @@
       "tags": [
         "technology",
         "communications"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x1dfbd3ccb6f57a8ad7ee8041385ec2e4216c264b",
@@ -146,7 +158,9 @@
       "controlId": 8,
       "tags": [
         "consumer_discretionary"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x2db5b0bbc00898379c3227c1c9910619435bc997",
@@ -163,7 +177,9 @@
       "controlId": 9,
       "tags": [
         "broad_market"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0xbc1093a1c525cac923a2e65d18703818bcff3a82",
@@ -181,7 +197,9 @@
       "tags": [
         "broad_market",
         "technology"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0xe7a123a58f10f90051cafff3081b7a3041ef31f3",
@@ -200,7 +218,9 @@
         "broad_market",
         "technology",
         "ai_semiconductor"
-      ]
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
     },
     {
       "id": "46630:0x16f5ea6a454eb8d671b8dfa27deefb24bab1030b",
@@ -217,6 +237,71 @@
       "controlId": 12,
       "tags": [
         "crypto_major"
+      ],
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000"
+    },
+    {
+      "id": "46630:0x22d5235a569c9c445d051760629b69e9c663e0e0",
+      "symbol": "GME",
+      "name": "Test Replica GameStop",
+      "address": "0x22d5235A569c9c445d051760629B69E9C663e0E0",
+      "kind": "stock",
+      "riskClass": "high_volatility",
+      "decimals": 18,
+      "maximumWeightBps": 2000,
+      "safeTwoSidedCapacityUsdWad": "0",
+      "maximumExposureUsdWad": "0",
+      "robinhoodUid": "0x9e8fec184f1b0965cb02cea2a0b1a03a8903133e0e67e609ed12d4ecb72a3925",
+      "canonicalSource": "testnet-production-interface-replica",
+      "replica": true,
+      "controlId": 13,
+      "tags": [
+        "stock",
+        "high_volatility",
+        "meme_speculative"
+      ]
+    },
+    {
+      "id": "46630:0x5445ac2965f1e40f619a87c3a55b3750827e1a8b",
+      "symbol": "SPCX",
+      "name": "Test Replica SPCX",
+      "address": "0x5445Ac2965f1E40F619a87C3a55b3750827e1a8b",
+      "kind": "stock",
+      "riskClass": "high_volatility",
+      "decimals": 18,
+      "maximumWeightBps": 2000,
+      "safeTwoSidedCapacityUsdWad": "0",
+      "maximumExposureUsdWad": "0",
+      "robinhoodUid": "0xb20dc906b134c6ba99e6a8ae6067acefaa0cb5f0219333d5ba1a616bf37a0721",
+      "canonicalSource": "testnet-production-interface-replica",
+      "replica": true,
+      "controlId": 14,
+      "tags": [
+        "stock",
+        "high_volatility",
+        "industrials"
+      ]
+    },
+    {
+      "id": "46630:0xed0d1a50669e6a9d9e0182f2bc0168f9cbb1a4f9",
+      "symbol": "VIRTUAL",
+      "name": "Test Replica Virtuals Protocol",
+      "address": "0xed0D1a50669e6A9d9e0182F2bc0168f9cBB1a4F9",
+      "kind": "crypto",
+      "riskClass": "high_volatility",
+      "decimals": 18,
+      "maximumWeightBps": 2000,
+      "safeTwoSidedCapacityUsdWad": "0",
+      "maximumExposureUsdWad": "0",
+      "robinhoodUid": null,
+      "canonicalSource": "testnet-production-interface-replica",
+      "replica": true,
+      "controlId": 15,
+      "tags": [
+        "crypto",
+        "high_volatility",
+        "meme_speculative"
       ]
     }
   ],
@@ -231,26 +316,28 @@
     "creatorVault": "0x81720eEA92D608daE1D789673d0a4d59c6B16485",
     "brain": "0x97B0fbb23dfadE516bbe7B9f4753EC4f4e282B1c",
     "basket": "0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B",
-    "basketImplementation": "0x3b55714f9aa87f613E5d92b7A8A916d1E87eAB59",
+    "basketImplementation": "0x0f2281f503968016ad49700f944913db875b5609",
     "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
     "dexExecutionAdapter": "0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff",
-    "dexExecutionImplementation": "0x423558a22f11520f2bb1bc11a306473357c2c693",
+    "dexExecutionImplementation": "0xdcc87a92358862970e2c92d1730792deeb5038c2",
     "dexValuationAdapter": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
-    "dexValuationImplementation": "0x029cAA11D2c782C4dA043fbB1FFC19a6bbb483B0"
+    "dexValuationImplementation": "0x21184a94799e400e1eb837bf18eeb0ef45dc6418",
+    "assetRegistryImplementation": "0x1c98290de0eb473c0d3bfe6fd4579d3a49cc6284"
   },
   "evidence": {
     "sourceChainId": 4663,
     "testnetChainId": 46630,
-    "qualification": "test-rehearsal-only",
-    "canonicalMainnetValidationRequired": true
+    "qualification": "test-rehearsal-capacity-v3",
+    "canonicalMainnetValidationRequired": true,
+    "capacityCandidateEvidence": "var/testnet-v3/capacity-candidates-v1.json",
+    "chainlinkAuthority": "permanently-inactive"
   },
-  "manifestHash": "ada26e310e5cb01200468001b98fd1ac400f0b7706b156aa4147be7a7d071a97",
   "assetRegistry": "0x03E4AEEfe8287a3D8DD9661e931F6D5078eEB435",
   "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
   "controlCatalogHash": "0x1c5b19d5171ffeb7f1d56cb571f80a4659801bed9db6000d67dd0b575fc6b774",
   "controlSchemaVersion": 1,
   "controlCatalogVersion": 1,
-  "releaseCommit": "d9f25b444d5fbfafe120c52efa4bb88d958a19b3",
+  "releaseCommit": "d1731219fc3b9d7012538a89683edb16ba289475",
   "brainProfile": {
     "schemaVersion": 2,
     "catalogVersion": 1,
@@ -270,7 +357,7 @@
   },
   "dexExecutionAdapter": "0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff",
   "dexValuationAdapter": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
-  "executionMode": "uniswap-v3-structured",
+  "executionMode": "uniswap-v3-capacity-v3",
   "legacyPlanExecutionDisabled": true,
   "dexVenue": {
     "venue": "uniswap-v3",
@@ -284,7 +371,6 @@
     "twapWindowSeconds": 1800,
     "quoteLifetimeSeconds": 30,
     "maximumReferenceBlockAge": 128,
-    "circuitBreaker": "0x71FF2ea72c0CB71760ea3c166CB1C5D46BA8e45B",
     "pools": [
       {
         "address": "0x87dfe3249d78c61728215Ad66437e1F4803074e0",
@@ -362,7 +448,39 @@
         "token1": "0x16f5eA6A454Eb8D671B8DFA27DeefB24bAB1030B",
         "fee": 3000,
         "approved": true
+      },
+      {
+        "address": "0x22B092075eD8970386D43Ef643c598Ef69a736dd",
+        "token0": "0x22d5235A569c9c445d051760629B69E9C663e0E0",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x16239c6d68350e65fA4086867A144eE4a3292F78",
+        "token0": "0x5445Ac2965f1E40F619a87C3a55b3750827e1a8b",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0xcf63801f17A618e41ABc72b83A7e7789622D7E7C",
+        "token0": "0xed0D1a50669e6A9d9e0182F2bc0168f9cBB1a4F9",
+        "fee": 3000,
+        "approved": true
       }
-    ]
+    ],
+    "longTwapWindowSeconds": 14400
+  },
+  "qualification": {
+    "schemaVersion": 3,
+    "requiredContinuousHours": 48,
+    "requiredRegularMarketSessions": 2,
+    "authority": "on-chain-dex-only"
+  },
+  "capacityPolicy": {
+    "tvlCapUsdWad": "60000000000000000000000",
+    "provenCapacityFractionBps": 5000,
+    "maximumAssetWeightBps": 2000,
+    "minimumReserveWeightBps": 2000,
+    "maximumHighVolatilityWeightBps": 3000
   }
 }
