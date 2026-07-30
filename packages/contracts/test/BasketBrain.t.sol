@@ -150,13 +150,15 @@ contract BasketBrainTest is Test {
     function testV6UsesGovernanceConfiguredSixtyThousandDollarTvlCap() public {
         vm.prank(admin);
         basket.reinitializeV6(60_000e18);
-        assertEq(basket.effectiveTvlCapUsdWad(), 60_000e18);
-        assertTrue(basket.capacityEnforcementEnabled());
+        assertEq(basket.tvlCapUsdWad(), 60_000e18);
+        vm.prank(admin);
+        basket.setTvlCapUsdWad(75_000e18);
+        assertEq(basket.tvlCapUsdWad(), 75_000e18);
 
         vm.startPrank(alice);
         usdg.approve(address(basket), type(uint256).max);
         vm.expectRevert(BasketVault.TvlCapExceeded.selector);
-        basket.deposit(60_001e18, 0, block.timestamp + 1 hours);
+        basket.deposit(75_001e18, 0, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 

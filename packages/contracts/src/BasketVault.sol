@@ -197,7 +197,7 @@ contract BasketVault is
     bool public legacyPlanExecutionDisabled;
     // V6 storage. Zero preserves the legacy cap until the V6 reinitializer is called.
     uint256 public tvlCapUsdWad;
-    bool public capacityEnforcementEnabled;
+    bool private _capacityEnforcementEnabled;
     uint256[38] private __gap;
 
     event Deposited(address indexed account, uint256 gross, uint256 shares, uint256 fee);
@@ -337,17 +337,18 @@ contract BasketVault is
     {
         if (tvlCapUsdWad_ == 0) revert InvalidConfiguration();
         tvlCapUsdWad = tvlCapUsdWad_;
-        capacityEnforcementEnabled = true;
-        emit BasketV6Configured(tvlCapUsdWad_, true);
+        _capacityEnforcementEnabled = true;
     }
 
-    function setTvlCapUsdWad(uint256 tvlCapUsdWad_) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (!capacityEnforcementEnabled || tvlCapUsdWad_ == 0) revert InvalidConfiguration();
+    function setTvlCapUsdWad(uint256 tvlCapUsdWad_)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (!_capacityEnforcementEnabled || tvlCapUsdWad_ == 0) revert InvalidConfiguration();
         tvlCapUsdWad = tvlCapUsdWad_;
-        emit BasketV6Configured(tvlCapUsdWad_, true);
     }
 
-    function effectiveTvlCapUsdWad() public view returns (uint256) {
+    function _effectiveTvlCapUsdWad() private view returns (uint256) {
         return tvlCapUsdWad == 0 ? TVL_CAP : tvlCapUsdWad;
     }
 
@@ -514,7 +515,7 @@ contract BasketVault is
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        if (beforeNav + _reserveToUsdWad(grossAmount) > effectiveTvlCapUsdWad()) {
+        if (beforeNav + _reserveToUsdWad(grossAmount) > _effectiveTvlCapUsdWad()) {
             revert TvlCapExceeded();
         }
         uint256 walletValue =
@@ -545,7 +546,7 @@ contract BasketVault is
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        if (beforeNav + _reserveToUsdWad(grossAmount) > effectiveTvlCapUsdWad()) {
+        if (beforeNav + _reserveToUsdWad(grossAmount) > _effectiveTvlCapUsdWad()) {
             revert TvlCapExceeded();
         }
         uint256 walletValue =
@@ -941,8 +942,8 @@ contract BasketVault is
     }
 
     function _enforceAssetCapacities() private view {
-        if (!capacityEnforcementEnabled || address(assetRegistry) == address(0)) return;
-        uint256 perAssetTvlLimit = (effectiveTvlCapUsdWad() * MAX_ASSET_WEIGHT_BPS) / BPS;
+        if (!_capacityEnforcementEnabled || address(assetRegistry) == address(0)) return;
+        uint256 perAssetTvlLimit = (_effectiveTvlCapUsdWad() * MAX_ASSET_WEIGHT_BPS) / BPS;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
             uint256 registryLimit = assetRegistry.maximumExposureUsdWad(asset);

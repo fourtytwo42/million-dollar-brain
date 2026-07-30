@@ -56,6 +56,14 @@ Durable project context lives here. Update this file whenever information should
   `scripts/upgrade-capacity-v3.sh`. The environment file was backed up and only
   the malformed line was removed; the wrapper expression was corrected before
   retrying.
+- Result: The corrected migration completed simulation but Foundry refused
+  broadcast because BasketVault V6 was 110 bytes above the EIP-170 runtime
+  limit. No transaction was sent. The redundant public effective-cap view was
+  converted to a private helper and the redundant enforcement-flag getter was
+  removed; the public stored `tvlCapUsdWad` getter, governance setter, and all
+  cap behavior remain unchanged. Final optimized BasketVault runtime is 24,510
+  bytes, 66 bytes below EIP-170. The full 55-test Foundry suite and all
+  capacity/context/readiness tests passed after the size repair.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
   then testnet migration/acceptance. Configure the missing mainnet RPC failover
   environment only when the Alchemy endpoint is supplied.

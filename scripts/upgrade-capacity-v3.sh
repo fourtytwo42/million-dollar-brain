@@ -77,8 +77,7 @@ MDB_REGISTRY="$registry" \
 [[ "$(cast call "$valuation" 'longTwapWindow()(uint32)' --rpc-url "$rpc")" == "14400" ]]
 [[ "$(cast call "$valuation" 'dexSafetyV2Enabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 [[ "$(cast call "$execution" 'dexOnlySafetyEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$basket" 'capacityEnforcementEnabled()(bool)' --rpc-url "$rpc")" == "true" ]]
-[[ "$(cast call "$basket" 'effectiveTvlCapUsdWad()(uint256)' --rpc-url "$rpc")" == \
+[[ "$(cast call "$basket" 'tvlCapUsdWad()(uint256)' --rpc-url "$rpc")" == \
   "60000000000000000000000" ]]
 
 echo "DEX-native capacity V3 migration verified on chain $expected_chain."
