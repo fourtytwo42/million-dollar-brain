@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "environment": "robinhood-testnet-v3",
+  "chainId": 46630,
+  "gitSha": "a8a351aacb76ba783ded535a33a344615248a76b",
+  "sourceGitSha": "22db52abd8a1c9fc930025929cc9e12944f2e568",
+  "repairCommits": [
+    "a8a351aacb76ba783ded535a33a344615248a76b",
+    "fa0b255af18dcb2877cf0df55eef68655a072d59"
+  ],
+  "repairDowntimeMs": 608733,
+  "startedAt": "2026-07-30T06:19:35.334Z",
+  "completedAt": "2026-07-30T08:32:08.756Z",
+  "durationHours": 2.0401913888888887,
+  "completedCheckpoints": 8,
+  "requiredCheckpoints": 7,
+  "protocolFailures": 0,
+  "preservedHarnessFailedAttempts": 5,
+  "atomicBuys": true,
+  "atomicSells": true,
+  "autonomousCycles": true,
+  "executedCycleCheckpoints": 4,
+  "noQueuedSales": true,
+  "oracleFresh": true,
+  "responsiveChecks": 24,
+  "browserErrors": [],
+  "userScenarios": 24,
+  "source": {
+    "state": "var/testnet-v3-endurance/state.json",
+    "checkpoints": "var/testnet-v3-endurance/checkpoints.jsonl"
+  },
+  "sourceHash": "9a28d0e485ce673f918440eea61214db5041bf833bba43169fe513d3a99570d6"
+}

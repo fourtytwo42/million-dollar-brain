@@ -4,18 +4,47 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete the required two-hour, three-actor Robinhood Testnet
-  acceptance for Braincell Inspector and Owner Profile V2.
-- Last meaningful change: Exact source commit
-  `d9f25b444d5fbfafe120c52efa4bb88d958a19b3` is live on devnet and testnet.
-  Testnet BrainMarketplace was upgraded in place, all 42 current owners received
-  a new makeover, and a live Piece 7 makeover transaction plus public
-  desktop/tablet/mobile UAT passed.
-- Next step: Commit/push promotion evidence, arm the two-hour acceptance against
-  the exact source release, supervise it, then record the completed artifact.
+- Current task: Braincell Inspector and Owner Profile V2 testnet acceptance is
+  complete.
+- Last meaningful change: The accepted runtime includes source release
+  `d9f25b444d5fbfafe120c52efa4bb88d958a19b3`, promotion evidence
+  `22db52abd8a1c9fc930025929cc9e12944f2e568`, and acceptance repairs
+  `fa0b255af18dcb2877cf0df55eef68655a072d59` and
+  `a8a351aacb76ba783ded535a33a344615248a76b`.
+- Next step: Continue ordinary changes from devnet. Any future contract,
+  wallet, valuation, execution, or accounting change requires a new exact-build
+  testnet acceptance before mainnet promotion.
 - Blockers: None on testnet. Mainnet remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Profile V2 two-hour testnet acceptance complete
+
+- Context: Braincell Inspector and Owner Profile V2 required a fresh two-hour,
+  three-actor Robinhood Testnet acceptance after the in-place marketplace
+  upgrade and live Profile V2 smoke transaction.
+- Decision: Preserve the original acceptance clock while excluding verified
+  repair downtime. Accept the cadence-persistence and test-token top-up repairs
+  as part of the exact tested release lineage.
+- Files: `var/testnet-readiness/v3-2h-acceptance.json`,
+  `var/testnet-v3-endurance/state.json`,
+  `var/testnet-v3-endurance/checkpoints.jsonl`,
+  `PROFILE_V2_TESTNET_ACCEPTANCE.md`.
+- Commands/tests: Eight passing checkpoints over 2.04 active hours; 24
+  three-actor scenarios; atomic BRAINS buys and sells; brain purchases and
+  resales; control changes; claims; oversized-exit rejection; concurrency;
+  fresh oracles; no queued sales; four checkpoints observing an executed
+  autonomous V6 cycle; 24 automated responsive checks; final public in-app
+  Browser UAT at 1440x900, 768x1024, and 390x844 in light and dark themes.
+- Result: Acceptance completed at `2026-07-30T08:32:08.756Z` with zero protocol
+  failures and no browser errors. Final UAT found no horizontal overflow,
+  desktop retained the compact inspector, tablet/mobile used the dedicated
+  Back-to-Brain detail view, Profile V2 presentation remained visible, and the
+  public domain returned HTTP 200. The testnet RPC gateway remained healthy on
+  its configured paid secondary while the LAN primary was unreachable.
+- Follow-up: Keep the endurance service disarmed. Do not broadcast or activate
+  mainnet without separate explicit authorization and the remaining release
+  gates.
 
 ### 2026-07-30 - Braincell Inspector and Owner Profile V2 devnet checkpoint
 
