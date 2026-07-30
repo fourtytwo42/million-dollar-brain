@@ -90,7 +90,10 @@ contract UniswapExecutionAdapter is
     uint16 public constant MAX_TWAP_DEVIATION_BPS = 300;
     uint16 public constant MAX_CIRCUIT_BREAKER_DEVIATION_BPS = 500;
     uint32 public constant MAX_PLAN_LIFETIME = 30;
-    uint32 public constant MAX_REFERENCE_BLOCK_AGE = 3;
+    // Robinhood L2 blocks are fast enough that an external-wallet signature can
+    // legitimately land dozens of blocks after its pinned quote. The plan's
+    // independent 30-second expiry remains the primary wall-clock bound.
+    uint32 public constant MAX_REFERENCE_BLOCK_AGE = 128;
 
     struct DexRouteV1 {
         address tokenIn;

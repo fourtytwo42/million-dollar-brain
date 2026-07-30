@@ -71,14 +71,14 @@ async function fundActor(
   requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
-  const minimumGas = parseEther("0.00025");
+  const targetGas = parseEther("0.00035");
   const gasBalance = await publicClient.getBalance({
     address: actor.account.address,
   });
-  if (gasBalance < minimumGas) {
+  if (gasBalance < targetGas) {
     const hash = await adminClient.sendTransaction({
       to: actor.account.address,
-      value: parseEther("0.001"),
+      value: targetGas - gasBalance,
     });
     await waitForReliableTransactionReceipt(hash);
     transactions.gasFunding = hash;

@@ -7,16 +7,43 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
   BRAINS NAV, validate on devnet, then promote the exact accepted release to
   Robinhood Testnet.
-- Last meaningful change: The corrected testnet DEX execution adapter is live.
-  A complete actor flow then passed: braincell resale, control update, BRAINS
-  buy, atomic BRAINS sell, reward claim, oversized-exit rejection, fresh DEX
-  NAV, and zero queued sales.
-- Next step: Freeze the corrected manifest/build commit, complete public
-  responsive UAT, then begin a fresh two-hour three-actor acceptance.
+- Last meaningful change: The two-hour testnet acceptance found that a
+  transaction submitted immediately from a pinned DEX quote could land five
+  Robinhood L2 blocks later and exceed the three-block route-age limit. The
+  runner is paused with its original clock and evidence preserved while the
+  route window and acceptance gas funding are repaired.
+- Next step: Deploy the focused adapter repair, verify a transaction landing
+  beyond three L2 blocks remains bounded by the 30-second expiry, and resume the
+  preserved acceptance run.
 - Blockers: The fresh two-hour acceptance remains incomplete. Mainnet
   deployment remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Acceptance route-age and gas-funding repair
+
+- Context: Acceptance checkpoint 1 failed on atomic redemption transaction
+  `0x33a64faacac2d09282e97a563fe585856e80d9a7d5076be2d818cbc9008c989c`.
+  The plan was pinned at L2 block 95349632 and landed at 95349637. Replay passed
+  at age three and reverted with `StaleReferenceBlock` at age four. A later
+  retry exposed a second test-harness defect: actor funding always attempted a
+  fixed 0.001 ETH transfer even when only a small deficit was needed.
+- Decision: Permit at most 128 Robinhood L2 blocks while retaining the
+  independent 30-second issued-at/deadline bound, exact-size quote, one-percent
+  minimum-output protection, and three-percent TWAP deviation check. Fund
+  acceptance actors only to a 0.00035 ETH target by transferring the exact
+  deficit.
+- Files: `packages/contracts/src/UniswapExecutionAdapter.sol`,
+  `packages/contracts/test/DexExecution.t.sol`,
+  `apps/web/app/api/testnet-acceptance/route.ts`,
+  `scripts/merge-dex-manifest.mjs`,
+  `packages/contracts/deployments/testnet-v3.json`.
+- Commands/tests: Pending focused and full verification, testnet adapter
+  upgrade, focused live checkpoint, and acceptance resume.
+- Result: Repair in progress. The runner remains stopped and its original
+  acceptance clock/evidence have not been reset.
+- Follow-up: Resume only after the focused live transaction and gas-funding
+  checks pass.
 
 ### 2026-07-30 - Robinhood L2 reference-block correction
 

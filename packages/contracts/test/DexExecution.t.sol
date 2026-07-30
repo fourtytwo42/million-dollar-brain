@@ -222,9 +222,9 @@ contract DexExecutionTest is Test {
     }
 
     function testRejectsStaleReferenceBlock() public {
-        vm.roll(block.number + 4);
+        vm.roll(block.number + 129);
         UniswapExecutionAdapter.DexSwapPlanV1 memory plan = _buyPlan(100e18, 50e18);
-        plan.referenceBlock = uint64(block.number - 4);
+        plan.referenceBlock = uint64(block.number - 129);
         vm.expectRevert(UniswapExecutionAdapter.StaleReferenceBlock.selector);
         adapter.execute(plan, true);
     }
@@ -236,11 +236,11 @@ contract DexExecutionTest is Test {
         vm.chainId(46_630);
 
         UniswapExecutionAdapter.DexSwapPlanV1 memory plan = _buyPlan(100e18, 50e18);
-        plan.referenceBlock = 997;
+        plan.referenceBlock = 872;
         assertEq(adapter.execute(plan, true), 50e18);
 
         plan = _buyPlan(100e18, 50e18);
-        plan.referenceBlock = 996;
+        plan.referenceBlock = 871;
         vm.expectRevert(UniswapExecutionAdapter.StaleReferenceBlock.selector);
         adapter.execute(plan, true);
     }

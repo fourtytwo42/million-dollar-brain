@@ -283,7 +283,7 @@
     ],
     "twapWindowSeconds": 1800,
     "quoteLifetimeSeconds": 30,
-    "maximumReferenceBlockAge": 3,
+    "maximumReferenceBlockAge": 128,
     "circuitBreaker": "0x71FF2ea72c0CB71760ea3c166CB1C5D46BA8e45B",
     "pools": [
       {

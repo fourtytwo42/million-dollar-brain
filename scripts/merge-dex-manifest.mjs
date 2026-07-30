@@ -149,7 +149,7 @@ const merged = {
     feeTiers: [3_000],
     twapWindowSeconds: 1_800,
     quoteLifetimeSeconds: 30,
-    maximumReferenceBlockAge: 3,
+    maximumReferenceBlockAge: 128,
     circuitBreaker: contracts.oracle,
     pools,
   },
