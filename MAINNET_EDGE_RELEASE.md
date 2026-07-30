@@ -103,15 +103,20 @@ Engineering acceptance requires:
   requests, NAV reconciliation, autonomous-cycle freshness, and desktop,
   tablet, and mobile browser checks.
 - Completed 2026-07-29: Control Catalog v1 passed seven checkpoints across
-  2.000 active hours. The ledger contains 21 three-actor scenarios with live
+  2.002 active hours. The final ledger contains 24 three-actor scenarios across
+  eight passing checkpoints with live
   ControlBundle changes, MDBS buys and atomic sells, claims, initial brain
   purchases and compounded 120% resales, rejected oversized exits,
-  concurrency, 21 responsive-layout checks, and zero browser errors. A
+  concurrency, 24 responsive-layout checks, and zero browser errors. A
   preserved harness failure exposed fixed actor funding after a resale exceeded
   15,000 USDG; the protocol reverted atomically, price-aware funding was
   deployed through recorded repair commits, and repair downtime was excluded.
   The corrected checkpoint and every later checkpoint passed. No protocol
-  transaction was lost or queued.
+  transaction was lost or queued. The final live Ornith V5 decision executed
+  on chain 46630 in transaction
+  `0xaf5cde0a946982dbca8ce947ea510d9c4f9766e02c8bc4ab331f450a02b22dbc`.
+  The acceptance artifact is
+  `var/testnet-readiness/v3-2h-acceptance.json`.
 - Forty-eight continuous passing mainnet-shadow hours for every launch asset,
   including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
@@ -126,7 +131,7 @@ separate encrypted, no-funds identity. `scripts/deploy-mainnet.sh` remains
 fail-closed. It requires chain 4663, a clean
 pushed commit, encrypted signer, explicit broadcast flag, non-mock manifest,
 runtime-bytecode verification, storage checks, fork evidence, testnet
-acceptance, shadow evidence, and all external credentials. The shadow runne
+acceptance, shadow evidence, and all external credentials. The shadow runner
 rejects signing keys and broadcast mode.
 
 ## External activation gates
