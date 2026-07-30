@@ -1900,3 +1900,28 @@ build`; authenticated live `/api/collect-market`.
   wallet UI. The independent price breaker remains effective.
 - Follow-up: Run the final full contract suite after adapter rotation, commit
   and push the exact candidate, then promote that exact build to testnet.
+
+### 2026-07-30 - Capacity V3 devnet integration findings
+
+- Context: The DEX-native capacity release upgraded the devnet manifest to V5,
+  added per-asset capacity evidence, and changed the execution-mode identifier
+  to `uniswap-v3-capacity-v3`.
+- Decision: Treat deployment schema V4 and newer as structured-route
+  deployments in both browser transaction handlers and the DEX keepalive
+  worker. Accept the original structured mode and the capacity-v3 mode in the
+  keepalive gate.
+- Files: `apps/web/components/brain-dashboard.tsx`,
+  `scripts/run-dex-keepalive.sh`.
+- Commands/tests: A real 1,000 USDG browser buy and 25% atomic BRAINS sell
+  succeeded after correcting the browser's exact-schema checks. The keepalive
+  service then completed successfully and advanced all active DEX observations.
+  `totalAssetsUsd()` recovered to `15129763998402415117350`. An oversized
+  50,000 USDG browser quote reported `NVDA DEX capacity would be exceeded` and
+  kept the Buy button disabled. Asset-universe 8/8, DecisionContext 10/10,
+  graduation/readiness 12/12, and the production build passed.
+- Result: Schema V5 no longer silently skips route planning or disables DEX
+  observation maintenance. Capacity failures are visible before wallet
+  signing, and stale TWAP data continues to fail closed if maintenance stops.
+- Follow-up: Verify the first naturally eligible full DecisionContext V7 cycle,
+  commit and push the exact devnet release, then promote that exact commit to
+  testnet and run the required two-hour acceptance.

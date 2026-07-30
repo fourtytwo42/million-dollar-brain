@@ -758,7 +758,7 @@ export function BrainDashboard() {
       ...receiptWaitPolicy,
     });
     const quote =
-      data.deployment.schemaVersion === 4
+      (data.deployment.schemaVersion ?? 0) >= 4
         ? await requestQuotePlan("deposit", value)
         : null;
     setMessage(
@@ -1015,7 +1015,7 @@ export function BrainDashboard() {
     });
     const minimumNet = (preview[2] * 99n) / 100n;
     const quote =
-      data.deployment.schemaVersion === 4
+      (data.deployment.schemaVersion ?? 0) >= 4
         ? await requestQuotePlan("redeem", shares)
         : null;
     const tx = await wallet.writeContract({

@@ -25,14 +25,19 @@ esac
 network_config="$repo_root/config/networks.json"
 rpc_url="$(jq -r --arg key "$config_key" '.[$key].serverRpcUrl' "$network_config")"
 manifest="$(jq -r --arg key "$config_key" '.[$key].deploymentFile' "$network_config")"
-[[ "$(jq -r '.schemaVersion' "$manifest")" == "4" ]] || {
-  echo "DEX manifest V4 is not active for $mode" >&2
+(( $(jq -r '.schemaVersion // 0' "$manifest") >= 4 )) || {
+  echo "DEX manifest V4 or newer is not active for $mode" >&2
   exit 1
 }
-[[ "$(jq -r '.executionMode' "$manifest")" == "uniswap-v3-structured" ]] || {
-  echo "structured DEX execution is not active for $mode" >&2
-  exit 1
-}
+execution_mode="$(jq -r '.executionMode' "$manifest")"
+case "$execution_mode" in
+  uniswap-v3-structured|uniswap-v3-capacity-v3)
+    ;;
+  *)
+    echo "structured DEX execution is not active for $mode" >&2
+    exit 1
+    ;;
+esac
 
 reserve="$(jq -r '.assets[] | select(.kind == "reserve") | .address' "$manifest")"
 mapfile -t assets < <(jq -r '.assets[] | select(.kind != "reserve") | .address' "$manifest")
