@@ -38,12 +38,26 @@ Durable project context lives here. Update this file whenever information should
   `apps/web/app/api/testnet-acceptance/route.ts`,
   `scripts/merge-dex-manifest.mjs`,
   `packages/contracts/deployments/testnet-v3.json`.
-- Commands/tests: Pending focused and full verification, testnet adapter
-  upgrade, focused live checkpoint, and acceptance resume.
-- Result: Repair in progress. The runner remains stopped and its original
-  acceptance clock/evidence have not been reset.
-- Follow-up: Resume only after the focused live transaction and gas-funding
-  checks pass.
+- Commands/tests: DEX execution 10/10; full Foundry 51/51; network policy
+  18/18; DecisionContext 10/10; production Next.js build; guarded testnet
+  implementation deployment and UUPS upgrade.
+- Result: Active DEX adapter proxy
+  `0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff` now uses implementation
+  `0x423558a22f11520f2bb1bc11a306473357c2c693`; implementation transaction
+  `0xc1c10f6df02f012a32945c0ecdd7e88b4b06f9d760c97fa86928d7c93e49a88e`
+  and upgrade transaction
+  `0x706a473d1eed91016b2ee15f8139ede78a35664b93a3216bf8599045cca73c31`.
+  On-chain `MAX_REFERENCE_BLOCK_AGE()` returns 128. The first guarded upgrade
+  script version selected the archived `.contracts.executionAdapter` manifest
+  field rather than `.contracts.dexExecutionAdapter`; because the legacy proxy
+  has no vault authority, this did not affect active execution. The legacy
+  proxy was immediately restored to its prior implementation
+  `0xF8E48B5aCA9dE83DAcDAFEa31F63e80392A7307D` in transaction
+  `0xb80a648bf1fd4f6624ff37931d3c5ed06f1e2b241c2bd83f76d0e9e717126bfc`.
+  The permanent upgrade script now selects and verifies the BasketVault
+  `dexExecutionAdapter`.
+- Follow-up: Run a focused live actor checkpoint, rebuild/restart the exact
+  testnet release, and resume the preserved two-hour acceptance.
 
 ### 2026-07-30 - Robinhood L2 reference-block correction
 
