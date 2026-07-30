@@ -44,7 +44,9 @@ function hash(value: unknown) {
 async function candidates() {
   const d = deployment();
   const stockAssets = d.assets?.filter(
-    (asset) => asset.kind === "stock" || asset.kind === "etf",
+    (asset) =>
+      asset.active !== false &&
+      (asset.kind === "stock" || asset.kind === "etf"),
   ) ?? [
     { symbol: "NVDA", address: d.nvda },
     { symbol: "AAPL", address: d.aapl },
@@ -111,9 +113,9 @@ async function candidates() {
     throw new Error("ETH-USD ticker is older than 120 seconds");
   }
   const ethValue = eth.value;
-  const cryptoAssets = d.assets?.filter((asset) => asset.kind === "crypto") ?? [
-    { symbol: "ETHX", address: d.ethx },
-  ];
+  const cryptoAssets = d.assets?.filter(
+    (asset) => asset.active !== false && asset.kind === "crypto",
+  ) ?? [{ symbol: "ETHX", address: d.ethx }];
   if (cryptoAssets.some((asset) => !["WETH", "ETHX"].includes(asset.symbol))) {
     throw new Error(
       "no approved official price source for a configured crypto asset",

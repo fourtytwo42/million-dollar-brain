@@ -256,6 +256,7 @@
       "canonicalSource": "testnet-production-interface-replica",
       "replica": true,
       "controlId": 13,
+      "active": false,
       "tags": [
         "stock",
         "high_volatility",
@@ -277,6 +278,7 @@
       "canonicalSource": "testnet-production-interface-replica",
       "replica": true,
       "controlId": 14,
+      "active": false,
       "tags": [
         "stock",
         "high_volatility",
@@ -298,6 +300,7 @@
       "canonicalSource": "testnet-production-interface-replica",
       "replica": true,
       "controlId": 15,
+      "active": false,
       "tags": [
         "crypto",
         "high_volatility",

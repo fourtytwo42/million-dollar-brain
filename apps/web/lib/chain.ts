@@ -56,6 +56,7 @@ export type DeploymentAsset = {
   robinhoodUid: string | null;
   controlId?: number;
   tags?: string[];
+  active?: boolean;
 };
 
 export type DexVenuePool = {
@@ -319,10 +320,13 @@ export async function dashboard(
 ) {
   const d = deployment();
   const assetManifest = deploymentAssets(d);
+  const valuationAssetManifest = assetManifest.filter(
+    (asset) => asset.active !== false,
+  );
   const reserve = assetManifest.find((asset) => asset.kind === "reserve");
   if (!reserve) throw new Error("deployment has no reserve asset");
   const assetAddresses = Object.fromEntries(
-    assetManifest.map((asset) => [asset.symbol, asset.address]),
+    valuationAssetManifest.map((asset) => [asset.symbol, asset.address]),
   ) as Record<string, Address>;
   const contracts: DashboardContract[] = [
     {
@@ -588,7 +592,7 @@ export async function dashboard(
   const walletUsdg = address ? (results[cursor++] as bigint) : 0n;
   const pendingRedemption = address ? (results[cursor++] as bigint) : 0n;
 
-  const assetRows = assetManifest.map((asset) => {
+  const assetRows = valuationAssetManifest.map((asset) => {
     const value = results[cursor++] as bigint;
     const weightBps = results[cursor++] as number;
     const oracle = results[cursor++] as readonly [bigint, bigint, boolean];
