@@ -457,11 +457,12 @@ When sources conflict, use this order:
   brain-purchase transaction.
 - Files: `apps/web/app/api/testnet-acceptance/route.ts`,
   `tests/endurance-testnet.mjs`, `MEMORY.md`.
-- Result: Source repaired from the shared devnet code line. Repair downtime
-  remains excluded from the original two active hours. A focused checkpoint
-  must pass before the acceptance run resumes.
-- Follow-up: Build and verify both web environments, commit and push the repair,
-  record the repair SHA in the active endurance state, then rerun checkpoint 4.
+- Result: Source repaired from the shared devnet code line. The runner now
+  requires an initial purchase only when an unowned piece existed before the
+  checkpoint; after sellout, all actors still execute real resale transactions.
+  Repair downtime remains excluded from the original two active hours.
+- Follow-up: Verify the corrected sold-out checkpoint, then continue the
+  original run.
 
 ### 2026-07-29 - Control Catalog v1 PRD Consolidation
 

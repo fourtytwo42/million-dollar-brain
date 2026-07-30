@@ -205,7 +205,7 @@ async function runAcceptanceActor(page, scenario) {
   return body;
 }
 
-async function runAcceptance(page, checkpoint) {
+async function runAcceptance(page, checkpoint, hadUnownedPiece) {
   const baseScenario = checkpoint * 3;
   const setupUser = await runAcceptanceActor(page, baseScenario);
   const concurrentUsers = await Promise.all([
@@ -214,7 +214,9 @@ async function runAcceptance(page, checkpoint) {
   ]);
   const users = [setupUser, ...concurrentUsers];
   assert.equal(new Set(users.map((user) => user.actor)).size, 3);
-  assert.ok(users.some((user) => user.purchaseType === "initial"));
+  if (hadUnownedPiece) {
+    assert.ok(users.some((user) => user.purchaseType === "initial"));
+  }
   assert.ok(users.some((user) => user.purchaseType === "resale"));
   return { ok: true, concurrentRequests: 2, userActions: 3, users };
 }
@@ -423,7 +425,11 @@ async function runCheckpoint(page, checkpoint, browserErrors) {
   const servicesBefore = await verifyServices();
   const statusBefore = await getHealthyStatus(page);
 
-  const acceptance = await runAcceptance(page, checkpoint);
+  const acceptance = await runAcceptance(
+    page,
+    checkpoint,
+    statusBefore.pieces.some((piece) => piece.unowned),
+  );
   const responsive = await verifyUi(page, checkpoint);
 
   const statusAfter = await getHealthyStatus(page);
