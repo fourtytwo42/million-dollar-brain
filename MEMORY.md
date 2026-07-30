@@ -99,6 +99,25 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Deploy the exact repair commit to devnet and testnet, confirm a
   successful natural V6 Ornith cycle, then resume checkpoint 0.
 
+### 2026-07-30 - Acceptance funding exhaustion repair
+
+- Context: Profile V2 acceptance checkpoints 0 through 3 passed. Checkpoint 4
+  exposed depletion of the operator's prefunded test USDG as repeated 20%
+  braincell resales increased acceptance-actor funding requirements.
+- Decision: The private chain-46630 acceptance endpoint mints project-owned
+  replica USDG directly to the deterministic test actor when it needs a
+  top-up. It no longer assumes the operator keeps an effectively unlimited
+  transferable test-token balance. Native test ETH remains reserve-capped and
+  unchanged.
+- Files: `apps/web/app/api/testnet-acceptance/route.ts`.
+- Commands/tests: Production build, focused transactional checkpoint, and
+  existing three-actor acceptance assertions.
+- Result: Long-running valueless testnet acceptance can continue exercising
+  rising-price braincell resales without draining an arbitrary seed balance.
+  This path remains token-authenticated, testnet-only, and unavailable on
+  mainnet.
+- Follow-up: Resume checkpoint 4 with repair downtime excluded.
+
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The basket share token's canonical product identity is `42 Braincells`
   (`BRAINS`). Internal legacy field names may remain for compatibility, but

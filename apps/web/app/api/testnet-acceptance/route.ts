@@ -14,6 +14,7 @@ import {
   chain,
   dashboard,
   deployment,
+  mintAbi,
   publicClient,
   waitForReliableTransactionReceipt,
 } from "@/lib/chain";
@@ -106,8 +107,8 @@ async function fundActor(
   if (balance < requiredUsdg) {
     transactions.usdgFunding = await write(adminClient, {
       address: usdg,
-      abi: erc20Abi,
-      functionName: "transfer",
+      abi: mintAbi,
+      functionName: "mint",
       args: [actor.account.address, requiredUsdg - balance],
     });
   }
