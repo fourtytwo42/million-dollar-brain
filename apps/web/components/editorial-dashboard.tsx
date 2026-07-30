@@ -1674,29 +1674,6 @@ export function EditorialDashboard({
                 </p>
               </div>
             </div>
-            <div className="title-actions">
-              <button
-                className="primary-action"
-                onClick={() => {
-                  setTradeSide("buy");
-                  document
-                    .getElementById("basket-trade")
-                    ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-              >
-                Buy BRAINS
-              </button>
-              <button
-                onClick={() => {
-                  setTradeSide("sell");
-                  document
-                    .getElementById("basket-trade")
-                    ?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-              >
-                Sell BRAINS
-              </button>
-            </div>
           </section>
           <section className="basket-overview-grid">
             <article className="large-ledger-card">

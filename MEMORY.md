@@ -1322,3 +1322,10 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: Eight endurance checkpoints; `npm run test:portfolio-display`; `npm --workspace apps/web run build`; desktop/tablet/mobile in-app Browser UAT.
 - Result: Active duration was 2.002 hours. Atomic buys and sells passed, no queued sales existed, and a live Ornith V5 allocation executed on chain 46630 in transaction `0xaf5cde0a946982dbca8ce947ea510d9c4f9766e02c8bc4ab331f450a02b22dbc`. Final NAV/share was `0.995938092690684581`.
 - Follow-up: Regenerate the exact-commit acceptance and signed non-broadcast mainnet candidate artifacts. Mainnet broadcast remains unauthorized.
+
+### 2026-07-29 - Basket Header Actions Removed
+
+- Context: The Basket header duplicated the Buy and Sell actions already available in the launchpad-style trading card on the same page.
+- Decision: Keep trading exclusively in the Buy/Sell card and remove the two redundant header buttons.
+- Files: `apps/web/components/editorial-dashboard.tsx`.
+- Result: The Basket introduction is quieter and has one obvious transaction surface.
