@@ -71,11 +71,10 @@ async function fundActor(
   requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
-  // The transaction client reserves 6,000,000 gas for the largest atomic DEX
-  // operation (about 0.000144 ETH at the observed testnet gas price). Keep a
-  // small bounded margin without concentrating the shared endurance budget in
-  // whichever concurrent request reaches the lock first.
-  const targetGas = parseEther("0.00016");
+  // Successful three-leg buys use about 2.08M gas and sells about 1.37M.
+  // Retain a 3M transaction ceiling and enough balance for both sequential
+  // operations without concentrating the shared endurance budget in one actor.
+  const targetGas = parseEther("0.000125");
   const gasBalance = await publicClient.getBalance({
     address: actor.account.address,
   });
@@ -246,7 +245,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "depositWithDexPlan",
-        gas: 6_000_000n,
+        gas: 3_000_000n,
         args: [
           gross,
           (depositPreview[2] * 99n) / 100n,
@@ -272,7 +271,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "redeemWithDexPlan",
-        gas: 6_000_000n,
+        gas: 3_000_000n,
         args: [
           sellShares,
           (redeemPreview[2] * 99n) / 100n,

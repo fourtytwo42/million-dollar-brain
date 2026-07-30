@@ -34,9 +34,11 @@ Durable project context lives here. Update this file whenever information should
   the test endpoint's 0.00035 ETH per-actor target could reserve more gas across
   three concurrent actors than the shared wallet pool contained. Reduce the
   bounded per-actor target. Live replay then established that the transaction
-  client reserves 6,000,000 gas for the largest atomic DEX call, requiring
-  about 0.000144 ETH at the observed gas price, so the final target is 0.00016
-  ETH with exact-deficit funding. Do not weaken price freshness, TWAP,
+  client reserved 6,000,000 gas for each atomic DEX call despite successful
+  three-leg buys using about 2.08 million and sells about 1.37 million. The
+  final harness uses a 3,000,000-gas ceiling and a 0.000125 ETH actor target,
+  enough for sequential buy and sell with substantial gas headroom while
+  remaining inside the shared test budget. Do not weaken price freshness, TWAP,
   transaction, or gas-health assertions.
 - Commands/tests: Actor-to-operator transfers
   `0xcc82aa67ff384773680d29b4c563212bb5bc711a1ab3465a46d955247bfb5b55`,
