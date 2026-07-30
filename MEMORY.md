@@ -6,10 +6,11 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Build the signed, non-broadcast mainnet candidate and complete
   its external qualification gates without deploying or activating mainnet.
-- Last meaningful change: Mainnet shadow schema v3 now distinguishes the
-  required AAPL/NVDA/SPY/WETH set from optional MSFT/QQQ/SOXX, automatically
-  maps official Chainlink feeds, collects SEC capitalization/AUM evidence, and
-  builds a signed `mainnet-candidate-v3.json`.
+- Last meaningful change: The exact-commit two-hour testnet acceptance run
+  found and repaired an exhaustion bug in the three-actor brain resale
+  scenario. Once all 42 pieces are owned, the acceptance endpoint now always
+  selects a piece owned by another actor instead of silently skipping the
+  required purchase transaction.
 - Next step: Supply the paid Alchemy mainnet endpoint and production 0x API
   credential/policy, resolve WETH capitalization evidence, then collect 48
   continuous hours and run the exact-commit fork/testnet acceptance gates.
@@ -444,6 +445,23 @@ When sources conflict, use this order:
 - The MVP DAO is a simple creator-controlled upgradeable revenue vault. The owner may withdraw creator-side revenue, but basket principal and brain-owner liabilities must remain outside its normal withdrawal authority.
 
 ## Verification Ledger
+
+### 2026-07-30 - Acceptance Brain-Resale Exhaustion Repair
+
+- Context: Checkpoint 4 of the exact `d221fda` acceptance run failed after all
+  42 pieces became owned because an even-numbered scenario fell back to a piece
+  already owned by the active actor. The endpoint correctly omitted a purchase,
+  while the endurance assertion correctly required one.
+- Decision: When no unowned piece remains, select any piece owned by another
+  actor and exercise a resale. Never treat an already-owned control update as a
+  brain-purchase transaction.
+- Files: `apps/web/app/api/testnet-acceptance/route.ts`,
+  `tests/endurance-testnet.mjs`, `MEMORY.md`.
+- Result: Source repaired from the shared devnet code line. Repair downtime
+  remains excluded from the original two active hours. A focused checkpoint
+  must pass before the acceptance run resumes.
+- Follow-up: Build and verify both web environments, commit and push the repair,
+  record the repair SHA in the active endurance state, then rerun checkpoint 4.
 
 ### 2026-07-29 - Control Catalog v1 PRD Consolidation
 

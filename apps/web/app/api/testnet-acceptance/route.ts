@@ -151,19 +151,20 @@ export async function POST(request: NextRequest) {
       );
 
       const unowned = before.pieces.filter((candidate) => candidate.unowned);
+      const resale = before.pieces.find(
+        (candidate) =>
+          !candidate.unowned &&
+          candidate.owner.toLowerCase() !== actor.account.address.toLowerCase(),
+      );
       const piece =
-        (scenario % 2 === 1
-          ? before.pieces.find(
+        (scenario % 2 === 0 && unowned.length > 0
+          ? unowned[scenario % unowned.length]
+          : before.pieces.find(
               (candidate) =>
                 candidate.owner.toLowerCase() ===
                 otherActor.account.address.toLowerCase(),
-            )
-          : unowned[scenario % Math.max(1, unowned.length)]) ??
-        before.pieces.find(
-          (candidate) =>
-            candidate.owner.toLowerCase() ===
-            actor.account.address.toLowerCase(),
-        ) ??
+            )) ??
+        resale ??
         unowned[0];
       if (!piece) throw new Error("no brain piece is available for acceptance");
       const brainPurchasePrice =
