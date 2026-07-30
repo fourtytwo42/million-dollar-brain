@@ -155,7 +155,25 @@ function qualification(): AssetQualificationWindowV2 | null {
 }
 
 export function releaseStatus(activation: ActivationInput) {
-  const releaseSha = process.env.MDB_RELEASE_SHA ?? "unrecorded";
+  const releaseEvidencePath = `${process.env.MDB_STATE_DIR ?? ""}/release.json`;
+  let recordedReleaseSha: string | null = null;
+  if (process.env.MDB_STATE_DIR && existsSync(releaseEvidencePath)) {
+    try {
+      const candidate = JSON.parse(
+        readFileSync(releaseEvidencePath, "utf8"),
+      ) as { gitSha?: unknown };
+      if (
+        typeof candidate.gitSha === "string" &&
+        /^[0-9a-f]{40}$/i.test(candidate.gitSha)
+      ) {
+        recordedReleaseSha = candidate.gitSha;
+      }
+    } catch {
+      recordedReleaseSha = null;
+    }
+  }
+  const releaseSha =
+    recordedReleaseSha ?? process.env.MDB_RELEASE_SHA ?? "unrecorded";
   return {
     environment: networkConfig.mode,
     releaseSha,

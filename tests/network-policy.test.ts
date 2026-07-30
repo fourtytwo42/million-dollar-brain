@@ -333,3 +333,12 @@ test("confirmed wallet actions survive temporary status refresh failures", () =>
   assert.match(dashboard, /\(\) => refresh\(\)\.catch\(\(\) => undefined\)/);
   assert.match(dashboard, /Live portfolio data is still refreshing\./);
 });
+
+test("runtime release evidence can supersede a stale service environment SHA", () => {
+  const releaseStatus = readFileSync("apps/web/lib/release-status.ts", "utf8");
+  assert.match(releaseStatus, /MDB_STATE_DIR.*release\.json/s);
+  assert.match(
+    releaseStatus,
+    /recordedReleaseSha \?\? process\.env\.MDB_RELEASE_SHA/,
+  );
+});
