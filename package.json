@@ -10,6 +10,7 @@
     "test:contracts": "forge test --root packages/contracts",
     "test:meme": "node --experimental-strip-types --test tests/meme-recap.test.ts",
     "test:portfolio-display": "node --experimental-strip-types --test tests/portfolio-display.test.ts",
+    "test:cycle-history": "node --experimental-strip-types --test tests/cycle-history.test.ts",
     "test:portrait": "node --experimental-strip-types --test tests/portrait.test.ts",
     "test:piece-name": "node --experimental-strip-types --test tests/piece-name.test.ts",
     "test:brain-controls": "node --experimental-strip-types --test tests/brain-controls.test.ts",

@@ -17,6 +17,7 @@ import {
   prepareExperienceBundle,
 } from "../lib/brain-control-experience";
 import { compileBrainV1 } from "../lib/compiled-brain";
+import { cycleSelectionKey } from "../lib/cycle-history";
 import {
   allocationSummary,
   basketChartColor,
@@ -527,9 +528,7 @@ export function EditorialDashboard({
   onClaim: () => void;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
-  const [selectedCycleHash, setSelectedCycleHash] = useState<string | null>(
-    null,
-  );
+  const [selectedCycleKey, setSelectedCycleKey] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [tradeSide, setTradeSide] = useState<"buy" | "sell">("buy");
   const profileInputRef = useRef<HTMLInputElement>(null);
@@ -568,7 +567,7 @@ export function EditorialDashboard({
     const query = new URLSearchParams(window.location.search);
     const cycle = query.get("cycle");
     if (query.get("view") === "decisions") setScreen("Decisions");
-    if (cycle) setSelectedCycleHash(cycle);
+    if (cycle) setSelectedCycleKey(cycle);
     const piece = Number(query.get("piece"));
     if (query.get("view") === "brain" && piece >= 1 && piece <= 42) {
       setScreen("Brain");
@@ -741,7 +740,9 @@ export function EditorialDashboard({
   const decisionHistory =
     data?.cycleHistory ?? (data?.latestCycle ? [data.latestCycle] : []);
   const selectedCycle =
-    decisionHistory.find((cycle) => cycle.txHash === selectedCycleHash) ??
+    decisionHistory.find(
+      (cycle) => cycleSelectionKey(cycle) === selectedCycleKey,
+    ) ??
     data?.latestCycle ??
     null;
   const selectedPreferences =
@@ -2595,21 +2596,25 @@ export function EditorialDashboard({
               <div className="decision-history-list" role="list">
                 {decisionHistory.map((cycle, index) => (
                   <button
-                    key={`${cycle.txHash}-${cycle.at}`}
+                    key={cycleSelectionKey(cycle)}
                     type="button"
                     role="listitem"
                     data-testid="decision-history-item"
                     className={
-                      selectedCycle?.txHash === cycle.txHash
+                      cycleSelectionKey(selectedCycle) ===
+                      cycleSelectionKey(cycle)
                         ? "decision-history-item selected"
                         : "decision-history-item"
                     }
                     aria-current={
-                      selectedCycle?.txHash === cycle.txHash
+                      cycleSelectionKey(selectedCycle) ===
+                      cycleSelectionKey(cycle)
                         ? "true"
                         : undefined
                     }
-                    onClick={() => setSelectedCycleHash(cycle.txHash)}
+                    onClick={() =>
+                      setSelectedCycleKey(cycleSelectionKey(cycle))
+                    }
                   >
                     <span>
                       <b>

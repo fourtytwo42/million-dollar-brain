@@ -18,6 +18,22 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
+### 2026-07-30 - Decision history selection identity fix
+
+- Context: Selecting HOLD entries in the 50-cycle Decisions history could show
+  the same details and highlight several rows.
+- Decision: Stop using nullable `txHash` as the list selection identity.
+  Executed cycles retain their transaction hash for stable deep links; HOLD
+  cycles use a deterministic key made from input hash and timestamp.
+- Files: `apps/web/lib/cycle-history.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `tests/cycle-history.test.ts`.
+- Commands/tests: Focused cycle-key tests, Prettier, production build, and
+  browser selection UAT across executed and HOLD entries.
+- Result: Every recorded cycle has a unique stable key, so exactly one history
+  row highlights and its corresponding details render.
+- Follow-up: None.
+
 ### 2026-07-30 - Removed redundant inspector control summary
 
 - Context: The selected-braincell inspector displayed the same control choices
