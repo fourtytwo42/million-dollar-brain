@@ -71,8 +71,8 @@ async function fundActor(
   requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
-  // Successful three-leg buys use about 2.08M gas and sells about 1.37M.
-  // Retain a 3M transaction ceiling and enough balance for both sequential
+  // Capacity V3 safety validation makes a full multi-leg buy approach 3M gas.
+  // Retain a 4.5M transaction ceiling and enough balance for both sequential
   // operations without concentrating the shared endurance budget in one actor.
   const targetGas = parseEther("0.000125");
   const gasBalance = await publicClient.getBalance({
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "depositWithDexPlan",
-        gas: 3_000_000n,
+        gas: 4_500_000n,
         args: [
           gross,
           (depositPreview[2] * 99n) / 100n,
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "redeemWithDexPlan",
-        gas: 3_000_000n,
+        gas: 4_500_000n,
         args: [
           sellShares,
           (redeemPreview[2] * 99n) / 100n,
