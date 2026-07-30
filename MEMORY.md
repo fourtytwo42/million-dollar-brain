@@ -4,17 +4,16 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete Braincell Inspector and Owner Profile V2 on devnet,
-  then promote the exact accepted commit through the in-place testnet UUPS
-  pipeline.
-- Last meaningful change: Profile V2 contract/catalog, the one-transaction
-  three-step makeover, compact inspector, mobile dedicated detail route, and
-  capped braincell-detail API are live on devnet. A real disposable-wallet
-  purchase and makeover persisted name, tagline, URL, and packed persona.
-- Next step: Finish the full regression/browser gate, commit and push the exact
-  candidate, snapshot and upgrade only testnet BrainMarketplace, then run
-  transactional smoke and the required two-hour acceptance.
-- Blockers: None on devnet. Mainnet remains unauthorized.
+- Current task: Complete the required two-hour, three-actor Robinhood Testnet
+  acceptance for Braincell Inspector and Owner Profile V2.
+- Last meaningful change: Exact source commit
+  `d9f25b444d5fbfafe120c52efa4bb88d958a19b3` is live on devnet and testnet.
+  Testnet BrainMarketplace was upgraded in place, all 42 current owners received
+  a new makeover, and a live Piece 7 makeover transaction plus public
+  desktop/tablet/mobile UAT passed.
+- Next step: Commit/push promotion evidence, arm the two-hour acceptance against
+  the exact source release, supervise it, then record the completed artifact.
+- Blockers: None on testnet. Mainnet remains unauthorized.
 
 ## Current State
 
@@ -46,7 +45,39 @@ Durable project context lives here. Update this file whenever information should
   owns the current build normally. Desktop inspector height is
   643px with no internal or horizontal overflow; mobile/tablet use the
   reloadable dedicated detail state and preserve the mounted map on Back.
-- Follow-up: Commit/push and perform exact-commit testnet promotion.
+- Follow-up: Complete and archive the required two-hour testnet acceptance.
+
+### 2026-07-30 - Profile V2 testnet promotion and smoke
+
+- Context: Promote the accepted Profile V2 release without changing testnet
+  addresses, ownership, prices, controls, rewards, basket state, or unrelated
+  implementations.
+- Decision: Upgrade only the existing BrainMarketplace UUPS proxy, pause only
+  the testnet cycle timer during the nonce-sensitive broadcast, run the V6
+  reinitializer, then restore the isolated service and timer.
+- Files: `packages/contracts/deployments/testnet-v3.json`,
+  `var/testnet-v3/release.json`.
+- Commands/tests: Exact-commit upgrade from
+  `d9f25b444d5fbfafe120c52efa4bb88d958a19b3`; pre/post state reconciliation;
+  live actor-signed `setProfileV2`; public in-app Browser UAT at 1440x900,
+  768x1024, and 390x844 in light/dark themes.
+- Result: BrainMarketplace proxy
+  `0x97B0fbb23dfadE516bbe7B9f4753EC4f4e282B1c` now uses implementation
+  `0xeafe424bba63b73a80a2d1a8c80227f9db7a3093`. Implementation transaction
+  `0xe8eab557f7321683d026233eb275541b119014d8bf41ebbd8705f9cf167fd5a8`;
+  upgrade transaction
+  `0x674ac1a96f091cb9a1657d126f5491c9eb16de75b495fae6349e999e13760023`.
+  The complete owner/price/profile/control/supply/NAV snapshot hash remained
+  `4f1bb1f22cc22fd187cd1a14f62e92c238ff0c38246fd6a35eed71472b334551`
+  before and after. All 42 owners received a makeover. Piece 7 then completed
+  a real Profile V2 transaction
+  `0xfd898c04c8fe9bb1fa8d3b4bb33722712f6109409eab264fcddc52316cf58b0a`;
+  its profile and event history persisted and its allowance became false.
+  Public UAT found no horizontal overflow or console errors, the desktop
+  inspector measured 616px with no internal scroll, responsive detail routing
+  worked, and test-wallet/faucet controls remained hidden.
+- Follow-up: Run the required two-hour three-actor acceptance for this exact
+  source release and attach the completed evidence.
 
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The basket share token's canonical product identity is `42 Braincells`

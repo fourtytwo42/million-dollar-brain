@@ -209,13 +209,22 @@
     "qualification": "test-rehearsal-only",
     "canonicalMainnetValidationRequired": true
   },
-  "manifestHash": "171c08fd46efc325374dc2efa58dc305f87b3ef194c3effcf96f2d0bcf242e45",
+  "manifestHash": "ada26e310e5cb01200468001b98fd1ac400f0b7706b156aa4147be7a7d071a97",
   "assetRegistry": "0x03E4AEEfe8287a3D8DD9661e931F6D5078eEB435",
   "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
   "controlCatalogHash": "0x1c5b19d5171ffeb7f1d56cb571f80a4659801bed9db6000d67dd0b575fc6b774",
   "controlSchemaVersion": 1,
   "controlCatalogVersion": 1,
-  "releaseCommit": "0f58ea2824dd8043b69cfb10418e27059095a36d",
+  "releaseCommit": "d9f25b444d5fbfafe120c52efa4bb88d958a19b3",
+  "brainProfile": {
+    "schemaVersion": 2,
+    "catalogVersion": 1,
+    "catalogHash": "0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f",
+    "implementation": "0xeafe424bba63b73a80a2d1a8c80227f9db7a3093",
+    "implementationTransaction": "0xe8eab557f7321683d026233eb275541b119014d8bf41ebbd8705f9cf167fd5a8",
+    "upgradeTransaction": "0x674ac1a96f091cb9a1657d126f5491c9eb16de75b495fae6349e999e13760023",
+    "upgradedAt": "2026-07-30T05:59:00Z"
+  },
   "basketIdentity": {
     "name": "42 Braincells",
     "symbol": "BRAINS",
