@@ -20,6 +20,36 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
+### 2026-07-30 - Testnet acceptance gas-budget recovery
+
+- Context: After repaired checkpoints 1 and 2 passed, checkpoint 3 retries
+  exhausted the small shared test-ETH budget. The operator could no longer
+  estimate the 321,965-gas price-publisher transaction, and the DEX heartbeat
+  signer then became too low to advance pool observations. This left
+  `priceSync.worker.last_error` populated and temporarily made DEX TWAP marks
+  unavailable.
+- Decision: Stop the acceptance runner, preserve its original clock, replenish
+  the operator from the three deterministic acceptance actors, then fund the
+  separate heartbeat signer from the operator. Do not weaken price freshness,
+  TWAP, or gas-health assertions.
+- Commands/tests: Actor-to-operator transfers
+  `0xcc82aa67ff384773680d29b4c563212bb5bc711a1ab3465a46d955247bfb5b55`,
+  `0x553b8f20db24b3a334ad1af1409f26173c72873f9a7b40ad12344c019b22ec1b`,
+  and
+  `0xe7514365ecf49dd138f395e814a4fd0c9c07c482bb0398d3d516fccbc60fb440`;
+  heartbeat funding transaction
+  `0x13743778c10aa364e34f0714bae3578d0c0a42050e6cde72a5365a54452f309e`;
+  manual DEX keepalive and collector recovery.
+- Result: All 11 pool observations advanced, the collector published fresh
+  evidence in transaction
+  `0xd73276f093e5fc6dac21020de28bbee434f18949753122a9e1a27a2061c2a89d`,
+  `priceSync.worker.last_error` cleared, oracle freshness returned true, HTTP
+  status returned 200, queued sales remained zero, and DEX-marked NAV
+  reconciled. Operator and heartbeat balances were approximately 0.0004455 and
+  0.0001108 test ETH after recovery.
+- Follow-up: Resume checkpoint 3 with repair downtime excluded and continue
+  monitoring both signer balances.
+
 ### 2026-07-30 - Acceptance route-age and gas-funding repair
 
 - Context: Acceptance checkpoint 1 failed on atomic redemption transaction
