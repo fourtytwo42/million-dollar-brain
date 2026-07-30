@@ -234,7 +234,7 @@
     "basketImplementation": "0x3b55714f9aa87f613E5d92b7A8A916d1E87eAB59",
     "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
     "dexExecutionAdapter": "0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff",
-    "dexExecutionImplementation": "0xA54bCcd627ebA7796A31b631E6e7d8a267fa7a93",
+    "dexExecutionImplementation": "0xF82483AF741aC607e9a3A74f726911a389464051",
     "dexValuationAdapter": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
     "dexValuationImplementation": "0x029cAA11D2c782C4dA043fbB1FFC19a6bbb483B0"
   },

@@ -7,17 +7,14 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
   BRAINS NAV, validate on devnet, then promote the exact accepted release to
   Robinhood Testnet.
-- Last meaningful change: Testnet DEX TWAP matured and the full preserved state
-  reconciled exactly. The first live BRAINS buy then safely reverted because
-  the adapter compared an RPC L2 reference block with Arbitrum's L1-derived
-  Solidity `block.number`; the adapter now uses ArbSys L2 block numbers on
-  Robinhood chains and the regression is covered by the full contract suite.
-- Next step: Upgrade only the testnet DEX execution adapter to the corrected
-  implementation, rerun the transactional smoke, complete public responsive
-  UAT, then begin a fresh two-hour three-actor acceptance.
-- Blockers: The adapter hotfix is tested but not yet promoted on testnet, and
-  the fresh two-hour acceptance remains incomplete. Mainnet deployment remains
-  unauthorized.
+- Last meaningful change: The corrected testnet DEX execution adapter is live.
+  A complete actor flow then passed: braincell resale, control update, BRAINS
+  buy, atomic BRAINS sell, reward claim, oversized-exit rejection, fresh DEX
+  NAV, and zero queued sales.
+- Next step: Freeze the corrected manifest/build commit, complete public
+  responsive UAT, then begin a fresh two-hour three-actor acceptance.
+- Blockers: The fresh two-hour acceptance remains incomplete. Mainnet
+  deployment remains unauthorized.
 
 ## Current State
 
@@ -36,9 +33,19 @@ Durable project context lives here. Update this file whenever information should
   focused DEX execution 10/10; full Foundry 51/51.
 - Result: The failure was an Arbitrum block-number namespace mismatch, not a
   stale route or loose quote. The corrected adapter accepts a reference three
-  L2 blocks old and rejects one four blocks old on chain 46630.
-- Follow-up: Push the exact fix, upgrade only the testnet adapter proxy, and
-  rerun the failed BRAINS buy/sell smoke.
+  L2 blocks old and rejects one four blocks old on chain 46630. Testnet adapter
+  proxy `0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff` now uses implementation
+  `0xF82483AF741aC607e9a3A74f726911a389464051`; implementation deployment
+  transaction
+  `0xf474bbed9dea4793c7ecb44fdce95768c7adea9acff20f5dbfcda44efb67d199`
+  and proxy upgrade transaction
+  `0x21b8e70ddbd62a2680e51f12c6d1cbc16a0524248c285290ae5ef2835afb1adb`.
+  The rerun completed a live BRAINS buy
+  `0xbc4e9986bd0149b1c98977ade299128633432f416cba4f137a39fb82845f4122`
+  and atomic sell
+  `0x6b1f28908cb25ab0aff339ac6224f6625471aaa8c65b274dffb1e4b4c6cf37d1`
+  with all acceptance assertions passing.
+- Follow-up: Complete public responsive UAT and fresh two-hour acceptance.
 
 ### 2026-07-30 - Self-hosted DEX testnet migration checkpoint
 
