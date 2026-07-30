@@ -14,6 +14,7 @@
     "test:piece-name": "node --experimental-strip-types --test tests/piece-name.test.ts",
     "test:brain-controls": "node --experimental-strip-types --test tests/brain-controls.test.ts",
     "test:brain-control-experience": "node --experimental-strip-types --test tests/brain-control-experience.test.ts",
+    "test:brain-profile-v2": "node --experimental-strip-types --test tests/brain-profile-v2.test.ts",
     "test:brain-control-experience:uat": "node tests/brain-control-experience-uat.mjs",
     "test:compiled-brain": "node --experimental-strip-types --test tests/compiled-brain.test.ts",
     "test:decision-context": "node --experimental-strip-types --test tests/decision-context.test.ts",

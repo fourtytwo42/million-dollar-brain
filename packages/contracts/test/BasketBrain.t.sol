@@ -656,4 +656,119 @@ contract BasketBrainTest is Test {
         basket.requestRedemption(100e18, 1, block.timestamp - 1);
         vm.stopPrank();
     }
+
+    function testProfileV2GrantsExistingOwnerOneCompleteMakeover() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        brain.setProfile(
+            1, keccak256("legacy portrait"), "Legacy Name", "https://example.com/legacy"
+        );
+        vm.stopPrank();
+        assertFalse(brain.canChangeProfile(1, alice));
+
+        vm.prank(admin);
+        brain.reinitializeV6(
+            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
+        );
+        assertTrue(brain.profileV2Enabled());
+        assertTrue(brain.canChangeProfile(1, alice));
+        assertEq(brain.customName(1), "Legacy Name");
+
+        uint64 pack = _personaPack(7, 11, 4, 4, 2, 2, 3, 7);
+        vm.prank(alice);
+        brain.setProfileV2(
+            1,
+            bytes32(0),
+            "Last Braincell Standing",
+            "https://example.com/new",
+            "Holding the clipboard while the market catches fire.",
+            pack
+        );
+        assertEq(brain.portraitHash(1), bytes32(0));
+        assertEq(brain.customName(1), "Last Braincell Standing");
+        assertEq(brain.customTagline(1), "Holding the clipboard while the market catches fire.");
+        assertEq(brain.personaPack(1), pack);
+        assertFalse(brain.canChangeProfile(1, alice));
+
+        vm.prank(alice);
+        vm.expectRevert("profile already changed");
+        brain.setProfileV2(1, bytes32(0), "Again", "", "", 0);
+    }
+
+    function testProfileV2ValidatesPersonaAndModerationDoesNotRestoreAllowance() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        vm.stopPrank();
+        vm.prank(admin);
+        brain.reinitializeV6(
+            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
+        );
+
+        vm.prank(alice);
+        vm.expectRevert("self rival");
+        brain.setProfileV2(1, bytes32(0), "Alice", "", "", _personaPack(0, 0, 0, 0, 0, 1, 0, 0));
+
+        vm.prank(alice);
+        vm.expectRevert("same rival ally");
+        brain.setProfileV2(1, bytes32(0), "Alice", "", "", _personaPack(0, 0, 0, 0, 0, 2, 2, 0));
+
+        vm.prank(alice);
+        brain.setProfileV2(
+            1,
+            keccak256("portrait"),
+            "Alice",
+            "https://example.com",
+            "A sensible amount of nonsense.",
+            _personaPack(1, 2, 3, 4, 2, 2, 3, 4)
+        );
+
+        vm.prank(admin);
+        brain.moderateProfile(1, 0x0f);
+        assertEq(brain.portraitHash(1), bytes32(0));
+        assertEq(brain.customName(1), "");
+        assertEq(brain.profileUrl(1), "");
+        assertEq(brain.customTagline(1), "");
+        assertFalse(brain.canChangeProfile(1, alice));
+
+        vm.prank(alice);
+        vm.expectRevert("profile already changed");
+        brain.setProfileV2(1, bytes32(0), "Restored", "", "", 0);
+    }
+
+    function testProfileV2DisablesLegacyProfileAndCanRollback() public {
+        vm.startPrank(alice);
+        usdg.approve(address(brain), type(uint256).max);
+        brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
+        vm.stopPrank();
+        vm.prank(admin);
+        brain.reinitializeV6(
+            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
+        );
+        vm.prank(alice);
+        vm.expectRevert("profile v2 enabled");
+        brain.setProfile(1, keccak256("legacy"), "Legacy");
+
+        vm.prank(admin);
+        brain.setProfileV2Enabled(false);
+        vm.prank(alice);
+        brain.setProfile(1, keccak256("legacy"), "Legacy");
+        assertEq(brain.customName(1), "Legacy");
+    }
+
+    function _personaPack(
+        uint8 accent,
+        uint8 badge,
+        uint8 voice,
+        uint8 victory,
+        uint8 panic,
+        uint8 rival,
+        uint8 ally,
+        uint8 reaction
+    ) private pure returns (uint64) {
+        return uint64(accent) | (uint64(badge) << 8) | (uint64(voice) << 16)
+            | (uint64(victory) << 24) | (uint64(panic) << 32) | (uint64(rival) << 40)
+            | (uint64(ally) << 48) | (uint64(reaction) << 56);
+    }
 }

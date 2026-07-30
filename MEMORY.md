@@ -4,20 +4,49 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Promote DecisionContext V6 and restore the 41
-  endurance-actor-owned testnet control bundles to canonical defaults.
-- Last meaningful change: V6 manifest-driven dossiers, evidence tiers,
-  deterministic maximum-position trimming, raw/constrained allocation
-  evidence, UI explainability, and a guarded owner-signed reset script passed
-  devnet unit/build/browser acceptance. Live Ornith produced and executed a V6
-  allocation with persisted evidence and policy output.
-- Next step: Freeze and push the exact release commit, deploy that build to
-  testnet, execute the guarded 41-cell reset, and verify the next naturally
-  eligible V6 cycle plus responsive public-domain UAT.
-- Blockers: None for this testnet release. Mainnet broadcast remains
-  unauthorized and its separate external readiness gates are unchanged.
+- Current task: Complete Braincell Inspector and Owner Profile V2 on devnet,
+  then promote the exact accepted commit through the in-place testnet UUPS
+  pipeline.
+- Last meaningful change: Profile V2 contract/catalog, the one-transaction
+  three-step makeover, compact inspector, mobile dedicated detail route, and
+  capped braincell-detail API are live on devnet. A real disposable-wallet
+  purchase and makeover persisted name, tagline, URL, and packed persona.
+- Next step: Finish the full regression/browser gate, commit and push the exact
+  candidate, snapshot and upgrade only testnet BrainMarketplace, then run
+  transactional smoke and the required two-hour acceptance.
+- Blockers: None on devnet. Mainnet remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Braincell Inspector and Owner Profile V2 devnet checkpoint
+
+- Context: The user wanted a more intuitive inspector, a dedicated responsive
+  detail view, and one expanded on-chain character makeover per ownership.
+- Decision: Append Profile V2 storage to BrainMarketplace, keep the existing
+  allowance mechanism, pack curated personality into uint64, and exclude all
+  profile presentation from AI steering and economics.
+- Files: `config/brain-profile-catalog.json`,
+  `packages/contracts/src/BrainMarketplace.sol`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `apps/web/lib/brain-profile.ts`,
+  `apps/web/app/api/braincell/[pieceId]/route.ts`.
+- Commands/tests: 38/38 full Foundry tests; 4/4 Profile V2 tests; 8/8
+  meme-recap tests; control/compiler/context regressions; production Next.js
+  build; live devnet purchase and makeover; in-app Browser at 1440x900,
+  768x1024, 390x844, dark mode, and a 720x450 high-zoom equivalent.
+- Result: Existing devnet state survived the UUPS upgrade. Profile V2 is
+  enabled with catalog hash
+  `0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f`.
+  The first local broadcast collided with the cycle scheduler nonce; pausing
+  the devnet cycle timer for the upgrade and immediately restoring it resolved
+  the operational race without contract changes. Live UAT also found the
+  disabled legacy `mdb-web.service` had been manually left active on port 3000
+  while the isolated `mdb-web-devnet.service` retried with EADDRINUSE. The
+  legacy unit was stopped, testnet was untouched, and the isolated unit now
+  owns the current build normally. Desktop inspector height is
+  643px with no internal or horizontal overflow; mobile/tablet use the
+  reloadable dedicated detail state and preserve the mounted map on Back.
+- Follow-up: Commit/push and perform exact-commit testnet promotion.
 
 - 42 Braincells is a proposed Robinhood Chain product combining a basket-backed share, a 42-piece community-controlled AI context, scheduled portfolio proposals, deterministic risk controls, and fee-funded creator/brain rewards.
 - The basket share token's canonical product identity is `42 Braincells`

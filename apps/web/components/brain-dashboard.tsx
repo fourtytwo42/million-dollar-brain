@@ -41,6 +41,11 @@ import {
   validateCustomPieceName,
 } from "@/lib/piece-name";
 import { preparePortrait } from "@/lib/portrait";
+import {
+  packBrainPersona,
+  validateBrainPersona,
+  type BrainPersonaV1,
+} from "@/lib/brain-profile";
 import { EditorialDashboard } from "./editorial-dashboard";
 
 type BrainOption = {
@@ -59,6 +64,9 @@ type Piece = {
   profileChangeAvailable: boolean;
   customName: string;
   profileUrl: string;
+  customTagline: string;
+  personaPack: string;
+  ownerCustomized: boolean;
   weight: number;
   affinity: string;
   name: string;
@@ -722,22 +730,42 @@ export function BrainDashboard() {
   }
   async function changeProfile(
     piece: Piece,
-    sourceFile: File,
-    newName: string,
-    newProfileUrl: string,
+    profile: {
+      file: File | null;
+      name: string;
+      profileUrl: string;
+      tagline: string;
+      persona: BrainPersonaV1;
+    },
   ) {
     if (!data) return;
+    const {
+      file: sourceFile,
+      name: newName,
+      profileUrl: newProfileUrl,
+      tagline: newTagline,
+      persona,
+    } = profile;
     const nameError = validateCustomPieceName(newName);
     if (nameError) throw new Error(nameError);
     const normalizedProfileUrl = normalizeProfileUrl(newProfileUrl);
+    const normalizedTagline = newTagline.trim();
+    if (new TextEncoder().encode(normalizedTagline).length > 96) {
+      throw new Error("Tagline must be 96 UTF-8 bytes or fewer.");
+    }
+    validateBrainPersona(piece.id, persona);
+    const packedPersona = packBrainPersona(persona);
     setMessage("Preparing your braincell media…");
-    const portrait = await preparePortrait(sourceFile);
-    const bytes = new Uint8Array(await portrait.arrayBuffer());
-    const hash = keccak256(bytes);
+    const portrait = sourceFile ? await preparePortrait(sourceFile) : null;
+    const hash = portrait
+      ? keccak256(new Uint8Array(await portrait.arrayBuffer()))
+      : (piece.portraitHash as `0x${string}`);
     const alreadyCommitted =
       hash.toLowerCase() === piece.portraitHash.toLowerCase() &&
       newName === piece.customName &&
-      normalizedProfileUrl === piece.profileUrl;
+      normalizedProfileUrl === piece.profileUrl &&
+      normalizedTagline === piece.customTagline &&
+      packedPersona === BigInt(piece.personaPack || "0");
 
     if (!piece.profileChangeAvailable && !alreadyCommitted) {
       throw new Error(
@@ -753,8 +781,15 @@ export function BrainDashboard() {
       const tx = await wallet.writeContract({
         address: data.deployment.brain,
         abi: brainAbi,
-        functionName: "setProfile",
-        args: [BigInt(piece.id), hash, newName, normalizedProfileUrl],
+        functionName: "setProfileV2",
+        args: [
+          BigInt(piece.id),
+          hash,
+          newName,
+          normalizedProfileUrl,
+          normalizedTagline,
+          packedPersona,
+        ],
       });
       await publicClient.waitForTransactionReceipt({
         hash: tx,
@@ -763,6 +798,16 @@ export function BrainDashboard() {
     }
 
     setMessage("Saving the committed portrait to 42 Braincells…");
+    if (!portrait) {
+      const refreshed = await refreshAfterConfirmedAction();
+      setMessage(
+        confirmedActionMessage(
+          `Piece ${piece.id} is now ${newName}. This ownership's makeover has been used.`,
+          refreshed,
+        ),
+      );
+      return;
+    }
     const form = new FormData();
     form.set("portrait", portrait);
     let uploadError = "portrait upload failed";
@@ -932,8 +977,8 @@ export function BrainDashboard() {
             throw error;
           })
         }
-        onProfile={(piece, file, name, profileUrl) =>
-          changeProfile(piece, file, name, profileUrl).catch((error) => {
+        onProfile={(piece, profile) =>
+          changeProfile(piece, profile).catch((error) => {
             setMessage(error.shortMessage ?? error.message);
             throw error;
           })

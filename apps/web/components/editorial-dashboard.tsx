@@ -31,6 +31,13 @@ import {
   validateCustomPieceName,
 } from "../lib/piece-name";
 import { portraitUrl } from "../lib/portrait";
+import {
+  BRAIN_PROFILE_CATALOG,
+  DEFAULT_BRAIN_PERSONA,
+  unpackBrainPersona,
+  type BrainPersonaV1,
+} from "../lib/brain-profile";
+import { memeCharacter } from "../lib/brain-meme";
 import { BrainMap } from "./brain-map";
 
 type BrainOption = {
@@ -80,6 +87,9 @@ export type EditorialPiece = {
   profileChangeAvailable: boolean;
   customName: string;
   profileUrl: string;
+  customTagline: string;
+  personaPack: string;
+  ownerCustomized: boolean;
   weight: number;
   affinity: string;
   name: string;
@@ -506,9 +516,13 @@ export function EditorialDashboard({
   ) => Promise<void>;
   onProfile: (
     piece: EditorialPiece,
-    file: File,
-    name: string,
-    profileUrl: string,
+    profile: {
+      file: File | null;
+      name: string;
+      profileUrl: string;
+      tagline: string;
+      persona: BrainPersonaV1;
+    },
   ) => Promise<void>;
   onClaim: () => void;
 }) {
@@ -522,6 +536,11 @@ export function EditorialDashboard({
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
+  const [profileTagline, setProfileTagline] = useState("");
+  const [profilePersona, setProfilePersona] = useState<BrainPersonaV1>(
+    DEFAULT_BRAIN_PERSONA,
+  );
+  const [profileStep, setProfileStep] = useState<1 | 2 | 3>(1);
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState("");
@@ -531,7 +550,10 @@ export function EditorialDashboard({
     null,
   );
   const [controlSaving, setControlSaving] = useState(false);
+  const [narrowBrain, setNarrowBrain] = useState(false);
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const controlDialogRef = useRef<HTMLElement>(null);
+  const profileDialogRef = useRef<HTMLElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
   const reserveMoney = (value: string | bigint) =>
@@ -547,7 +569,20 @@ export function EditorialDashboard({
     const cycle = query.get("cycle");
     if (query.get("view") === "decisions") setScreen("Decisions");
     if (cycle) setSelectedCycleHash(cycle);
+    const piece = Number(query.get("piece"));
+    if (query.get("view") === "brain" && piece >= 1 && piece <= 42) {
+      setScreen("Brain");
+      setSelectedId(piece);
+      setMobileDetailOpen(true);
+    }
   }, [setScreen]);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const update = () => setNarrowBrain(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
   useEffect(() => {
     if (!window.localStorage.getItem("mdb-onboarding-seen-v1")) {
       setShowGuide(true);
@@ -613,6 +648,9 @@ export function EditorialDashboard({
     if (!selected || !mine || !selected.profileChangeAvailable) return;
     setProfileName(selectedDisplayName);
     setProfileUrl(selected.profileUrl);
+    setProfileTagline(selected.customTagline || selected.tagline);
+    setProfilePersona(unpackBrainPersona(BigInt(selected.personaPack || "0")));
+    setProfileStep(1);
     setProfileFile(null);
     setProfilePreview(null);
     setProfileError("");
@@ -624,8 +662,46 @@ export function EditorialDashboard({
     setProfileFile(null);
     setProfilePreview(null);
     setProfileUrl("");
+    setProfileTagline("");
+    setProfileStep(1);
     setProfileError("");
   };
+  useEffect(() => {
+    if (!profileEditorOpen) return;
+    const dialog = profileDialogRef.current;
+    const previous = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      Array.from(
+        dialog?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        ) ?? [],
+      );
+    focusable()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeProfileEditor();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items.at(-1)!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => {
+      document.removeEventListener("keydown", keydown);
+      previous?.focus();
+    };
+  }, [profileEditorOpen, profileSaving]);
   useEffect(() => {
     return () => {
       if (profilePreview) URL.revokeObjectURL(profilePreview);
@@ -635,6 +711,9 @@ export function EditorialDashboard({
     data?.pieces.filter(
       (piece) => account && piece.owner.toLowerCase() === account.toLowerCase(),
     ).length ?? 0;
+  const selectedPersona = selected
+    ? unpackBrainPersona(BigInt(selected.personaPack || "0"))
+    : DEFAULT_BRAIN_PERSONA;
   const chooseSellPercent = (percent: number) => {
     if (!data) return;
     setSellAmount(inputAmount((BigInt(data.shares) * BigInt(percent)) / 100n));
@@ -935,7 +1014,8 @@ export function EditorialDashboard({
           }}
         >
           <section
-            className="profile-editor-card"
+            ref={profileDialogRef}
+            className="profile-editor-card profile-editor-v2"
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-editor-title"
@@ -958,103 +1038,328 @@ export function EditorialDashboard({
               </button>
             </div>
 
-            <button
-              type="button"
-              className="profile-image-picker"
-              onClick={() => profileInputRef.current?.click()}
-              disabled={profileSaving}
-            >
-              <img
-                src={profilePreview ?? portraitUrl(selected)}
-                alt="New braincell portrait preview"
-              />
-              <span>
-                {profileFile
-                  ? "Choose different media"
-                  : "Choose image or animation"}
-              </span>
-            </button>
-            <input
-              ref={profileInputRef}
-              className="sr-only"
-              type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              disabled={profileSaving}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                event.target.value = "";
-                if (profilePreview) URL.revokeObjectURL(profilePreview);
-                setProfileFile(file);
-                setProfilePreview(file ? URL.createObjectURL(file) : null);
-                setProfileError("");
-              }}
-            />
+            <nav className="profile-steps" aria-label="Makeover steps">
+              {["Look", "Personality", "Link & confirm"].map((label, index) => (
+                <button
+                  type="button"
+                  key={label}
+                  className={profileStep === index + 1 ? "active" : ""}
+                  onClick={() => setProfileStep((index + 1) as 1 | 2 | 3)}
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </button>
+              ))}
+            </nav>
 
-            <label className="profile-name-field">
-              <span>Braincell name</span>
-              <input
-                value={profileName}
-                disabled={profileSaving}
-                maxLength={MAX_CUSTOM_PIECE_NAME_BYTES}
-                onChange={(event) => {
-                  setProfileName(event.target.value);
-                  setProfileError("");
-                }}
-                autoComplete="off"
-                spellCheck
-              />
-              <small>
-                {new TextEncoder().encode(profileName).length}/
-                {MAX_CUSTOM_PIECE_NAME_BYTES} UTF-8 bytes
-              </small>
-            </label>
+            <div className="profile-editor-body">
+              {profileStep === 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="profile-image-picker"
+                    onClick={() => profileInputRef.current?.click()}
+                    disabled={profileSaving}
+                  >
+                    <img
+                      src={profilePreview ?? portraitUrl(selected)}
+                      alt="New braincell portrait preview"
+                    />
+                    <span>
+                      {profileFile
+                        ? "Choose different media"
+                        : "Choose image or animation"}
+                    </span>
+                  </button>
+                  <input
+                    ref={profileInputRef}
+                    className="sr-only"
+                    type="file"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
+                    disabled={profileSaving}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      event.target.value = "";
+                      if (profilePreview) URL.revokeObjectURL(profilePreview);
+                      setProfileFile(file);
+                      setProfilePreview(
+                        file ? URL.createObjectURL(file) : null,
+                      );
+                      setProfileError("");
+                    }}
+                  />
 
-            <label className="profile-link-field">
-              <span>Link shown with this braincell (optional)</span>
-              <input
-                type="url"
-                value={profileUrl}
-                disabled={profileSaving}
-                placeholder="example.com/your-page"
-                onChange={(event) => {
-                  setProfileUrl(event.target.value);
-                  setProfileError("");
-                }}
-                autoComplete="url"
-                spellCheck={false}
-              />
-              <small>HTTPS only · visible in the tooltip and details</small>
-            </label>
+                  <label className="profile-name-field">
+                    <span>Braincell name</span>
+                    <input
+                      value={profileName}
+                      disabled={profileSaving}
+                      maxLength={MAX_CUSTOM_PIECE_NAME_BYTES}
+                      onChange={(event) => {
+                        setProfileName(event.target.value);
+                        setProfileError("");
+                      }}
+                      autoComplete="off"
+                      spellCheck
+                    />
+                    <small>
+                      {new TextEncoder().encode(profileName).length}/
+                      {MAX_CUSTOM_PIECE_NAME_BYTES} UTF-8 bytes
+                    </small>
+                  </label>
 
-            <div className="profile-editor-notice">
-              <strong>Name + media + link use one on-chain change.</strong>
-              <span>
-                Animated GIF and WebP files stay animated. Your wallet commits
-                the name, media hash, and optional link together. You cannot
-                edit them again until someone else purchases this braincell.
-              </span>
+                  <div className="profile-choice-grid">
+                    <label>
+                      <span>Accent</span>
+                      <select
+                        value={profilePersona.accent}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            accent: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {BRAIN_PROFILE_CATALOG.accents.map((choice) => (
+                          <option key={choice.id} value={choice.id}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Badge</span>
+                      <select
+                        value={profilePersona.badge}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            badge: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {BRAIN_PROFILE_CATALOG.badges.map((choice) => (
+                          <option key={choice.id} value={choice.id}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Reaction</span>
+                      <select
+                        value={profilePersona.reaction}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            reaction: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {BRAIN_PROFILE_CATALOG.reactions.map((choice) => (
+                          <option key={choice.id} value={choice.id}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {profileStep === 2 && (
+                <>
+                  <label className="profile-name-field">
+                    <span>Short tagline</span>
+                    <textarea
+                      value={profileTagline}
+                      maxLength={96}
+                      onChange={(event) =>
+                        setProfileTagline(event.target.value)
+                      }
+                    />
+                    <small>
+                      {new TextEncoder().encode(profileTagline).length}/96 UTF-8
+                      bytes
+                    </small>
+                  </label>
+
+                  <div className="profile-choice-grid">
+                    <label>
+                      <span>Voice</span>
+                      <select
+                        value={profilePersona.voice}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            voice: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {BRAIN_PROFILE_CATALOG.voices.map((choice) => (
+                          <option key={choice.id} value={choice.id}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Victory line</span>
+                      <select
+                        value={profilePersona.victoryLine}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            victoryLine: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {memeCharacter(selected.id).catchphrases.map(
+                          (line, index) => (
+                            <option key={line} value={index}>
+                              {line}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Panic line</span>
+                      <select
+                        value={profilePersona.panicLine}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            panicLine: Number(event.target.value),
+                          })
+                        }
+                      >
+                        {[
+                          memeCharacter(selected.id).voice.objection,
+                          memeCharacter(selected.id).voice.blame,
+                          memeCharacter(selected.id).voice.fallback,
+                        ].map((line, index) => (
+                          <option key={line} value={index}>
+                            {line}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Rival</span>
+                      <select
+                        value={profilePersona.rivalPieceId}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            rivalPieceId: Number(event.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>No rival</option>
+                        {data?.pieces
+                          .filter(
+                            (piece) =>
+                              piece.id !== selected.id &&
+                              piece.id !== profilePersona.allyPieceId,
+                          )
+                          .map((piece) => (
+                            <option key={piece.id} value={piece.id}>
+                              {pieceDisplayName(piece)}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>Ally</span>
+                      <select
+                        value={profilePersona.allyPieceId}
+                        onChange={(event) =>
+                          setProfilePersona({
+                            ...profilePersona,
+                            allyPieceId: Number(event.target.value),
+                          })
+                        }
+                      >
+                        <option value={0}>No ally</option>
+                        {data?.pieces
+                          .filter(
+                            (piece) =>
+                              piece.id !== selected.id &&
+                              piece.id !== profilePersona.rivalPieceId,
+                          )
+                          .map((piece) => (
+                            <option key={piece.id} value={piece.id}>
+                              {pieceDisplayName(piece)}
+                            </option>
+                          ))}
+                      </select>
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {profileStep === 3 && (
+                <>
+                  <label className="profile-link-field">
+                    <span>Link shown with this braincell (optional)</span>
+                    <input
+                      type="url"
+                      value={profileUrl}
+                      disabled={profileSaving}
+                      placeholder="example.com/your-page"
+                      onChange={(event) => {
+                        setProfileUrl(event.target.value);
+                        setProfileError("");
+                      }}
+                      autoComplete="url"
+                      spellCheck={false}
+                    />
+                    <small>
+                      HTTPS only · visible in the tooltip and details
+                    </small>
+                  </label>
+
+                  <div className="profile-editor-notice">
+                    <strong>
+                      The complete makeover uses one on-chain change.
+                    </strong>
+                    <span>
+                      Animated GIF and WebP files stay animated. Your wallet
+                      commits the name, media hash, and optional link together.
+                      You cannot edit them again until someone else purchases
+                      this braincell. Media is optional; omitting it keeps the
+                      current portrait. Presentation never enters the AI trading
+                      context.
+                    </span>
+                  </div>
+                </>
+              )}
+              {profileError && (
+                <p className="profile-editor-error" role="alert">
+                  {profileError}
+                </p>
+              )}
             </div>
-            {profileError && (
-              <p className="profile-editor-error" role="alert">
-                {profileError}
-              </p>
-            )}
             <div className="profile-editor-actions">
               <button
                 type="button"
                 className="secondary-action"
-                onClick={closeProfileEditor}
+                onClick={() => {
+                  if (profileStep === 1) closeProfileEditor();
+                  else setProfileStep((profileStep - 1) as 1 | 2);
+                }}
                 disabled={profileSaving}
               >
-                Cancel
+                {profileStep === 1 ? "Cancel" : "Back"}
               </button>
               <button
                 type="button"
                 className="primary-action"
-                disabled={profileSaving || !profileFile}
+                disabled={profileSaving}
                 onClick={async () => {
-                  if (!profileFile) {
-                    setProfileError("Choose an image or animation.");
+                  if (profileStep < 3) {
+                    setProfileStep((profileStep + 1) as 2 | 3);
                     return;
                   }
                   const validationError = validateCustomPieceName(profileName);
@@ -1076,12 +1381,13 @@ export function EditorialDashboard({
                   setProfileSaving(true);
                   setProfileError("");
                   try {
-                    await onProfile(
-                      selected,
-                      profileFile,
-                      profileName,
-                      normalizedUrl,
-                    );
+                    await onProfile(selected, {
+                      file: profileFile,
+                      name: profileName,
+                      profileUrl: normalizedUrl,
+                      tagline: profileTagline.trim(),
+                      persona: profilePersona,
+                    });
                     setProfileSaving(false);
                     closeProfileEditor();
                   } catch (error) {
@@ -1094,7 +1400,11 @@ export function EditorialDashboard({
                   }
                 }}
               >
-                {profileSaving ? "Confirming…" : "Confirm in wallet"}
+                {profileStep < 3
+                  ? "Continue"
+                  : profileSaving
+                    ? "Confirming..."
+                    : "Confirm in wallet"}
               </button>
             </div>
           </section>
@@ -1492,31 +1802,61 @@ export function EditorialDashboard({
             />
           </section>
 
-          <section className="brain-primary-grid">
-            <BrainMap
-              pieces={data?.pieces ?? []}
-              selectedId={selectedId}
-              account={account}
-              onSelect={setSelectedId}
-            />
-            {selected && (
+          <section
+            className={`brain-primary-grid ${narrowBrain && mobileDetailOpen ? "mobile-detail-active" : ""}`}
+          >
+            <div
+              className={
+                narrowBrain && mobileDetailOpen ? "brain-map-hidden" : undefined
+              }
+            >
+              <BrainMap
+                pieces={data?.pieces ?? []}
+                selectedId={selectedId}
+                account={account}
+                onSelect={(pieceId) => {
+                  setSelectedId(pieceId);
+                  if (narrowBrain) {
+                    setMobileDetailOpen(true);
+                    const query = new URLSearchParams(window.location.search);
+                    query.set("view", "brain");
+                    query.set("piece", String(pieceId));
+                    window.history.pushState({}, "", `?${query.toString()}`);
+                  }
+                }}
+              />
+            </div>
+            {selected && (!narrowBrain || mobileDetailOpen) && (
               <aside
                 className="piece-ledger piece-inspector"
                 id="piece-inspector"
                 aria-live="polite"
                 aria-label={`Selected brain piece: ${selectedDisplayName}`}
               >
+                {narrowBrain && (
+                  <button
+                    type="button"
+                    className="back-to-brain"
+                    onClick={() => {
+                      setMobileDetailOpen(false);
+                      const query = new URLSearchParams(window.location.search);
+                      query.delete("piece");
+                      window.history.pushState({}, "", `?${query.toString()}`);
+                    }}
+                  >
+                    ← Back to Brain
+                  </button>
+                )}
                 <div className="piece-ledger-head">
                   <button
                     type="button"
                     className="detail-portrait portrait-change-button"
-                    disabled={!mine || !selected.profileChangeAvailable}
+                    disabled
                     aria-label={
                       mine && selected.profileChangeAvailable
                         ? `Customize ${selectedDisplayName}'s profile`
                         : "This braincell profile cannot be customized right now"
                     }
-                    onClick={openProfileEditor}
                   >
                     <img
                       src={portraitUrl(selected)}
@@ -1534,8 +1874,7 @@ export function EditorialDashboard({
                     <button
                       type="button"
                       className="piece-name-button"
-                      disabled={!mine || !selected.profileChangeAvailable}
-                      onClick={openProfileEditor}
+                      disabled
                       aria-label={`Customize ${selectedDisplayName}'s profile`}
                     >
                       <h2>{selectedDisplayName}</h2>
@@ -1549,6 +1888,23 @@ export function EditorialDashboard({
                       <span>
                         {selected.kind} · {selected.visual}
                       </span>
+                      {selectedPersona.badge > 0 && (
+                        <span className="persona-chip">
+                          {
+                            BRAIN_PROFILE_CATALOG.badges[selectedPersona.badge]
+                              .label
+                          }
+                        </span>
+                      )}
+                      {selectedPersona.reaction > 0 && (
+                        <span className="persona-chip">
+                          {
+                            BRAIN_PROFILE_CATALOG.reactions[
+                              selectedPersona.reaction
+                            ].label
+                          }
+                        </span>
+                      )}
                     </div>
                     {selected.profileUrl.startsWith("https://") && (
                       <a
@@ -1569,13 +1925,47 @@ export function EditorialDashboard({
                       : "Profile customization used. The next purchaser gets one new change."}
                   </p>
                 )}
-                <p className="piece-tagline">{selected.tagline}</p>
+                <p className="piece-tagline">
+                  {selected.customTagline || selected.tagline}
+                </p>
+                {mine && selected.profileChangeAvailable && (
+                  <button
+                    type="button"
+                    className="secondary-action full-button"
+                    onClick={openProfileEditor}
+                  >
+                    Customize character
+                  </button>
+                )}
                 <p className="piece-lore">“{selected.lore}”</p>
                 <div className="control-summary-card">
-                  <span>COMPILED STEERING</span>
+                  <span>WHAT THIS BRAINCELL TELLS THE AI</span>
                   <strong>
                     {experienceSummary(selected.id, selected.controlBundle)}
                   </strong>
+                  <dl className="control-value-rows">
+                    {experienceControls(selected.id).map((control) => (
+                      <div key={`${control.key}-${control.rawIndex}`}>
+                        <dt>{control.label}</dt>
+                        <dd>
+                          {control.options?.[
+                            Math.max(
+                              0,
+                              control.optionValues?.indexOf(
+                                selected.controlBundle.values[
+                                  control.rawIndex
+                                ] ?? 0,
+                              ) ??
+                                selected.controlBundle.values[
+                                  control.rawIndex
+                                ] ??
+                                0,
+                            )
+                          ]?.label ?? "Current setting"}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
                   {describeBundleAssets(
                     selected.id,
                     selected.controlBundle,
@@ -1645,11 +2035,26 @@ export function EditorialDashboard({
                       }
                       onClick={() => onBuy(selected)}
                     >
-                      {selected.unowned ? "Buy piece" : "Buy next"} · $
-                      {reserveMoney(selected.price)}
+                      Buy braincell for ${reserveMoney(selected.price)}
                     </button>
                   )}
                 </div>
+                <details className="piece-more">
+                  <summary>More about this braincell</summary>
+                  <p>{selected.lore}</p>
+                  <dl>
+                    <div>
+                      <dt>Archetype</dt>
+                      <dd>
+                        {selected.kind} · {selected.visual}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Ownership</dt>
+                      <dd>Serial {selected.ownershipSerial}</dd>
+                    </div>
+                  </dl>
+                </details>
                 <section
                   className="brain-finances"
                   aria-label="Your brain finances"
@@ -1674,18 +2079,15 @@ export function EditorialDashboard({
                     Brain-piece owners share the brain side of BRAINS buy and
                     sell fees. Rewards accrue until you claim them.
                   </p>
-                  <button
-                    className="primary-action full-button"
-                    disabled={
-                      !data ||
-                      owned === 0 ||
-                      BigInt(data.rewards.pending) === 0n
-                    }
-                    onClick={onClaim}
-                  >
-                    Claim ${data ? reserveMoney(data.rewards.pending) : "0"}{" "}
-                    USDG
-                  </button>
+                  {data && (owned > 0 || BigInt(data.rewards.pending) > 0n) && (
+                    <button
+                      className="primary-action full-button"
+                      disabled={BigInt(data.rewards.pending) === 0n}
+                      onClick={onClaim}
+                    >
+                      Claim ${reserveMoney(data.rewards.pending)} USDG
+                    </button>
+                  )}
                 </section>
               </aside>
             )}

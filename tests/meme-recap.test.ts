@@ -47,6 +47,44 @@ test("rejects unsafe or malformed AI Brain Pulse copy", () => {
   );
 });
 
+test("new profile personality steers deterministic drama but not allocation", () => {
+  const input = brain([
+    {
+      signedValue: 2,
+      weightedValue: 1000,
+      selectedOption: "Maximum conviction",
+    },
+  ]);
+  const personaPack = (
+    (4n << 24n) |
+    (2n << 32n) |
+    (9n << 40n) |
+    (10n << 48n)
+  ).toString();
+  const executed = generateMemeRecap(
+    input,
+    { USDG: 2500, AAPL: 7500 },
+    null,
+    [{ pieceId: 1, personaPack }],
+    true,
+  );
+  assert.equal(executed.rivalPieceId, 9);
+  assert.equal(executed.cast[0].line, MEME_CHARACTERS[0].catchphrases[4]);
+  assert.equal(
+    executed.cast.find((item) => item.role === "support")?.pieceId,
+    10,
+  );
+
+  const held = generateMemeRecap(
+    input,
+    { USDG: 2500, AAPL: 7500 },
+    null,
+    [{ pieceId: 1, personaPack }],
+    false,
+  );
+  assert.equal(held.cast[0].line, MEME_CHARACTERS[0].voice.fallback);
+});
+
 test("roster v4 has the locked cast ratio and valid identities", () => {
   assert.equal(CHARACTER_ROSTER_VERSION, 4);
   assert.equal(MEME_CHARACTERS.length, 42);

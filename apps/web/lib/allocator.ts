@@ -836,11 +836,6 @@ export async function runCycle() {
         stateless: true as const,
       },
   };
-  const memeRecap = generateMemeRecap(
-    brain,
-    decision.allocation,
-    decision.source === "ai" ? decision.brainPulse : null,
-  );
   let hash: `0x${string}` | null = null;
   let receipt: Awaited<
     ReturnType<typeof waitForReliableTransactionReceipt>
@@ -936,6 +931,16 @@ export async function runCycle() {
   );
   const reserveSymbol =
     d.assets?.find((asset) => asset.kind === "reserve")?.symbol ?? "USDG";
+  const memeRecap = generateMemeRecap(
+    brain,
+    decision.allocation,
+    decision.source === "ai" ? decision.brainPulse : null,
+    state.pieces.map((piece) => ({
+      pieceId: piece.id,
+      personaPack: piece.personaPack,
+    })),
+    Boolean(hash),
+  );
   const record = {
     schemaVersion: state.activation.controlBundlesEnabled
       ? 6

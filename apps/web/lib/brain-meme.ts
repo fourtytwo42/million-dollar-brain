@@ -967,6 +967,11 @@ export type MemeRecap = {
   disclaimer: string;
 };
 
+export type MemeProfilePresentation = {
+  pieceId: number;
+  personaPack: string;
+};
+
 export function validateAiBrainPulse(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const normalized = value.replace(/\s+/g, " ").trim();
@@ -988,6 +993,8 @@ export function generateMemeRecap(
   brain: MemeBrainInput[],
   allocation: Record<string, number>,
   aiHeadline?: string | null,
+  profilePresentation: MemeProfilePresentation[] = [],
+  executed = true,
 ): MemeRecap {
   const active = brain
     .filter((piece) => piece.active)
@@ -1002,7 +1009,16 @@ export function generateMemeRecap(
   if (!spokesperson)
     throw new Error("Cannot build a meme recap without brain pieces");
   const profile = memeCharacter(spokesperson.id);
+  const profileEntry = profilePresentation.find(
+    (item) => item.pieceId === spokesperson.id,
+  );
+  const personaPack = BigInt(profileEntry?.personaPack ?? "0");
+  const victoryLine = Number((personaPack >> 24n) & 0xffn);
+  const panicLine = Number((personaPack >> 32n) & 0xffn);
+  const preferredRivalId = Number((personaPack >> 40n) & 0xffn);
+  const preferredAllyId = Number((personaPack >> 48n) & 0xffn);
   const rival =
+    active.find((piece) => piece.id === preferredRivalId) ??
     active.find((piece) => profile.rivals.includes(piece.id)) ??
     nonNeutral.find(
       (piece) =>
@@ -1020,6 +1036,13 @@ export function generateMemeRecap(
         piece.id !== rival?.id &&
         piece.id !== scapegoat?.id,
     )
+    .sort(
+      (left, right) =>
+        Number(right.id === preferredAllyId) -
+          Number(left.id === preferredAllyId) ||
+        strength(right) - strength(left) ||
+        left.id - right.id,
+    )
     .slice(0, 4);
   const index = Math.max(0, Math.min(4, spokesperson.signedValue + 2));
   const allocationLeader =
@@ -1036,7 +1059,15 @@ export function generateMemeRecap(
       role: "spokesperson",
       mood: spokesperson.selectedOption,
       influenceBps: spokesperson.weightBps,
-      line: profile.catchphrases[index],
+      line: executed
+        ? profile.catchphrases[
+            profileEntry ? Math.min(4, victoryLine) : index
+          ]
+        : [
+            profile.voice.objection,
+            profile.voice.blame,
+            profile.voice.fallback,
+          ][Math.min(2, panicLine)],
     },
   ];
   if (rival) {

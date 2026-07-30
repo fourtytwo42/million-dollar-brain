@@ -12,6 +12,7 @@ import {
     ERC721Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { BrainProfileCatalog } from "./generated/BrainProfileCatalog.sol";
 
 interface IRewardDistributor {
     function setOwner(uint256 pieceId, address newOwner) external;
@@ -50,6 +51,12 @@ contract BrainMarketplace is
     // Appended V3 storage for the external Control Catalog registry.
     address public controlRegistry;
     bool public controlBundlesEnabled;
+    // Appended V6 storage for the bounded Profile V2 makeover.
+    mapping(uint256 => string) public customTagline;
+    mapping(uint256 => uint64) public personaPack;
+    uint16 public profileCatalogVersion;
+    bytes32 public profileCatalogHash;
+    bool public profileV2Enabled;
 
     event PiecePurchased(
         uint256 indexed pieceId,
@@ -82,6 +89,28 @@ contract BrainMarketplace is
     event PurchaseControlConfigured(bool purchasesEnabled);
     event ControlRegistryConfigured(address indexed registry, bool enabled);
     event ControlBundlesEnabled(bool enabled);
+    event ProfileChangedV2(
+        uint256 indexed pieceId,
+        address indexed owner,
+        uint64 indexed ownershipSerial,
+        bytes32 portraitHash,
+        string customName,
+        string profileUrl,
+        string customTagline,
+        uint64 personaPack,
+        uint16 catalogVersion
+    );
+    event ProfileModerated(
+        uint256 indexed pieceId,
+        address indexed moderator,
+        address indexed owner,
+        uint8 fieldMask,
+        uint64 ownershipSerial
+    );
+    event ProfileV2Configured(uint16 catalogVersion, bytes32 catalogHash, bool enabled);
+    event ProfileAllowanceGranted(
+        uint256 indexed pieceId, address indexed owner, uint64 indexed ownershipSerial
+    );
 
     function initialize(
         address admin,
@@ -187,6 +216,36 @@ contract BrainMarketplace is
         emit ControlBundlesEnabled(enabled);
     }
 
+    function reinitializeV6(
+        uint16 catalogVersion_,
+        bytes32 catalogHash_,
+        bool enabled,
+        bool grantCurrentOwners
+    ) external reinitializer(6) onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(catalogVersion_ == BrainProfileCatalog.VERSION, "profile catalog version");
+        require(catalogHash_ == BrainProfileCatalog.CATALOG_HASH, "profile catalog hash");
+        profileCatalogVersion = catalogVersion_;
+        profileCatalogHash = catalogHash_;
+        profileV2Enabled = enabled;
+
+        if (grantCurrentOwners) {
+            for (uint256 pieceId = 1; pieceId <= PIECE_COUNT; ++pieceId) {
+                address currentOwner = ownerOf(pieceId);
+                if (currentOwner != address(this)) {
+                    portraitChangeSerialPlusOne[pieceId] = 0;
+                    emit ProfileAllowanceGranted(pieceId, currentOwner, ownershipSerial[pieceId]);
+                }
+            }
+        }
+        emit ProfileV2Configured(catalogVersion_, catalogHash_, enabled);
+    }
+
+    function setProfileV2Enabled(bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(profileCatalogVersion > 0 && profileCatalogHash != bytes32(0), "catalog unset");
+        profileV2Enabled = enabled;
+        emit ProfileV2Configured(profileCatalogVersion, profileCatalogHash, enabled);
+    }
+
     function canChangePortrait(uint256 pieceId, address account) public view returns (bool) {
         _validPiece(pieceId);
         if (account == address(0) || ownerOf(pieceId) != account || account == address(this)) {
@@ -220,6 +279,7 @@ contract BrainMarketplace is
         string memory newName,
         string memory newProfileUrl
     ) private {
+        require(!profileV2Enabled, "profile v2 enabled");
         _validPiece(pieceId);
         require(ownerOf(pieceId) == msg.sender, "not owner");
         require(newPortraitHash != bytes32(0), "empty portrait");
@@ -236,6 +296,42 @@ contract BrainMarketplace is
         );
     }
 
+    function setProfileV2(
+        uint256 pieceId,
+        bytes32 newPortraitHash,
+        string calldata newName,
+        string calldata newProfileUrl,
+        string calldata newTagline,
+        uint64 newPersonaPack
+    ) external {
+        require(profileV2Enabled, "profile v2 disabled");
+        _validPiece(pieceId);
+        require(ownerOf(pieceId) == msg.sender, "not owner");
+        require(canChangeProfile(pieceId, msg.sender), "profile already changed");
+        _validateName(newName);
+        _validateProfileUrl(newProfileUrl);
+        _validateTagline(newTagline);
+        _validatePersonaPack(pieceId, newPersonaPack);
+
+        portraitHash[pieceId] = newPortraitHash;
+        customName[pieceId] = newName;
+        profileUrl[pieceId] = newProfileUrl;
+        customTagline[pieceId] = newTagline;
+        personaPack[pieceId] = newPersonaPack;
+        portraitChangeSerialPlusOne[pieceId] = ownershipSerial[pieceId] + 1;
+        emit ProfileChangedV2(
+            pieceId,
+            msg.sender,
+            ownershipSerial[pieceId],
+            newPortraitHash,
+            newName,
+            newProfileUrl,
+            newTagline,
+            newPersonaPack,
+            profileCatalogVersion
+        );
+    }
+
     function resetPortrait(uint256 pieceId) external onlyRole(DEFAULT_ADMIN_ROLE) {
         _validPiece(pieceId);
         portraitHash[pieceId] = bytes32(0);
@@ -246,6 +342,24 @@ contract BrainMarketplace is
         _validPiece(pieceId);
         profileUrl[pieceId] = "";
         emit ProfileUrlModerated(pieceId, msg.sender, ownerOf(pieceId), ownershipSerial[pieceId]);
+    }
+
+    /// @notice Clears creator-moderated presentation fields without restoring
+    /// the owner's one-makeover allowance. Bits: portrait=1, name=2, URL=4,
+    /// tagline=8.
+    function moderateProfile(uint256 pieceId, uint8 fieldMask)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        _validPiece(pieceId);
+        require(fieldMask > 0 && (fieldMask & 0xf0) == 0, "invalid field mask");
+        if ((fieldMask & 1) != 0) portraitHash[pieceId] = bytes32(0);
+        if ((fieldMask & 2) != 0) customName[pieceId] = "";
+        if ((fieldMask & 4) != 0) profileUrl[pieceId] = "";
+        if ((fieldMask & 8) != 0) customTagline[pieceId] = "";
+        emit ProfileModerated(
+            pieceId, msg.sender, ownerOf(pieceId), fieldMask, ownershipSerial[pieceId]
+        );
     }
 
     function reinitializeV2(bool purchasesEnabled_)
@@ -289,6 +403,38 @@ contract BrainMarketplace is
             uint8 character = uint8(raw[i]);
             require(character >= 0x21 && character <= 0x7e, "invalid url");
         }
+    }
+
+    function _validateTagline(string memory value) private pure {
+        bytes memory raw = bytes(value);
+        require(raw.length <= BrainProfileCatalog.TAGLINE_MAXIMUM_BYTES, "tagline too long");
+        if (raw.length == 0) return;
+        require(raw[0] != 0x20 && raw[raw.length - 1] != 0x20, "tagline whitespace");
+        for (uint256 i; i < raw.length; ++i) {
+            uint8 character = uint8(raw[i]);
+            require(character >= 0x20 && character != 0x7f, "invalid tagline");
+        }
+    }
+
+    function _validatePersonaPack(uint256 pieceId, uint64 packed) private pure {
+        uint8 accent = uint8(packed);
+        uint8 badge = uint8(packed >> 8);
+        uint8 voice = uint8(packed >> 16);
+        uint8 victoryLine = uint8(packed >> 24);
+        uint8 panicLine = uint8(packed >> 32);
+        uint8 rival = uint8(packed >> 40);
+        uint8 ally = uint8(packed >> 48);
+        uint8 reaction = uint8(packed >> 56);
+        require(accent < BrainProfileCatalog.ACCENT_COUNT, "invalid accent");
+        require(badge < BrainProfileCatalog.BADGE_COUNT, "invalid badge");
+        require(voice < BrainProfileCatalog.VOICE_COUNT, "invalid voice");
+        require(victoryLine < BrainProfileCatalog.VICTORY_LINE_COUNT, "invalid victory");
+        require(panicLine < BrainProfileCatalog.PANIC_LINE_COUNT, "invalid panic");
+        require(reaction < BrainProfileCatalog.REACTION_COUNT, "invalid reaction");
+        require(rival <= PIECE_COUNT && ally <= PIECE_COUNT, "invalid relationship");
+        require(rival == 0 || rival != pieceId, "self rival");
+        require(ally == 0 || ally != pieceId, "self ally");
+        require(rival == 0 || ally == 0 || rival != ally, "same rival ally");
     }
 
     function transferFrom(address, address, uint256) public pure override {

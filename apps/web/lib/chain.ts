@@ -354,6 +354,21 @@ export async function dashboard(
       functionName: "catalogHash",
     },
     {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "profileCatalogVersion",
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "profileCatalogHash",
+    },
+    {
+      address: d.brain,
+      abi: brainAbi,
+      functionName: "profileV2Enabled",
+    },
+    {
       address: d.basket,
       abi: basketAbi,
       functionName: "previewDeposit",
@@ -482,6 +497,18 @@ export async function dashboard(
         functionName: "profileUrl",
         args: [id],
       },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "customTagline",
+        args: [id],
+      },
+      {
+        address: d.brain,
+        abi: brainAbi,
+        functionName: "personaPack",
+        args: [id],
+      },
     );
     if (hasControlCatalog) {
       contracts.push({
@@ -515,6 +542,9 @@ export async function dashboard(
   );
   const catalogVersion = results[cursor++] as number;
   const catalogHash = results[cursor++] as `0x${string}`;
+  const profileCatalogVersion = results[cursor++] as number;
+  const profileCatalogHash = results[cursor++] as `0x${string}`;
+  const profileV2Enabled = results[cursor++] as boolean;
   const depositPreview = results[cursor++] as readonly [bigint, bigint, bigint];
   const shares = address ? (results[cursor++] as bigint) : 0n;
   const walletUsdg = address ? (results[cursor++] as bigint) : 0n;
@@ -546,6 +576,8 @@ export async function dashboard(
     const portraitChangeSerialPlusOne = Number(results[cursor++] as bigint);
     const customName = results[cursor++] as string;
     const profileUrl = results[cursor++] as string;
+    const customTagline = results[cursor++] as string;
+    const personaPack = results[cursor++] as bigint;
     const rawControlBundle = hasControlCatalog
       ? (results[cursor++] as readonly [
           number,
@@ -581,6 +613,9 @@ export async function dashboard(
         !unowned && portraitChangeSerialPlusOne !== ownershipSerial + 1,
       customName,
       profileUrl,
+      customTagline,
+      personaPack: personaPack.toString(),
+      ownerCustomized: portraitChangeSerialPlusOne === ownershipSerial + 1,
       controlBundle,
       controlBundleHash: rawControlBundle?.[3] ?? null,
       controlSelectionVersion: Number(rawControlBundle?.[4] ?? 0n),
@@ -677,6 +712,12 @@ export async function dashboard(
       catalogVersion: controlCatalogVersion,
       catalogHash: controlCatalogHash,
       registry: d.brainControlRegistry ?? null,
+    },
+    profileCatalog: {
+      schemaVersion: 2,
+      catalogVersion: Number(profileCatalogVersion),
+      catalogHash: profileCatalogHash,
+      enabled: Boolean(profileV2Enabled),
     },
     deployment: d,
     blockNumber: latestBlock.number.toString(),

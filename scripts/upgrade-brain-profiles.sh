@@ -59,5 +59,9 @@ MDB_BRAIN="$brain" forge script \
 
 cast call "$brain" 'customName(uint256)(string)' 1 --rpc-url "$rpc" >/dev/null
 cast call "$brain" 'profileUrl(uint256)(string)' 1 --rpc-url "$rpc" >/dev/null
+cast call "$brain" 'customTagline(uint256)(string)' 1 --rpc-url "$rpc" >/dev/null
+cast call "$brain" 'personaPack(uint256)(uint64)' 1 --rpc-url "$rpc" >/dev/null
+[[ "$(cast call "$brain" 'profileCatalogVersion()(uint16)' --rpc-url "$rpc" | awk '{print $1}')" == "1" ]]
+[[ "$(cast call "$brain" 'profileV2Enabled()(bool)' --rpc-url "$rpc")" == "true" ]]
 cast call "$brain" 'canChangeProfile(uint256,address)(bool)' 1 "$brain" --rpc-url "$rpc" >/dev/null
-echo "Brain profile implementation is active on chain $chain_id at $brain"
+echo "Brain Profile V2 is active on chain $chain_id at $brain"

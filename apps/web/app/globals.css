@@ -12,6 +12,223 @@
   --shadow: 0 18px 50px rgba(42, 30, 13, 0.09);
 }
 
+/* Braincell Inspector and Owner Profile V2 */
+.piece-inspector {
+  overflow: visible;
+  padding: 12px;
+}
+.piece-inspector .piece-ledger-head {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+}
+.piece-inspector .detail-portrait,
+.piece-inspector .detail-portrait img {
+  width: 96px;
+  height: 96px;
+}
+.piece-inspector .profile-customization-note,
+.piece-inspector .braincell-decree.compact,
+.piece-inspector .control-summary-card > p:not(.control-assets),
+.piece-inspector .control-summary-card small,
+.piece-inspector .brain-finances > div:first-child,
+.piece-inspector .brain-finances > p {
+  display: none;
+}
+.piece-inspector .piece-tagline {
+  margin: 8px 0;
+}
+.piece-inspector .control-summary-card,
+.piece-inspector .brain-finances,
+.piece-inspector .piece-actions {
+  margin-top: 8px;
+  padding: 9px;
+}
+.piece-inspector .control-summary-card {
+  gap: 5px;
+}
+.piece-inspector .brain-finances {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.piece-inspector .brain-finances .full-button {
+  width: auto;
+}
+.piece-inspector .portrait-change-button:disabled,
+.piece-inspector .piece-name-button:disabled {
+  cursor: default;
+  opacity: 1;
+  filter: none;
+}
+.piece-inspector .piece-lore {
+  display: none;
+}
+.control-value-rows,
+.piece-more dl {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+.control-value-rows > div,
+.piece-more dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding-bottom: 5px;
+  border-bottom: 1px dotted var(--border);
+}
+.control-value-rows dt,
+.piece-more dt {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+.control-value-rows dd,
+.piece-more dd {
+  margin: 0;
+  font:
+    700 10px "IBM Plex Mono",
+    "DM Mono",
+    monospace;
+  text-align: right;
+}
+.piece-more {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+}
+.piece-more summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.piece-more p {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.profile-editor-v2 {
+  width: min(720px, 100%);
+  max-height: min(820px, calc(100vh - 32px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  padding: 0;
+  overflow: hidden;
+}
+.profile-editor-v2 .profile-editor-heading,
+.profile-editor-v2 .profile-editor-actions {
+  padding: 18px 20px;
+  background: var(--surface);
+}
+.profile-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-block: 1px solid var(--border);
+}
+.profile-steps button {
+  min-height: 42px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--text-muted);
+}
+.profile-steps button.active {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+}
+.profile-steps span {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 5px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.profile-editor-v2 .profile-editor-body {
+  overflow-y: auto;
+  padding: 18px 20px;
+}
+.profile-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.profile-choice-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+.profile-choice-grid select,
+.profile-name-field textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 9px;
+}
+.profile-name-field textarea {
+  min-height: 74px;
+  resize: vertical;
+}
+.back-to-brain {
+  width: fit-content;
+  margin-bottom: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .brain-primary-grid.mobile-detail-active {
+    display: block;
+  }
+  .mobile-detail-active .brain-map-hidden {
+    display: none;
+  }
+  .mobile-detail-active .piece-inspector {
+    width: 100%;
+    min-height: calc(100dvh - 120px);
+    padding-bottom: 92px;
+  }
+  .mobile-detail-active .piece-actions {
+    position: sticky;
+    z-index: 20;
+    bottom: 8px;
+    box-shadow: 0 -8px 24px
+      color-mix(in srgb, var(--background) 75%, transparent);
+  }
+  .mobile-detail-active .piece-inspector .piece-actions > div {
+    display: none !important;
+  }
+  .mobile-detail-active .piece-name-button h2 {
+    font-size: clamp(1.3rem, 6vw, 1.75rem);
+    line-height: 1.02;
+  }
+  .profile-editor-v2 {
+    width: 100%;
+    max-height: calc(100dvh - 12px);
+    align-self: end;
+    border-radius: 14px 14px 0 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-choice-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-steps button {
+    font-size: 10px;
+  }
+}
+
 .test-wallet-strip {
   align-items: center;
   background: #f2e8d5;
@@ -2744,6 +2961,14 @@ footer {
   text-decoration: underline;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.persona-chip {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--primary);
+  font-weight: 700;
 }
 .profile-customization-note {
   margin: 10px 0 0;

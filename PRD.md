@@ -1214,3 +1214,29 @@ confidence reason codes, and non-blocking warnings.
   but mandatory safety, valuation, execution, and accounting data are always
   supplied.
 - Cycle inputs use immutable versioned snapshots; later user actions do not silently mutate an already signed proposal.
+
+# Braincell Inspector and Owner Profile V2
+
+The Brain inspector uses progressive disclosure. On desktop, the portrait and
+identity, current AI steering, contextual ownership action, and compact
+account-wide brain finances must fit without internal scrolling at 1440 by 900.
+Lore, technical evidence, catalog identifiers, URLs, and history live under
+`More about this braincell`. Below 901 pixels, selecting a cell opens a
+reloadable `?view=brain&piece=<id>` detail view with a Back to Brain action and
+a sticky primary action; returning preserves the mounted map state.
+
+Each ownership receives one complete on-chain Profile V2 makeover. The single
+transaction may set or retain the self-hosted animated/static portrait and may
+set name, HTTPS URL, a 96-byte tagline, curated accent, badge, voice, victory
+line, panic line, rival, ally, and reaction. Rival and ally are bounded piece
+IDs and cannot be the current piece or each other. The curated selections are
+packed into one validated uint64. Existing owners receive one fresh allowance
+when Profile V2 is enabled; a later purchase unlocks the next allowance.
+
+Profile presentation never enters DecisionContext or an AI prompt and never
+changes influence, eligibility, risk, allocation, execution, or economics.
+Curated personality may affect only deterministic Brain Drama, tooltips, and
+share presentation after the makeover transaction. Creator moderation can
+independently restore portrait, name, URL, or tagline without restoring the
+spent owner allowance. Owner URLs are never fetched server-side and render as
+`nofollow ugc` links.
