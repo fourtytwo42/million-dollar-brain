@@ -487,7 +487,11 @@ export function BrainDashboard() {
     [key],
   );
   useEffect(() => {
-    if (!data || data.deployment.schemaVersion !== 4 || screen !== "Basket") {
+    if (
+      !data ||
+      (data.deployment.schemaVersion ?? 0) < 4 ||
+      screen !== "Basket"
+    ) {
       setBuyDexQuote(null);
       setSellDexQuote(null);
       return;

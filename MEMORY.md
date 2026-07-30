@@ -80,6 +80,11 @@ Durable project context lives here. Update this file whenever information should
   now shows route impact, short-TWAP gap, projected exposure, permitted
   exposure, and capacity utilization. Asset-universe, DecisionContext V7,
   graduation/readiness tests, and the production web build pass.
+- Result: Promoting the devnet deployment manifest from V4 to V5 exposed a
+  client compatibility defect: Basket quote polling required schema version
+  exactly 4. It now accepts every supported schema version 4 or newer. Live
+  UAT confirms the $1,000 quote renders 24.74%-31.12% capacity utilization and
+  the correct projected exposure against each $12,500 on-chain ceiling.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
   then testnet migration/acceptance. Configure the missing mainnet RPC failover
   environment only when the Alchemy endpoint is supplied.

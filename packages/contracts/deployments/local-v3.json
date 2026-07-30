@@ -1,0 +1,160 @@
+{
+  "aapl": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "basket": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+  "brain": "0x59b670e9fA9D0A427751Af201D676719a970857b",
+  "creatorVault": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+  "ethx": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  "nvda": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  "oracle": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+  "rewards": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+  "router": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+  "usdg": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+  "assetRegistry": "0x09F8E13ec5CFde5689654241463fe9a5c5837970",
+  "brainControlRegistry": "0x95A13B7F46f569B0633Cc48c42103F526c269d4F",
+  "controlCatalogHash": "0x1c5b19d5171ffeb7f1d56cb571f80a4659801bed9db6000d67dd0b575fc6b774",
+  "controlSchemaVersion": 1,
+  "controlCatalogVersion": 1,
+  "schemaVersion": 5,
+  "environment": "devnet",
+  "chainId": 31337,
+  "assets": [
+    {
+      "id": "31337:0x5fbdb2315678afecb367f032d93f642f64180aa3",
+      "symbol": "USDG",
+      "name": "Global Dollar",
+      "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+      "kind": "reserve",
+      "riskClass": "reserve",
+      "decimals": 18,
+      "maximumWeightBps": 10000,
+      "robinhoodUid": null,
+      "controlId": 1,
+      "tags": [
+        "reserve"
+      ]
+    },
+    {
+      "id": "31337:0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+      "symbol": "AAPL",
+      "name": "Apple",
+      "address": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+      "kind": "stock",
+      "riskClass": "standard",
+      "decimals": 18,
+      "maximumWeightBps": 5000,
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000",
+      "robinhoodUid": null,
+      "controlId": 2,
+      "tags": [
+        "technology"
+      ]
+    },
+    {
+      "id": "31337:0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+      "symbol": "NVDA",
+      "name": "NVIDIA",
+      "address": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+      "kind": "stock",
+      "riskClass": "standard",
+      "decimals": 18,
+      "maximumWeightBps": 5000,
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000",
+      "robinhoodUid": null,
+      "controlId": 3,
+      "tags": [
+        "technology",
+        "ai_semiconductor"
+      ]
+    },
+    {
+      "id": "31337:0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+      "symbol": "ETHX",
+      "name": "Ether",
+      "address": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+      "kind": "crypto",
+      "riskClass": "high_volatility",
+      "decimals": 18,
+      "maximumWeightBps": 5000,
+      "safeTwoSidedCapacityUsdWad": "25000000000000000000000",
+      "maximumExposureUsdWad": "12500000000000000000000",
+      "robinhoodUid": null,
+      "controlId": 12,
+      "tags": [
+        "crypto_major"
+      ]
+    }
+  ],
+  "contracts": {
+    "router": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+    "oracle": "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707",
+    "valuation": "0x31532Fe1F6802f9A3a22790Aa584636076cE4DCb",
+    "dexExecutionAdapter": "0x40ec018CDa28e11c3BfF23487dcE6102459A25B9",
+    "dexValuationAdapter": "0x31532Fe1F6802f9A3a22790Aa584636076cE4DCb",
+    "dexValuationImplementation": "0xfc7f67c45e7083d5f86ad347b2d8d07da051adc1",
+    "assetRegistry": "0x09F8E13ec5CFde5689654241463fe9a5c5837970",
+    "assetRegistryImplementation": "0x4ae99c90e5f5d21bbc2bd946f7a50feea0640662",
+    "brainControlRegistry": "0x95A13B7F46f569B0633Cc48c42103F526c269d4F",
+    "rewards": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
+    "creatorVault": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
+    "brain": "0x59b670e9fA9D0A427751Af201D676719a970857b",
+    "basket": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
+    "basketImplementation": "0xee3f77fe2c6fe533026489635dd0229bd6e5edf3",
+    "dexExecutionImplementation": "0x6699e889831e647c768537ad3d4167c11d710b92"
+  },
+  "dexExecutionAdapter": "0x40ec018CDa28e11c3BfF23487dcE6102459A25B9",
+  "dexValuationAdapter": "0x31532Fe1F6802f9A3a22790Aa584636076cE4DCb",
+  "executionMode": "uniswap-v3-capacity-v3",
+  "legacyPlanExecutionDisabled": true,
+  "qualification": {
+    "schemaVersion": 3,
+    "requiredContinuousHours": 48,
+    "requiredRegularMarketSessions": 2,
+    "authority": "on-chain-dex-only"
+  },
+  "capacityPolicy": {
+    "tvlCapUsdWad": "60000000000000000000000",
+    "provenCapacityFractionBps": 5000,
+    "maximumAssetWeightBps": 2000,
+    "minimumReserveWeightBps": 2000,
+    "maximumHighVolatilityWeightBps": 3000
+  },
+  "dexVenue": {
+    "venue": "uniswap-v3",
+    "factory": "0x789aE82401fce8994DC33bD4ccAABa775BdeF7E8",
+    "router": "0x6e84D4731523a63C9eD032201A6694f32d673E25",
+    "quoter": "0xc33f403128D9D234d542E54684C2F1C2D408556e",
+    "weth": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+    "feeTiers": [
+      3000
+    ],
+    "twapWindowSeconds": 1800,
+    "longTwapWindowSeconds": 14400,
+    "quoteLifetimeSeconds": 30,
+    "maximumReferenceBlockAge": 3,
+    "pools": [
+      {
+        "address": "0xd5EfF99704c478a0e9D1e52F5DAC39411978FE04",
+        "token0": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "token1": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x8A1D200dA61b55FA600D800477A9D524ae86998F",
+        "token0": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "token1": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x7f2ddd5ACB4f29EA2c4982565bb317a046951157",
+        "token0": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "token1": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+        "fee": 3000,
+        "approved": true
+      }
+    ]
+  }
+}
