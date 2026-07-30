@@ -71,10 +71,11 @@ async function fundActor(
   requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
-  // Capacity V3 safety validation makes a full multi-leg buy approach 3M gas.
-  // Retain a 4.5M transaction ceiling and enough balance for both sequential
+  // Capacity V3 safety validation makes a full multi-leg buy approach 4.5M gas
+  // on Robinhood's Nitro accounting. Retain an 8M rehearsal ceiling and enough
+  // balance for both sequential
   // operations without concentrating the shared endurance budget in one actor.
-  const targetGas = parseEther("0.000125");
+  const targetGas = parseEther("0.00025");
   const gasBalance = await publicClient.getBalance({
     address: actor.account.address,
   });
@@ -250,7 +251,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "depositWithDexPlan",
-        gas: 4_500_000n,
+        gas: 8_000_000n,
         args: [
           gross,
           (depositPreview[2] * 99n) / 100n,
@@ -276,7 +277,7 @@ export async function POST(request: NextRequest) {
         address: d.basket,
         abi: basketAbi,
         functionName: "redeemWithDexPlan",
-        gas: 4_500_000n,
+        gas: 8_000_000n,
         args: [
           sellShares,
           (redeemPreview[2] * 99n) / 100n,
