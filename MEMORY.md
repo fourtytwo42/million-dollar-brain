@@ -30,8 +30,12 @@ Durable project context lives here. Update this file whenever information should
   unavailable.
 - Decision: Stop the acceptance runner, preserve its original clock, replenish
   the operator from the three deterministic acceptance actors, then fund the
-  separate heartbeat signer from the operator. Do not weaken price freshness,
-  TWAP, or gas-health assertions.
+  separate heartbeat signer from the operator. The first recovery exposed that
+  the test endpoint's 0.00035 ETH per-actor target could reserve more gas across
+  three concurrent actors than the shared wallet pool contained. Reduce the
+  bounded per-actor target to 0.0001 ETH, approximately two complete actor
+  flows, while retaining exact-deficit funding. Do not weaken price freshness,
+  TWAP, transaction, or gas-health assertions.
 - Commands/tests: Actor-to-operator transfers
   `0xcc82aa67ff384773680d29b4c563212bb5bc711a1ab3465a46d955247bfb5b55`,
   `0x553b8f20db24b3a334ad1af1409f26173c72873f9a7b40ad12344c019b22ec1b`,
@@ -47,8 +51,8 @@ Durable project context lives here. Update this file whenever information should
   status returned 200, queued sales remained zero, and DEX-marked NAV
   reconciled. Operator and heartbeat balances were approximately 0.0004455 and
   0.0001108 test ETH after recovery.
-- Follow-up: Resume checkpoint 3 with repair downtime excluded and continue
-  monitoring both signer balances.
+- Follow-up: Build and deploy the bounded actor-gas target, resume checkpoint 3
+  with repair downtime excluded, and continue monitoring all signer balances.
 
 ### 2026-07-30 - Acceptance route-age and gas-funding repair
 
