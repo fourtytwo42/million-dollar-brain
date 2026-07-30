@@ -47,6 +47,24 @@ Durable project context lives here. Update this file whenever information should
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
 
+### 2026-07-29 - AI-written Brain Pulse
+
+- Context: The user wanted Brain Pulse to be written by the allocator rather
+  than assembled from a deterministic headline template.
+- Decision: Require every accepted Ornith allocation response to include one
+  validated 12-to-180-character `brainPulse` sentence. Store it in the
+  immutable cycle recap with `headlineSource: "ai"`. Invalid or missing copy
+  rejects the model result; deterministic holds and legacy cycles use the
+  existing deterministic fallback.
+- Files: `apps/web/lib/allocator.ts`, `apps/web/lib/brain-meme.ts`,
+  `tests/meme-recap.test.ts`, `tests/decision-context.test.ts`, `PRD.md`.
+- Commands/tests: 7/7 meme-recap tests; 9/9 DecisionContext tests; production
+  Next.js build.
+- Result: Brain Pulse is authored in the same stateless allocation call, so no
+  second model request is added and historical pulse text remains immutable.
+- Follow-up: Verify the next naturally eligible testnet V6 AI cycle records
+  `memeRecap.headlineSource: "ai"` and serves the exact headline publicly.
+
 ### 2026-07-29 - DecisionContext V6 and guarded testnet control reset
 
 - Context: Testnet endurance controls produced a distorted baseline and the
@@ -245,7 +263,7 @@ decision`; the focused Experience v2 suite passes.
   marketplace gate, all 42 migrated bundles, DecisionContext V5 compiler,
   cadence eligibility scheduler, preview API, and data-driven control editor
   are live. Catalog v3 remains stored for history and emergency rollback.
-- Every new allocation persists one deterministic `memeRecap` in `cycles.jsonl` using the recorded brain snapshot and actual target allocation. No additional model call is made, and legacy cycles remain readable without invented dialogue.
+- Every accepted AI allocation now includes a validated, AI-written Brain Pulse sentence in the same model response. The exact sentence is persisted in `memeRecap`; deterministic holds and legacy cycles use the existing deterministic headline fallback. Character casting and dialogue remain deterministic, and no additional model call is made.
 - `PRD.md` v1.2 plus its linked normative specifications is the authoritative
   requirements set. `BRAIN_CONTROL_CATALOG.md` is normative for the target
   control system; `BRAIN_PRESET_CATALOG.md` is normative for deployed

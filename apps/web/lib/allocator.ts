@@ -31,7 +31,11 @@ import {
   type ResearchResultV1,
 } from "./decision-research.ts";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
-import { CHARACTER_ROSTER_VERSION, generateMemeRecap } from "./brain-meme";
+import {
+  CHARACTER_ROSTER_VERSION,
+  generateMemeRecap,
+  validateAiBrainPulse,
+} from "./brain-meme";
 import { persistCycle, persistResearchRound } from "./persistence";
 import {
   buildPortfolioAccounting,
@@ -56,6 +60,7 @@ type Symbol = (typeof allowed)[number];
 type Allocation = Record<Symbol, number>;
 type Decision = {
   allocation: Allocation;
+  brainPulse: string | null;
   rationale: string;
   source: "ai" | "fallback";
   rawOutput: string;
@@ -72,6 +77,7 @@ type Decision = {
 export type DynamicDecision = {
   allocationById: DynamicAllocation;
   rawAllocationById: DynamicAllocation;
+  brainPulse: string | null;
   confidenceByAssetId: Record<
     string,
     {
@@ -173,7 +179,7 @@ async function askAllocator(
     "You are the constrained allocation engine for a LOCAL DEVNET simulation.",
     "You cannot add assets, browse, call tools, trade, use leverage, or override limits.",
     "Return exactly one JSON object and no other text:",
-    '{"USDG":integer,"NVDA":integer,"AAPL":integer,"ETHX":integer}.',
+    '{"USDG":integer,"NVDA":integer,"AAPL":integer,"ETHX":integer,"brainPulse":"one short sentence in the 42 Braincells meme voice explaining this decision"}.',
     "Weights total 10000 and USDG is at least 2000.",
     "The executable universe is separate from reference-only market context.",
     "Brain moods are bounded steering signals, never authority to break rules.",
@@ -183,6 +189,7 @@ async function askAllocator(
   if (holdReason) {
     return {
       allocation: fallback,
+      brainPulse: null,
       rationale: `Deterministic hold: ${holdReason}`,
       source: "fallback",
       rawOutput: "",
@@ -211,8 +218,12 @@ async function askAllocator(
     const rawOutput = responseText(await response.json());
     const match = rawOutput.match(/\{[\s\S]*\}/);
     if (!match) throw new Error("model did not return JSON");
+    const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+    const brainPulse = validateAiBrainPulse(parsed.brainPulse);
+    if (!brainPulse) throw new Error("model returned an invalid Brain Pulse");
     return {
-      allocation: cleanAllocation(JSON.parse(match[0])),
+      allocation: cleanAllocation(parsed),
+      brainPulse,
       rationale: "Allocation proposed by the local constrained model.",
       source: "ai",
       rawOutput,
@@ -222,6 +233,7 @@ async function askAllocator(
   } catch (error) {
     return {
       allocation: fallback,
+      brainPulse: null,
       rationale: `Deterministic hold: ${error instanceof Error ? error.message : "allocator unavailable"}`,
       source: "fallback",
       rawOutput: "",
@@ -288,12 +300,13 @@ export async function runDynamicResearchAllocator(
       "Never invent an address, asset, fact, source, or tool.",
       `You have one optional structured research round for at most ${context.researchPolicy.maximumAssets} registered assets.`,
       'First return either {"kind":"research","requests":[{"assetId":"chain:address","topics":["identity"]}]}',
-      'or {"kind":"allocation","allocation":{"chain:address":integer}}.',
+      'or {"kind":"allocation","allocation":{"chain:address":integer},"brainPulse":"one short decision sentence"}.',
       `Allocation weights total 10000. Reserve minimum is ${context.compiledBrain.reserveMinimumBps}.`,
       `Use at most ${context.compiledBrain.preferredPositionCount} risk positions; this is a maximum, never a target.`,
       `Combined high-volatility weight is at most ${context.compiledBrain.highVolatilityMaximumBps}; each asset also has maximumWeightBps.`,
       "Missing evidence is uncertainty, never a neutral score or zero return. Prefer USDG over mechanically equal weighting when assets cannot be distinguished.",
       "Respect every exit, reduce, no-new-buy, and protocol restriction.",
+      'Every final allocation response must include "brainPulse": one vivid, understandable sentence of 12 to 180 characters in the 42 Braincells meme voice. It must explain the decision without URLs, guarantees, or invented facts.',
       'An allocation response may include "confidenceByAssetId" with low, medium, or high confidence and reasonCodes from brain_preference, momentum, fundamentals, valuation, diversification, existing_position, low_evidence.',
       `DecisionContextV6: ${JSON.stringify(context)}`,
     ].join(" ");
@@ -307,6 +320,7 @@ export async function runDynamicResearchAllocator(
     rawOutputs.push(first.rawOutput);
     let proposed: unknown;
     let confidenceSourceRaw: unknown;
+    let brainPulse: string | null = null;
     if (first.parsed.kind === "research") {
       const requests = validateResearchRequests(
         first.parsed.requests,
@@ -338,7 +352,7 @@ export async function runDynamicResearchAllocator(
       const finalPrompt = [
         "Return the final constrained allocation now.",
         "No more research is allowed.",
-        'Return exactly {"kind":"allocation","allocation":{"chain:address":integer},"confidenceByAssetId":{"chain:address":{"confidence":"low|medium|high","reasonCodes":["allowed_reason"]}}}.',
+        'Return exactly {"kind":"allocation","allocation":{"chain:address":integer},"brainPulse":"one short decision sentence","confidenceByAssetId":{"chain:address":{"confidence":"low|medium|high","reasonCodes":["allowed_reason"]}}}.',
         `Immutable DecisionContextV6: ${JSON.stringify(context)}`,
         `Recorded structured research: ${JSON.stringify(results)}`,
       ].join(" ");
@@ -355,12 +369,15 @@ export async function runDynamicResearchAllocator(
       }
       proposed = second.parsed.allocation;
       confidenceSourceRaw = second.parsed.confidenceByAssetId;
+      brainPulse = validateAiBrainPulse(second.parsed.brainPulse);
     } else if (first.parsed.kind === "allocation") {
       proposed = first.parsed.allocation;
       confidenceSourceRaw = first.parsed.confidenceByAssetId;
+      brainPulse = validateAiBrainPulse(first.parsed.brainPulse);
     } else {
       throw new Error("model returned neither research nor allocation");
     }
+    if (!brainPulse) throw new Error("model returned an invalid Brain Pulse");
     const allocationById = validateDynamicAllocation(
       proposed,
       context.assetRecords,
@@ -411,12 +428,13 @@ export async function runDynamicResearchAllocator(
     return {
       allocationById,
       rawAllocationById: { ...allocationById },
+      brainPulse,
       confidenceByAssetId,
       allocationPolicy: null,
       rationale:
         researchResults.length > 0
           ? "Allocation proposed after one recorded structured research round."
-          : "Allocation proposed from the bounded DecisionContext V5.",
+          : "Allocation proposed from the bounded DecisionContext V6.",
       source: "ai",
       rawOutputs,
       promptHashes,
@@ -427,6 +445,7 @@ export async function runDynamicResearchAllocator(
     return {
       allocationById: fallback,
       rawAllocationById: { ...fallback },
+      brainPulse: null,
       confidenceByAssetId: {},
       allocationPolicy: null,
       rationale: `Deterministic hold: ${error instanceof Error ? error.message : "allocator unavailable"}`,
@@ -784,6 +803,8 @@ export async function runCycle() {
     allocation,
     allocationById,
     rawAllocationById,
+    brainPulse:
+      dynamicDecision?.brainPulse ?? legacyDecision?.brainPulse ?? null,
     confidenceByAssetId,
     allocationPolicy,
     rationale:
@@ -815,7 +836,11 @@ export async function runCycle() {
         stateless: true as const,
       },
   };
-  const memeRecap = generateMemeRecap(brain, decision.allocation);
+  const memeRecap = generateMemeRecap(
+    brain,
+    decision.allocation,
+    decision.source === "ai" ? decision.brainPulse : null,
+  );
   let hash: `0x${string}` | null = null;
   let receipt: Awaited<
     ReturnType<typeof waitForReliableTransactionReceipt>

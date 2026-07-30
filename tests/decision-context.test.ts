@@ -106,3 +106,17 @@ test("V6 prompt treats missing evidence as uncertainty and position count as a m
   assert.match(allocator, /rawAllocationById/);
   assert.match(allocator, /allocationWarnings/);
 });
+
+test("every accepted AI allocation carries a validated Brain Pulse", () => {
+  const allocator = readFileSync(
+    new URL("../apps/web/lib/allocator.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(allocator, /Every final allocation response must include/);
+  assert.match(allocator, /validateAiBrainPulse/);
+  assert.match(allocator, /model returned an invalid Brain Pulse/);
+  assert.match(
+    allocator,
+    /decision\.source === "ai" \? decision\.brainPulse : null/,
+  );
+});

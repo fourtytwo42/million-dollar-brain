@@ -951,6 +951,7 @@ export type MemeCastRole = "spokesperson" | "rival" | "scapegoat" | "support";
 export type MemeRecap = {
   version: 1;
   headline: string;
+  headlineSource?: "ai" | "deterministic";
   spokespersonPieceId: number;
   rivalPieceId?: number;
   scapegoatPieceId?: number;
@@ -966,6 +967,19 @@ export type MemeRecap = {
   disclaimer: string;
 };
 
+export function validateAiBrainPulse(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (
+    normalized.length < 12 ||
+    normalized.length > 180 ||
+    /https?:\/\/|www\.|[\u0000-\u001f\u007f]/i.test(normalized)
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
 function strength(piece: MemeBrainInput) {
   return Math.abs(piece.weightedValue);
 }
@@ -973,6 +987,7 @@ function strength(piece: MemeBrainInput) {
 export function generateMemeRecap(
   brain: MemeBrainInput[],
   allocation: Record<string, number>,
+  aiHeadline?: string | null,
 ): MemeRecap {
   const active = brain
     .filter((piece) => piece.active)
@@ -1011,7 +1026,10 @@ export function generateMemeRecap(
     Object.entries(allocation).sort(
       (left, right) => right[1] - left[1],
     )[0]?.[0] ?? "USDG";
-  const headline = `${profile.name} seized the microphone and declared ${allocationLeader} the main character.`;
+  const validatedAiHeadline = validateAiBrainPulse(aiHeadline);
+  const headline =
+    validatedAiHeadline ??
+    `${profile.name} seized the microphone and declared ${allocationLeader} the main character.`;
   const cast: MemeRecap["cast"] = [
     {
       pieceId: spokesperson.id,
@@ -1062,6 +1080,7 @@ export function generateMemeRecap(
   return {
     version: 1,
     headline,
+    headlineSource: validatedAiHeadline ? "ai" : "deterministic",
     spokespersonPieceId: spokesperson.id,
     rivalPieceId: rival?.id,
     scapegoatPieceId: scapegoat?.id,

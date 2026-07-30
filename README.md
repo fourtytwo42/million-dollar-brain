@@ -11,7 +11,7 @@ constrained scheduled AI allocation through closed, auditable control panels.
 
 Usable local-devnet release running natively on the project VM. It includes upgradeable protocol contracts, disposable and external wallet support, the complete 42-piece ERC-721 brain, entry and redemption economics, brain-owner claims, a creator vault, atomic exits, an hourly keeper, and constrained Ornith allocation cycles.
 
-The live application follows the normative editorial system: its Brain view uses character roster v4, a 10-human/32-nonhuman financial fever-dream bureaucracy inside curved SVG segments, crew and personal-ownership filters, a character-led Brain Pulse, and a complete selected-piece inspector. Basket provides the portfolio ledger and user actions. Decisions shows the Brain requested, Ornith proposed, and Protocol executed chain plus deterministic Brain Drama, historical character statistics, downloadable recap cards, and prefilled social sharing.
+The live application follows the normative editorial system: its Brain view uses character roster v4, a 10-human/32-nonhuman financial fever-dream bureaucracy inside curved SVG segments, crew and personal-ownership filters, an Ornith-written Brain Pulse for accepted AI cycles, and a complete selected-piece inspector. Basket provides the portfolio ledger and user actions. Decisions shows the Brain requested, Ornith proposed, and Protocol executed chain plus deterministic Brain Drama, historical character statistics, downloadable recap cards, and prefilled social sharing.
 
 The local application remains a simulation. A separate V3 deployment is live
 on Robinhood Testnet with 12 clearly labelled production-interface replicas,

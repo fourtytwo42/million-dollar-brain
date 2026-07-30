@@ -5,6 +5,7 @@ import {
   generateMemeRecap,
   MEME_CHARACTERS,
   type MemeBrainInput,
+  validateAiBrainPulse,
 } from "../apps/web/lib/brain-meme.ts";
 
 const brain = (overrides: Partial<MemeBrainInput>[] = []): MemeBrainInput[] =>
@@ -18,6 +19,33 @@ const brain = (overrides: Partial<MemeBrainInput>[] = []): MemeBrainInput[] =>
     active: true,
     ...(overrides[index] ?? {}),
   }));
+
+test("uses a validated AI-written Brain Pulse and records its provenance", () => {
+  const recap = generateMemeRecap(
+    brain(),
+    { USDG: 2500, AAPL: 2000, NVDA: 2000, WETH: 3500 },
+    "The brain kept cash in the glovebox and let WETH drive the getaway car.",
+  );
+  assert.equal(
+    recap.headline,
+    "The brain kept cash in the glovebox and let WETH drive the getaway car.",
+  );
+  assert.equal(recap.headlineSource, "ai");
+});
+
+test("rejects unsafe or malformed AI Brain Pulse copy", () => {
+  assert.equal(validateAiBrainPulse("too short"), null);
+  assert.equal(
+    validateAiBrainPulse("Visit https://example.com for alpha"),
+    null,
+  );
+  assert.equal(
+    validateAiBrainPulse(
+      "  Cash   stayed home while momentum took the wheel.  ",
+    ),
+    "Cash stayed home while momentum took the wheel.",
+  );
+});
 
 test("roster v4 has the locked cast ratio and valid identities", () => {
   assert.equal(CHARACTER_ROSTER_VERSION, 4);
