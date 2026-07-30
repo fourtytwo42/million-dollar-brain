@@ -1940,9 +1940,6 @@ export function EditorialDashboard({
                 <p className="piece-lore">“{selected.lore}”</p>
                 <div className="control-summary-card">
                   <span>WHAT THIS BRAINCELL TELLS THE AI</span>
-                  <strong>
-                    {experienceSummary(selected.id, selected.controlBundle)}
-                  </strong>
                   <dl className="control-value-rows">
                     {experienceControls(selected.id).map((control) => (
                       <div key={`${control.key}-${control.rawIndex}`}>

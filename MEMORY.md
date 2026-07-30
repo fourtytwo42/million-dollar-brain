@@ -18,6 +18,21 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
+### 2026-07-30 - Removed redundant inspector control summary
+
+- Context: The selected-braincell inspector displayed the same control choices
+  twice: first as a colon-separated sentence and again as clearer
+  question/value rows.
+- Decision: Remove the duplicated sentence from the inspector and retain the
+  accessible question/value rows. Map tooltips and control-editor previews keep
+  their compact summaries.
+- Files: `apps/web/components/editorial-dashboard.tsx`.
+- Commands/tests: Prettier, production build, and responsive devnet browser
+  verification.
+- Result: The inspector's `What this braincell tells the AI` section now shows
+  each choice once.
+- Follow-up: None.
+
 ### 2026-07-30 - Profile V2 two-hour testnet acceptance complete
 
 - Context: Braincell Inspector and Owner Profile V2 required a fresh two-hour,
