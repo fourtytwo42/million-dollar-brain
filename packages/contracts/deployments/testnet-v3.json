@@ -449,23 +449,26 @@
         "fee": 3000,
         "approved": true
       },
-      {
-        "address": "0x22B092075eD8970386D43Ef643c598Ef69a736dd",
-        "token0": "0x22d5235A569c9c445d051760629B69E9C663e0E0",
-        "fee": 3000,
-        "approved": true
-      },
-      {
-        "address": "0x16239c6d68350e65fA4086867A144eE4a3292F78",
-        "token0": "0x5445Ac2965f1E40F619a87C3a55b3750827e1a8b",
-        "fee": 3000,
-        "approved": true
-      },
-      {
-        "address": "0xcf63801f17A618e41ABc72b83A7e7789622D7E7C",
-        "token0": "0xed0D1a50669e6A9d9e0182F2bc0168f9cBB1a4F9",
-        "fee": 3000,
-        "approved": true
+    {
+      "address": "0x22B092075eD8970386D43Ef643c598Ef69a736dd",
+      "token0": "0x22d5235A569c9c445d051760629B69E9C663e0E0",
+      "token1": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+      "fee": 3000,
+      "approved": true
+    },
+    {
+      "address": "0x16239c6d68350e65fA4086867A144eE4a3292F78",
+      "token0": "0x5445Ac2965f1E40F619a87C3a55b3750827e1a8b",
+      "token1": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+      "fee": 3000,
+      "approved": true
+    },
+    {
+      "address": "0xcf63801f17A618e41ABc72b83A7e7789622D7E7C",
+      "token0": "0xed0D1a50669e6A9d9e0182F2bc0168f9cBB1a4F9",
+      "token1": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+      "fee": 3000,
+      "approved": true
       }
     ],
     "longTwapWindowSeconds": 14400
