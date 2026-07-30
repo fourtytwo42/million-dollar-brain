@@ -391,3 +391,16 @@ A user viewing any cycle should be able to answer:
 6. What did deterministic rules change?
 7. Which trades executed?
 8. What does the basket hold now?
+
+## 16. V6 allocation-policy evidence
+
+New DecisionContext V6 cycles preserve both the model's raw proposal and the
+final constrained target. Decisions displays each selected asset's evidence
+tier, observation coverage, bounded confidence, reason codes, policy removals,
+and warnings.
+
+The brain's desired position count is a maximum, not a quota. After mandatory
+exit, reduce, no-new-buy, reserve, volatility, and protocol rules, excess
+positions are ranked deterministically by brain directives, proposed weight,
+evidence quality, coverage, liquidity, and canonical asset ID. Removed weight
+returns to USDG. Legacy V5 records remain readable without invented evidence.

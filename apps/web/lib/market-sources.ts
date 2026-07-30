@@ -186,8 +186,35 @@ type SecUnit = {
   fp?: string;
 };
 
-export async function secCompanyFacts(symbol: "NVDA" | "AAPL") {
-  const cik = symbol === "NVDA" ? "0001045810" : "0000320193";
+const secCiks: Record<string, string> = {
+  AAPL: "0000320193",
+  NVDA: "0001045810",
+  MSFT: "0000789019",
+  AMZN: "0001018724",
+  GOOGL: "0001652044",
+  META: "0001326801",
+  TSLA: "0001318605",
+};
+
+export async function secCompanyFacts(symbol: string) {
+  const cik = secCiks[symbol.toUpperCase()];
+  if (!cik) {
+    return {
+      value: null,
+      source: "https://data.sec.gov/api/xbrl/companyfacts/",
+      observedAt: null,
+      retrievedAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 6 * 60 * 60 * 1_000).toISOString(),
+      valid: false,
+      error: `SEC CIK not configured for ${symbol}`,
+    } satisfies SourceValue<{
+      entityName: string;
+      facts?: {
+        "us-gaap"?: Record<string, { units?: Record<string, SecUnit[]> }>;
+        dei?: Record<string, { units?: Record<string, SecUnit[]> }>;
+      };
+    }>;
+  }
   return fetchJson<{
     entityName: string;
     facts?: {

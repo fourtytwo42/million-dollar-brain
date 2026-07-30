@@ -216,3 +216,25 @@ The same stored package can be replayed without accessing live external sources.
 - A disabled asset follows its explicit `sell_only`, `hold_only`, or `frozen` state.
 - Conflicting sources invalidate the affected field instead of asking Ornith to choose.
 - No valid allocation output means the current allocation is held.
+
+## 10. DecisionContext V6 evidence policy
+
+Every active manifest asset receives a dossier. Stock and ETF dossiers use the
+official Robinhood quote, spread, volume, halt state, corporate actions, local
+history, execution evidence, and configured SEC facts. WETH uses the official
+Coinbase ETH ticker and history as its market-history reference. Canonical
+manifest tags are retained.
+
+Each compact and detailed row carries one evidence tier:
+
+- `complete`: current valuation plus enough validated market, execution, and
+  supporting evidence to distinguish the asset.
+- `partial`: useful validated evidence exists, but one or more important
+  dimensions remain unavailable.
+- `price_only`: current valuation exists but there is too little supporting
+  evidence to distinguish the asset reliably.
+
+Testnet keeps partial and price-only assets allocatable, but the model must
+treat missing evidence as uncertainty rather than a neutral return or neutral
+score. USDG is preferable to mechanical equal weighting when candidates cannot
+be distinguished. Mainnet continues to admit only qualified, activated assets.

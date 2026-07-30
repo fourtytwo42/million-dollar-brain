@@ -65,6 +65,14 @@ export type CompactAssetV1 = {
   spreadBps: number | null;
   qualificationHours: number;
   maximumWeightBps: number;
+  evidence?: {
+    tier: "complete" | "partial" | "price_only";
+    coverageScoreBps: number;
+    sampleCount: number;
+    spanMinutes: number;
+    availableFields: string[];
+    unavailableReasons: string[];
+  };
 };
 
 export type DynamicAllocation = Record<string, number>;

@@ -70,3 +70,39 @@ test("allocator remains stateless and context history is capped", () => {
   assert.match(allocator, /persistResearchRound/);
   assert.doesNotMatch(allocator, /conversation[_A-Za-z]*:/);
 });
+
+test("V6 builds dossiers from the active manifest and preserves its tags", () => {
+  const context = readFileSync(
+    new URL("../apps/web/lib/decision-context.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(context, /buildManifestDossiers/);
+  assert.match(context, /stockRecords\.map/);
+  assert.match(context, /robinhoodStockData\(record\.symbol\)/);
+  assert.match(context, /identity:[\s\S]*tags: \[\.\.\.record\.tags\]/);
+  assert.doesNotMatch(context, /tags: \[asset\.kind, "deployment_manifest"\]/);
+  assert.match(context, /coinbaseEthTicker/);
+});
+
+test("V6 evidence never turns unavailable history into a neutral return", () => {
+  const context = readFileSync(
+    new URL("../apps/web/lib/decision-context.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(context, /"complete" \| "partial" \| "price_only"/);
+  assert.match(context, /unavailableReasons/);
+  assert.match(context, /`\$\{field\} unavailable from validated sources`/);
+  assert.match(context, /return24hBps: feature\?\.return24hBps \?\? null/);
+});
+
+test("V6 prompt treats missing evidence as uncertainty and position count as a maximum", () => {
+  const allocator = readFileSync(
+    new URL("../apps/web/lib/allocator.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(allocator, /Missing evidence is uncertainty/);
+  assert.match(allocator, /this is a maximum, never a target/);
+  assert.match(allocator, /DecisionContextV6/);
+  assert.match(allocator, /rawAllocationById/);
+  assert.match(allocator, /allocationWarnings/);
+});

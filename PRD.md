@@ -1094,6 +1094,28 @@ The following are supplied production inputs or external approvals rather than d
 
 These gates do not block local Anvil or public-testnet implementation. Mainnet value-entry functions remain disabled until the applicable evidence is attached to the release checklist.
 
+### DecisionContext V6 and testnet evidence policy
+
+The executable universe is manifest-driven. Every active reserve, stock, ETF,
+and crypto asset receives a dynamic dossier with canonical tags, current
+valuation, market-history coverage, execution evidence, and explicit
+unavailable-field reasons. Stock and ETF dossiers use official Robinhood market
+data; configured equities may add SEC Company Facts; WETH maps official
+Coinbase ETH ticker and candle evidence.
+
+Every asset is labelled `complete`, `partial`, or `price_only`. Low-evidence
+testnet assets remain eligible, but missing evidence is uncertainty and may not
+be represented as a neutral return or score. The model is instructed to prefer
+USDG over mechanical equal weighting when candidates cannot be distinguished.
+Mainnet qualification and activation rules remain unchanged.
+
+Piece 3's desired position count is a deterministic maximum. The model may use
+fewer positions. Excess positions are removed after mandatory restrictions
+using brain directives, proposed weight, evidence tier and coverage, liquidity,
+and canonical asset ID as the stable tie-break. Removed weight returns to USDG.
+New cycles persist raw and constrained allocations, selected and removed IDs,
+confidence reason codes, and non-blocking warnings.
+
 ## 21. Current decisions ledger
 
 - Robinhood Chain is the target network.

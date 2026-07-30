@@ -683,8 +683,12 @@ try {
   );
   assert.equal(
     historyStatus.latestCycle.schemaVersion,
-    5,
-    "new cycles must use the reproducible DecisionContextV5 record",
+    6,
+    "new cycles must use the evidence-aware DecisionContextV6 record",
+  );
+  assert.ok(
+    Object.keys(historyStatus.latestCycle.assetEvidence ?? {}).length > 0,
+    "V6 cycles must persist per-asset evidence tiers",
   );
   assert.equal(
     historyStatus.latestCycle.decisionContext.benchmarks.every(
@@ -943,7 +947,7 @@ try {
   });
   assert.equal(errors.length, 0, `browser errors: ${errors.join(" | ")}`);
   console.log(
-    "UAT PASS: Control Catalog v1 ownership and atomic bundle updates, DecisionContext V5 evidence, official market collection, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live BRAINS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
+    "UAT PASS: Control Catalog v1 ownership and atomic bundle updates, DecisionContext V6 evidence, official market collection, paired local oracle/router price synchronization, cash-flow-adjusted accounting, live BRAINS performance and P&L, accessible positive-only portfolio pie chart, proportional buy and atomic sell previews, PostgreSQL persistence, positive-only decision positions, first-visit explanation, plain-language screen guidance, 42 meme-universe v4 portraits, deterministic Brain Drama, 1200x630 sharing, anatomical segment manifest, character-first map, tooltip, roving keyboard navigation, zoom, mobile list/search, historical decision exploration, responsive overflow, economics, autonomous cycle, queue-free atomic settlement, and dark mode completed in Chromium.",
   );
 } finally {
   await browser.close();

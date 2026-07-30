@@ -135,6 +135,33 @@ type CycleRecord = {
   source: string;
   rationale?: string;
   allocation: Record<string, number>;
+  rawAllocationById?: Record<string, number>;
+  constrainedAllocationById?: Record<string, number>;
+  allocationWarnings?: string[];
+  allocationPolicy?: {
+    preferredPositionMaximum: number;
+    selectedAssetIds: string[];
+    removedAssetIds: string[];
+    warnings: string[];
+  } | null;
+  assetEvidence?: Record<
+    string,
+    {
+      tier: "complete" | "partial" | "price_only";
+      coverageScoreBps: number;
+      sampleCount: number;
+      spanMinutes: number;
+      availableFields: string[];
+      unavailableReasons: string[];
+    }
+  >;
+  confidenceByAssetId?: Record<
+    string,
+    {
+      confidence: "low" | "medium" | "high";
+      reasonCodes: string[];
+    }
+  >;
   txHash: string | null;
   redemptionTxHash?: string | null;
   block?: string;
@@ -181,6 +208,7 @@ type CycleRecord = {
       } | null;
     }[];
     decisionOutcomes?: unknown;
+    assetEvidence?: CycleRecord["assetEvidence"];
   };
   characterRosterVersion?: number;
   memeRecap?: MemeRecap;
@@ -640,6 +668,16 @@ export function EditorialDashboard({
   const selectedPreferences =
     selectedCycle?.brain?.activeNonNeutralInstructions ?? [];
   const selectedAllocation = selectedCycle?.allocation ?? { USDG: 10000 };
+  const symbolForAssetId = (id: string) =>
+    data?.assets.find((asset) => asset.id === id)?.symbol ?? id;
+  const selectedRawAllocation = selectedCycle?.rawAllocationById
+    ? Object.fromEntries(
+        Object.entries(selectedCycle.rawAllocationById).map(([id, weight]) => [
+          symbolForAssetId(id),
+          weight,
+        ]),
+      )
+    : selectedAllocation;
   const selectedMeme = selectedCycle?.memeRecap;
   const characterStats = decisionHistory.reduce<
     Record<
@@ -2275,6 +2313,67 @@ export function EditorialDashboard({
                       </b>
                     </div>
                   </section>
+                  {(selectedCycle.schemaVersion ?? 0) >= 6 &&
+                    selectedCycle.assetEvidence && (
+                      <details className="decision-data-details" open>
+                        <summary>Allocation policy and evidence</summary>
+                        <div>
+                          <article>
+                            <b>Raw AI proposal</b>
+                            <span>
+                              {allocationSummary(selectedRawAllocation)}
+                            </span>
+                            <small>
+                              Before deterministic brain and protocol policy
+                            </small>
+                          </article>
+                          <article>
+                            <b>Final constrained target</b>
+                            <span>{allocationSummary(selectedAllocation)}</span>
+                            <small>
+                              Up to{" "}
+                              {selectedCycle.allocationPolicy
+                                ?.preferredPositionMaximum ??
+                                "the selected"}{" "}
+                              risk positions
+                            </small>
+                          </article>
+                          {Object.entries(selectedCycle.assetEvidence)
+                            .filter(
+                              ([id]) =>
+                                (selectedCycle.constrainedAllocationById?.[
+                                  id
+                                ] ?? 0) > 0,
+                            )
+                            .map(([id, evidence]) => (
+                              <article key={id}>
+                                <b>
+                                  {symbolForAssetId(id)} ·{" "}
+                                  {evidence.tier.replace("_", " ")}
+                                </b>
+                                <span>
+                                  {evidence.sampleCount} samples ·{" "}
+                                  {evidence.spanMinutes}m covered
+                                </span>
+                                <small>
+                                  {selectedCycle.confidenceByAssetId?.[id]
+                                    ?.confidence ?? "protocol"}{" "}
+                                  confidence
+                                  {selectedCycle.confidenceByAssetId?.[id]
+                                    ?.reasonCodes.length
+                                    ? ` · ${selectedCycle.confidenceByAssetId[id].reasonCodes.join(", ")}`
+                                    : ""}
+                                </small>
+                              </article>
+                            ))}
+                        </div>
+                        {(selectedCycle.allocationWarnings ?? []).map(
+                          (warning) => (
+                            <small key={warning}>Warning: {warning}</small>
+                          ),
+                        )}
+                      </details>
+                    )}
                   {(selectedCycle.schemaVersion ?? 0) >= 3 && (
                     <details className="decision-data-details">
                       <summary>Data behind this decision</summary>
@@ -2419,7 +2518,7 @@ export function EditorialDashboard({
                   )}
                 </DecisionStage>
                 <DecisionStage number="02" title="AI proposed" tone="ornith">
-                  {positiveAllocationEntries(selectedAllocation).map(
+                  {positiveAllocationEntries(selectedRawAllocation).map(
                     ([symbol, weight]) => (
                       <p
                         key={symbol}
@@ -2444,14 +2543,22 @@ export function EditorialDashboard({
                   <p>
                     <b>Allowlist checked</b>
                     <span>
-                      Qualified registry assets only · maximum nine risk
-                      positions
+                      Registry assets only · maximum{" "}
+                      {selectedCycle?.allocationPolicy
+                        ?.preferredPositionMaximum ?? 9}{" "}
+                      risk positions
                     </span>
                   </p>
                   <p>
                     <b>Reserve enforced</b>
-                    <span>USDG target at or above 20%</span>
+                    <span>{allocationSummary(selectedAllocation)}</span>
                   </p>
+                  {(selectedCycle?.allocationWarnings ?? []).map((warning) => (
+                    <p key={warning}>
+                      <b>Policy warning</b>
+                      <span>{warning}</span>
+                    </p>
+                  ))}
                   <p>
                     <b>Execution block</b>
                     <span>{selectedCycle?.block ?? "Awaiting cycle"}</span>

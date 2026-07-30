@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { keccak256, stringToHex, type Address } from "viem";
 import {
   coinbaseEthCandles,
+  coinbaseEthTicker,
   fredMacro,
   latestSecFact,
   robinhoodStockData,
@@ -247,9 +248,43 @@ export type DecisionContextV5 = Omit<
   inputHash: string;
 };
 
+export type AssetEvidenceTierV1 = "complete" | "partial" | "price_only";
+
+export type AssetDecisionEvidenceV1 = {
+  tier: AssetEvidenceTierV1;
+  coverageScoreBps: number;
+  sampleCount: number;
+  spanMinutes: number;
+  availableFields: string[];
+  unavailableReasons: string[];
+};
+
+export type AllocationConfidenceReasonV1 =
+  | "brain_preference"
+  | "momentum"
+  | "fundamentals"
+  | "valuation"
+  | "diversification"
+  | "existing_position"
+  | "low_evidence";
+
+export type DecisionContextV6 = Omit<
+  DecisionContextV5,
+  "schemaVersion" | "inputHash"
+> & {
+  schemaVersion: 6;
+  assetEvidence: Record<string, AssetDecisionEvidenceV1>;
+  allocationPolicy: {
+    preferredPositionMaximum: number;
+    positionCountIsMaximum: true;
+    missingEvidenceIsUncertainty: true;
+  };
+  inputHash: string;
+};
+
 // Kept as a source-compatible alias while legacy persisted V2 records remain readable.
 export type DecisionContextV2 =
-  DecisionContextV3 | DecisionContextV4 | DecisionContextV5;
+  DecisionContextV3 | DecisionContextV4 | DecisionContextV5 | DecisionContextV6;
 
 type DashboardState = {
   deployment: {
@@ -269,6 +304,7 @@ type DashboardState = {
     decimals: number;
     maximumWeightBps: number;
     robinhoodUid: string | null;
+    tags?: string[];
   }[];
   nav: string;
   navPerShare: string;
@@ -846,7 +882,7 @@ function legacyAssetRecords(state: DashboardState): AssetRecordV1[] {
     ...asset,
     chainId: networkConfig.chainId,
     id: canonicalAssetId(networkConfig.chainId, asset.address),
-    tags: [asset.kind, "deployment_manifest"],
+    tags: asset.tags?.length ? [...asset.tags] : [asset.kind],
     valuationAdapter:
       typeof state.deployment.oracle === "string"
         ? (state.deployment.oracle as Address)
@@ -869,6 +905,336 @@ function legacyAssetRecords(state: DashboardState): AssetRecordV1[] {
   }));
 }
 
+function evidenceForDossier(
+  record: AssetRecordV1,
+  dossier: AssetDossierV2,
+  feature: MarketFeatureSetV1 | null,
+): AssetDecisionEvidenceV1 {
+  if (record.kind === "reserve") {
+    return {
+      tier: "complete",
+      coverageScoreBps: 10_000,
+      sampleCount: 1,
+      spanMinutes: 0,
+      availableFields: ["oracle", "liquidity", "reserve_identity"],
+      unavailableReasons: [],
+    };
+  }
+  const fields = {
+    oracle: dossier.quote.oracleValid,
+    bid_ask: dossier.quote.bidUsd !== null && dossier.quote.askUsd !== null,
+    volume: dossier.quote.volume24h !== null,
+    return_1h: dossier.performance.return1hBps !== null,
+    return_24h: dossier.performance.return24hBps !== null,
+    return_7d: dossier.performance.return7dBps !== null,
+    volatility_30d: dossier.performance.volatility30dBps !== null,
+    liquidity: dossier.execution.liquidityScoreBps !== null,
+    fundamentals:
+      dossier.fundamentals.revenueUsd !== null ||
+      dossier.fundamentals.marketCapUsd !== null,
+    corporate_actions: dossier.provenance.some((item) =>
+      item.formulaVersion.includes("actions"),
+    ),
+  };
+  const availableFields = Object.entries(fields)
+    .filter(([, available]) => available)
+    .map(([field]) => field);
+  const unavailableReasons = Object.entries(fields)
+    .filter(([, available]) => !available)
+    .map(([field]) => `${field} unavailable from validated sources`);
+  const coverage = feature?.coverage;
+  const tier: AssetEvidenceTierV1 =
+    fields.oracle &&
+    fields.bid_ask &&
+    fields.volume &&
+    fields.return_24h &&
+    fields.liquidity &&
+    (record.kind === "etf" || record.kind === "crypto" || fields.fundamentals)
+      ? "complete"
+      : availableFields.filter((field) => field !== "oracle").length > 0
+        ? "partial"
+        : "price_only";
+  return {
+    tier,
+    coverageScoreBps: Math.min(10_000, availableFields.length * 1_000),
+    sampleCount: coverage?.sampleCount ?? 0,
+    spanMinutes: coverage?.spanMinutes ?? 0,
+    availableFields,
+    unavailableReasons,
+  };
+}
+
+async function buildManifestDossiers(
+  state: DashboardState,
+  records: AssetRecordV1[],
+  legacy: AssetDossierV2[],
+) {
+  const features = await latestMarketFeatures();
+  const stockRecords = records.filter(
+    (record) =>
+      record.active && (record.kind === "stock" || record.kind === "etf"),
+  );
+  const stockSources = new Map(
+    await Promise.all(
+      stockRecords.map(
+        async (record) =>
+          [record.symbol, await robinhoodStockData(record.symbol)] as const,
+      ),
+    ),
+  );
+  const equityRecords = records.filter(
+    (record) => record.active && record.kind === "stock",
+  );
+  const secSources = new Map(
+    await Promise.all(
+      equityRecords.map(
+        async (record) =>
+          [record.symbol, await secCompanyFacts(record.symbol)] as const,
+      ),
+    ),
+  );
+  const [ethCandles, ethTicker] = await Promise.all([
+    coinbaseEthCandles(),
+    coinbaseEthTicker(),
+  ]);
+  const ethRows = (ethCandles.value ?? [])
+    .filter((row) => row.length >= 5)
+    .map((row) => ({ time: row[0], close: row[4] }))
+    .sort((a, b) => a.time - b.time);
+  const ethMetrics = calculateCandleMetrics(ethRows);
+  const legacyBySymbol = new Map(legacy.map((asset) => [asset.symbol, asset]));
+  const accounting = await buildPortfolioAccounting(state);
+  const dossiers = records
+    .filter((record) => record.active)
+    .map((record) => {
+      const existing = legacyBySymbol.get(record.symbol);
+      const feature = features[record.symbol] ?? null;
+      const stock = stockSources.get(record.symbol);
+      const quote = stock?.quote ?? null;
+      const ticker =
+        record.kind === "crypto" || record.symbol === "WETH"
+          ? ethTicker.value
+          : null;
+      const bid = quote
+        ? Number(quote.bid)
+        : ticker
+          ? Number(ticker.bid)
+          : (existing?.quote.bidUsd ?? null);
+      const ask = quote
+        ? Number(quote.ask)
+        : ticker
+          ? Number(ticker.ask)
+          : (existing?.quote.askUsd ?? null);
+      const midpoint =
+        bid !== null && ask !== null
+          ? (bid + ask) / 2
+          : Number(
+              BigInt(state.oracle.assets[record.symbol]?.priceUsdWad ?? "0"),
+            ) / 1e18;
+      const sec = secSources.get(record.symbol);
+      const revenue = sec
+        ? latestFactValue(sec.value, "Revenues")
+        : { value: null, filed: null };
+      const netIncome = sec
+        ? latestFactValue(sec.value, "NetIncomeLoss")
+        : { value: null, filed: null };
+      const performance =
+        record.kind === "reserve"
+          ? {
+              return1hBps: 0,
+              return24hBps: 0,
+              return7dBps: 0,
+              return30dBps: 0,
+              volatility30dBps: 0,
+              maximumDrawdownBps: 0,
+            }
+          : record.kind === "crypto" || record.symbol === "WETH"
+            ? ethMetrics
+            : {
+                return1hBps: feature?.return1hBps ?? null,
+                return24hBps: feature?.return24hBps ?? null,
+                return7dBps: feature?.return7dBps ?? null,
+                return30dBps: feature?.return30dBps ?? null,
+                volatility30dBps: feature?.volatility30dBps ?? null,
+                maximumDrawdownBps: feature?.maximumDrawdown30dBps ?? null,
+              };
+      const provenance: SourceStamp[] = [];
+      if (stock) {
+        provenance.push(
+          stamp(stock.sources.assets, null, "robinhood-assets-v1"),
+          stamp(
+            stock.sources.quote,
+            quote?.generatedAt ?? null,
+            "robinhood-raw-underlier-quote-v1",
+          ),
+          stamp(stock.sources.actions, null, "robinhood-actions-v1"),
+        );
+      }
+      if (sec) {
+        provenance.push(
+          stamp(sec, revenue.filed, "sec-companyfacts-latest-filing-v1"),
+        );
+      }
+      if (record.kind === "crypto" || record.symbol === "WETH") {
+        provenance.push(
+          stamp(ethTicker, ticker?.time ?? null, "coinbase-eth-ticker-v1"),
+          stamp(
+            ethCandles,
+            ethRows.at(-1)
+              ? new Date(ethRows.at(-1)!.time * 1_000).toISOString()
+              : null,
+            "coinbase-hourly-candles-v1",
+          ),
+        );
+      }
+      const oracle = state.oracle.assets[record.symbol];
+      const dossier: AssetDossierV2 & {
+        id: string;
+        coverageScoreBps: number;
+        diversificationScoreBps: number;
+        stabilityScoreBps: number;
+      } = {
+        id: record.id,
+        symbol: record.symbol,
+        identity: {
+          contract: record.address,
+          robinhoodUid: stock?.asset?.id ?? record.robinhoodUid,
+          assetClass:
+            record.kind === "reserve"
+              ? "stable"
+              : record.kind === "stock" || record.kind === "etf"
+                ? "equity"
+                : "crypto",
+          tags: [...record.tags],
+          executable: true,
+          permissions: {
+            buy:
+              record.active &&
+              Boolean(oracle?.valid) &&
+              !(quote?.isTradingHalt ?? false),
+            sell:
+              record.active &&
+              Boolean(oracle?.valid) &&
+              !(quote?.isTradingHalt ?? false),
+            halted: quote?.isTradingHalt ?? false,
+          },
+        },
+        portfolio: {
+          balanceWad: state.holdings[record.symbol] ?? "0",
+          valueUsdWad: state.holdingValues[record.symbol] ?? "0",
+          weightBps: state.currentWeightsBps[record.symbol] ?? 0,
+          costBasisUsdWad:
+            accounting.positions[record.symbol]?.costBasisUsdWad ?? null,
+          realizedPnlUsdWad:
+            accounting.positions[record.symbol]?.realizedPnlUsdWad ?? null,
+          unrealizedPnlUsdWad:
+            accounting.positions[record.symbol]?.unrealizedPnlUsdWad ?? null,
+        },
+        quote: {
+          bidUsd: bid,
+          askUsd: ask,
+          midpointUsd: midpoint || null,
+          spreadBps:
+            midpoint > 0 && bid !== null && ask !== null
+              ? Math.round(((ask - bid) / midpoint) * 10_000)
+              : null,
+          volume24h: quote
+            ? Number(quote.dailyTradingVolume)
+            : ticker
+              ? Number(ticker.volume)
+              : null,
+          priceAgeSeconds: quote?.generatedAt
+            ? Math.max(
+                0,
+                Math.floor(
+                  (Date.now() - Date.parse(quote.generatedAt)) / 1_000,
+                ),
+              )
+            : ticker?.time
+              ? Math.max(
+                  0,
+                  Math.floor((Date.now() - Date.parse(ticker.time)) / 1_000),
+                )
+              : oracle
+                ? Math.max(0, Math.floor(Date.now() / 1_000) - oracle.updatedAt)
+                : null,
+          oraclePriceUsdWad: oracle?.priceUsdWad ?? "0",
+          oracleTimestamp: oracle?.updatedAt ?? 0,
+          oracleValid: oracle?.valid ?? false,
+        },
+        performance: {
+          ...performance,
+          trend:
+            performance.return24hBps === null
+              ? null
+              : performance.return24hBps > 25
+                ? "up"
+                : performance.return24hBps < -25
+                  ? "down"
+                  : "flat",
+          momentumBps: performance.return24hBps,
+          meanReversionBps:
+            performance.return7dBps === null ||
+            performance.return24hBps === null
+              ? null
+              : Math.round(
+                  performance.return24hBps - performance.return7dBps / 7,
+                ),
+          correlationToBasket: feature?.correlationToBasket ?? null,
+        },
+        execution: {
+          liquidityScoreBps:
+            feature?.liquidityScoreBps ??
+            (quote
+              ? Math.min(
+                  10_000,
+                  Math.round(
+                    Math.log10(Number(quote.dailyTradingVolume) + 1) * 1_500,
+                  ),
+                )
+              : record.kind === "reserve"
+                ? 10_000
+                : null),
+          estimatedPriceImpactBps:
+            feature?.estimatedExecutionCostBps ??
+            record.qualification?.buyImpactBps ??
+            null,
+          estimatedExecutionCostBps:
+            feature?.estimatedExecutionCostBps ??
+            (midpoint > 0 && bid !== null && ask !== null
+              ? Math.round(((ask - bid) / midpoint) * 5_000)
+              : record.kind === "reserve"
+                ? 0
+                : null),
+        },
+        fundamentals: {
+          marketCapUsd: record.qualification?.marketCapOrAumUsdWad
+            ? Number(BigInt(record.qualification.marketCapOrAumUsdWad)) / 1e18
+            : null,
+          revenueUsd: revenue.value,
+          netIncomeUsd: netIncome.value,
+          assetsUsd: null,
+          liabilitiesUsd: null,
+          filingDate: revenue.filed,
+          corporateActions: stock?.corporateActions ?? [],
+        },
+        provenance,
+        coverageScoreBps: 0,
+        diversificationScoreBps: record.kind === "reserve" ? 0 : 5_000,
+        stabilityScoreBps: oracle?.valid ? 10_000 : 0,
+      };
+      const evidence = evidenceForDossier(record, dossier, feature);
+      dossier.coverageScoreBps = evidence.coverageScoreBps;
+      return { dossier, evidence };
+    });
+  return {
+    dossiers: dossiers.map((item) => item.dossier),
+    evidenceByAssetId: Object.fromEntries(
+      dossiers.map((item) => [item.dossier.id, item.evidence]),
+    ),
+  };
+}
+
 export async function buildDecisionContext(
   state: DashboardState,
 ): Promise<DecisionContextV4> {
@@ -881,8 +1247,13 @@ export async function buildDecisionContext(
     networkConfig.mode === "mainnet" && persisted.some((asset) => asset.active)
       ? persisted
       : manifestRecords;
+  const manifestDossiers = await buildManifestDossiers(
+    state,
+    assetRecords,
+    base.assets,
+  );
   const dossierBySymbol = new Map(
-    base.assets.map((asset) => [asset.symbol, asset]),
+    manifestDossiers.dossiers.map((asset) => [asset.symbol, asset]),
   );
   const eligibleAssetDirectory: CompactAssetV1[] = assetRecords
     .filter((asset) => asset.active)
@@ -905,119 +1276,27 @@ export async function buildDecisionContext(
             ? asset.qualification.qualificationHours
             : 0,
         maximumWeightBps: asset.maximumWeightBps,
+        evidence: manifestDossiers.evidenceByAssetId[asset.id],
       };
     });
-  const detailedLegacy = base.assets.flatMap((asset) => {
-    const record = assetRecords.find(
-      (candidate) =>
-        candidate.symbol === asset.symbol &&
-        candidate.address.toLowerCase() ===
-          asset.identity.contract.toLowerCase(),
-    );
-    if (!record) return [];
-    return [
-      {
-        ...asset,
-        id: record.id,
-        coverageScoreBps:
-          asset.provenance.filter((stamp) => stamp.valid).length * 1_000,
-        diversificationScoreBps:
-          asset.identity.assetClass === "stable" ? 0 : 5_000,
-        stabilityScoreBps: asset.quote.oracleValid ? 10_000 : 0,
-      },
-    ];
-  });
-  const legacySymbols = new Set(detailedLegacy.map((asset) => asset.symbol));
-  const detailedDynamic = assetRecords
-    .filter((record) => record.active && !legacySymbols.has(record.symbol))
-    .map((record) => {
-      const oracle = state.oracle.assets[record.symbol];
-      return {
-        id: record.id,
-        symbol: record.symbol,
-        identity: {
-          contract: record.address,
-          robinhoodUid: record.robinhoodUid,
-          assetClass:
-            record.kind === "reserve"
-              ? ("stable" as const)
-              : record.kind === "crypto" || record.kind === "token"
-                ? ("crypto" as const)
-                : ("equity" as const),
-          tags: record.tags,
-          executable: true as const,
-          permissions: {
-            buy: record.active && Boolean(oracle?.valid),
-            sell: record.active && Boolean(oracle?.valid),
-            halted: !record.active,
-          },
-        },
-        portfolio: {
-          balanceWad: state.holdings[record.symbol] ?? "0",
-          valueUsdWad: state.holdingValues[record.symbol] ?? "0",
-          weightBps: state.currentWeightsBps[record.symbol] ?? 0,
-          costBasisUsdWad: null,
-          realizedPnlUsdWad: null,
-          unrealizedPnlUsdWad: null,
-        },
-        quote: {
-          bidUsd: null,
-          askUsd: null,
-          midpointUsd: oracle
-            ? Number(BigInt(oracle.priceUsdWad)) / 1e18
-            : null,
-          spreadBps: null,
-          volume24h: null,
-          priceAgeSeconds: oracle
-            ? Math.max(0, Math.floor(Date.now() / 1_000) - oracle.updatedAt)
-            : null,
-          oraclePriceUsdWad: oracle?.priceUsdWad ?? "0",
-          oracleTimestamp: oracle?.updatedAt ?? 0,
-          oracleValid: oracle?.valid ?? false,
-        },
-        performance: {
-          return1hBps: null,
-          return24hBps: null,
-          return7dBps: null,
-          return30dBps: null,
-          volatility30dBps: null,
-          maximumDrawdownBps: null,
-          trend: null,
-          momentumBps: null,
-          meanReversionBps: null,
-          correlationToBasket: null,
-        },
-        execution: {
-          liquidityScoreBps: record.qualification?.liquidityValid
-            ? 10_000
-            : null,
-          estimatedPriceImpactBps: record.qualification?.buyImpactBps ?? null,
-          estimatedExecutionCostBps: record.qualification?.buyImpactBps ?? null,
-        },
-        fundamentals: {
-          marketCapUsd: record.qualification?.marketCapOrAumUsdWad
-            ? Number(BigInt(record.qualification.marketCapOrAumUsdWad)) / 1e18
-            : null,
-          revenueUsd: null,
-          netIncomeUsd: null,
-          assetsUsd: null,
-          liabilitiesUsd: null,
-          filingDate: null,
-          corporateActions: [],
-        },
-        provenance: [],
-        coverageScoreBps: 0,
-        diversificationScoreBps: record.kind === "reserve" ? 0 : 5_000,
-        stabilityScoreBps: oracle?.valid ? 10_000 : 0,
-      };
-    });
-  const detailed = [...detailedLegacy, ...detailedDynamic];
+  const detailed = manifestDossiers.dossiers;
   const universe = compileUniverseContext(eligibleAssetDirectory, detailed);
   const dynamicFreshness = assessDynamicFreshness(
     assetRecords,
     detailed,
     state.oracle,
   );
+  const dynamicSourceManifest = [
+    ...new Map(
+      [
+        ...base.sourceManifest,
+        ...detailed.flatMap((asset) => asset.provenance),
+      ].map((source) => [
+        `${source.source}:${source.observationTime ?? ""}:${source.hash}`,
+        source,
+      ]),
+    ).values(),
+  ];
   const reserve = assetRecords.find(
     (asset) => asset.active && asset.kind === "reserve",
   );
@@ -1043,6 +1322,7 @@ export async function buildDecisionContext(
       ],
     },
     assets: universe.detailedAssets,
+    sourceManifest: dynamicSourceManifest,
     assetRecords,
     eligibleAssetDirectory,
     reserveAssetId: reserve.id,

@@ -17,7 +17,10 @@ import {
   waitForReliableTransactionReceipt,
 } from "./chain";
 import { buildDecisionContext } from "./decision-context";
-import type { DecisionContextV5 } from "./decision-context";
+import type {
+  AllocationConfidenceReasonV1,
+  DecisionContextV6,
+} from "./decision-context";
 import {
   validateDynamicAllocation,
   type DynamicAllocation,
@@ -40,9 +43,10 @@ import { collectOfficialMarketData } from "./market-history";
 import { syncLocalMarketPrices } from "./market-price-sync";
 import { networkConfig } from "./network";
 import {
-  applyCompiledRestrictions,
+  applyEvidenceAwareAllocationPolicy,
   compileBrainV1,
   evaluateBrainEligibility,
+  type AllocationPolicyEvidenceV1,
 } from "./compiled-brain";
 import { summarizeControlBundle } from "./brain-controls";
 import { stableDecisionJson } from "./decision-math";
@@ -67,6 +71,15 @@ type Decision = {
 
 export type DynamicDecision = {
   allocationById: DynamicAllocation;
+  rawAllocationById: DynamicAllocation;
+  confidenceByAssetId: Record<
+    string,
+    {
+      confidence: "low" | "medium" | "high";
+      reasonCodes: AllocationConfidenceReasonV1[];
+    }
+  >;
+  allocationPolicy: AllocationPolicyEvidenceV1 | null;
   rationale: string;
   source: "ai" | "fallback";
   rawOutputs: string[];
@@ -248,7 +261,7 @@ async function requestModelJson(
 }
 
 export async function runDynamicResearchAllocator(
-  context: DecisionContextV5,
+  context: DecisionContextV6,
   fallback: DynamicAllocation,
 ): Promise<DynamicDecision> {
   const provider =
@@ -276,9 +289,13 @@ export async function runDynamicResearchAllocator(
       `You have one optional structured research round for at most ${context.researchPolicy.maximumAssets} registered assets.`,
       'First return either {"kind":"research","requests":[{"assetId":"chain:address","topics":["identity"]}]}',
       'or {"kind":"allocation","allocation":{"chain:address":integer}}.',
-      "Allocation weights total 10000, reserve is at least 2000, no risk asset exceeds its maximumWeightBps,",
-      "there are at most nine risk positions, and combined high-volatility weight is at most 3000.",
-      `DecisionContextV5: ${JSON.stringify(context)}`,
+      `Allocation weights total 10000. Reserve minimum is ${context.compiledBrain.reserveMinimumBps}.`,
+      `Use at most ${context.compiledBrain.preferredPositionCount} risk positions; this is a maximum, never a target.`,
+      `Combined high-volatility weight is at most ${context.compiledBrain.highVolatilityMaximumBps}; each asset also has maximumWeightBps.`,
+      "Missing evidence is uncertainty, never a neutral score or zero return. Prefer USDG over mechanically equal weighting when assets cannot be distinguished.",
+      "Respect every exit, reduce, no-new-buy, and protocol restriction.",
+      'An allocation response may include "confidenceByAssetId" with low, medium, or high confidence and reasonCodes from brain_preference, momentum, fundamentals, valuation, diversification, existing_position, low_evidence.',
+      `DecisionContextV6: ${JSON.stringify(context)}`,
     ].join(" ");
     promptHashes.push(keccak256(stringToHex(basePrompt)));
     const first = await requestModelJson(
@@ -289,6 +306,7 @@ export async function runDynamicResearchAllocator(
     );
     rawOutputs.push(first.rawOutput);
     let proposed: unknown;
+    let confidenceSourceRaw: unknown;
     if (first.parsed.kind === "research") {
       const requests = validateResearchRequests(
         first.parsed.requests,
@@ -320,8 +338,8 @@ export async function runDynamicResearchAllocator(
       const finalPrompt = [
         "Return the final constrained allocation now.",
         "No more research is allowed.",
-        'Return exactly {"kind":"allocation","allocation":{"chain:address":integer}}.',
-        `Immutable DecisionContextV5: ${JSON.stringify(context)}`,
+        'Return exactly {"kind":"allocation","allocation":{"chain:address":integer},"confidenceByAssetId":{"chain:address":{"confidence":"low|medium|high","reasonCodes":["allowed_reason"]}}}.',
+        `Immutable DecisionContextV6: ${JSON.stringify(context)}`,
         `Recorded structured research: ${JSON.stringify(results)}`,
       ].join(" ");
       promptHashes.push(keccak256(stringToHex(finalPrompt)));
@@ -336,17 +354,65 @@ export async function runDynamicResearchAllocator(
         throw new Error("second model pass did not return an allocation");
       }
       proposed = second.parsed.allocation;
+      confidenceSourceRaw = second.parsed.confidenceByAssetId;
     } else if (first.parsed.kind === "allocation") {
       proposed = first.parsed.allocation;
+      confidenceSourceRaw = first.parsed.confidenceByAssetId;
     } else {
       throw new Error("model returned neither research nor allocation");
     }
+    const allocationById = validateDynamicAllocation(
+      proposed,
+      context.assetRecords,
+      context.reserveAssetId,
+    );
+    const confidenceSource =
+      (confidenceSourceRaw as Record<string, unknown> | undefined) ?? {};
+    const allowedReasons = new Set<AllocationConfidenceReasonV1>([
+      "brain_preference",
+      "momentum",
+      "fundamentals",
+      "valuation",
+      "diversification",
+      "existing_position",
+      "low_evidence",
+    ]);
+    const confidenceByAssetId = Object.fromEntries(
+      Object.entries(allocationById)
+        .filter(([id, weight]) => id !== context.reserveAssetId && weight > 0)
+        .map(([id]) => {
+          const row = confidenceSource[id] as
+            { confidence?: unknown; reasonCodes?: unknown } | undefined;
+          const evidence = context.assetEvidence[id];
+          const confidence: "low" | "medium" | "high" =
+            row?.confidence === "high" ||
+            row?.confidence === "medium" ||
+            row?.confidence === "low"
+              ? row.confidence
+              : evidence?.tier === "complete"
+                ? "medium"
+                : "low";
+          const reasonCodes = Array.isArray(row?.reasonCodes)
+            ? row.reasonCodes.filter(
+                (reason): reason is AllocationConfidenceReasonV1 =>
+                  typeof reason === "string" &&
+                  allowedReasons.has(reason as AllocationConfidenceReasonV1),
+              )
+            : [];
+          if (
+            evidence?.tier === "price_only" &&
+            !reasonCodes.includes("low_evidence")
+          ) {
+            reasonCodes.push("low_evidence");
+          }
+          return [id, { confidence, reasonCodes: reasonCodes.slice(0, 4) }];
+        }),
+    );
     return {
-      allocationById: validateDynamicAllocation(
-        proposed,
-        context.assetRecords,
-        context.reserveAssetId,
-      ),
+      allocationById,
+      rawAllocationById: { ...allocationById },
+      confidenceByAssetId,
+      allocationPolicy: null,
       rationale:
         researchResults.length > 0
           ? "Allocation proposed after one recorded structured research round."
@@ -360,6 +426,9 @@ export async function runDynamicResearchAllocator(
   } catch (error) {
     return {
       allocationById: fallback,
+      rawAllocationById: { ...fallback },
+      confidenceByAssetId: {},
+      allocationPolicy: null,
       rationale: `Deterministic hold: ${error instanceof Error ? error.message : "allocator unavailable"}`,
       source: "fallback",
       rawOutputs,
@@ -450,9 +519,24 @@ export async function runCycle() {
       };
     }),
   );
-  const market: DecisionContextV5 = {
+  const assetEvidence = Object.fromEntries(
+    baseMarket.eligibleAssetDirectory.map((asset) => [
+      asset.id,
+      asset.evidence ?? {
+        tier: "price_only" as const,
+        coverageScoreBps: 0,
+        sampleCount: 0,
+        spanMinutes: 0,
+        availableFields: [],
+        unavailableReasons: [
+          "only fresh on-chain valuation is currently available",
+        ],
+      },
+    ]),
+  );
+  const market: DecisionContextV6 = {
     ...baseMarket,
-    schemaVersion: 5,
+    schemaVersion: 6,
     controlCatalog: {
       schemaVersion: 1,
       catalogVersion: 1,
@@ -466,6 +550,12 @@ export async function runCycle() {
       })),
     },
     compiledBrain,
+    assetEvidence,
+    allocationPolicy: {
+      preferredPositionMaximum: compiledBrain.preferredPositionCount,
+      positionCountIsMaximum: true,
+      missingEvidenceIsUncertainty: true,
+    },
     researchPolicy: {
       ...baseMarket.researchPolicy,
       maximumAssets: compiledBrain.researchAssetLimit,
@@ -476,6 +566,7 @@ export async function runCycle() {
           baseInputHash: baseMarket.inputHash,
           controlCatalogHash: state.controlCatalog.catalogHash,
           compiledBrain,
+          assetEvidence,
         }),
       ),
     ),
@@ -500,7 +591,7 @@ export async function runCycle() {
       eligibility,
     });
     return {
-      schemaVersion: 5,
+      schemaVersion: 6,
       at: new Date().toISOString(),
       source: "scheduler",
       executionStatus: "skipped",
@@ -586,11 +677,25 @@ export async function runCycle() {
     ? await runDynamicResearchAllocator(market, dynamicFallback)
     : null;
   if (dynamicDecision?.source === "ai") {
-    dynamicDecision.allocationById = applyCompiledRestrictions(
+    const policyResult = applyEvidenceAwareAllocationPolicy(
       dynamicDecision.allocationById,
       compiledBrain,
       market.reserveAssetId,
+      Object.fromEntries(
+        Object.entries(market.assetEvidence).map(([id, evidence]) => [
+          id,
+          {
+            tier: evidence.tier,
+            coverageScoreBps: evidence.coverageScoreBps,
+            liquidityScoreBps:
+              market.eligibleAssetDirectory.find((asset) => asset.id === id)
+                ?.liquidityScoreBps ?? null,
+          },
+        ]),
+      ),
     );
+    dynamicDecision.allocationById = policyResult.allocation;
+    dynamicDecision.allocationPolicy = policyResult.policy;
   }
   const legacyDecision = dynamicMode
     ? null
@@ -601,7 +706,10 @@ export async function runCycle() {
           ? market.freshness.reasons.join("; ")
           : undefined,
       );
-  const allocationById = dynamicDecision?.allocationById ?? null;
+  let allocationById = dynamicDecision?.allocationById ?? null;
+  let rawAllocationById = dynamicDecision?.rawAllocationById ?? allocationById;
+  let allocationPolicy = dynamicDecision?.allocationPolicy ?? null;
+  let confidenceByAssetId = dynamicDecision?.confidenceByAssetId ?? {};
   let allocation: Record<string, number> = dynamicDecision
     ? Object.fromEntries(
         market.assetRecords
@@ -625,13 +733,48 @@ export async function runCycle() {
         weight,
       ]),
     );
-    const restricted = applyCompiledRestrictions(
+    rawAllocationById = { ...byId };
+    const policyResult = applyEvidenceAwareAllocationPolicy(
       byId,
       compiledBrain,
       market.reserveAssetId,
+      Object.fromEntries(
+        Object.entries(market.assetEvidence).map(([id, evidence]) => [
+          id,
+          {
+            tier: evidence.tier,
+            coverageScoreBps: evidence.coverageScoreBps,
+            liquidityScoreBps:
+              market.eligibleAssetDirectory.find((asset) => asset.id === id)
+                ?.liquidityScoreBps ?? null,
+          },
+        ]),
+      ),
+    );
+    allocationById = policyResult.allocation;
+    allocationPolicy = policyResult.policy;
+    confidenceByAssetId = Object.fromEntries(
+      Object.entries(policyResult.allocation)
+        .filter(([id, weight]) => id !== market.reserveAssetId && weight > 0)
+        .map(([id]) => {
+          const evidence = market.assetEvidence[id];
+          return [
+            id,
+            {
+              confidence:
+                evidence?.tier === "complete"
+                  ? ("medium" as const)
+                  : ("low" as const),
+              reasonCodes:
+                evidence?.tier === "price_only"
+                  ? (["low_evidence"] as AllocationConfidenceReasonV1[])
+                  : ([] as AllocationConfidenceReasonV1[]),
+            },
+          ];
+        }),
     );
     allocation = Object.fromEntries(
-      Object.entries(restricted).map(([id, weight]) => [
+      Object.entries(policyResult.allocation).map(([id, weight]) => [
         symbolById.get(id) ?? id,
         weight,
       ]),
@@ -640,6 +783,9 @@ export async function runCycle() {
   const decision = {
     allocation,
     allocationById,
+    rawAllocationById,
+    confidenceByAssetId,
+    allocationPolicy,
     rationale:
       dynamicDecision?.rationale ??
       legacyDecision?.rationale ??
@@ -767,13 +913,19 @@ export async function runCycle() {
     d.assets?.find((asset) => asset.kind === "reserve")?.symbol ?? "USDG";
   const record = {
     schemaVersion: state.activation.controlBundlesEnabled
-      ? 5
+      ? 6
       : dynamicMode
         ? 4
         : 3,
     at: new Date().toISOString(),
     allocation: decision.allocation,
     allocationById: decision.allocationById,
+    rawAllocationById: decision.rawAllocationById,
+    constrainedAllocationById: decision.allocationById,
+    assetEvidence: market.assetEvidence,
+    confidenceByAssetId: decision.confidenceByAssetId,
+    allocationPolicy: decision.allocationPolicy,
+    allocationWarnings: decision.allocationPolicy?.warnings ?? [],
     rationale: decision.rationale,
     source: decision.source,
     characterRosterVersion: CHARACTER_ROSTER_VERSION,

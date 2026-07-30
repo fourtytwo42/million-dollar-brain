@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  applyEvidenceAwareAllocationPolicy,
   applyCompiledRestrictions,
   compileBrainV1,
   evaluateBrainEligibility,
@@ -119,4 +120,101 @@ test("stale data, cooldown, drift, and concurrency each prevent execution", () =
   });
   assert.equal(eligibility.eligible, false);
   assert.ok(eligibility.reasons.length >= 4);
+});
+
+test("preferred position count is a deterministic maximum, not a target", () => {
+  const state = pieces();
+  state[2].bundle.values[0] = 1; // Four positions.
+  const expanded = [
+    ...assets,
+    ...["aapl", "msft", "spy", "qqq"].map((id, index) => ({
+      id,
+      controlId: 20 + index,
+      symbol: id.toUpperCase(),
+      kind: index > 1 ? "etf" : "stock",
+      riskClass: "standard",
+      active: true,
+      tags: ["broad_market"],
+      currentWeightBps: 0,
+    })),
+  ];
+  const compiled = compileBrainV1(state, expanded);
+  const result = applyEvidenceAwareAllocationPolicy(
+    {
+      usdg: 2000,
+      nvda: 1200,
+      weth: 1000,
+      aapl: 1200,
+      msft: 1200,
+      spy: 1200,
+      qqq: 1200,
+    },
+    compiled,
+    "usdg",
+    Object.fromEntries(
+      expanded.map((asset, index) => [
+        asset.id,
+        {
+          tier:
+            index % 3 === 0
+              ? ("complete" as const)
+              : index % 3 === 1
+                ? ("partial" as const)
+                : ("price_only" as const),
+          coverageScoreBps: 1000 + index,
+          liquidityScoreBps: 5000,
+        },
+      ]),
+    ),
+  );
+  assert.equal(
+    Object.entries(result.allocation).filter(
+      ([id, weight]) => id !== "usdg" && weight > 0,
+    ).length,
+    4,
+  );
+  assert.equal(result.policy.removedAssetIds.length, 2);
+  assert.equal(
+    Object.values(result.allocation).reduce((sum, value) => sum + value, 0),
+    10000,
+  );
+});
+
+test("equal-weight evidence ties use canonical asset id as final tie-break", () => {
+  const state = pieces();
+  state[2].bundle.values[0] = 0; // Two positions.
+  const tied = [
+    assets[0],
+    ...["asset-c", "asset-a", "asset-b"].map((id, index) => ({
+      ...assets[1],
+      id,
+      controlId: 20 + index,
+      symbol: id.toUpperCase(),
+    })),
+  ];
+  const compiled = compileBrainV1(state, tied);
+  const evidence = Object.fromEntries(
+    tied.map((asset) => [
+      asset.id,
+      {
+        tier: "partial" as const,
+        coverageScoreBps: 5000,
+        liquidityScoreBps: 5000,
+      },
+    ]),
+  );
+  const first = applyEvidenceAwareAllocationPolicy(
+    { usdg: 4000, "asset-a": 2000, "asset-b": 2000, "asset-c": 2000 },
+    compiled,
+    "usdg",
+    evidence,
+  );
+  const second = applyEvidenceAwareAllocationPolicy(
+    { usdg: 4000, "asset-c": 2000, "asset-b": 2000, "asset-a": 2000 },
+    compiled,
+    "usdg",
+    evidence,
+  );
+  assert.deepEqual(first, second);
+  assert.deepEqual(first.policy.selectedAssetIds, ["asset-a", "asset-b"]);
 });

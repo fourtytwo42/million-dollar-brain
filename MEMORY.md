@@ -4,19 +4,18 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Build the signed, non-broadcast mainnet candidate and complete
-  its external qualification gates without deploying or activating mainnet.
-- Last meaningful change: The exact-commit two-hour testnet acceptance run
-  found and repaired an exhaustion bug in the three-actor brain resale
-  scenario. Once all 42 pieces are owned, the acceptance endpoint now always
-  selects a piece owned by another actor instead of silently skipping the
-  required purchase transaction.
-- Next step: Supply the paid Alchemy mainnet endpoint and production 0x API
-  credential/policy, resolve WETH capitalization evidence, then collect 48
-  continuous hours and run the exact-commit fork/testnet acceptance gates.
-- Blockers: Alchemy mainnet HTTPS/WSS and 0x credentials are not configured.
-  WETH's canonical Robinhood-chain deposited value is currently below the
-  locked $100 million requirement. Mainnet deployment remains unauthorized.
+- Current task: Promote DecisionContext V6 and restore the 41
+  endurance-actor-owned testnet control bundles to canonical defaults.
+- Last meaningful change: V6 manifest-driven dossiers, evidence tiers,
+  deterministic maximum-position trimming, raw/constrained allocation
+  evidence, UI explainability, and a guarded owner-signed reset script passed
+  devnet unit/build/browser acceptance. Live Ornith produced and executed a V6
+  allocation with persisted evidence and policy output.
+- Next step: Freeze and push the exact release commit, deploy that build to
+  testnet, execute the guarded 41-cell reset, and verify the next naturally
+  eligible V6 cycle plus responsive public-domain UAT.
+- Blockers: None for this testnet release. Mainnet broadcast remains
+  unauthorized and its separate external readiness gates are unchanged.
 
 ## Current State
 
@@ -47,6 +46,28 @@ Durable project context lives here. Update this file whenever information should
   Robinhood Testnet hides those controls while retaining the same internal
   session-wallet and `/api/faucet` test hooks for authorized automation.
 - The 42-piece visual brain uses one continuous traced lateral silhouette. Semantic placement metadata labels 34 cerebrum pieces, 6 cerebellum pieces, and 2 brainstem pieces while preserving every canonical NFT ID and all economic mappings.
+
+### 2026-07-29 - DecisionContext V6 and guarded testnet control reset
+
+- Context: Testnet endurance controls produced a distorted baseline and the
+  allocator treated weakly evidenced dynamic assets too similarly.
+- Decision: Build dossiers from every active manifest asset, retain canonical
+  tags, label evidence as complete/partial/price-only, treat missing evidence as
+  uncertainty, and treat Piece 3's position selection as a maximum.
+- Files: `apps/web/lib/decision-context.ts`,
+  `apps/web/lib/allocator.ts`, `apps/web/lib/compiled-brain.ts`,
+  `apps/web/components/editorial-dashboard.tsx`,
+  `scripts/reset-testnet-controls.ts`.
+- Commands/tests: 35/35 Foundry; V6 decision-context 8/8; compiled-brain 6/6;
+  production Next.js build; live devnet Ornith V6 cycle and rebalance;
+  in-app Browser UAT at 1440x900, 768x1024, and 390x844 with no horizontal
+  overflow or console errors.
+- Result: Live V6 records persist source evidence, raw and constrained
+  allocations, evidence tiers, confidence, selected/removed IDs, and warnings.
+  The guarded reset preview validated exactly 41 known actor-owned cells and
+  preserved externally owned Piece 1 without broadcasting.
+- Follow-up: Commit/push, deploy exact build to testnet, broadcast the guarded
+  reset, and wait for the natural testnet scheduler cycle.
 
 ### 2026-07-29 - Mainnet readiness evidence v3
 

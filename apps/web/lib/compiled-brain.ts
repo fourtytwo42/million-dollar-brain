@@ -89,6 +89,19 @@ export type BrainEligibilityV1 = {
   reasons: string[];
 };
 
+export type AllocationAssetEvidenceV1 = {
+  tier: "complete" | "partial" | "price_only";
+  coverageScoreBps: number;
+  liquidityScoreBps: number | null;
+};
+
+export type AllocationPolicyEvidenceV1 = {
+  preferredPositionMaximum: number;
+  selectedAssetIds: string[];
+  removedAssetIds: string[];
+  warnings: string[];
+};
+
 const directiveNames: AssetDirectiveKind[] = [
   "none",
   "eligible",
@@ -423,4 +436,90 @@ export function applyCompiledRestrictions(
     }
   }
   return result;
+}
+
+export function applyEvidenceAwareAllocationPolicy(
+  proposed: Record<string, number>,
+  compiled: CompiledBrainV1,
+  reserveAssetId: string,
+  evidenceByAssetId: Record<string, AllocationAssetEvidenceV1>,
+): {
+  allocation: Record<string, number>;
+  policy: AllocationPolicyEvidenceV1;
+} {
+  const restricted = applyCompiledRestrictions(
+    proposed,
+    compiled,
+    reserveAssetId,
+  );
+  const tierRank = { complete: 3, partial: 2, price_only: 1 } as const;
+  const riskIds = Object.keys(restricted).filter(
+    (id) => id !== reserveAssetId && (restricted[id] ?? 0) > 0,
+  );
+  const ranked = [...riskIds].sort((a, b) => {
+    const directiveA = compiled.assetDirectives[a];
+    const directiveB = compiled.assetDirectives[b];
+    const evidenceA = evidenceByAssetId[a] ?? {
+      tier: "price_only" as const,
+      coverageScoreBps: 0,
+      liquidityScoreBps: null,
+    };
+    const evidenceB = evidenceByAssetId[b] ?? {
+      tier: "price_only" as const,
+      coverageScoreBps: 0,
+      liquidityScoreBps: null,
+    };
+    return (
+      (directiveB?.preferenceScore ?? 0) - (directiveA?.preferenceScore ?? 0) ||
+      (restricted[b] ?? 0) - (restricted[a] ?? 0) ||
+      tierRank[evidenceB.tier] - tierRank[evidenceA.tier] ||
+      evidenceB.coverageScoreBps - evidenceA.coverageScoreBps ||
+      (evidenceB.liquidityScoreBps ?? 0) - (evidenceA.liquidityScoreBps ?? 0) ||
+      a.localeCompare(b)
+    );
+  });
+  const selectedAssetIds = ranked.slice(0, compiled.preferredPositionCount);
+  const removedAssetIds = ranked.slice(compiled.preferredPositionCount);
+  let released = 0;
+  for (const id of removedAssetIds) {
+    released += restricted[id] ?? 0;
+    restricted[id] = 0;
+  }
+  restricted[reserveAssetId] = (restricted[reserveAssetId] ?? 0) + released;
+  const selectedLowEvidence = selectedAssetIds.filter(
+    (id) => (evidenceByAssetId[id]?.tier ?? "price_only") === "price_only",
+  );
+  const nonZeroWeights = selectedAssetIds.map((id) => restricted[id] ?? 0);
+  const mechanicallySymmetric =
+    nonZeroWeights.length >= 3 &&
+    new Set(nonZeroWeights).size === 1 &&
+    selectedAssetIds.some(
+      (id) => (evidenceByAssetId[id]?.tier ?? "price_only") !== "complete",
+    );
+  const warnings = [
+    ...(removedAssetIds.length
+      ? [
+          `${removedAssetIds.length} position(s) were removed to enforce the brain's maximum position count.`,
+        ]
+      : []),
+    ...(selectedLowEvidence.length
+      ? [
+          `${selectedLowEvidence.length} selected position(s) rely on price-only evidence.`,
+        ]
+      : []),
+    ...(mechanicallySymmetric
+      ? [
+          "The proposal used mechanically symmetric weights despite incomplete evidence.",
+        ]
+      : []),
+  ];
+  return {
+    allocation: restricted,
+    policy: {
+      preferredPositionMaximum: compiled.preferredPositionCount,
+      selectedAssetIds,
+      removedAssetIds,
+      warnings,
+    },
+  };
 }
