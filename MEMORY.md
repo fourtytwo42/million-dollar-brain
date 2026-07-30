@@ -1313,3 +1313,12 @@ build`; authenticated live `/api/collect-market`.
 - Commands/tests: Public chain-46630 rehearsal estimated 72,477,317 gas and 0.001449546412477317 ETH. The first build found `BasketVault` at 25,151 runtime bytes; the corrected build is 24,309 bytes, 267 bytes below EIP-170. The operator had about 0.0129492027 test ETH before broadcast.
 - Result: The hard code-size release gate is cleared. No V3 testnet transaction was broadcast during the rehearsal.
 - Follow-up: Run all 22 contract tests, commit/push the exact optimizer and bytecode change, then broadcast the already-authorized fresh V3 deployment with `--slow` to tolerate public-RPC replica lag.
+
+### 2026-07-29 - Mainnet-Candidate Testnet Acceptance Completion
+
+- Context: The exact-source candidate `d221fda3fc4243ac62c5893859711376174da73a` completed its two-hour Robinhood Testnet acceptance after preserving and excluding repair downtime.
+- Decision: Settlement dust that rounds to both 0.00% and $0.00 is excluded from Basket holdings and the pie chart; the underlying accounting balance remains untouched.
+- Files: `apps/web/lib/portfolio-display.ts`, `apps/web/components/editorial-dashboard.tsx`, `tests/portfolio-display.test.ts`, `var/testnet-v3-endurance/`.
+- Commands/tests: Eight endurance checkpoints; `npm run test:portfolio-display`; `npm --workspace apps/web run build`; desktop/tablet/mobile in-app Browser UAT.
+- Result: Active duration was 2.002 hours. Atomic buys and sells passed, no queued sales existed, and a live Ornith V5 allocation executed on chain 46630 in transaction `0xaf5cde0a946982dbca8ce947ea510d9c4f9766e02c8bc4ab331f450a02b22dbc`. Final NAV/share was `0.995938092690684581`.
+- Follow-up: Regenerate the exact-commit acceptance and signed non-broadcast mainnet candidate artifacts. Mainnet broadcast remains unauthorized.

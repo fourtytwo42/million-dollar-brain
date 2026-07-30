@@ -7,6 +7,7 @@ import {
   BASKET_CHART_COLOR_COUNT,
   positiveAllocationEntries,
   positiveBalanceSymbols,
+  visibleHoldingSymbols,
 } from "../apps/web/lib/portfolio-display.ts";
 
 test("portfolio holdings include only positive token balances", () => {
@@ -18,6 +19,21 @@ test("portfolio holdings include only positive token balances", () => {
       ETHX: "not-a-balance",
     }),
     ["USDG", "AAPL"],
+  );
+});
+
+test("visible holdings hide zero-weight and sub-cent settlement dust", () => {
+  assert.deepEqual(
+    visibleHoldingSymbols(
+      { USDG: "100", AAPL: "1", NVDA: "2" },
+      {
+        USDG: "1000000000000000000",
+        AAPL: "1",
+        NVDA: "5000000000000000",
+      },
+      { USDG: 5000, AAPL: 0, NVDA: 1 },
+    ),
+    ["USDG", "NVDA"],
   );
 });
 

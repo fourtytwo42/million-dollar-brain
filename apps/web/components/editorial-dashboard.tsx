@@ -21,7 +21,7 @@ import {
   allocationSummary,
   basketChartColor,
   positiveAllocationEntries,
-  positiveBalanceSymbols,
+  visibleHoldingSymbols,
 } from "../lib/portfolio-display";
 import {
   MAX_CUSTOM_PIECE_NAME_BYTES,
@@ -615,7 +615,11 @@ export function EditorialDashboard({
     data?.latestCycle?.brain?.activeNonNeutralInstructions ?? [];
   const latestAllocation = data?.latestCycle?.allocation ?? { USDG: 10000 };
   const holdingSlices = data
-    ? positiveBalanceSymbols(data.holdings).map((symbol) => {
+    ? visibleHoldingSymbols(
+        data.holdings,
+        data.holdingValues,
+        data.currentWeightsBps,
+      ).map((symbol) => {
         const value = BigInt(data.holdingValues[symbol] ?? "0");
         const nav = BigInt(data.nav);
         return {

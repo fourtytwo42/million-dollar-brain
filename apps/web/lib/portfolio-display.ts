@@ -12,6 +12,23 @@ export function positiveBalanceSymbols(
     .map(([symbol]) => symbol);
 }
 
+export function visibleHoldingSymbols(
+  holdings: Record<string, string>,
+  holdingValues: Record<string, string>,
+  currentWeightsBps: Record<string, number>,
+): string[] {
+  return positiveBalanceSymbols(holdings).filter((symbol) => {
+    try {
+      return (
+        BigInt(holdingValues[symbol] ?? "0") >= 5_000_000_000_000_000n &&
+        (currentWeightsBps[symbol] ?? 0) > 0
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
 export const BASKET_CHART_COLOR_COUNT = 10;
 
 export function basketChartColor(index: number): string {
