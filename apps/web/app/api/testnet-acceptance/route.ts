@@ -71,10 +71,11 @@ async function fundActor(
   requiredUsdg: bigint,
   transactions: Record<string, string>,
 ) {
-  // One complete actor flow consumes roughly 0.00004 ETH on Robinhood
-  // Testnet. Keep a bounded two-flow reserve without concentrating the shared
-  // endurance budget in whichever request reaches the lock first.
-  const targetGas = parseEther("0.0001");
+  // The transaction client reserves 6,000,000 gas for the largest atomic DEX
+  // operation (about 0.000144 ETH at the observed testnet gas price). Keep a
+  // small bounded margin without concentrating the shared endurance budget in
+  // whichever concurrent request reaches the lock first.
+  const targetGas = parseEther("0.00016");
   const gasBalance = await publicClient.getBalance({
     address: actor.account.address,
   });

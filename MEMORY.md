@@ -33,9 +33,11 @@ Durable project context lives here. Update this file whenever information should
   separate heartbeat signer from the operator. The first recovery exposed that
   the test endpoint's 0.00035 ETH per-actor target could reserve more gas across
   three concurrent actors than the shared wallet pool contained. Reduce the
-  bounded per-actor target to 0.0001 ETH, approximately two complete actor
-  flows, while retaining exact-deficit funding. Do not weaken price freshness,
-  TWAP, transaction, or gas-health assertions.
+  bounded per-actor target. Live replay then established that the transaction
+  client reserves 6,000,000 gas for the largest atomic DEX call, requiring
+  about 0.000144 ETH at the observed gas price, so the final target is 0.00016
+  ETH with exact-deficit funding. Do not weaken price freshness, TWAP,
+  transaction, or gas-health assertions.
 - Commands/tests: Actor-to-operator transfers
   `0xcc82aa67ff384773680d29b4c563212bb5bc711a1ab3465a46d955247bfb5b55`,
   `0x553b8f20db24b3a334ad1af1409f26173c72873f9a7b40ad12344c019b22ec1b`,
