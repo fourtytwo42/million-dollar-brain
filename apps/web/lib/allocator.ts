@@ -508,7 +508,7 @@ function saveEligibilityState(
 export async function runCycle() {
   const d = deployment();
   const redemptionTxHash: `0x${string}` | null = null;
-  if (d.schemaVersion === 3 && networkConfig.mode === "testnet") {
+  if ((d.schemaVersion ?? 0) >= 3 && networkConfig.mode === "testnet") {
     await collectOfficialMarketData();
     await syncLocalMarketPrices();
   }
@@ -673,7 +673,7 @@ export async function runCycle() {
     aggregateEffects: { tagPreferenceBps },
     decisionContext: market,
   };
-  const dynamicMode = d.schemaVersion === 3 && Boolean(d.assets?.length);
+  const dynamicMode = (d.schemaVersion ?? 0) >= 3 && Boolean(d.assets?.length);
   const dynamicFallback = Object.fromEntries(
     market.assetRecords
       .filter((asset) => asset.active)

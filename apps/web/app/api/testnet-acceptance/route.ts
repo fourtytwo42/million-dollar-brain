@@ -121,8 +121,8 @@ export async function POST(request: NextRequest) {
     await syncLocalMarketPrices();
     const result = await withAdminTransactionLock(async () => {
       const d = deployment();
-      if (d.schemaVersion !== 3)
-        throw new Error("V3 testnet deployment is not active");
+      if ((d.schemaVersion ?? 0) < 3)
+        throw new Error("dynamic testnet deployment is not active");
       const reserve = d.assets?.find((asset) => asset.kind === "reserve");
       if (!reserve) throw new Error("reserve asset is unavailable");
       const actorIndex = scenario % 3;

@@ -7,17 +7,47 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
   BRAINS NAV, validate on devnet, then promote the exact accepted release to
   Robinhood Testnet.
-- Last meaningful change: Devnet now passes the complete self-hosted DEX
-  contract, web, transaction, and responsive Browser acceptance suite. Fresh
-  Uniswap pools were seeded from the independent circuit-breaker prices, and
-  live 1,000 and 100 USDG BRAINS buys plus an atomic sale completed.
-- Next step: Freeze and push the exact devnet release, then perform the
-  state-preserving testnet pool/adapter/vault migration and fresh two-hour
-  acceptance.
-- Blockers: Testnet promotion and acceptance remain incomplete. Mainnet
-  deployment remains unauthorized.
+- Last meaningful change: Robinhood Testnet now has 11 seeded Uniswap-compatible
+  pools, DEX TWAP valuation and structured execution adapters, and the existing
+  BasketVault proxy upgraded in place to V5. Legacy plan execution is disabled
+  and old-adapter token allowances are zero.
+- Next step: Let the real 30-minute testnet TWAP window mature, reconcile the
+  pre/post protocol state, deploy the exact schema-V4-compatible web build, run
+  transactional smoke and public responsive UAT, then begin a fresh two-hour
+  three-actor acceptance.
+- Blockers: Testnet TWAP history is still maturing and the fresh two-hour
+  acceptance remains incomplete. Mainnet deployment remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Self-hosted DEX testnet migration checkpoint
+
+- Context: Promote the accepted self-hosted Uniswap execution and DEX TWAP NAV
+  release while preserving the existing Robinhood Testnet BasketVault proxy and
+  all protocol/user state.
+- Decision: Deploy 11 direct USDG pools plus DEX valuation/execution adapters,
+  upgrade BasketVault in place, keep the 30-minute TWAP requirement honest, and
+  run a dedicated ten-minute observation heartbeat. Do not bypass TWAP age or
+  use 0x.
+- Files: `packages/contracts/deployments/testnet-v3.json`,
+  `var/testnet-v3/dex-v5-migration/pre-status.json`,
+  `var/testnet-v3/dex-v5-migration/pre-manifest.json`,
+  `apps/web/lib/allocator.ts`,
+  `apps/web/app/api/testnet-acceptance/route.ts`.
+- Commands/tests: On-chain proxy-slot and adapter reads; all legacy-adapter
+  allowances checked; DecisionContext 10/10, network policy 18/18, asset
+  universe 8/8, and production Next.js build.
+- Result: BasketVault proxy
+  `0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B` now uses V5 implementation
+  `0x3b55714f9aa87f613E5d92b7A8A916d1E87eAB59`, DEX valuation
+  `0x040D44887B698ee5E74E8F930DD8B1bd1020531E`, and DEX execution
+  `0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff`. DEX execution is enabled,
+  legacy plan execution is disabled, maximum DEX price age is 900 seconds, and
+  every old-adapter token allowance is zero. A schema-V4 compatibility defect
+  in the allocator and private acceptance endpoint was found before acceptance
+  and corrected to accept dynamic deployment schemas 3 and newer.
+- Follow-up: Verify the 30-minute TWAP becomes valid, reconcile preserved state,
+  then freeze the exact commit and run smoke/UAT plus two-hour acceptance.
 
 ### 2026-07-30 - Decision history selection identity fix
 

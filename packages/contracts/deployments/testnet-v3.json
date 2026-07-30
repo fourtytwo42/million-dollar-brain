@@ -1,12 +1,11 @@
 {
-  "schemaVersion": 3,
-  "environment": "robinhood-testnet-replica",
+  "schemaVersion": 4,
+  "environment": "testnet",
   "chainId": 46630,
   "productionParityReplicas": true,
   "canonicalAssets": false,
   "automaticFreshness": false,
   "deployer": "0x4365543D9e895bb48835CEcedf0903E8770A3A63",
-  "quoteAuthorizer": "0x4365543D9e895bb48835CEcedf0903E8770A3A63",
   "assets": [
     {
       "id": "46630:0x12065d8e3a96de0aeca1c6eb5ad22f992cc447dc",
@@ -21,7 +20,9 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 1,
-      "tags": ["reserve"]
+      "tags": [
+        "reserve"
+      ]
     },
     {
       "id": "46630:0xb512a917ccb2fec8e048a5ceb9b81e4c239519e3",
@@ -36,7 +37,9 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 2,
-      "tags": ["technology"]
+      "tags": [
+        "technology"
+      ]
     },
     {
       "id": "46630:0x68dc0b849e708e289f9b16d84bf3cb2d4a115522",
@@ -51,7 +54,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 3,
-      "tags": ["technology", "ai_semiconductor"]
+      "tags": [
+        "technology",
+        "ai_semiconductor"
+      ]
     },
     {
       "id": "46630:0xb634624fecf5acf61059ee7f9a7b0515cc3b09b9",
@@ -66,7 +72,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 4,
-      "tags": ["technology", "ai_semiconductor"]
+      "tags": [
+        "technology",
+        "ai_semiconductor"
+      ]
     },
     {
       "id": "46630:0x92d22f0ce08a8cbf2190b89700e91ffab28670af",
@@ -81,7 +90,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 5,
-      "tags": ["technology", "consumer_discretionary"]
+      "tags": [
+        "technology",
+        "consumer_discretionary"
+      ]
     },
     {
       "id": "46630:0x7277db3598e3fd1d3f2bab11d3973a31b1357b6b",
@@ -96,7 +108,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 6,
-      "tags": ["technology", "communications"]
+      "tags": [
+        "technology",
+        "communications"
+      ]
     },
     {
       "id": "46630:0xd8dc444dc2454a630b15c795a837cf36b575aaf2",
@@ -111,7 +126,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 7,
-      "tags": ["technology", "communications"]
+      "tags": [
+        "technology",
+        "communications"
+      ]
     },
     {
       "id": "46630:0x1dfbd3ccb6f57a8ad7ee8041385ec2e4216c264b",
@@ -126,7 +144,9 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 8,
-      "tags": ["consumer_discretionary"]
+      "tags": [
+        "consumer_discretionary"
+      ]
     },
     {
       "id": "46630:0x2db5b0bbc00898379c3227c1c9910619435bc997",
@@ -141,7 +161,9 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 9,
-      "tags": ["broad_market"]
+      "tags": [
+        "broad_market"
+      ]
     },
     {
       "id": "46630:0xbc1093a1c525cac923a2e65d18703818bcff3a82",
@@ -156,7 +178,10 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 10,
-      "tags": ["broad_market", "technology"]
+      "tags": [
+        "broad_market",
+        "technology"
+      ]
     },
     {
       "id": "46630:0xe7a123a58f10f90051cafff3081b7a3041ef31f3",
@@ -171,7 +196,11 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 11,
-      "tags": ["broad_market", "technology", "ai_semiconductor"]
+      "tags": [
+        "broad_market",
+        "technology",
+        "ai_semiconductor"
+      ]
     },
     {
       "id": "46630:0x16f5ea6a454eb8d671b8dfa27deefb24bab1030b",
@@ -186,13 +215,15 @@
       "canonicalSource": "https://api.robinhood.com/rhj/assets",
       "replica": true,
       "controlId": 12,
-      "tags": ["crypto_major"]
+      "tags": [
+        "crypto_major"
+      ]
     }
   ],
   "contracts": {
     "router": "0xfE04BC25d4758262cCF9A1e40bfFA96877DaDB63",
     "oracle": "0x71FF2ea72c0CB71760ea3c166CB1C5D46BA8e45B",
-    "valuation": "0x71FF2ea72c0CB71760ea3c166CB1C5D46BA8e45B",
+    "valuation": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
     "assetRegistry": "0x03E4AEEfe8287a3D8DD9661e931F6D5078eEB435",
     "executionAdapter": "0x3B2716e9E6a06Db05418508152bAcACa39E9fAcB",
     "pricePublisher": "0x7FB986BDcFC23bF419af83BE4bFE4efDBff7407d",
@@ -200,8 +231,12 @@
     "creatorVault": "0x81720eEA92D608daE1D789673d0a4d59c6B16485",
     "brain": "0x97B0fbb23dfadE516bbe7B9f4753EC4f4e282B1c",
     "basket": "0xf10007004eF0d006bBaF6E3A9C92432dBeE7De5B",
-    "basketImplementation": "0xd28cf38b6133e97492392480f4d7209bb027ebda",
-    "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347"
+    "basketImplementation": "0x3b55714f9aa87f613E5d92b7A8A916d1E87eAB59",
+    "brainControlRegistry": "0x53c66BC52c328bc6B099BcB66888420930Ec2347",
+    "dexExecutionAdapter": "0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff",
+    "dexExecutionImplementation": "0xA54bCcd627ebA7796A31b631E6e7d8a267fa7a93",
+    "dexValuationAdapter": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
+    "dexValuationImplementation": "0x029cAA11D2c782C4dA043fbB1FFC19a6bbb483B0"
   },
   "evidence": {
     "sourceChainId": 4663,
@@ -232,5 +267,102 @@
     "implementationTransaction": "0x15e42a32096f5d8609c9520de5634d178f22c59dfb7f3dba546a5a51e3a88674",
     "upgradeTransaction": "0x2ebbb234b573be20f1e4baa9fe99be2f5f7a378cb23d94459dfcc43c94249cdb",
     "upgradedAt": "2026-07-29T18:13:13Z"
+  },
+  "dexExecutionAdapter": "0x500030eF18830dcEDb7AcBAa23CC3866CF24c1ff",
+  "dexValuationAdapter": "0x040D44887B698ee5E74E8F930DD8B1bd1020531E",
+  "executionMode": "uniswap-v3-structured",
+  "legacyPlanExecutionDisabled": true,
+  "dexVenue": {
+    "venue": "uniswap-v3",
+    "factory": "0xAaEf9e728E20fd6b1231E90e8fd5A96Bb06B8fA3",
+    "router": "0xf8E1719a40e5D02Ae8bf4315Fe3ebfC1A0A5E89f",
+    "quoter": "0x5B70C3104fe57Fa3e7d36E99b47e91af930339D6",
+    "weth": "0x16f5eA6A454Eb8D671B8DFA27DeefB24bAB1030B",
+    "feeTiers": [
+      3000
+    ],
+    "twapWindowSeconds": 1800,
+    "quoteLifetimeSeconds": 30,
+    "maximumReferenceBlockAge": 3,
+    "circuitBreaker": "0x71FF2ea72c0CB71760ea3c166CB1C5D46BA8e45B",
+    "pools": [
+      {
+        "address": "0x87dfe3249d78c61728215Ad66437e1F4803074e0",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0xB512a917cCB2Fec8e048a5Ceb9b81e4c239519e3",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x9CE01fdD47E5B0f3Ced5aF9Af02F51f16136aAf5",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x68dc0B849E708E289f9b16d84BF3cb2d4A115522",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x6AaE489Ff0bC6efED10f066cc09752a3Cb0e4ee5",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0xB634624feCf5acF61059eE7f9a7B0515CC3B09B9",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x4Bb753930289f46e6cb4595De5a3B497Bd44da13",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x92d22F0CE08A8CBF2190B89700e91fFaB28670AF",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x60C4F9BB64d5E9f3160B8ce0C0931307d3508E78",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x7277Db3598E3Fd1D3F2BAb11d3973a31b1357b6B",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x20069Cc89732F6171Fe8d25c65Cc9c8Ca6EC9053",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0xD8dc444DC2454a630b15C795A837Cf36B575AAf2",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x64a441C0C9988B7fcfb827C929BbB70d82e9Fc95",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x1dFBd3cCb6F57A8aD7EE8041385ec2e4216C264B",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0xF6587c989f29aAcB212dE4832E236B1389Aa3065",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x2Db5b0BbC00898379C3227c1c9910619435BC997",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x35C4590500D67F2d2FB09D312481a2E719E021AA",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0xBc1093a1C525cac923A2E65d18703818bCFF3A82",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x654BD3C93b4b5213051d4034fd6d36d26D3E8086",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0xE7a123a58F10F90051cAFfF3081b7a3041ef31F3",
+        "fee": 3000,
+        "approved": true
+      },
+      {
+        "address": "0x9c5A52C1c956E86B491549C068C1cbffeA4826E7",
+        "token0": "0x12065D8e3A96De0AEcA1c6eb5aD22F992CC447Dc",
+        "token1": "0x16f5eA6A454Eb8D671B8DFA27DeefB24bAB1030B",
+        "fee": 3000,
+        "approved": true
+      }
+    ]
   }
 }
