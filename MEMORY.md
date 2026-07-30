@@ -73,6 +73,13 @@ Durable project context lives here. Update this file whenever information should
   Foundry had not allowlisted the repository `var/` evidence destination.
   `packages/contracts/foundry.toml` now grants only that required write path;
   contract build and size checks pass.
+- Result: Inactive devnet candidates GME, SPCX, and VIRTUAL were deployed with
+  stable IDs 13-15, plus unregistered WBTC-lookalike and USDe rejection
+  fixtures. Initial live Browser UAT found the server was returning capacity
+  and TWAP evidence but the expanded Basket quote did not render it. The UI
+  now shows route impact, short-TWAP gap, projected exposure, permitted
+  exposure, and capacity utilization. Asset-universe, DecisionContext V7,
+  graduation/readiness tests, and the production web build pass.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
   then testnet migration/acceptance. Configure the missing mainnet RPC failover
   environment only when the Alchemy endpoint is supplied.

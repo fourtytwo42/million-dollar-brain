@@ -312,6 +312,11 @@ type QuotePlanResponse = {
       estimatedGasCostUsdG: string;
       twapAmountOut: string;
       priceImpactBps: number;
+      capacity: {
+        maximumExposureUsdWad: string | null;
+        projectedExposureUsdWad: string | null;
+        utilizationBps: number | null;
+      };
       path: `0x${string}`;
     };
   }[];

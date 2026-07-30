@@ -468,6 +468,11 @@ type DexQuoteSummary = {
       estimatedGasCostUsdG: string;
       twapAmountOut: string;
       priceImpactBps: number;
+      capacity: {
+        maximumExposureUsdWad: string | null;
+        projectedExposureUsdWad: string | null;
+        utilizationBps: number | null;
+      };
     };
   }[];
 };
@@ -2383,6 +2388,18 @@ export function EditorialDashboard({
                               const output = dexAsset(
                                 quote.plan.route.tokenOut,
                               );
+                              const quoted = BigInt(quote.plan.quotedAmountOut);
+                              const twap = BigInt(quote.evidence.twapAmountOut);
+                              const twapGapBps =
+                                twap === 0n
+                                  ? 0
+                                  : Number(
+                                      ((quoted > twap
+                                        ? quoted - twap
+                                        : twap - quoted) *
+                                        10_000n) /
+                                        twap,
+                                    );
                               return (
                                 <small
                                   key={`${quote.evidence.firstPool}-${index}`}
@@ -2396,10 +2413,43 @@ export function EditorialDashboard({
                                   {(
                                     quote.evidence.priceImpactBps / 100
                                   ).toFixed(2)}
-                                  % · pool {short(quote.evidence.firstPool)}
+                                  % · TWAP gap {(twapGapBps / 100).toFixed(2)}%
+                                  {quote.evidence.capacity.utilizationBps !==
+                                  null
+                                    ? ` · capacity ${(
+                                        quote.evidence.capacity.utilizationBps /
+                                        100
+                                      ).toFixed(2)}%`
+                                    : ""}
+                                  {" · pool "}
+                                  {short(quote.evidence.firstPool)}
                                 </small>
                               );
                             })}
+                            {buyDexQuote.plans.map((quote, index) =>
+                              quote.evidence.capacity.maximumExposureUsdWad !==
+                                null &&
+                              quote.evidence.capacity
+                                .projectedExposureUsdWad !== null ? (
+                                <small
+                                  key={`capacity-${quote.evidence.firstPool}-${index}`}
+                                >
+                                  {dexAsset(quote.plan.route.tokenOut)
+                                    ?.symbol ?? "Asset"}{" "}
+                                  projected exposure $
+                                  {reserveMoney(
+                                    quote.evidence.capacity
+                                      .projectedExposureUsdWad,
+                                  )}{" "}
+                                  of $
+                                  {reserveMoney(
+                                    quote.evidence.capacity
+                                      .maximumExposureUsdWad,
+                                  )}{" "}
+                                  permitted
+                                </small>
+                              ) : null,
+                            )}
                             <small>
                               Quote expires at{" "}
                               {new Date(
@@ -2494,19 +2544,34 @@ export function EditorialDashboard({
                             <b>
                               Live DEX routes · block {sellDexQuote.quoteBlock}
                             </b>
-                            {sellDexQuote.plans.map((quote, index) => (
-                              <small
-                                key={`${quote.evidence.firstPool}-${index}`}
-                              >
-                                {dexRouteLabel(quote)} · estimated{" "}
-                                {reserveMoney(quote.plan.quotedAmountOut)} USDG
-                                · impact{" "}
-                                {(quote.evidence.priceImpactBps / 100).toFixed(
-                                  2,
-                                )}
-                                % · pool {short(quote.evidence.firstPool)}
-                              </small>
-                            ))}
+                            {sellDexQuote.plans.map((quote, index) => {
+                              const quoted = BigInt(quote.plan.quotedAmountOut);
+                              const twap = BigInt(quote.evidence.twapAmountOut);
+                              const twapGapBps =
+                                twap === 0n
+                                  ? 0
+                                  : Number(
+                                      ((quoted > twap
+                                        ? quoted - twap
+                                        : twap - quoted) *
+                                        10_000n) /
+                                        twap,
+                                    );
+                              return (
+                                <small
+                                  key={`${quote.evidence.firstPool}-${index}`}
+                                >
+                                  {dexRouteLabel(quote)} · estimated{" "}
+                                  {reserveMoney(quote.plan.quotedAmountOut)}{" "}
+                                  USDG · impact{" "}
+                                  {(
+                                    quote.evidence.priceImpactBps / 100
+                                  ).toFixed(2)}
+                                  % · TWAP gap {(twapGapBps / 100).toFixed(2)}%
+                                  · pool {short(quote.evidence.firstPool)}
+                                </small>
+                              );
+                            })}
                             <small>
                               Estimated sell proceeds use this exact-size quote.
                               Your receipt will show actual proceeds.
