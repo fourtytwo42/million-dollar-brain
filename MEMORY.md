@@ -1329,3 +1329,11 @@ build`; authenticated live `/api/collect-market`.
 - Decision: Keep trading exclusively in the Buy/Sell card and remove the two redundant header buttons.
 - Files: `apps/web/components/editorial-dashboard.tsx`.
 - Result: The Basket introduction is quieter and has one obvious transaction surface.
+
+### 2026-07-29 - Testnet Cash Weight and Equal-Weight Diagnosis
+
+- Context: Testnet displayed roughly 58% USDG with small, nearly equal risk positions after the acceptance run.
+- Result: This is not a fallback allocation. Dry-Powder Goblin is set to a 50% reserve, Silicon-Valley Brain orders an AAPL exit, The Basket Case prefers four positions, and Gas-Fee Furnace applies a four-hour trade cooldown. Ornith's persisted raw outputs explicitly propose the equal weights; the latest proposal is 50% USDG plus five 10% positions.
+- Result: Most active testnet replicas have coverage score zero and no mature returns, spread, liquidity, or fundamentals. Only AAPL and NVDA currently have meaningful official dossiers, while AAPL is prohibited by the active brain directive. The dynamic validator treats every active manifest asset as allocatable and enforces at most nine positions; the four-position brain preference is not a hard validator limit.
+- Result: The current roughly 58% USDG portfolio is the last executed allocation. New 50% proposals are held because the selected four-hour cooldown remains active.
+- Follow-up: Before treating testnet behavior as representative, restore intentional post-endurance controls and require usable evidence for model selection. Consider making preferred position count more explicit in the prompt or deterministically bounded.
