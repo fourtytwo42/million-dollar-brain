@@ -25,7 +25,7 @@ set +a
 manifest="$repo_root/packages/contracts/deployments/testnet-v3.json"
 adapter="$(jq -er '.contracts.dexExecutionAdapter' "$manifest")"
 basket="$(jq -er '.contracts.basket' "$manifest")"
-[[ "$(cast call "$basket" 'executionAdapter()(address)' --rpc-url "$rpc" | tr '[:upper:]' '[:lower:]')" == "$(printf '%s' "$adapter" | tr '[:upper:]' '[:lower:]')" ]]
+[[ "$(cast call "$basket" 'dexExecutionAdapter()(address)' --rpc-url "$rpc" | tr '[:upper:]' '[:lower:]')" == "$(printf '%s' "$adapter" | tr '[:upper:]' '[:lower:]')" ]]
 implementation_slot="0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
 before="$(cast storage "$adapter" "$implementation_slot" --rpc-url "$rpc")"
 
