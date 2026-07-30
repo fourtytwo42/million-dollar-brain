@@ -7,14 +7,14 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Complete and promote the DEX-native capacity V3 release. It
   replaces fixed launch assets, Chainlink authority, capitalization/AUM gates,
   and the universal $250K threshold with dynamic on-chain capacity.
-- Last meaningful change: Contract, context, qualification, candidate, and
-  migration tooling is implemented in the dirty VM worktree. The full Foundry,
-  policy, readiness, context, and production-build suite is passing before
-  devnet deployment.
-- Next step: Commit and push the exact candidate, run guarded devnet V3/V6
-  migration plus GME/SPCX/VIRTUAL candidate deployment, complete responsive
-  devnet UAT, then promote the same commit to testnet and run a fresh two-hour
-  acceptance.
+- Last meaningful change: The guarded devnet V3/V6 migration completed at
+  pushed release `5a4c40996677a22e34e4e0446da400158eb81d16`.
+  All four proxies upgraded successfully; BRAINS supply and DEX-marked NAV
+  remained byte-for-byte unchanged, and the live vault cap is $60,000.
+- Next step: Push the Foundry evidence-path allowlist correction, deploy the
+  inactive GME/SPCX/VIRTUAL devnet candidates and identity-negative fixtures,
+  complete responsive devnet UAT, then promote the exact commit to testnet and
+  run a fresh two-hour acceptance.
 - Blockers: The mainnet failover service lacks `/etc/mdb/mainnet-rpc.env` and
   therefore no Alchemy backup is configured. Mainnet fork inputs are
   incomplete, the new 48-hour clocks have only started, current aggregate DEX
@@ -64,6 +64,15 @@ Durable project context lives here. Update this file whenever information should
   cap behavior remain unchanged. Final optimized BasketVault runtime is 24,510
   bytes, 66 bytes below EIP-170. The full 55-test Foundry suite and all
   capacity/context/readiness tests passed after the size repair.
+- Result: The final guarded devnet migration succeeded with all 23 receipts
+  confirmed. AssetRegistry qualification V3, four-hour DEX safety,
+  DEX-only execution safety, and BasketVault V6 are enabled. BRAINS supply
+  remains `14596869612729017105275` and NAV remains
+  `14388762381893589668758`, exactly matching the pre-upgrade snapshot.
+  Candidate deployment then correctly stopped before broadcast because
+  Foundry had not allowlisted the repository `var/` evidence destination.
+  `packages/contracts/foundry.toml` now grants only that required write path;
+  contract build and size checks pass.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
   then testnet migration/acceptance. Configure the missing mainnet RPC failover
   environment only when the Alchemy endpoint is supplied.
