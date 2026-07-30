@@ -14,7 +14,9 @@ const dex = JSON.parse(readFileSync(dexPath, "utf8"));
 const chainId = Number(chainIdRaw);
 
 const id = (address) => `${chainId}:${address.toLowerCase()}`;
-const localAssets = [
+const localAssets = base.assets?.length
+  ? []
+  : [
   {
     id: id(base.usdg),
     symbol: "USDG",
@@ -67,7 +69,7 @@ const localAssets = [
     controlId: 12,
     tags: ["crypto_major"],
   },
-];
+    ];
 
 const assets = base.assets?.length ? base.assets : localAssets;
 const reserve = assets.find((asset) => asset.kind === "reserve");

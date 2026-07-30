@@ -8,6 +8,7 @@ Type=oneshot
 User=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
 EnvironmentFile=/etc/mdb/testnet.env
+EnvironmentFile=/etc/mdb/testnet-dex-keepalive.env
 Environment=MDB_NETWORK_MODE=testnet
 ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/run-dex-keepalive.sh
 NoNewPrivileges=true
