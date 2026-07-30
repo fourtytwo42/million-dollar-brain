@@ -58,6 +58,26 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Build and deploy the bounded actor-gas target, resume checkpoint 3
   with repair downtime excluded, and continue monitoring all signer balances.
 
+### 2026-07-30 - Acceptance repair backlog correction
+
+- Context: Checkpoint 3 passed after the gas-limit correction, but the runner
+  immediately launched checkpoint 4 because its schedule was still anchored to
+  the original wall clock. Repair downtime had moved the next scheduled time
+  into the past, so successful recovery caused a missed-checkpoint backlog and
+  rapidly consumed the remaining test-ETH budget.
+- Decision: After every successful checkpoint, schedule the next checkpoint no
+  earlier than one full interval from the current time, capped at the preserved
+  end time. Retain the original active-duration accounting and repair-downtime
+  extension, but never replay missed checkpoints.
+- Files: `tests/endurance-testnet.mjs`.
+- Result: The runner is stopped with its clock and ledger preserved. A testnet
+  faucet top-up is required before resuming because the aggregate operator and
+  three actor balances no longer safely cover another complete three-actor
+  checkpoint.
+- Follow-up: Fund operator
+  `0x4365543D9e895bb48835CEcedf0903E8770A3A63`, verify collector and heartbeat
+  health, then resume without backlog.
+
 ### 2026-07-30 - Acceptance route-age and gas-funding repair
 
 - Context: Acceptance checkpoint 1 failed on atomic redemption transaction

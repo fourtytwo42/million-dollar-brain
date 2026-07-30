@@ -496,7 +496,10 @@ try {
       state.lastCheckpoint = result;
       state.lastFailure = null;
       state.nextCheckpointAt = Math.min(
-        state.startedAt + state.completedCheckpoints * state.intervalMs,
+        Math.max(
+          state.startedAt + state.completedCheckpoints * state.intervalMs,
+          Date.now() + state.intervalMs,
+        ),
         state.endAt,
       );
       state.failureAt = null;
