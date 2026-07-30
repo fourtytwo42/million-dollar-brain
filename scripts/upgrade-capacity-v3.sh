@@ -44,7 +44,7 @@ registry="$(jq -er '.contracts.assetRegistry' "$manifest")"
 valuation="$(jq -er '.contracts.dexValuationAdapter' "$manifest")"
 execution="$(jq -er '.contracts.dexExecutionAdapter' "$manifest")"
 basket="$(jq -er '.contracts.basket' "$manifest")"
-assets="$(jq -er '[.assets[].address] | join(\",\")' "$manifest")"
+assets="$(jq -er '[.assets[].address] | join(",")' "$manifest")"
 capacities="${MDB_CAPACITY_V3_CAPACITIES_USD_WAD:?Provide one capacity per manifest asset, including zero for USDG}"
 [[ "$(tr ',' '\n' <<<"$assets" | wc -l)" == "$(tr ',' '\n' <<<"$capacities" | wc -l)" ]]
 

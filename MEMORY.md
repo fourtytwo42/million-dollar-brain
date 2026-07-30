@@ -50,6 +50,12 @@ Durable project context lives here. Update this file whenever information should
   VIRTUAL/WBTC/USDe remain disabled until committed canonical identity exists.
   `mainnet-candidate-v5.json` is generated with stable registry IDs and
   `readyToBroadcast: false`.
+- Result: The first guarded devnet migration attempt sent no transaction and
+  exposed two preflight defects: a stray standalone line in
+  `/etc/mdb/devnet.env` and an over-escaped `jq join` expression in
+  `scripts/upgrade-capacity-v3.sh`. The environment file was backed up and only
+  the malformed line was removed; the wrapper expression was corrected before
+  retrying.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
   then testnet migration/acceptance. Configure the missing mainnet RPC failover
   environment only when the Alchemy endpoint is supplied.
