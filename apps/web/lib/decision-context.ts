@@ -282,9 +282,37 @@ export type DecisionContextV6 = Omit<
   inputHash: string;
 };
 
+export type AssetCapacityPolicyV1 = {
+  safeTwoSidedCapacityUsdWad: string;
+  maximumExposureUsdWad: string;
+  capacityUtilizationBps: number | null;
+  shortTwapValid: boolean;
+  longTwapValid: boolean;
+  timeWeightedLiquidityValid: boolean;
+  qualificationHours: number;
+  regularMarketSessions: number;
+  mature: boolean;
+};
+
+export type DecisionContextV7 = Omit<
+  DecisionContextV6,
+  "schemaVersion" | "inputHash"
+> & {
+  schemaVersion: 7;
+  pricingAuthority: "dex_twap";
+  settlementAsset: "USDG";
+  nativeEthEntryEnabled: false;
+  assetCapacityPolicy: Record<string, AssetCapacityPolicyV1>;
+  inputHash: string;
+};
+
 // Kept as a source-compatible alias while legacy persisted V2 records remain readable.
 export type DecisionContextV2 =
-  DecisionContextV3 | DecisionContextV4 | DecisionContextV5 | DecisionContextV6;
+  | DecisionContextV3
+  | DecisionContextV4
+  | DecisionContextV5
+  | DecisionContextV6
+  | DecisionContextV7;
 
 type DashboardState = {
   deployment: {
@@ -1208,9 +1236,12 @@ async function buildManifestDossiers(
                 : null),
         },
         fundamentals: {
-          marketCapUsd: record.qualification?.marketCapOrAumUsdWad
-            ? Number(BigInt(record.qualification.marketCapOrAumUsdWad)) / 1e18
-            : null,
+          marketCapUsd:
+            record.qualification &&
+            "marketCapOrAumUsdWad" in record.qualification &&
+            record.qualification.marketCapOrAumUsdWad
+              ? Number(BigInt(record.qualification.marketCapOrAumUsdWad)) / 1e18
+              : null,
           revenueUsd: revenue.value,
           netIncomeUsd: netIncome.value,
           assetsUsd: null,

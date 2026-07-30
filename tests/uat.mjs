@@ -685,12 +685,12 @@ try {
   );
   assert.equal(
     historyStatus.latestCycle.schemaVersion,
-    6,
-    "new cycles must use the evidence-aware DecisionContextV6 record",
+    7,
+    "new cycles must use the DEX-capacity-aware DecisionContextV7 record",
   );
   assert.ok(
     Object.keys(historyStatus.latestCycle.assetEvidence ?? {}).length > 0,
-    "V6 cycles must persist per-asset evidence tiers",
+    "V7 cycles must persist per-asset evidence tiers",
   );
   assert.equal(
     historyStatus.latestCycle.decisionContext.benchmarks.every(

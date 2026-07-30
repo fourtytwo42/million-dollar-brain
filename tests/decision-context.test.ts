@@ -95,14 +95,15 @@ test("V6 evidence never turns unavailable history into a neutral return", () => 
   assert.match(context, /return24hBps: feature\?\.return24hBps \?\? null/);
 });
 
-test("V6 prompt treats missing evidence as uncertainty and position count as a maximum", () => {
+test("V7 prompt uses DEX-only authority and treats position count as a maximum", () => {
   const allocator = readFileSync(
     new URL("../apps/web/lib/allocator.ts", import.meta.url),
     "utf8",
   );
   assert.match(allocator, /Missing evidence is uncertainty/);
   assert.match(allocator, /this is a maximum, never a target/);
-  assert.match(allocator, /DecisionContextV6/);
+  assert.match(allocator, /DecisionContextV7/);
+  assert.match(allocator, /DEX TWAP, time-weighted liquidity/);
   assert.match(allocator, /rawAllocationById/);
   assert.match(allocator, /allocationWarnings/);
 });

@@ -5,7 +5,6 @@ import { Script } from "forge-std/Script.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import { AssetRegistry } from "../src/AssetRegistry.sol";
-import { ChainlinkValuationAdapter } from "../src/ChainlinkValuationAdapter.sol";
 import { DexTwapValuationAdapter } from "../src/DexTwapValuationAdapter.sol";
 import { UniswapExecutionAdapter } from "../src/UniswapExecutionAdapter.sol";
 import { RewardDistributor } from "../src/RewardDistributor.sol";
@@ -25,21 +24,21 @@ interface IUniswapPoolFee {
 /// @dev The shell release gate supplies only canonical addresses and refuses mock manifests.
 contract DeployMainnet is Script {
     uint256 internal constant CHAIN_ID = 4663;
+    uint256 internal constant INITIAL_TVL_CAP = 60_000e18;
     address internal constant CANONICAL_USDG = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168;
     address internal constant CANONICAL_WETH = 0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73;
 
     function run() external {
         require(block.chainid == CHAIN_ID, "mainnet chain only");
         address deployer = vm.envAddress("MDB_DEPLOYER_ADDRESS");
-        address sequencerFeed = vm.envAddress("MDB_CHAINLINK_SEQUENCER_FEED");
-        address usdgFeed = vm.envAddress("MDB_USDG_CHAINLINK_FEED");
-        uint256 usdgHeartbeat = vm.envUint("MDB_USDG_FEED_HEARTBEAT");
         address[] memory riskAssets = vm.envAddress("MDB_MAINNET_RISK_ASSETS", ",");
-        address[] memory feeds = vm.envAddress("MDB_MAINNET_CHAINLINK_FEEDS", ",");
-        uint256[] memory heartbeats = vm.envUint("MDB_MAINNET_FEED_HEARTBEATS", ",");
+        uint256[] memory assetIds = vm.envUint("MDB_MAINNET_ASSET_IDS", ",");
         uint256[] memory assetKinds = vm.envUint("MDB_MAINNET_ASSET_KINDS", ",");
         uint256[] memory riskClasses = vm.envUint("MDB_MAINNET_RISK_CLASSES", ",");
         uint256[] memory maximumWeights = vm.envUint("MDB_MAINNET_MAX_WEIGHTS_BPS", ",");
+        uint256[] memory safeCapacities = vm.envUint("MDB_MAINNET_SAFE_CAPACITY_USD_WAD", ",");
+        bytes32[] memory qualificationHashes =
+            vm.envBytes32("MDB_MAINNET_QUALIFICATION_HASHES", ",");
         address uniswapFactory = vm.envAddress("MDB_UNISWAP_FACTORY");
         address uniswapRouter = vm.envAddress("MDB_UNISWAP_ROUTER");
         address[] memory directPools = vm.envAddress("MDB_MAINNET_DIRECT_POOLS", ",");
@@ -48,20 +47,21 @@ contract DeployMainnet is Script {
             vm.envUint("MDB_MAINNET_MIN_DIRECT_LIQUIDITY", ",");
         uint256[] memory minimumBridgeLiquidity =
             vm.envUint("MDB_MAINNET_MIN_BRIDGE_LIQUIDITY", ",");
-        address wethSupplyAdapter = vm.envAddress("MDB_WETH_SUPPLY_ADAPTER");
         require(
-            deployer != address(0) && sequencerFeed != address(0) && uniswapFactory != address(0)
-                && uniswapRouter != address(0),
+            deployer != address(0) && uniswapFactory != address(0) && uniswapRouter != address(0),
             "zero role"
         );
         require(
-            riskAssets.length > 0 && riskAssets.length == feeds.length
-                && feeds.length == heartbeats.length && feeds.length == assetKinds.length
-                && feeds.length == riskClasses.length && feeds.length == maximumWeights.length
-                && feeds.length == directPools.length && feeds.length == bridgePools.length
-                && feeds.length == minimumDirectLiquidity.length
-                && feeds.length == minimumBridgeLiquidity.length,
-            "feed manifest"
+            riskAssets.length > 0 && riskAssets.length == assetKinds.length
+                && riskAssets.length == assetIds.length && riskAssets.length == riskClasses.length
+                && riskAssets.length == maximumWeights.length
+                && riskAssets.length == safeCapacities.length
+                && riskAssets.length == qualificationHashes.length
+                && riskAssets.length == directPools.length
+                && riskAssets.length == bridgePools.length
+                && riskAssets.length == minimumDirectLiquidity.length
+                && riskAssets.length == minimumBridgeLiquidity.length,
+            "DEX manifest"
         );
         vm.startBroadcast();
 
@@ -70,17 +70,6 @@ contract DeployMainnet is Script {
                 new ERC1967Proxy(
                     address(new AssetRegistry()),
                     abi.encodeCall(AssetRegistry.initialize, (deployer, CHAIN_ID))
-                )
-            )
-        );
-        ChainlinkValuationAdapter circuitBreaker = ChainlinkValuationAdapter(
-            address(
-                new ERC1967Proxy(
-                    address(new ChainlinkValuationAdapter()),
-                    abi.encodeCall(
-                        ChainlinkValuationAdapter.initialize,
-                        (deployer, sequencerFeed, uint32(3_600))
-                    )
                 )
             )
         );
@@ -95,11 +84,11 @@ contract DeployMainnet is Script {
                 )
             )
         );
-        circuitBreaker.configureFeed(CANONICAL_USDG, usdgFeed, uint32(usdgHeartbeat), false, true);
+        valuation.reinitializeV2(4 hours);
 
         for (uint256 i; i < riskAssets.length; ++i) {
             address token = riskAssets[i];
-            require(token.code.length > 0 && feeds[i].code.length > 0, "canonical code");
+            require(token.code.length > 0, "canonical code");
             require(IERC20Metadata(token).decimals() <= 36, "token decimals");
             bool isWeth = token == CANONICAL_WETH;
             require(
@@ -111,7 +100,6 @@ contract DeployMainnet is Script {
                 "risk"
             );
             require(maximumWeights[i] > 0 && maximumWeights[i] <= 2_000, "weight");
-            circuitBreaker.configureFeed(token, feeds[i], uint32(heartbeats[i]), !isWeth, true);
             valuation.configureRoute(
                 token,
                 DexTwapValuationAdapter.TwapRoute({
@@ -121,6 +109,16 @@ contract DeployMainnet is Script {
                     minimumBridgeLiquidity: uint128(minimumBridgeLiquidity[i]),
                     minimumObservationCardinality: 2,
                     maximumObservationAge: 3_600,
+                    enabled: true
+                })
+            );
+            valuation.configureSafety(
+                token,
+                DexTwapValuationAdapter.DexSafetyConfig({
+                    minimumDirectHarmonicLiquidity: uint128(minimumDirectLiquidity[i]),
+                    minimumBridgeHarmonicLiquidity: uint128(minimumBridgeLiquidity[i]),
+                    maximumSpotToShortDeviationBps: 300,
+                    maximumShortToLongDeviationBps: 500,
                     enabled: true
                 })
             );
@@ -205,7 +203,7 @@ contract DeployMainnet is Script {
                 new ERC1967Proxy(
                     address(new UniswapExecutionAdapter()),
                     abi.encodeCall(
-                        UniswapExecutionAdapter.initialize,
+                        UniswapExecutionAdapter.initializeDexOnly,
                         (
                             deployer,
                             address(basket),
@@ -213,14 +211,30 @@ contract DeployMainnet is Script {
                             CANONICAL_WETH,
                             uniswapFactory,
                             uniswapRouter,
-                            address(valuation),
-                            address(circuitBreaker),
-                            uint32(3_600)
+                            address(valuation)
                         )
                     )
                 )
             )
         );
+        registry.registerAsset(
+            AssetRegistry.AssetRecord({
+                token: CANONICAL_USDG,
+                robinhoodUid: bytes32(0),
+                kind: AssetRegistry.AssetKind.RESERVE,
+                riskClass: AssetRegistry.RiskClass.RESERVE,
+                valuationAdapter: address(valuation),
+                executionAdapter: address(execution),
+                circulatingSupplyAdapter: address(0),
+                maximumWeightBps: 0,
+                registered: false,
+                active: false
+            })
+        );
+        bytes32[] memory reserveTags = new bytes32[](2);
+        reserveTags[0] = bytes32("reserve");
+        reserveTags[1] = bytes32("stablecoin");
+        registry.configureAssetIdentity(CANONICAL_USDG, 1, reserveTags);
         for (uint256 i; i < riskAssets.length; ++i) {
             address token = riskAssets[i];
             bool isWeth = token == CANONICAL_WETH;
@@ -233,12 +247,23 @@ contract DeployMainnet is Script {
                     riskClass: AssetRegistry.RiskClass(riskClasses[i]),
                     valuationAdapter: address(valuation),
                     executionAdapter: address(execution),
-                    circulatingSupplyAdapter: isWeth ? wethSupplyAdapter : address(0),
+                    circulatingSupplyAdapter: address(0),
                     maximumWeightBps: uint16(maximumWeights[i]),
                     registered: false,
                     active: false
                 })
             );
+            require(assetIds[i] > 1 && assetIds[i] <= type(uint32).max, "asset id");
+            bytes32[] memory tags = new bytes32[](2);
+            tags[0] = assetKinds[i] == uint8(AssetRegistry.AssetKind.STOCK)
+                ? bytes32("stock")
+                : assetKinds[i] == uint8(AssetRegistry.AssetKind.ETF)
+                    ? bytes32("etf")
+                    : bytes32("crypto");
+            tags[1] = riskClasses[i] == uint8(AssetRegistry.RiskClass.HIGH_VOLATILITY)
+                ? bytes32("high_volatility")
+                : bytes32("standard_risk");
+            registry.configureAssetIdentity(token, uint32(assetIds[i]), tags);
             execution.setPool(directPools[i], true);
             execution.setFeeTier(IUniswapPoolFee(directPools[i]).fee(), true);
             if (bridgePools[i] != address(0)) {
@@ -246,13 +271,65 @@ contract DeployMainnet is Script {
                 execution.setFeeTier(IUniswapPoolFee(bridgePools[i]).fee(), true);
             }
         }
+        registry.reinitializeV3();
+        registry.recordQualificationV3(
+            CANONICAL_USDG,
+            AssetRegistry.AssetQualificationV3({
+                evidenceHash: keccak256(
+                    abi.encode("canonical-mainnet-usdg", block.chainid, CANONICAL_USDG)
+                ),
+                observedAt: uint64(block.timestamp),
+                validUntil: uint64(block.timestamp + 2 hours),
+                consecutiveHours: 48,
+                regularMarketSessions: 0,
+                safeTwoSidedCapacityUsdWad: 0,
+                identityValid: true,
+                routeMature: false,
+                shortTwapValid: false,
+                longTwapValid: false,
+                timeWeightedLiquidityValid: false,
+                liquidityValid: false,
+                transferBehaviorValid: true,
+                tokenStateClear: true
+            })
+        );
+        for (uint256 i; i < riskAssets.length; ++i) {
+            registry.recordQualificationV3(
+                riskAssets[i],
+                AssetRegistry.AssetQualificationV3({
+                    evidenceHash: qualificationHashes[i],
+                    observedAt: uint64(block.timestamp),
+                    validUntil: uint64(block.timestamp + 2 hours),
+                    consecutiveHours: 48,
+                    regularMarketSessions: assetKinds[i] == uint8(AssetRegistry.AssetKind.STOCK)
+                        || assetKinds[i] == uint8(AssetRegistry.AssetKind.ETF)
+                        ? 2
+                        : 0,
+                    safeTwoSidedCapacityUsdWad: uint128(safeCapacities[i]),
+                    identityValid: true,
+                    routeMature: true,
+                    shortTwapValid: true,
+                    longTwapValid: true,
+                    timeWeightedLiquidityValid: true,
+                    liquidityValid: true,
+                    transferBehaviorValid: true,
+                    tokenStateClear: true
+                })
+            );
+        }
+        registry.setQualificationV3Enabled(true);
+        registry.setActive(CANONICAL_USDG, true);
+        for (uint256 i; i < riskAssets.length; ++i) {
+            registry.setActive(riskAssets[i], true);
+        }
         basket.reinitializeV3(address(registry), address(execution));
         basket.reinitializeV4(false, false, false);
         basket.reinitializeV5(address(valuation), address(execution));
+        basket.reinitializeV6(INITIAL_TVL_CAP);
         basket.setDexPriceAge(1 hours);
 
         string memory root = "mainnet";
-        vm.serializeUint(root, "schemaVersion", 4);
+        vm.serializeUint(root, "schemaVersion", 5);
         vm.serializeString(root, "environment", "robinhood-mainnet");
         vm.serializeUint(root, "chainId", CHAIN_ID);
         vm.serializeBool(root, "canonicalAssets", true);
@@ -261,7 +338,6 @@ contract DeployMainnet is Script {
         vm.serializeAddress(root, "deployer", deployer);
         vm.serializeAddress(root, "usdg", CANONICAL_USDG);
         vm.serializeAddress(root, "assetRegistry", address(registry));
-        vm.serializeAddress(root, "circuitBreaker", address(circuitBreaker));
         vm.serializeAddress(root, "dexValuationAdapter", address(valuation));
         vm.serializeAddress(root, "dexFactory", uniswapFactory);
         vm.serializeAddress(root, "dexRouter", uniswapRouter);

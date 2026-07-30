@@ -125,9 +125,13 @@ contract UniswapExecutionAdapter is
     mapping(uint24 => bool) public approvedFeeTier;
     mapping(address => bool) public approvedIntermediate;
     mapping(address => bool) public approvedPool;
+    // Appended DEX-only safety mode. Legacy circuit-breaker fields remain readable for UUPS
+    // storage compatibility but have no authority while this flag is enabled.
+    bool public dexOnlySafetyEnabled;
 
     event PoolApprovalUpdated(address indexed pool, bool approved);
     event FeeTierApprovalUpdated(uint24 indexed feeTier, bool approved);
+    event DexOnlySafetyEnabled(bool enabled);
     event SwapExecuted(
         address indexed tokenIn,
         address indexed tokenOut,
@@ -155,6 +159,44 @@ contract UniswapExecutionAdapter is
                 || dexMark_ == address(0) || circuitBreaker_ == address(0)
                 || maximumCircuitBreakerAge_ == 0
         ) revert InvalidConfiguration();
+        _initializeBase(admin, vault_, reserve_, weth_, factory_, router_, dexMark_);
+        circuitBreaker = ICircuitBreakerPrice(circuitBreaker_);
+        maximumCircuitBreakerAge = maximumCircuitBreakerAge_;
+    }
+
+    function initializeDexOnly(
+        address admin,
+        address vault_,
+        address reserve_,
+        address weth_,
+        address factory_,
+        address router_,
+        address dexMark_
+    ) external initializer {
+        if (
+            admin == address(0) || vault_ == address(0) || reserve_ == address(0)
+                || weth_ == address(0) || factory_ == address(0) || router_ == address(0)
+                || dexMark_ == address(0)
+        ) revert InvalidConfiguration();
+        _initializeBase(admin, vault_, reserve_, weth_, factory_, router_, dexMark_);
+        dexOnlySafetyEnabled = true;
+        emit DexOnlySafetyEnabled(true);
+    }
+
+    function reinitializeDexOnly() external reinitializer(2) onlyRole(DEFAULT_ADMIN_ROLE) {
+        dexOnlySafetyEnabled = true;
+        emit DexOnlySafetyEnabled(true);
+    }
+
+    function _initializeBase(
+        address admin,
+        address vault_,
+        address reserve_,
+        address weth_,
+        address factory_,
+        address router_,
+        address dexMark_
+    ) private {
         __UUPSUpgradeable_init();
         __AccessControl_init();
         __ReentrancyGuard_init();
@@ -166,8 +208,6 @@ contract UniswapExecutionAdapter is
         factory = IUniswapV3FactoryExecution(factory_);
         router = ISwapRouter02(router_);
         dexMark = IDexMark(dexMark_);
-        circuitBreaker = ICircuitBreakerPrice(circuitBreaker_);
-        maximumCircuitBreakerAge = maximumCircuitBreakerAge_;
         approvedIntermediate[weth_] = true;
     }
 
@@ -189,7 +229,9 @@ contract UniswapExecutionAdapter is
     {
         if (msg.sender != vault) revert UnauthorizedVault();
         (address firstPool, address secondPool) = _validatePlan(plan);
-        if (increasesExposure) _checkCircuitBreaker(plan.route.tokenOut);
+        if (increasesExposure && !dexOnlySafetyEnabled) {
+            _checkCircuitBreaker(plan.route.tokenOut);
+        }
 
         IERC20 tokenIn = IERC20(plan.route.tokenIn);
         IERC20 tokenOut = IERC20(plan.route.tokenOut);

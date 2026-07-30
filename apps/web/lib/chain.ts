@@ -51,6 +51,8 @@ export type DeploymentAsset = {
   riskClass: RiskClass;
   decimals: number;
   maximumWeightBps: number;
+  safeTwoSidedCapacityUsdWad?: string;
+  maximumExposureUsdWad?: string;
   robinhoodUid: string | null;
   controlId?: number;
   tags?: string[];
@@ -72,6 +74,7 @@ export type DexVenueManifestV1 = {
   weth: Address;
   feeTiers: number[];
   twapWindowSeconds: number;
+  longTwapWindowSeconds?: number;
   quoteLifetimeSeconds: number;
   maximumReferenceBlockAge: number;
   pools: DexVenuePool[];

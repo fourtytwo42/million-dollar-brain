@@ -109,6 +109,30 @@ contract ArbSysBlockNumberMock {
     }
 }
 
+contract AssetCapacityRegistryMock {
+    uint128 public maximumExposure;
+
+    function setMaximumExposure(uint128 value) external {
+        maximumExposure = value;
+    }
+
+    function isActive(address) external pure returns (bool) {
+        return true;
+    }
+
+    function isHighVolatility(address) external pure returns (bool) {
+        return false;
+    }
+
+    function maximumWeightBps(address) external pure returns (uint16) {
+        return 2_000;
+    }
+
+    function maximumExposureUsdWad(address) external view returns (uint128) {
+        return maximumExposure;
+    }
+}
+
 contract DexExecutionTest is Test {
     MockToken internal usdg;
     MockToken internal asset;
@@ -285,6 +309,39 @@ contract DexExecutionTest is Test {
         vm.prank(address(0xB0B));
         vm.expectRevert();
         vault.setDexAdapters(address(twap), address(adapter));
+    }
+
+    function testV6RejectsExposureAboveProvenCapacity() public {
+        AssetCapacityRegistryMock registry = new AssetCapacityRegistryMock();
+        registry.setMaximumExposure(10e18);
+        address[] memory assets = new address[](1);
+        assets[0] = address(asset);
+        BasketVault vault = new BasketVault();
+        vault.initialize(
+            address(this),
+            address(usdg),
+            address(router),
+            address(this),
+            address(this),
+            address(this),
+            assets
+        );
+        vault.reinitializeV3(address(registry), address(adapter));
+        vault.reinitializeV5(address(twap), address(adapter));
+        vault.reinitializeV6(60_000e18);
+        usdg.mint(address(vault), 80e18);
+        asset.mint(address(vault), 10e18);
+
+        address[] memory targetAssets = new address[](2);
+        targetAssets[0] = address(usdg);
+        targetAssets[1] = address(asset);
+        uint16[] memory weights = new uint16[](2);
+        weights[0] = 8_000;
+        weights[1] = 2_000;
+        BasketVault.DexSwapPlan[] memory plans = new BasketVault.DexSwapPlan[](0);
+
+        vm.expectRevert(BasketVault.AssetCapacityExceeded.selector);
+        vault.rebalanceWithDexPlan(targetAssets, weights, keccak256("capacity"), plans);
     }
 
     function _buyPlan(uint256 amountIn, uint256 quotedOut)

@@ -117,29 +117,41 @@ function asset(
       kind === "crypto" || kind === "token" ? address(102) : null,
     canonicalSource: "official-fixture",
     qualification: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       evidenceHash: `hash-${value}`,
       observedAt: new Date().toISOString(),
       validUntil: new Date(Date.now() + 86_400_000).toISOString(),
       qualificationHours: 48,
       regularMarketSessions: 2,
       lastFailureAt: null,
-      marketCapOrAumUsdWad: (100_000_000n * 10n ** 18n).toString(),
-      executableDepthUsdWad: (250_000n * 10n ** 18n).toString(),
+      safeTwoSidedCapacityUsdWad: (25_000n * 10n ** 18n).toString(),
+      maximumExposureUsdWad: (12_500n * 10n ** 18n).toString(),
+      capacityProbeUsdWad: [(25_000n * 10n ** 18n).toString()],
       buyImpactBps: 100,
       sellImpactBps: 100,
       identityValid: true,
-      oracleValid: true,
+      routeMature: true,
       liquidityValid: true,
       transferBehaviorValid: true,
-      corporateActionClear: true,
+      tokenStateClear: true,
+      dexSafety: {
+        shortTwapWindowSeconds: 1800,
+        longTwapWindowSeconds: 14400,
+        shortTwapValid: true,
+        longTwapValid: true,
+        timeWeightedLiquidityValid: true,
+        spotToShortDeviationBps: 10,
+        shortToLongDeviationBps: 20,
+        observationCardinality: 8,
+        newestObservationAt: new Date().toISOString(),
+      },
       reasons: [],
     },
     active: true,
   };
 }
 
-test("qualification enforces 48 hours, market sessions, liquidity, and supply evidence", () => {
+test("V3 qualification enforces 48 hours, market sessions, DEX safety, and capacity", () => {
   const crypto = asset(1, "crypto", "high_volatility");
   assert.ok(
     crypto.qualification && "qualificationHours" in crypto.qualification,
@@ -150,9 +162,11 @@ test("qualification enforces 48 hours, market sessions, liquidity, and supply ev
   assert.equal(qualificationStatus(crypto, qualification).eligible, false);
   qualification.qualificationHours = 48;
   crypto.circulatingSupplyAdapter = null;
+  assert.equal(qualificationStatus(crypto, qualification).eligible, true);
+  qualification.dexSafety.longTwapValid = false;
   assert.match(
     qualificationStatus(crypto, qualification).reasons.join(" "),
-    /circulating supply/,
+    /four-hour/,
   );
 });
 

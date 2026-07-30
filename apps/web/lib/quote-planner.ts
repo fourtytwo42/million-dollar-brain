@@ -76,6 +76,11 @@ export type JsonDexSwapPlan = {
     estimatedGasCostUsdG: string;
     twapAmountOut: string;
     priceImpactBps: number;
+    capacity: {
+      maximumExposureUsdWad: string | null;
+      projectedExposureUsdWad: string | null;
+      utilizationBps: number | null;
+    };
     path: string;
     rejectedRoutes: {
       path: string;
@@ -108,7 +113,7 @@ function venue() {
   const d = deployment();
   const configured = d.dexVenue as Venue | undefined;
   if (
-    d.schemaVersion !== 4 ||
+    (d.schemaVersion ?? 0) < 4 ||
     !d.dexExecutionAdapter ||
     !d.dexValuationAdapter ||
     !configured?.factory ||
@@ -117,7 +122,7 @@ function venue() {
     !configured.weth ||
     !configured.pools?.length
   ) {
-    throw new Error("DEX venue manifest V4 is not active");
+    throw new Error("DEX venue manifest V4 or newer is not active");
   }
   return { d, venue: configured };
 }
@@ -395,6 +400,11 @@ function jsonPlan(
   vault: Address,
   blockNumber: bigint,
   issuedAt: number,
+  capacity: JsonDexSwapPlan["evidence"]["capacity"] = {
+    maximumExposureUsdWad: null,
+    projectedExposureUsdWad: null,
+    utilizationBps: null,
+  },
 ): JsonDexSwapPlan {
   const expiresAt = issuedAt + 30;
   return {
@@ -417,6 +427,7 @@ function jsonPlan(
       estimatedGasCostUsdG: selected.gasCostUsdG.toString(),
       twapAmountOut: twapAmountOut.toString(),
       priceImpactBps,
+      capacity,
       path: selected.path,
       rejectedRoutes: rejectedRoutes.map((route) => ({
         ...route,
@@ -446,6 +457,12 @@ export async function buildDexSwapPlans(
       const weight = BigInt(state.currentWeightsBps[asset.symbol] ?? 0);
       const buyValue = (net * weight) / 10_000n;
       if (buyValue === 0n || buyValue <= dust) continue;
+      const currentExposure = BigInt(state.holdingValues[asset.symbol] ?? "0");
+      const maximumExposure = BigInt(asset.maximumExposureUsdWad ?? "0");
+      const projectedExposure = currentExposure + buyValue;
+      if (maximumExposure > 0n && projectedExposure > maximumExposure) {
+        throw new Error(`${asset.symbol} DEX capacity would be exceeded`);
+      }
       const quote = await bestRoute(
         reserve.address,
         asset.address,
@@ -462,6 +479,15 @@ export async function buildDexSwapPlans(
           d.basket,
           blockNumber,
           issuedAt,
+          {
+            maximumExposureUsdWad:
+              maximumExposure > 0n ? maximumExposure.toString() : null,
+            projectedExposureUsdWad: projectedExposure.toString(),
+            utilizationBps:
+              maximumExposure > 0n
+                ? Number((projectedExposure * 10_000n) / maximumExposure)
+                : null,
+          },
         ),
       );
     }
@@ -559,6 +585,10 @@ export async function buildDexRebalancePlans(
     const currentValue = BigInt(state.holdingValues[asset.symbol] ?? "0");
     const targetValue =
       (totalNav * BigInt(allocationById[asset.id] ?? 0)) / 10_000n;
+    const maximumExposure = BigInt(asset.maximumExposureUsdWad ?? "0");
+    if (maximumExposure > 0n && targetValue > maximumExposure) {
+      throw new Error(`${asset.symbol} target exceeds proven DEX capacity`);
+    }
     if (targetValue <= currentValue || targetValue - currentValue <= dust)
       continue;
     const reserveIn =
@@ -581,6 +611,15 @@ export async function buildDexRebalancePlans(
         d.basket,
         blockNumber,
         issuedAt,
+        {
+          maximumExposureUsdWad:
+            maximumExposure > 0n ? maximumExposure.toString() : null,
+          projectedExposureUsdWad: targetValue.toString(),
+          utilizationBps:
+            maximumExposure > 0n
+              ? Number((targetValue * 10_000n) / maximumExposure)
+              : null,
+        },
       ),
     );
   }

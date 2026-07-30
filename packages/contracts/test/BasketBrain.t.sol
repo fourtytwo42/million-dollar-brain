@@ -147,6 +147,19 @@ contract BasketBrainTest is Test {
         assertEq(basket.symbol(), "BRAINS");
     }
 
+    function testV6UsesGovernanceConfiguredSixtyThousandDollarTvlCap() public {
+        vm.prank(admin);
+        basket.reinitializeV6(60_000e18);
+        assertEq(basket.effectiveTvlCapUsdWad(), 60_000e18);
+        assertTrue(basket.capacityEnforcementEnabled());
+
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        vm.expectRevert(BasketVault.TvlCapExceeded.selector);
+        basket.deposit(60_001e18, 0, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
+
     function testDepositRebalanceAndRedeem() public {
         uint256 creatorBefore = usdg.balanceOf(address(creatorVault));
         vm.startPrank(alice);

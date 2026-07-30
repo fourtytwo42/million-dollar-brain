@@ -44,7 +44,7 @@ The exact launch contracts are selected immediately before deployment from the t
 | Canonical Stock Token identity and status  | Robinhood Stock Token `https://api.robinhood.com/rhj/assets` and official chain contracts |
 | Quote, trading halt, and underlying volume | Robinhood Stock Token `https://api.robinhood.com/rhj/prices/{symbol}`                     |
 | Corporate actions and token multipliers    | Robinhood Stock Token `https://api.robinhood.com/rhj/corporate-actions`                   |
-| Execution and NAV price                    | Chainlink feed on Robinhood Chain when supported                                          |
+| Execution and NAV price                    | Qualified on-chain DEX routes, 30-minute TWAP, four-hour TWAP, and actual balance deltas  |
 | Token balances, transfers, and pool state  | Robinhood Chain RPC and indexed chain events                                              |
 | Issuer filings and structured fundamentals | SEC EDGAR Submissions and Company Facts APIs                                              |
 | Macro observations                         | FRED Series Observations API                                                              |
@@ -58,7 +58,11 @@ features in PostgreSQL. No unofficial historical backfill is allowed. Every
 metric carries coverage and remains unavailable until its official-history
 window matures. Raw candles remain outside the model prompt.
 
-Robinhood Stock Token quotes describe the underlying asset and are not multiplier-adjusted. Supported Chainlink Stock Token feeds are already multiplier-adjusted. The price adapter records this semantic difference and must not apply the ERC-8056 multiplier twice.
+Robinhood Stock Token quotes describe the underlying asset but do not set
+BRAINS NAV or transaction settlement. DEX pool observations and actual token
+balance deltas are authoritative. ERC-8056 identity, pause, halt, and
+multiplier-transition state remain qualification inputs; no off-chain quote or
+feed may authorize a token or a trade.
 
 ## 4. Deterministically calculated metrics
 
@@ -137,7 +141,7 @@ Ornith also receives the current basket, protocol limits, complete brain, previo
 Ornith has no browser, search, or arbitrary HTTP access. It may request one
 orchestrated research round for at most 16 registered asset identities.
 Requests are validated against the registry and return only immutable
-structured evidence from approved official, on-chain, portfolio, and 0x
+structured evidence from approved official, on-chain, portfolio, and DEX
 sources.
 
 This prevents:

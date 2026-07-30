@@ -31,7 +31,6 @@ export function contractBytecodeHashes(repoRoot) {
     "BasketVault",
     "BrainMarketplace",
     "AssetRegistry",
-    "ChainlinkValuationAdapter",
     "DexTwapValuationAdapter",
     "UniswapExecutionAdapter",
     "RewardDistributor",

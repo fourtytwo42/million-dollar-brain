@@ -10,6 +10,7 @@ contract TwapPoolMock {
     address public token1;
     uint128 public liquidity;
     int24 public meanTick;
+    int24 public longMeanTick;
     int24 public spotTick;
     uint16 public cardinality;
     uint32 public observationTime;
@@ -29,10 +30,15 @@ contract TwapPoolMock {
         uint32 observationTime_
     ) external {
         meanTick = meanTick_;
+        longMeanTick = meanTick_;
         spotTick = spotTick_;
         liquidity = liquidity_;
         cardinality = cardinality_;
         observationTime = observationTime_;
+    }
+
+    function setLongMeanTick(int24 longMeanTick_) external {
+        longMeanTick = longMeanTick_;
     }
 
     function observe(uint32[] calldata secondsAgos)
@@ -40,10 +46,30 @@ contract TwapPoolMock {
         view
         returns (int56[] memory cumulatives, uint160[] memory secondsPerLiquidity)
     {
-        cumulatives = new int56[](2);
-        secondsPerLiquidity = new uint160[](2);
-        cumulatives[0] = 0;
-        cumulatives[1] = int56(meanTick) * int56(uint56(secondsAgos[0]));
+        cumulatives = new int56[](secondsAgos.length);
+        secondsPerLiquidity = new uint160[](secondsAgos.length);
+        uint32 longest = secondsAgos[0];
+        int56 current = int56(longMeanTick) * int56(uint56(longest));
+        uint256 currentLiquidity =
+            (uint256(longest) << 128) / uint256(liquidity == 0 ? 1 : liquidity);
+        for (uint256 i; i < secondsAgos.length; ++i) {
+            uint32 age = secondsAgos[i];
+            if (age == 0) {
+                cumulatives[i] = current;
+                secondsPerLiquidity[i] = uint160(currentLiquidity);
+            } else if (age == longest) {
+                cumulatives[i] = 0;
+                secondsPerLiquidity[i] = 0;
+            } else {
+                cumulatives[i] =
+                    current - int56(meanTick) * int56(uint56(age));
+                secondsPerLiquidity[i] = uint160(
+                    currentLiquidity
+                        - ((uint256(age) << 128)
+                            / uint256(liquidity == 0 ? 1 : liquidity))
+                );
+            }
+        }
     }
 
     function slot0() external view returns (uint160, int24, uint16, uint16, uint16, uint8, bool) {
@@ -123,5 +149,26 @@ contract DexTwapValuationTest is Test {
 
         vm.expectRevert(DexTwapValuationAdapter.InvalidConfiguration.selector);
         adapter.setMaximumObservationAge(address(asset), 1 hours + 1);
+    }
+
+    function testV2RequiresShortLongTwapAgreementAndTimeWeightedLiquidity() public {
+        pool.setState(0, 0, 1_000_000, 64, uint32(block.timestamp));
+        adapter.reinitializeV2(4 hours);
+        adapter.configureSafety(
+            address(asset),
+            DexTwapValuationAdapter.DexSafetyConfig({
+                minimumDirectHarmonicLiquidity: 900_000,
+                minimumBridgeHarmonicLiquidity: 0,
+                maximumSpotToShortDeviationBps: 300,
+                maximumShortToLongDeviationBps: 500,
+                enabled: true
+            })
+        );
+        (,, bool valid) = adapter.quoteStatus(address(asset));
+        assertTrue(valid);
+
+        pool.setLongMeanTick(1_000);
+        (,, valid) = adapter.quoteStatus(address(asset));
+        assertFalse(valid);
     }
 }

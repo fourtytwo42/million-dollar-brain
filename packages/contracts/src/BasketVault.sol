@@ -41,6 +41,7 @@ interface IAssetRegistryView {
     function isActive(address token) external view returns (bool);
     function isHighVolatility(address token) external view returns (bool);
     function maximumWeightBps(address token) external view returns (uint16);
+    function maximumExposureUsdWad(address token) external view returns (uint128);
 }
 
 interface IExecutionAdapterV3 {
@@ -128,6 +129,7 @@ contract BasketVault is
     error StalePrice();
     error InvalidWeights();
     error AllocationLimitExceeded();
+    error AssetCapacityExceeded();
 
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
     uint256 public constant BPS = 10_000;
@@ -193,7 +195,10 @@ contract BasketVault is
     IDexExecutionAdapterV1 public dexExecutionAdapter;
     bool public dexExecutionEnabled;
     bool public legacyPlanExecutionDisabled;
-    uint256[40] private __gap;
+    // V6 storage. Zero preserves the legacy cap until the V6 reinitializer is called.
+    uint256 public tvlCapUsdWad;
+    bool public capacityEnforcementEnabled;
+    uint256[38] private __gap;
 
     event Deposited(address indexed account, uint256 gross, uint256 shares, uint256 fee);
     event DepositAssetPurchased(
@@ -229,6 +234,7 @@ contract BasketVault is
     event DexPriceAgeConfigured(uint256 maximumPriceAge);
     event SupportedAssetAdded(address indexed asset);
     event SupportedAssetRemoved(address indexed asset);
+    event BasketV6Configured(uint256 tvlCapUsdWad, bool capacityEnforcementEnabled);
 
     function initialize(
         address admin,
@@ -322,6 +328,27 @@ contract BasketVault is
         legacyPlanExecutionDisabled = true;
         swapPlansRequired = true;
         emit BasketV5Configured(dexValuation_, dexExecutionAdapter_);
+    }
+
+    function reinitializeV6(uint256 tvlCapUsdWad_)
+        external
+        reinitializer(6)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (tvlCapUsdWad_ == 0) revert InvalidConfiguration();
+        tvlCapUsdWad = tvlCapUsdWad_;
+        capacityEnforcementEnabled = true;
+        emit BasketV6Configured(tvlCapUsdWad_, true);
+    }
+
+    function setTvlCapUsdWad(uint256 tvlCapUsdWad_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!capacityEnforcementEnabled || tvlCapUsdWad_ == 0) revert InvalidConfiguration();
+        tvlCapUsdWad = tvlCapUsdWad_;
+        emit BasketV6Configured(tvlCapUsdWad_, true);
+    }
+
+    function effectiveTvlCapUsdWad() public view returns (uint256) {
+        return tvlCapUsdWad == 0 ? TVL_CAP : tvlCapUsdWad;
     }
 
     function setDexPriceAge(uint256 maximumPriceAge_) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -487,13 +514,16 @@ contract BasketVault is
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        if (beforeNav + _reserveToUsdWad(grossAmount) > TVL_CAP) revert TvlCapExceeded();
+        if (beforeNav + _reserveToUsdWad(grossAmount) > effectiveTvlCapUsdWad()) {
+            revert TvlCapExceeded();
+        }
         uint256 walletValue =
             beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
         if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
         if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
         _routeFee(fee);
         _investDepositWithDexPlans(msg.sender, net, beforeNav, plans);
+        _enforceAssetCapacities();
         uint256 afterNav = totalAssetsUsd();
         if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
@@ -515,7 +545,9 @@ contract BasketVault is
         uint256 fee = (grossAmount * FEE_BPS) / BPS;
         uint256 net = grossAmount - fee;
         uint256 netWad = _reserveToUsdWad(net);
-        if (beforeNav + _reserveToUsdWad(grossAmount) > TVL_CAP) revert TvlCapExceeded();
+        if (beforeNav + _reserveToUsdWad(grossAmount) > effectiveTvlCapUsdWad()) {
+            revert TvlCapExceeded();
+        }
         uint256 walletValue =
             beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
         if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
@@ -672,6 +704,7 @@ contract BasketVault is
             emit RebalanceAssetTraded(cycleHash, asset, true, received, reserveIn, buyValue);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
+        _enforceAssetCapacities();
         _storeTargetWeights(targetAssets, weights, cycleHash);
         emit Rebalanced(cycleHash, totalAssetsUsd());
     }
@@ -903,6 +936,20 @@ contract BasketVault is
                 riskPositions > MAX_RISK_POSITIONS || highVolatilityWeight > MAX_HIGH_VOLATILITY_BPS
             ) {
                 revert AllocationLimitExceeded();
+            }
+        }
+    }
+
+    function _enforceAssetCapacities() private view {
+        if (!capacityEnforcementEnabled || address(assetRegistry) == address(0)) return;
+        uint256 perAssetTvlLimit = (effectiveTvlCapUsdWad() * MAX_ASSET_WEIGHT_BPS) / BPS;
+        for (uint256 i; i < assets.length; ++i) {
+            address asset = assets[i];
+            uint256 registryLimit = assetRegistry.maximumExposureUsdWad(asset);
+            uint256 effectiveLimit =
+                registryLimit < perAssetTvlLimit ? registryLimit : perAssetTvlLimit;
+            if (effectiveLimit == 0 || assetValueUsd(asset) > effectiveLimit) {
+                revert AssetCapacityExceeded();
             }
         }
     }

@@ -63,6 +63,26 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         bool corporateActionClear;
     }
 
+    /// @notice DEX-native qualification evidence. Off-chain capitalization and oracle feeds are
+    /// deliberately excluded: identity, price formation, liquidity and capacity must be proven
+    /// from canonical contracts and approved on-chain pools.
+    struct AssetQualificationV3 {
+        bytes32 evidenceHash;
+        uint64 observedAt;
+        uint64 validUntil;
+        uint32 consecutiveHours;
+        uint8 regularMarketSessions;
+        uint128 safeTwoSidedCapacityUsdWad;
+        bool identityValid;
+        bool routeMature;
+        bool shortTwapValid;
+        bool longTwapValid;
+        bool timeWeightedLiquidityValid;
+        bool liquidityValid;
+        bool transferBehaviorValid;
+        bool tokenStateClear;
+    }
+
     uint256 public registryChainId;
     address[] private _tokens;
     mapping(address token => AssetRecord record) private _records;
@@ -73,7 +93,12 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     mapping(uint32 id => address token) private _tokensByAssetId;
     mapping(uint32 id => mapping(bytes32 tag => bool enabled)) private _assetTags;
     uint16 public assetIdentityVersion;
-    uint256[41] private __gap;
+    // Appended V3 storage. The legacy qualification mapping remains intact for rollback/audit.
+    mapping(address token => AssetQualificationV3 qualification) private _qualificationsV3;
+    mapping(address token => uint128 maximumExposure) private _maximumExposureUsdWad;
+    uint16 public qualificationSchemaVersion;
+    bool public qualificationV3Enabled;
+    uint256[38] private __gap;
 
     event AssetRegistered(address indexed token, bytes32 indexed robinhoodUid, AssetKind kind);
     event AssetConfigurationUpdated(address indexed token);
@@ -87,6 +112,14 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     event AssetActivationChanged(address indexed token, bool active);
     event AssetIdentityConfigured(address indexed token, uint32 indexed assetId);
     event AssetTagConfigured(uint32 indexed assetId, bytes32 indexed tag, bool enabled);
+    event QualificationV3Recorded(
+        address indexed token,
+        bytes32 indexed evidenceHash,
+        uint128 safeTwoSidedCapacityUsdWad,
+        uint128 maximumExposureUsdWad,
+        bool eligible
+    );
+    event QualificationV3Enabled(bool enabled);
 
     function initialize(address admin, uint256 chainId_) external initializer {
         require(admin != address(0), "zero admin");
@@ -158,10 +191,46 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         );
     }
 
+    function reinitializeV3() external reinitializer(3) onlyRole(DEFAULT_ADMIN_ROLE) {
+        qualificationSchemaVersion = 3;
+    }
+
+    function recordQualificationV3(address token, AssetQualificationV3 calldata qualification)
+        external
+        onlyRole(QUALIFIER_ROLE)
+    {
+        AssetRecord storage record = _records[token];
+        require(record.registered, "unknown asset");
+        require(qualification.observedAt <= block.timestamp, "future observation");
+        require(qualification.validUntil > block.timestamp, "expired evidence");
+        _qualificationsV3[token] = qualification;
+        uint128 maximumExposure = record.kind == AssetKind.RESERVE
+            ? type(uint128).max
+            : qualification.safeTwoSidedCapacityUsdWad / 2;
+        _maximumExposureUsdWad[token] = maximumExposure;
+        if (qualificationV3Enabled && record.active && !_eligibleV3(record, qualification)) {
+            record.active = false;
+            emit AssetActivationChanged(token, false);
+        }
+        emit QualificationV3Recorded(
+            token,
+            qualification.evidenceHash,
+            qualification.safeTwoSidedCapacityUsdWad,
+            maximumExposure,
+            _eligibleV3(record, qualification)
+        );
+    }
+
+    function setQualificationV3Enabled(bool enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(!enabled || qualificationSchemaVersion == 3, "v3 not initialized");
+        qualificationV3Enabled = enabled;
+        emit QualificationV3Enabled(enabled);
+    }
+
     function setActive(address token, bool active) external onlyRole(ASSET_ADMIN_ROLE) {
         AssetRecord storage record = _records[token];
         require(record.registered, "unknown asset");
-        if (active) require(_eligible(record, _qualifications[token]), "asset not qualified");
+        if (active) require(_eligibleCurrent(record, token), "asset not qualified");
         record.active = active;
         emit AssetActivationChanged(token, active);
     }
@@ -176,7 +245,7 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
 
     function isActive(address token) external view returns (bool) {
         AssetRecord storage record = _records[token];
-        return record.active && _eligible(record, _qualifications[token]);
+        return record.active && _eligibleCurrent(record, token);
     }
 
     function isHighVolatility(address token) external view returns (bool) {
@@ -195,13 +264,13 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         uint256 count;
         for (uint256 i; i < _tokens.length; ++i) {
             AssetRecord storage record = _records[_tokens[i]];
-            if (record.active && _eligible(record, _qualifications[_tokens[i]])) count++;
+            if (record.active && _eligibleCurrent(record, _tokens[i])) count++;
         }
         active = new address[](count);
         uint256 cursor;
         for (uint256 i; i < _tokens.length; ++i) {
             AssetRecord storage record = _records[_tokens[i]];
-            if (record.active && _eligible(record, _qualifications[_tokens[i]])) {
+            if (record.active && _eligibleCurrent(record, _tokens[i])) {
                 active[cursor++] = _tokens[i];
             }
         }
@@ -249,7 +318,57 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         address token = _tokensByAssetId[id];
         if (token == address(0)) return false;
         AssetRecord storage record = _records[token];
-        return record.active && _eligible(record, _qualifications[token]);
+        return record.active && _eligibleCurrent(record, token);
+    }
+
+    function qualificationV3(address token)
+        external
+        view
+        returns (AssetQualificationV3 memory qualification, uint128 maximumExposureUsdWad_)
+    {
+        return (_qualificationsV3[token], _maximumExposureUsdWad[token]);
+    }
+
+    function maximumExposureUsdWad(address token) external view returns (uint128) {
+        return _maximumExposureUsdWad[token];
+    }
+
+    function isEligibleV3(address token) external view returns (bool) {
+        return _eligibleV3(_records[token], _qualificationsV3[token]);
+    }
+
+    function _eligibleCurrent(AssetRecord memory record, address token)
+        private
+        view
+        returns (bool)
+    {
+        return qualificationV3Enabled
+            ? _eligibleV3(record, _qualificationsV3[token])
+            : _eligible(record, _qualifications[token]);
+    }
+
+    function _eligibleV3(AssetRecord memory record, AssetQualificationV3 memory qualification)
+        private
+        view
+        returns (bool)
+    {
+        if (!record.registered || qualification.validUntil <= block.timestamp) return false;
+        if (qualification.consecutiveHours < MINIMUM_QUALIFICATION_HOURS) return false;
+        if (
+            (record.kind == AssetKind.STOCK || record.kind == AssetKind.ETF)
+                && qualification.regularMarketSessions < MINIMUM_REGULAR_MARKET_SESSIONS
+        ) return false;
+        if (
+            !qualification.identityValid || !qualification.transferBehaviorValid
+                || !qualification.tokenStateClear
+        ) return false;
+        if (record.kind == AssetKind.RESERVE) return true;
+        if (
+            qualification.safeTwoSidedCapacityUsdWad == 0 || !qualification.routeMature
+                || !qualification.shortTwapValid || !qualification.longTwapValid
+                || !qualification.timeWeightedLiquidityValid || !qualification.liquidityValid
+        ) return false;
+        return record.valuationAdapter != address(0) && record.executionAdapter != address(0);
     }
 
     function _eligible(AssetRecord memory record, AssetQualification memory qualification)

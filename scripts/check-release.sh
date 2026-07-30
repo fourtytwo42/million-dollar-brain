@@ -42,7 +42,7 @@ case "$environment" in
     [[ "$(jq -r '.gitSha' "$acceptance")" == "$(git rev-parse HEAD)" ]]
     ./scripts/rehearse-mainnet.sh
     node scripts/build-mainnet-candidate.mjs
-    candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v3.json"
+    candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v5.json"
     jq -e '
       .chainId == 4663 and .broadcastPermitted == false and
       .activationState == "paused-canary" and .signed == true and

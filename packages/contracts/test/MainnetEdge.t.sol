@@ -153,6 +153,58 @@ contract MainnetEdgeTest is Test {
         assertFalse(registry.isActive(address(tokenOut)));
     }
 
+    function testDexNativeQualificationRequiresMatureCapacityWithoutSupplyAdapter() public {
+        AssetRegistry registry = AssetRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(new AssetRegistry()),
+                    abi.encodeCall(AssetRegistry.initialize, (address(this), block.chainid))
+                )
+            )
+        );
+        registry.registerAsset(
+            AssetRegistry.AssetRecord({
+                token: address(tokenOut),
+                robinhoodUid: bytes32(0),
+                kind: AssetRegistry.AssetKind.CRYPTO,
+                riskClass: AssetRegistry.RiskClass.HIGH_VOLATILITY,
+                valuationAdapter: address(oracle),
+                executionAdapter: address(adapter),
+                circulatingSupplyAdapter: address(0),
+                maximumWeightBps: 2_000,
+                registered: false,
+                active: false
+            })
+        );
+        registry.reinitializeV3();
+        AssetRegistry.AssetQualificationV3 memory qualification =
+            AssetRegistry.AssetQualificationV3({
+                evidenceHash: keccak256("dex-capacity"),
+                observedAt: uint64(block.timestamp),
+                validUntil: uint64(block.timestamp + 2 hours),
+                consecutiveHours: 48,
+                regularMarketSessions: 0,
+                safeTwoSidedCapacityUsdWad: uint128(25_000e18),
+                identityValid: true,
+                routeMature: true,
+                shortTwapValid: true,
+                longTwapValid: true,
+                timeWeightedLiquidityValid: true,
+                liquidityValid: true,
+                transferBehaviorValid: true,
+                tokenStateClear: true
+            });
+        registry.recordQualificationV3(address(tokenOut), qualification);
+        registry.setQualificationV3Enabled(true);
+        registry.setActive(address(tokenOut), true);
+        assertTrue(registry.isActive(address(tokenOut)));
+        assertEq(registry.maximumExposureUsdWad(address(tokenOut)), 12_500e18);
+
+        qualification.longTwapValid = false;
+        registry.recordQualificationV3(address(tokenOut), qualification);
+        assertFalse(registry.isActive(address(tokenOut)));
+    }
+
     function testExecutionBlockWindowIsGovernanceBounded() public {
         assertEq(adapter.currentReferenceBlock(), block.number);
         adapter.setExecutionLimits(75, 600);

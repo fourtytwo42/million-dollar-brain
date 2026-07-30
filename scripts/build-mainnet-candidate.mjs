@@ -7,8 +7,9 @@ import {
   sha256,
 } from "./lib/release-artifacts.mjs";
 import {
-  MAINNET_CORE_SYMBOLS,
-  MAINNET_OPTIONAL_SYMBOLS,
+  MAINNET_PRIORITY_SYMBOLS,
+  MAINNET_TVL_CAP_USD_WAD,
+  MAINNET_WATCHLIST_SYMBOLS,
 } from "./lib/mainnet-readiness.mjs";
 
 const repoRoot = resolve(import.meta.dirname, "..");
@@ -17,7 +18,7 @@ const statePath =
   resolve(repoRoot, "var/mainnet-shadow/state.json");
 const stableOutput = resolve(
   repoRoot,
-  "var/mainnet-readiness/mainnet-candidate-v4.json",
+  "var/mainnet-readiness/mainnet-candidate-v5.json",
 );
 const run = (command, args, options = {}) =>
   execFileSync(command, args, {
@@ -32,8 +33,8 @@ const gitSha = run("git", ["rev-parse", "HEAD"]);
 const pushed = gitSha === run("git", ["rev-parse", "@{u}"]);
 const clean = run("git", ["status", "--porcelain"]) === "";
 const state = JSON.parse(readFileSync(statePath, "utf8"));
-if (state.schemaVersion !== 4 || state.chainId !== 4663)
-  throw new Error("DEX-qualified mainnet shadow schema v4 is required");
+if (state.schemaVersion !== 5 || state.chainId !== 4663)
+  throw new Error("DEX-native mainnet shadow schema v5 is required");
 if (state.broadcastPermitted !== false)
   throw new Error("Shadow evidence unexpectedly permits broadcast");
 
@@ -52,64 +53,80 @@ const acceptancePassed =
   acceptance?.atomicSells === true &&
   acceptance?.autonomousCycles === true;
 const forkPassed =
-  fork?.schemaVersion === 4 &&
+  fork?.schemaVersion === 5 &&
   fork?.chainId === 4663 &&
   fork?.canonicalAssets === true &&
   fork?.activationState === "paused-canary";
 
 const includedSymbols = state.readiness?.includedSymbols ?? [];
+const includedRiskAssets = includedSymbols
+  .map((symbol) => state.assets.find((asset) => asset.symbol === symbol))
+  .filter(Boolean)
+  .sort((left, right) =>
+    left.address.toLowerCase().localeCompare(right.address.toLowerCase()),
+  )
+  .map((asset, index) => ({ ...asset, registryAssetId: index + 2 }));
 const candidateAssets = [
-  state.assets.find((asset) => asset.symbol === "USDG"),
-  ...includedSymbols.map((symbol) =>
-    state.assets.find((asset) => asset.symbol === symbol),
-  ),
-].filter(Boolean);
+  {
+    ...state.assets.find((asset) => asset.symbol === "USDG"),
+    registryAssetId: 1,
+  },
+  ...includedRiskAssets,
+].filter((asset) => asset.address);
+const registryAssetIds = Object.fromEntries(
+  candidateAssets.map((asset) => [asset.symbol, asset.registryAssetId]),
+);
 const assetPolicy = Object.fromEntries(
   includedSymbols.map((symbol) => [
     symbol,
     {
+      registryAssetId: registryAssetIds[symbol],
       kind:
-        symbol === "WETH"
-          ? "CRYPTO"
-          : ["SPY", "QQQ", "SOXX"].includes(symbol)
-            ? "ETF"
-            : "STOCK",
-      riskClass: symbol === "WETH" ? "HIGH_VOLATILITY" : "STANDARD",
-      maximumWeightBps: 2_000,
+        state.qualification
+          .find((row) => row.symbol === symbol)
+          ?.kind?.toUpperCase() ?? "TOKEN",
+      riskClass:
+        state.qualification
+          .find((row) => row.symbol === symbol)
+          ?.riskClass?.toUpperCase() ?? "HIGH_VOLATILITY",
+      maximumWeightBps:
+        state.qualification.find((row) => row.symbol === symbol)
+          ?.maximumWeightBps ?? 2_000,
+      safeTwoSidedCapacityUsdWad:
+        state.qualification.find((row) => row.symbol === symbol)
+          ?.safeTwoSidedCapacityUsdWad ?? "0",
+      maximumExposureUsdWad:
+        state.qualification.find((row) => row.symbol === symbol)
+          ?.maximumExposureUsdWad ?? "0",
       qualificationEvidenceHash:
         state.qualification.find((row) => row.symbol === symbol)
           ?.evidenceHash ?? null,
     },
   ]),
 );
-const feeds = Object.fromEntries(
-  state.feedEvidence
-    .filter((feed) => includedSymbols.includes(feed.symbol))
-    .map((feed) => [
-      feed.symbol,
-      {
-        address: feed.feed,
-        decimals: feed.decimals,
-        marketHours: feed.marketHours,
-        sourceHash: feed.catalogSourceHash,
-      },
-    ]),
-);
 const venues = Object.fromEntries(
-  state.quoteEvidence
-    .filter((quote) => includedSymbols.includes(quote.symbol))
-    .map((quote) => [
-      quote.symbol,
-      {
-        factory: quote.impactBuy?.factory ?? null,
-        router: quote.impactBuy?.router ?? null,
-        quoter: quote.impactBuy?.quoter ?? null,
-        buyPools: quote.impactBuy?.pools ?? [],
-        sellPools: quote.impactSell?.pools ?? [],
-        buyEvidenceHash: quote.impactBuy?.sourceHash ?? null,
-        sellEvidenceHash: quote.impactSell?.sourceHash ?? null,
-      },
-    ]),
+  state.capacityEvidence
+    .filter((evidence) => includedSymbols.includes(evidence.symbol))
+    .map((evidence) => {
+      const selected = [...evidence.probes]
+        .reverse()
+        .find((probe) => probe.passed);
+      return [
+        evidence.symbol,
+        {
+          factory: selected?.buy?.factory ?? null,
+          router: selected?.buy?.router ?? null,
+          quoter: selected?.buy?.quoter ?? null,
+          buyPools: selected?.buy?.pools ?? [],
+          sellPools: selected?.sell?.pools ?? [],
+          shortTwapSeconds: 1_800,
+          longTwapSeconds: 14_400,
+          safeTwoSidedCapacityUsdWad: evidence.safeTwoSidedCapacityUsdWad,
+          buyEvidenceHash: selected?.buy?.sourceHash ?? null,
+          sellEvidenceHash: selected?.sell?.sourceHash ?? null,
+        },
+      ];
+    }),
 );
 const operatorAddress =
   process.env.MDB_DEPLOYER_ADDRESS ??
@@ -119,7 +136,7 @@ const operatorAddress =
 const buildExists = existsSync(resolve(repoRoot, "apps/web/.next/BUILD_ID"));
 const payload = {
   schemaVersion: 1,
-  manifestSchemaVersion: 4,
+  manifestSchemaVersion: 5,
   environment: "robinhood-mainnet-candidate",
   chainId: 4663,
   gitSha,
@@ -127,15 +144,17 @@ const payload = {
   broadcastPermitted: false,
   activationState: "paused-canary",
   canonicalAssets: true,
-  requiredSymbols: [...MAINNET_CORE_SYMBOLS],
-  optionalSymbols: [...MAINNET_OPTIONAL_SYMBOLS],
+  prioritySymbols: [...MAINNET_PRIORITY_SYMBOLS],
+  watchlistSymbols: [...MAINNET_WATCHLIST_SYMBOLS],
   includedSymbols,
+  tvlCapUsdWad: MAINNET_TVL_CAP_USD_WAD.toString(),
+  reserveSymbol: "USDG",
+  nativeEthEntryEnabled: false,
   assets: candidateAssets,
+  registryAssetIds,
   assetPolicy,
-  oracleMappings: feeds,
   venueMappings: venues,
   qualificationEvidenceHash: state.sourceHash,
-  chainlinkCatalogHash: state.chainlinkCatalogHash,
   bytecodeHashes: contractBytecodeHashes(repoRoot),
   webBuildId: buildExists
     ? readFileSync(resolve(repoRoot, "apps/web/.next/BUILD_ID"), "utf8").trim()
@@ -152,9 +171,13 @@ const payload = {
     coreQualificationPassed: state.readiness?.coreQualificationPassed === true,
     acceptancePassed,
     forkPassed,
-    noMainnetManifest: !existsSync(
-      resolve(repoRoot, "packages/contracts/deployments/mainnet-v4.json"),
-    ),
+    noMainnetManifest:
+      !existsSync(
+        resolve(repoRoot, "packages/contracts/deployments/mainnet-v4.json"),
+      ) &&
+      !existsSync(
+        resolve(repoRoot, "packages/contracts/deployments/mainnet-v5.json"),
+      ),
   },
   acceptanceHash: acceptance ? sha256(JSON.stringify(acceptance)) : null,
   forkHash: fork ? sha256(JSON.stringify(fork)) : null,
@@ -189,7 +212,7 @@ report.readyToBroadcast = report.readyToBroadcast && report.signed;
 
 const shaOutput = resolve(
   repoRoot,
-  `var/releases/${gitSha}/mainnet-candidate-v4.json`,
+  `var/releases/${gitSha}/mainnet-candidate-v5.json`,
 );
 for (const output of [stableOutput, shaOutput]) {
   mkdirSync(dirname(output), { recursive: true });

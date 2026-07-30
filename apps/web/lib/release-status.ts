@@ -55,25 +55,30 @@ export type PromotionReceiptV1 = {
 export type AssetQualificationEvidenceV3 = {
   schemaVersion: 3;
   symbol: string;
-  required: boolean;
+  assetId: string;
+  priority: boolean;
   included: boolean;
   qualificationWindowPassed: boolean;
   qualificationStartedAt: string | null;
   latestSuccessfulCheckAt: string | null;
   resetReason: string | null;
   regularMarketSessions: string[];
-  feedState: Record<string, unknown> | null;
-  liquidityEvidence: Record<string, unknown> | null;
+  safeTwoSidedCapacityUsdWad: string;
+  maximumExposureUsdWad: string;
+  dexSafety: Record<string, unknown> | null;
+  liquidityEvidence: Record<string, unknown>;
   evidenceHash: string;
 };
 
-export type MainnetReadinessV1 = {
-  schemaVersion: 1;
+export type MainnetReadinessV2 = {
+  schemaVersion: 2;
   ready: boolean;
-  requiredSymbols: readonly ["AAPL", "NVDA", "SPY", "WETH"];
-  optionalSymbols: readonly ["MSFT", "QQQ", "SOXX"];
+  prioritySymbols: string[];
+  watchlistSymbols: string[];
   qualifiedLaunchSet: string[];
-  missingRequired: string[];
+  qualifiedRiskAssetCount: number;
+  aggregateRiskCapacityBps: number;
+  missingRequirements: string[];
   observedAt: string;
 };
 

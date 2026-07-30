@@ -19,7 +19,7 @@ import {
 import { buildDecisionContext } from "./decision-context";
 import type {
   AllocationConfidenceReasonV1,
-  DecisionContextV6,
+  DecisionContextV7,
 } from "./decision-context";
 import {
   validateDynamicAllocation,
@@ -273,7 +273,7 @@ async function requestModelJson(
 }
 
 export async function runDynamicResearchAllocator(
-  context: DecisionContextV6,
+  context: DecisionContextV7,
   fallback: DynamicAllocation,
 ): Promise<DynamicDecision> {
   const provider =
@@ -305,10 +305,11 @@ export async function runDynamicResearchAllocator(
       `Use at most ${context.compiledBrain.preferredPositionCount} risk positions; this is a maximum, never a target.`,
       `Combined high-volatility weight is at most ${context.compiledBrain.highVolatilityMaximumBps}; each asset also has maximumWeightBps.`,
       "Missing evidence is uncertainty, never a neutral score or zero return. Prefer USDG over mechanically equal weighting when assets cannot be distinguished.",
+      "DEX TWAP, time-weighted liquidity, and exact-size capacity are the only authoritative pricing and admission evidence. External research cannot authorize a trade.",
       "Respect every exit, reduce, no-new-buy, and protocol restriction.",
       'Every final allocation response must include "brainPulse": one vivid, understandable sentence of 12 to 180 characters in the 42 Braincells meme voice. It must explain the decision without URLs, guarantees, or invented facts.',
       'An allocation response may include "confidenceByAssetId" with low, medium, or high confidence and reasonCodes from brain_preference, momentum, fundamentals, valuation, diversification, existing_position, low_evidence.',
-      `DecisionContextV6: ${JSON.stringify(context)}`,
+      `DecisionContextV7: ${JSON.stringify(context)}`,
     ].join(" ");
     promptHashes.push(keccak256(stringToHex(basePrompt)));
     const first = await requestModelJson(
@@ -353,7 +354,7 @@ export async function runDynamicResearchAllocator(
         "Return the final constrained allocation now.",
         "No more research is allowed.",
         'Return exactly {"kind":"allocation","allocation":{"chain:address":integer},"brainPulse":"one short decision sentence","confidenceByAssetId":{"chain:address":{"confidence":"low|medium|high","reasonCodes":["allowed_reason"]}}}.',
-        `Immutable DecisionContextV6: ${JSON.stringify(context)}`,
+        `Immutable DecisionContextV7: ${JSON.stringify(context)}`,
         `Recorded structured research: ${JSON.stringify(results)}`,
       ].join(" ");
       promptHashes.push(keccak256(stringToHex(finalPrompt)));
@@ -553,9 +554,50 @@ export async function runCycle() {
       },
     ]),
   );
-  const market: DecisionContextV6 = {
+  const assetCapacityPolicy = Object.fromEntries(
+    baseMarket.assetRecords.map((asset) => {
+      const qualification =
+        asset.qualification &&
+        "schemaVersion" in asset.qualification &&
+        asset.qualification.schemaVersion === 3
+          ? asset.qualification
+          : null;
+      const currentValue = BigInt(state.holdingValues[asset.symbol] ?? "0");
+      const maximumExposure = BigInt(
+        qualification?.maximumExposureUsdWad ?? "0",
+      );
+      return [
+        asset.id,
+        {
+          safeTwoSidedCapacityUsdWad:
+            qualification?.safeTwoSidedCapacityUsdWad ?? "0",
+          maximumExposureUsdWad: qualification?.maximumExposureUsdWad ?? "0",
+          capacityUtilizationBps:
+            maximumExposure > 0n
+              ? Number((currentValue * 10_000n) / maximumExposure)
+              : null,
+          shortTwapValid: qualification?.dexSafety.shortTwapValid ?? false,
+          longTwapValid: qualification?.dexSafety.longTwapValid ?? false,
+          timeWeightedLiquidityValid:
+            qualification?.dexSafety.timeWeightedLiquidityValid ?? false,
+          qualificationHours: qualification?.qualificationHours ?? 0,
+          regularMarketSessions: qualification?.regularMarketSessions ?? 0,
+          mature:
+            qualification !== null &&
+            qualification.qualificationHours >= 48 &&
+            qualification.dexSafety.shortTwapValid &&
+            qualification.dexSafety.longTwapValid &&
+            qualification.dexSafety.timeWeightedLiquidityValid,
+        },
+      ];
+    }),
+  );
+  const market: DecisionContextV7 = {
     ...baseMarket,
-    schemaVersion: 6,
+    schemaVersion: 7,
+    pricingAuthority: "dex_twap",
+    settlementAsset: "USDG",
+    nativeEthEntryEnabled: false,
     controlCatalog: {
       schemaVersion: 1,
       catalogVersion: 1,
@@ -575,6 +617,7 @@ export async function runCycle() {
       positionCountIsMaximum: true,
       missingEvidenceIsUncertainty: true,
     },
+    assetCapacityPolicy,
     researchPolicy: {
       ...baseMarket.researchPolicy,
       maximumAssets: compiledBrain.researchAssetLimit,
@@ -586,6 +629,7 @@ export async function runCycle() {
           controlCatalogHash: state.controlCatalog.catalogHash,
           compiledBrain,
           assetEvidence,
+          assetCapacityPolicy,
         }),
       ),
     ),
@@ -610,7 +654,7 @@ export async function runCycle() {
       eligibility,
     });
     return {
-      schemaVersion: 6,
+      schemaVersion: 7,
       at: new Date().toISOString(),
       source: "scheduler",
       executionStatus: "skipped",

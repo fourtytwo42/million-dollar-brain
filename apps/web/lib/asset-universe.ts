@@ -31,6 +31,40 @@ export type AssetQualificationWindowV2 = Omit<
   lastFailureAt: string | null;
 };
 
+export type DexSafetyEvidenceV2 = {
+  shortTwapWindowSeconds: 1800;
+  longTwapWindowSeconds: 14400;
+  shortTwapValid: boolean;
+  longTwapValid: boolean;
+  timeWeightedLiquidityValid: boolean;
+  spotToShortDeviationBps: number | null;
+  shortToLongDeviationBps: number | null;
+  observationCardinality: number;
+  newestObservationAt: string | null;
+};
+
+export type AssetQualificationV3 = {
+  schemaVersion: 3;
+  evidenceHash: string;
+  observedAt: string;
+  validUntil: string;
+  qualificationHours: number;
+  regularMarketSessions: number;
+  safeTwoSidedCapacityUsdWad: string;
+  maximumExposureUsdWad: string;
+  capacityProbeUsdWad: string[];
+  buyImpactBps: number | null;
+  sellImpactBps: number | null;
+  identityValid: boolean;
+  routeMature: boolean;
+  liquidityValid: boolean;
+  transferBehaviorValid: boolean;
+  tokenStateClear: boolean;
+  dexSafety: DexSafetyEvidenceV2;
+  lastFailureAt: string | null;
+  reasons: string[];
+};
+
 export type AssetRecordV1 = {
   id: string;
   chainId: number;
@@ -47,7 +81,11 @@ export type AssetRecordV1 = {
   executionAdapter: Address | null;
   circulatingSupplyAdapter: Address | null;
   canonicalSource: string;
-  qualification: AssetQualificationV1 | AssetQualificationWindowV2 | null;
+  qualification:
+    | AssetQualificationV1
+    | AssetQualificationWindowV2
+    | AssetQualificationV3
+    | null;
   active: boolean;
 };
 
@@ -88,8 +126,19 @@ export type DynamicOracleState = {
 };
 
 export const ASSET_POLICY = {
+  // Legacy V1/V2 replay values. New qualification uses only the V3 fields below.
   minimumMarketCapOrAumUsdWad: 100_000_000n * 10n ** 18n,
   minimumExecutableDepthUsdWad: 250_000n * 10n ** 18n,
+  initialTvlCapUsdWad: 60_000n * 10n ** 18n,
+  capacityProbeUsdWad: [
+    1_000n,
+    5_000n,
+    10_000n,
+    25_000n,
+    100_000n,
+    250_000n,
+  ].map((value) => value * 10n ** 18n),
+  maximumExposureCapacityBps: 5_000,
   maximumProbeImpactBps: 100,
   minimumQualificationHours: 48,
   minimumRegularMarketSessions: 2,
@@ -101,6 +150,8 @@ export const ASSET_POLICY = {
   maximumInputTokens: 96_000,
   maximumDetailedAssets: 64,
   maximumResearchAssets: 16,
+  minimumLaunchRiskAssets: 4,
+  minimumAggregateRiskCapacityBps: 8_000,
 } as const;
 
 export function assessDynamicFreshness(
@@ -165,11 +216,56 @@ export function qualificationStatus(
     | "executionAdapter"
     | "circulatingSupplyAdapter"
   >,
-  evidence: AssetQualificationV1 | AssetQualificationWindowV2 | null,
+  evidence:
+    | AssetQualificationV1
+    | AssetQualificationWindowV2
+    | AssetQualificationV3
+    | null,
   now = Date.now(),
 ) {
   const reasons: string[] = [];
   if (!evidence) return { eligible: false, reasons: ["missing evidence"] };
+  if ("schemaVersion" in evidence && evidence.schemaVersion === 3) {
+    if (Date.parse(evidence.validUntil) <= now)
+      reasons.push("evidence expired");
+    if (evidence.qualificationHours < ASSET_POLICY.minimumQualificationHours) {
+      reasons.push("48 continuous qualification hours not complete");
+    }
+    if (
+      (asset.kind === "stock" || asset.kind === "etf") &&
+      evidence.regularMarketSessions < ASSET_POLICY.minimumRegularMarketSessions
+    ) {
+      reasons.push("two regular US market sessions not observed");
+    }
+    if (BigInt(evidence.safeTwoSidedCapacityUsdWad) <= 0n) {
+      reasons.push("no passing two-sided DEX capacity");
+    }
+    if (
+      evidence.buyImpactBps === null ||
+      evidence.buyImpactBps > ASSET_POLICY.maximumProbeImpactBps ||
+      evidence.sellImpactBps === null ||
+      evidence.sellImpactBps > ASSET_POLICY.maximumProbeImpactBps
+    ) {
+      reasons.push("capacity probe exceeds 1% DEX impact");
+    }
+    if (!evidence.identityValid)
+      reasons.push("canonical on-chain identity invalid");
+    if (!evidence.routeMature || !asset.valuationAdapter)
+      reasons.push("mature DEX valuation route unavailable");
+    if (!evidence.liquidityValid || !asset.executionAdapter)
+      reasons.push("DEX execution unavailable");
+    if (!evidence.dexSafety.shortTwapValid)
+      reasons.push("30-minute TWAP unavailable");
+    if (!evidence.dexSafety.longTwapValid)
+      reasons.push("four-hour TWAP unavailable");
+    if (!evidence.dexSafety.timeWeightedLiquidityValid)
+      reasons.push("time-weighted liquidity unavailable");
+    if (!evidence.transferBehaviorValid)
+      reasons.push("unsupported transfer behavior");
+    if (!evidence.tokenStateClear)
+      reasons.push("token pause or transition active");
+    return { eligible: reasons.length === 0, reasons };
+  }
   const marketCap = evidence.marketCapOrAumUsdWad
     ? BigInt(evidence.marketCapOrAumUsdWad)
     : 0n;

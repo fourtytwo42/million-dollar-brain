@@ -52,7 +52,10 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
 
     bytes32 public constant CONFIGURATOR_ROLE = keccak256("CONFIGURATOR_ROLE");
     uint32 public constant DEFAULT_TWAP_WINDOW = 30 minutes;
+    uint32 public constant DEFAULT_LONG_TWAP_WINDOW = 4 hours;
     uint32 public constant MAXIMUM_OBSERVATION_AGE = 1 hours;
+    uint16 public constant MAXIMUM_SAFETY_DEVIATION_BPS = 1_000;
+    uint256 private constant BPS = 10_000;
 
     struct TwapRoute {
         address directPool;
@@ -64,10 +67,22 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         bool enabled;
     }
 
+    struct DexSafetyConfig {
+        uint128 minimumDirectHarmonicLiquidity;
+        uint128 minimumBridgeHarmonicLiquidity;
+        uint16 maximumSpotToShortDeviationBps;
+        uint16 maximumShortToLongDeviationBps;
+        bool enabled;
+    }
+
     address public reserve;
     address public weth;
     uint32 public twapWindow;
     mapping(address => TwapRoute) public routes;
+    // Appended V2 DEX-only manipulation controls.
+    uint32 public longTwapWindow;
+    bool public dexSafetyV2Enabled;
+    mapping(address => DexSafetyConfig) public safetyConfigs;
 
     event TwapRouteConfigured(
         address indexed asset,
@@ -77,6 +92,14 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         uint128 minimumBridgeLiquidity
     );
     event MaximumObservationAgeUpdated(address indexed asset, uint32 maximumObservationAge);
+    event DexSafetyV2Configured(uint32 shortWindow, uint32 longWindow);
+    event DexSafetyConfigured(
+        address indexed asset,
+        uint128 minimumDirectHarmonicLiquidity,
+        uint128 minimumBridgeHarmonicLiquidity,
+        uint16 maximumSpotToShortDeviationBps,
+        uint16 maximumShortToLongDeviationBps
+    );
 
     function initialize(address admin, address reserve_, address weth_, uint32 twapWindow_)
         external
@@ -118,6 +141,38 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         );
     }
 
+    function reinitializeV2(uint32 longTwapWindow_)
+        external
+        reinitializer(2)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        uint32 configured = longTwapWindow_ == 0 ? DEFAULT_LONG_TWAP_WINDOW : longTwapWindow_;
+        if (configured <= twapWindow) revert InvalidConfiguration();
+        longTwapWindow = configured;
+        dexSafetyV2Enabled = true;
+        emit DexSafetyV2Configured(twapWindow, configured);
+    }
+
+    function configureSafety(address asset, DexSafetyConfig calldata config)
+        external
+        onlyRole(CONFIGURATOR_ROLE)
+    {
+        if (
+            !routes[asset].enabled || !config.enabled || config.maximumSpotToShortDeviationBps == 0
+                || config.maximumSpotToShortDeviationBps > MAXIMUM_SAFETY_DEVIATION_BPS
+                || config.maximumShortToLongDeviationBps == 0
+                || config.maximumShortToLongDeviationBps > MAXIMUM_SAFETY_DEVIATION_BPS
+        ) revert InvalidConfiguration();
+        safetyConfigs[asset] = config;
+        emit DexSafetyConfigured(
+            asset,
+            config.minimumDirectHarmonicLiquidity,
+            config.minimumBridgeHarmonicLiquidity,
+            config.maximumSpotToShortDeviationBps,
+            config.maximumShortToLongDeviationBps
+        );
+    }
+
     function setMaximumObservationAge(address asset, uint32 maximumObservationAge)
         external
         onlyRole(CONFIGURATOR_ROLE)
@@ -141,6 +196,7 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         if (token == reserve) return (1e18, block.timestamp, true);
         TwapRoute memory route = routes[token];
         if (!route.enabled) return (0, 0, false);
+        if (dexSafetyV2Enabled && !_routeSafetyValid(token, route)) return (0, 0, false);
         (uint256 firstQuote, uint256 firstUpdated, bool firstValid) = _poolQuote(
             route.directPool,
             token,
@@ -165,6 +221,129 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         );
         updatedAt = firstUpdated < secondUpdated ? firstUpdated : secondUpdated;
         return secondValid ? (_reserveToWad(reserveQuote), updatedAt, true) : (0, updatedAt, false);
+    }
+
+    function safetyStatus(address token)
+        external
+        view
+        returns (
+            bool valid,
+            uint128 directHarmonicLiquidity,
+            uint128 bridgeHarmonicLiquidity,
+            int24 directShortTick,
+            int24 directLongTick
+        )
+    {
+        TwapRoute memory route = routes[token];
+        DexSafetyConfig memory config = safetyConfigs[token];
+        if (!route.enabled || !config.enabled) return (false, 0, 0, 0, 0);
+        (valid, directHarmonicLiquidity, directShortTick, directLongTick) = _poolSafety(
+            route.directPool,
+            token,
+            route.bridgePool == address(0) ? reserve : weth,
+            _unit(token),
+            config.minimumDirectHarmonicLiquidity,
+            config.maximumSpotToShortDeviationBps,
+            config.maximumShortToLongDeviationBps
+        );
+        if (!valid || route.bridgePool == address(0)) {
+            return (valid, directHarmonicLiquidity, 0, directShortTick, directLongTick);
+        }
+        (bool bridgeValid, uint128 bridgeLiquidity,,) = _poolSafety(
+            route.bridgePool,
+            weth,
+            reserve,
+            _unit(weth),
+            config.minimumBridgeHarmonicLiquidity,
+            config.maximumSpotToShortDeviationBps,
+            config.maximumShortToLongDeviationBps
+        );
+        bridgeHarmonicLiquidity = bridgeLiquidity;
+        valid = bridgeValid;
+    }
+
+    function _routeSafetyValid(address token, TwapRoute memory route) private view returns (bool) {
+        DexSafetyConfig memory config = safetyConfigs[token];
+        if (!config.enabled || longTwapWindow <= twapWindow) return false;
+        (bool firstValid,,,) = _poolSafety(
+            route.directPool,
+            token,
+            route.bridgePool == address(0) ? reserve : weth,
+            _unit(token),
+            config.minimumDirectHarmonicLiquidity,
+            config.maximumSpotToShortDeviationBps,
+            config.maximumShortToLongDeviationBps
+        );
+        if (!firstValid || route.bridgePool == address(0)) return firstValid;
+        (bool bridgeValid,,,) = _poolSafety(
+            route.bridgePool,
+            weth,
+            reserve,
+            _unit(weth),
+            config.minimumBridgeHarmonicLiquidity,
+            config.maximumSpotToShortDeviationBps,
+            config.maximumShortToLongDeviationBps
+        );
+        return bridgeValid;
+    }
+
+    function _poolSafety(
+        address poolAddress,
+        address baseToken,
+        address quoteToken,
+        uint256 baseAmount,
+        uint128 minimumHarmonicLiquidity,
+        uint16 maximumSpotToShortDeviationBps,
+        uint16 maximumShortToLongDeviationBps
+    )
+        private
+        view
+        returns (bool valid, uint128 harmonicLiquidity, int24 shortTick, int24 longTick)
+    {
+        IUniswapV3PoolTwap pool = IUniswapV3PoolTwap(poolAddress);
+        (, int24 spotTick,, uint16 cardinality,,,, bool slotValid) = _slot0(pool);
+        if (!slotValid || cardinality < 2) return (false, 0, 0, 0);
+        uint32[] memory secondsAgos = new uint32[](3);
+        secondsAgos[0] = longTwapWindow;
+        secondsAgos[1] = twapWindow;
+        try pool.observe(secondsAgos) returns (
+            int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives
+        ) {
+            if (tickCumulatives.length != 3 || liquidityCumulatives.length != 3) {
+                return (false, 0, 0, 0);
+            }
+            shortTick = _meanTick(tickCumulatives[2] - tickCumulatives[1], twapWindow);
+            longTick = _meanTick(tickCumulatives[2] - tickCumulatives[0], longTwapWindow);
+            uint160 liquidityDelta = liquidityCumulatives[2] - liquidityCumulatives[0];
+            if (liquidityDelta == 0) return (false, 0, shortTick, longTick);
+            uint256 harmonic = (uint256(longTwapWindow) << 128) / liquidityDelta;
+            harmonicLiquidity = harmonic > type(uint128).max ? type(uint128).max : uint128(harmonic);
+            if (harmonicLiquidity < minimumHarmonicLiquidity) {
+                return (false, harmonicLiquidity, shortTick, longTick);
+            }
+            uint256 spotQuote = _quoteAtTick(spotTick, uint128(baseAmount), baseToken, quoteToken);
+            uint256 shortQuote = _quoteAtTick(shortTick, uint128(baseAmount), baseToken, quoteToken);
+            uint256 longQuote = _quoteAtTick(longTick, uint128(baseAmount), baseToken, quoteToken);
+            valid = _withinDeviation(spotQuote, shortQuote, maximumSpotToShortDeviationBps)
+                && _withinDeviation(shortQuote, longQuote, maximumShortToLongDeviationBps);
+        } catch {
+            return (false, 0, 0, 0);
+        }
+    }
+
+    function _meanTick(int56 delta, uint32 window) private pure returns (int24 meanTick) {
+        meanTick = int24(delta / int56(uint56(window)));
+        if (delta < 0 && delta % int56(uint56(window)) != 0) meanTick--;
+    }
+
+    function _withinDeviation(uint256 left, uint256 right, uint16 maximumBps)
+        private
+        pure
+        returns (bool)
+    {
+        if (left == 0 || right == 0) return false;
+        uint256 difference = left > right ? left - right : right - left;
+        return difference * BPS <= right * maximumBps;
     }
 
     function quoteAmount(address tokenIn, address tokenOut, uint256 amountIn)

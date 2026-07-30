@@ -1,92 +1,92 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  chainlinkMappingsFromCatalog,
-  officialHistoryCoverage,
-  sessionAwareMaximumAgeSeconds,
+  CAPACITY_PROBES_USD,
+  MAINNET_PRIORITY_SYMBOLS,
   summarizeMainnetReadiness,
 } from "../scripts/lib/mainnet-readiness.mjs";
 
-test("Chainlink catalog maps Robinhood equities and ETH without inventing SOXX", () => {
-  const rows = [
-    {
-      proxyAddress: "0x0000000000000000000000000000000000000001",
-      heartbeat: 86400,
-      path: "robinhood-aapl-usd",
-      docs: {
-        baseAsset: "AAPL",
-        quoteAsset: "USD",
-        blockchainName: "Robinhood",
-        productTypeCode: "primaryTokenizedPrice",
-        marketHours: "us_equities_24/5",
-      },
-    },
-    {
-      proxyAddress: "0x0000000000000000000000000000000000000002",
-      heartbeat: 3600,
-      docs: {
-        baseAsset: "ETH",
-        quoteAsset: "USD",
-        productTypeCode: "RefPrice",
-        marketHours: "Crypto",
-      },
-    },
-  ];
-  const mappings = chainlinkMappingsFromCatalog(rows, ["AAPL", "SOXX", "WETH"]);
-  assert.equal(mappings.AAPL.address, rows[0].proxyAddress);
-  assert.equal(mappings.WETH.address, rows[1].proxyAddress);
-  assert.equal(mappings.SOXX, undefined);
+const wad = (value) => (BigInt(value) * 10n ** 18n).toString();
+const qualified = (
+  symbol,
+  capacityUsd = 25_000,
+  riskClass = "standard",
+  assetId = `4663:${symbol.toLowerCase()}`,
+) => ({
+  assetId,
+  symbol,
+  riskClass,
+  maximumWeightBps: 2_000,
+  safeTwoSidedCapacityUsdWad: wad(capacityUsd),
+  identityValid: true,
+  routeMaturityScoreBps: 10_000,
+  qualificationWindowPassed: true,
 });
 
-test("equity feed freshness allows a closed weekend without weakening weekdays", () => {
-  const mapping = {
-    heartbeatSeconds: 86400,
-    marketHours: "us_equities_24/5",
-  };
-  assert.equal(
-    sessionAwareMaximumAgeSeconds(mapping, new Date("2026-07-29T14:00:00Z")),
-    86400,
+test("capacity ladder is deterministic and begins at a usable small trade", () => {
+  assert.deepEqual(
+    CAPACITY_PROBES_USD,
+    [1_000, 5_000, 10_000, 25_000, 100_000, 250_000],
   );
-  assert.equal(
-    sessionAwareMaximumAgeSeconds(mapping, new Date("2026-08-01T14:00:00Z")),
-    96 * 3600,
-  );
-});
-
-test("official history matures only after 48 covered hours", () => {
-  const start = Date.parse("2026-07-27T00:10:00Z");
-  const rows = Array.from({ length: 48 }, (_, index) => ({
-    at: new Date(start + index * 3600000).toISOString(),
-    assets: [
-      { assetId: "4663:a", symbol: "AAPL", officialPriceUsd: 200 + index },
-    ],
-  }));
-  const mature = officialHistoryCoverage(
-    rows,
-    "4663:a",
-    "AAPL",
-    new Date(start + 47 * 3600000).toISOString(),
-  );
-  assert.equal(mature.spanHours, 47);
-  assert.equal(mature.coverageBps, 10000);
-  assert.equal(mature.valid, true);
-  assert.equal(
-    officialHistoryCoverage(rows.slice(1), "4663:a", "AAPL", mature.newestAt)
-      .valid,
-    false,
-  );
-});
-
-test("core four determine readiness while optional assets never delay it", () => {
-  const passed = ["AAPL", "NVDA", "SPY", "WETH"].map((symbol) => ({
-    symbol,
-    qualificationWindowPassed: true,
-  }));
-  const readiness = summarizeMainnetReadiness([
-    ...passed,
-    { symbol: "MSFT", qualificationWindowPassed: false },
+  assert.deepEqual(MAINNET_PRIORITY_SYMBOLS, [
+    "WETH",
+    "NVDA",
+    "GME",
+    "SPY",
+    "SPCX",
+    "VIRTUAL",
   ]);
-  assert.equal(readiness.coreQualificationPassed, true);
-  assert.deepEqual(readiness.missingCore, []);
-  assert.deepEqual(readiness.includedSymbols, ["AAPL", "NVDA", "SPY", "WETH"]);
+});
+
+test("readiness requires four assets and enough post-risk-cap capacity for 80% exposure", () => {
+  const insufficient = summarizeMainnetReadiness([
+    qualified("WETH", 25_000, "high_volatility"),
+    qualified("NVDA"),
+    qualified("SPY"),
+    qualified("GME", 25_000, "high_volatility"),
+  ]);
+  assert.equal(insufficient.coreQualificationPassed, false);
+  assert.match(insufficient.missingRequirements.join(" "), /80%/);
+
+  const ready = summarizeMainnetReadiness([
+    qualified("WETH", 25_000, "high_volatility"),
+    qualified("NVDA"),
+    qualified("SPY"),
+    qualified("MSFT"),
+    qualified("GME", 25_000, "high_volatility"),
+  ]);
+  assert.equal(ready.aggregateRiskCapacityBps, 8_000);
+  assert.equal(ready.coreQualificationPassed, true);
+  assert.deepEqual(ready.missingRequirements, []);
+});
+
+test("canonical WETH identity is independent from its 48-hour qualification clock", () => {
+  const readiness = summarizeMainnetReadiness([
+    {
+      ...qualified("WETH", 250_000, "high_volatility"),
+      qualificationWindowPassed: false,
+    },
+    qualified("NVDA"),
+    qualified("SPY"),
+    qualified("MSFT"),
+    qualified("AAPL"),
+  ]);
+  assert.doesNotMatch(
+    readiness.missingRequirements.join(" "),
+    /canonical WETH identity/,
+  );
+});
+
+test("selection is capacity-first with canonical asset ID as the stable tie-break", () => {
+  const readiness = summarizeMainnetReadiness([
+    qualified("WETH", 250_000, "high_volatility", "4663:03"),
+    qualified("BETA", 25_000, "standard", "4663:02"),
+    qualified("ALPHA", 25_000, "standard", "4663:01"),
+    qualified("GAMMA", 25_000, "standard", "4663:04"),
+  ]);
+  assert.deepEqual(readiness.includedAssetIds.slice(1), [
+    "4663:01",
+    "4663:02",
+    "4663:04",
+  ]);
 });

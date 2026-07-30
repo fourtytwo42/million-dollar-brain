@@ -3,9 +3,9 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
-manifest="$repo_root/packages/contracts/deployments/mainnet-v4.json"
+manifest="$repo_root/packages/contracts/deployments/mainnet-v5.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
-candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v4.json"
+candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v5.json"
 testnet_acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
@@ -55,12 +55,12 @@ forge fmt --check packages/contracts
 forge test --root packages/contracts
 
 jq -e '
-  .schemaVersion == 4 and .chainId == 4663 and .broadcastPermitted == false and
+  .schemaVersion == 5 and .chainId == 4663 and .broadcastPermitted == false and
   .gates.noSigningKey == true and
-  .gates.canonicalIdentityChecked == true and
+  .gates.fullCanonicalStockUniverseInspected == true and
   .gates.dexVenueVerified == true and .gates.selfHostedRouting == true and
-  .gates.twoSidedQuotesValid == true and
-  .gates.chainlinkMappingsConfigured == true and
+  .gates.noChainlinkAuthority == true and
+  .gates.noOffchainCapitalizationGate == true and
   .gates.qualificationWindowPassed == true
 ' "$shadow_state" >/dev/null
 jq -e '
@@ -97,7 +97,7 @@ MDB_DEPLOYMENT_OUTPUT="$manifest" \
     --gas-estimate-multiplier 175
 
 jq -e '
-  .schemaVersion == 4 and .chainId == 4663 and
+  .schemaVersion == 5 and .chainId == 4663 and
   .environment == "robinhood-mainnet" and .canonicalAssets == true and
   .productionParityReplicas == false and .activationState == "paused-canary"
 ' "$manifest" >/dev/null

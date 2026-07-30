@@ -169,7 +169,9 @@ The MVP consists of the following upgradeable components:
 
 8. **Oracle Adapter**
    - Marks basket assets from approved Uniswap pool TWAPs.
-   - Uses Chainlink only as an emergency divergence circuit breaker for new exposure.
+   - Uses DEX-native 30-minute and four-hour TWAP, time-weighted liquidity,
+     route-age, and exact-size quote checks for new exposure. Chainlink has no
+     active pricing, execution, qualification, or readiness authority.
 
 9. **Allocation and Risk Controller**
    - Accepts signed AI target proposals.
@@ -215,10 +217,10 @@ NAV must include:
 - Reserved redemption and execution costs where applicable.
 - Conservative treatment of paused, stale, or illiquid assets.
 
-Chainlink does not calculate NAV. A fresh Chainlink observation is used only as
-a 5% emergency divergence circuit breaker for buys and rebalances. Exact-size
-DEX quotes estimate transactions, and actual token balance changes determine
-settlement.
+DEX observations calculate NAV and actual balance deltas settle trades.
+Chainlink does not calculate NAV, expected output, qualification, readiness, or
+redemption settlement and is permanently inactive in the DEX-native execution
+mode.
 
 ### 7.3 Deposit
 
@@ -1142,7 +1144,10 @@ confidence reason codes, and non-blocking warnings.
 - Basket shares use entry and redemption fees rather than a transfer tax.
 - MVP fees are 1% entry and 1% redemption.
 - The share token is `42 Braincells` (`BRAINS`) with 18 decimals; the 42-piece NFT retains its existing on-chain identity for deployment compatibility.
-- Initial BRAINS NAV is 1 USDG, creator seed capital is 10,000 USDG, audited-pilot TVL is capped at 100,000 USDG, and the per-wallet deposit cap is 25,000 USDG.
+- Initial BRAINS NAV is 1 USDG, creator seed capital is 10,000 USDG, the
+  initial mainnet TVL cap is 60,000 USDG, and per-asset exposure is bounded by
+  both 20% of that cap and 50% of proven two-sided DEX capacity. The per-wallet
+  deposit cap remains 25,000 USDG.
 - Basket fees split equally between the Creator DAO Vault and brain owners.
 - Within the creator half of basket fees, 40% of the total fee is creator-withdrawable and 10% of the total fee funds the Automation Reserve.
 - Basket-share transfers, internal rebalances, managed NAV, investment gains,
@@ -1171,20 +1176,24 @@ confidence reason codes, and non-blocking warnings.
   risk positions plus USDG.
 - Candidates come from Robinhood's canonical metadata but require explicit risk-administrator approval.
 - The discoverable universe includes canonical Robinhood Stock Tokens and supported standard ERC-20s; discovery never grants trading approval.
-- Stock Token integration supports ERC-8056 multipliers and keeps raw balances, UI-scaled amounts, underlying quotes, and multiplier-adjusted Chainlink feeds distinct.
+- Stock Token integration supports ERC-8056 identity, pause, halt, and
+  multiplier-transition state while DEX routes remain the only authoritative
+  valuation and execution surface.
 - The MVP execution venue is the verified Robinhood Chain Uniswap deployment.
   Additional venues require separate qualification and governance activation.
 - The self-hosted router reads factories, pools, ticks, observations, liquidity,
   and quoters through the server RPC gateway. It never accepts arbitrary
   calldata or an externally generated execution quote.
 - BRAINS NAV is DEX TWAP-marked. Exact-size DEX quotes drive previews, actual
-  balance deltas determine settlement, and Chainlink remains only a circuit
-  breaker for increased exposure and rebalancing.
+  balance deltas determine settlement, and 30-minute/four-hour TWAP agreement
+  plus time-weighted liquidity protect increased exposure and rebalancing.
 - All agent information comes from free structured feeds or deterministic protocol calculations.
 - Ornith has no browsing, news, social, arbitrary HTTP, or user-directed
   research. One bounded structured research round is permitted for at most 16
   registered assets.
-- Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, and FRED are the approved MVP sources.
+- Robinhood Chain DEX state and canonical token identity are authoritative for
+  NAV, execution, qualification, and readiness. Robinhood metadata, SEC EDGAR,
+  and FRED may provide optional structured AI context only.
 - Data-Diet Chef allocates optional attention among technical, fundamental,
   valuation, macro, liquidity, portfolio-history, outcome, and corporate-event
   evidence. Attention Hydra selects bounded timeframes and comparisons.

@@ -4,22 +4,55 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Self-hosted Uniswap execution and DEX TWAP-marked BRAINS NAV
-  are accepted on Robinhood Testnet. Continue the read-only mainnet shadow and
-  qualification work without broadcasting.
-- Last meaningful change: The exact repaired release
-  `3c640ae19fa01744554cfa85a2cebea209c98366` completed seven passing
-  checkpoints over 2.0109875 active hours. The immutable acceptance artifact
-  and signed non-broadcast mainnet candidate were regenerated.
-- Next step: Accumulate valid mainnet DEX history and 48 continuous
-  qualification hours, resolve the core-asset evidence and liquidity failures,
-  configure the missing mainnet rehearsal environment, and run the paused
-  mainnet-fork deployment rehearsal.
-- Blockers: AAPL, NVDA, SPY, and WETH are not yet qualified. Mainnet fork
-  rehearsal inputs are incomplete, the Alchemy failover gateway is not
-  configured, and mainnet deployment remains unauthorized.
+- Current task: Complete and promote the DEX-native capacity V3 release. It
+  replaces fixed launch assets, Chainlink authority, capitalization/AUM gates,
+  and the universal $250K threshold with dynamic on-chain capacity.
+- Last meaningful change: Contract, context, qualification, candidate, and
+  migration tooling is implemented in the dirty VM worktree. The full Foundry,
+  policy, readiness, context, and production-build suite is passing before
+  devnet deployment.
+- Next step: Commit and push the exact candidate, run guarded devnet V3/V6
+  migration plus GME/SPCX/VIRTUAL candidate deployment, complete responsive
+  devnet UAT, then promote the same commit to testnet and run a fresh two-hour
+  acceptance.
+- Blockers: The mainnet failover service lacks `/etc/mdb/mainnet-rpc.env` and
+  therefore no Alchemy backup is configured. Mainnet fork inputs are
+  incomplete, the new 48-hour clocks have only started, current aggregate DEX
+  capacity is below the 80% readiness gate, and mainnet broadcast remains
+  unauthorized.
 
 ## Current State
+
+### 2026-07-30 - DEX-native capacity V3 engineering checkpoint
+
+- Context: The fixed AAPL/NVDA/SPY/WETH launch set, Chainlink checks,
+  capitalization/AUM evidence, and universal $250K liquidity gate could force
+  a structurally cash-heavy basket and excluded usable smaller routes.
+- Decision: Keep USDG as reserve and settlement; use 30-minute/four-hour DEX
+  TWAP agreement, time-weighted liquidity, exact-size two-sided capacity, and
+  canonical on-chain identity as the only authoritative qualification and
+  execution evidence. Initial mainnet TVL is $60K; asset exposure is the lower
+  of 50% of proven capacity and 20% of the active TVL cap.
+- Files: `packages/contracts/src/{AssetRegistry,BasketVault,DexTwapValuationAdapter,UniswapExecutionAdapter}.sol`,
+  `packages/contracts/script/{UpgradeCapacityV3,DeployCapacityCandidates,DeployMainnet}.s.sol`,
+  `scripts/{mainnet-shadow,build-mainnet-candidate}.mjs`,
+  `scripts/lib/mainnet-readiness.mjs`, `apps/web/lib/decision-context.ts`,
+  `apps/web/lib/allocator.ts`, and guarded upgrade/deploy shell scripts.
+- Commands/tests: 55 Foundry tests passed, including direct V6 capacity
+  enforcement; asset-universe, DecisionContext V7, and 12 graduation/readiness
+  tests passed; Next.js production build and four storage-layout inspections
+  passed. `git diff --check` passed.
+- Result: Live read-only chain-4663 scan inspected 98 canonical candidates with
+  no signing key and no Chainlink authority. First V3 observations show WETH
+  capacity $250K, NVDA $100K, SPY $10K, AAPL/QQQ $5K, and MSFT $1K. WETH,
+  NVDA, and SPY currently pass route/TWAP/TWAL safety, but no asset has 48
+  hours yet. GME/SPCX were not present in the canonical discovery result;
+  VIRTUAL/WBTC/USDe remain disabled until committed canonical identity exists.
+  `mainnet-candidate-v5.json` is generated with stable registry IDs and
+  `readyToBroadcast: false`.
+- Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
+  then testnet migration/acceptance. Configure the missing mainnet RPC failover
+  environment only when the Alchemy endpoint is supplied.
 
 ### 2026-07-30 - Self-hosted DEX V5 testnet acceptance complete
 

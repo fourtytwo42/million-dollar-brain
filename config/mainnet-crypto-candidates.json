@@ -1,0 +1,26 @@
+[
+  {
+    "symbol": "VIRTUAL",
+    "name": "Virtuals Protocol",
+    "address": null,
+    "enabled": false,
+    "riskClass": "high_volatility",
+    "identityStatus": "canonical origin and Robinhood bridge identity required"
+  },
+  {
+    "symbol": "WBTC",
+    "name": "Wrapped Bitcoin",
+    "address": null,
+    "enabled": false,
+    "riskClass": "high_volatility",
+    "identityStatus": "ambiguous wrapped representations; canonical identity required"
+  },
+  {
+    "symbol": "USDE",
+    "name": "Ethena USDe",
+    "address": null,
+    "enabled": false,
+    "riskClass": "high_volatility",
+    "identityStatus": "canonical identity and mature DEX route required"
+  }
+]

@@ -1,6 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import type {
   AssetQualificationV1,
+  AssetQualificationV3,
   AssetQualificationWindowV2,
   AssetRecordV1,
 } from "./asset-universe.ts";
@@ -447,7 +448,8 @@ export async function recentPortfolioSnapshots(limit = 32) {
 
 export async function persistAssetCandidate(
   asset: AssetRecordV1,
-  qualification: AssetQualificationV1 | AssetQualificationWindowV2,
+  qualification:
+    AssetQualificationV1 | AssetQualificationWindowV2 | AssetQualificationV3,
   manifestHash: string,
   passed: boolean,
 ) {

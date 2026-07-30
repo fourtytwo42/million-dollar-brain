@@ -3,6 +3,41 @@
 **Status:** Signed non-broadcast candidate; qualification incomplete
 **Last verified:** 2026-07-30
 
+## Capacity V3 / Manifest V5 amendment
+
+This section supersedes the fixed launch-set, Chainlink, market-cap/AUM, and
+universal-liquidity requirements later in this document.
+
+- USDG remains the reserve, accounting unit, settlement asset, fee currency,
+  and only user-facing buy/sell currency. Native ETH entry and exit are
+  deferred; WETH is an investable risk asset.
+- Mainnet qualification scans every canonical Robinhood Stock Token plus a
+  committed crypto candidate catalog. Symbols never establish identity.
+- WETH, NVDA, GME, SPY, SPCX, and VIRTUAL are priority candidates, not forced
+  members. Ambiguous WBTC variants and USDe remain excluded until their
+  contract origin, bridge behavior, and mature DEX routes are committed.
+- Qualification is entirely DEX-native: canonical identity, token state,
+  mature 30-minute and four-hour TWAPs, time-weighted liquidity, route age,
+  two-sided quotes, and 48 continuous hourly passes. Stocks and ETFs must span
+  two regular US market sessions.
+- Capacity is probed at $1K, $5K, $10K, $25K, $100K, and $250K. Each asset
+  records its highest two-sided notional that remains within 1% of its
+  30-minute TWAP.
+- Initial TVL is capped at $60K. Per-asset exposure is the lower of 50% of
+  proven capacity and 20% of the active TVL cap.
+- Readiness requires at least four qualified risk assets and enough
+  post-classification capacity to deploy 80% of TVL while preserving at least
+  20% USDG, no more than 20% per asset, and no more than 30% combined
+  high-volatility exposure.
+- Chainlink, capitalization, AUM, supply adapters, 0x, and quote-authorizer
+  evidence have no authority over NAV, execution, qualification, readiness, or
+  safe atomic exits. Historical evidence remains archived only.
+- `DecisionContextV7` exposes activated assets, DEX capacity, route maturity,
+  TWAP/TWAL safety, realized volatility, liquidity stability, and evidence
+  coverage. Optional external research cannot authorize execution.
+- The non-broadcast output is `mainnet-candidate-v5.json`. Mainnet services
+  remain disabled and `42braincells.com` remains Coming Soon.
+
 ## Environments
 
 | Environment          | Chain | Purpose                                                                          | Broadcast policy         |
