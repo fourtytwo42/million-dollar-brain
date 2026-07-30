@@ -4,14 +4,16 @@
 
 MDB keeps local development and Robinhood Testnet isolated.
 
-| Environment       | Port | Chain | RPC                                       | State               |
-| ----------------- | ---: | ----: | ----------------------------------------- | ------------------- |
-| Local             | 3000 | 31337 | Local Anvil                               | Enabled and usable  |
-| Robinhood Testnet | 3001 | 46630 | `https://rpc.testnet.chain.robinhood.com` | V3 live and enabled |
+| Environment       | Port | Chain | RPC                                     | State               |
+| ----------------- | ---: | ----: | --------------------------------------- | ------------------- |
+| Local             | 3000 | 31337 | Local Anvil                             | Enabled and usable  |
+| Robinhood Testnet | 3001 | 46630 | LAN-primary loopback gateway on `18548` | V3 live and enabled |
 
-The official Robinhood endpoint is used for both server and browser testnet
-traffic. The shared Robyn LAN node is not an MDB dependency. A hosted provider
-will be considered only after measured rate limits or reliability failures.
+Server processes use the loopback failover gateway. It prefers the allowlisted
+LAN node at `192.168.50.117:8547`, compares it with the configured remote
+secondary, and fails over when the primary is unreachable, syncing, wrong-chain,
+or behind. Browser wallets continue using the public HTTPS endpoint and never
+receive the LAN URL.
 
 The archived V2 mock release has been replaced by the committed
 `packages/contracts/deployments/testnet-v3.json`. It contains 12 clearly
@@ -40,6 +42,17 @@ The repaired checkpoint and every later checkpoint passed. Final live in-app
 Browser UAT passed on desktop, tablet, mobile, light, and dark views with no
 horizontal overflow or console warnings/errors. The completed endurance
 service is disabled and disarmed.
+
+The newer self-hosted DEX V5 acceptance completed on 2026-07-30 from exact
+pushed release `3c640ae19fa01744554cfa85a2cebea209c98366`. Seven checkpoints
+covered 2.0109875 active hours after excluding 4,284,685 ms of recorded repair
+downtime. The immutable ledger records 21 three-actor scenarios, 21 responsive
+checks, atomic BRAINS buys and sells, autonomous DecisionContext V6 cycles,
+four executed-cycle checkpoints, fresh DEX marks, reconciled NAV, zero protocol
+failures, zero queued sales, and zero application browser errors. Final public
+desktop, tablet, and mobile Browser UAT passed in light and dark themes. The
+canonical artifact is `var/testnet-readiness/v3-2h-acceptance.json` with source
+hash `940fae207af636691316a8c96d0121c926d04c78ec150eb04540200a223f90f6`.
 
 `npm audit` currently reports 27 advisories (22 moderate, 5 high, 0 critical)
 across the pinned wallet and Next.js dependency graph. The available aggregate

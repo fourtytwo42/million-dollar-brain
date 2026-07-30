@@ -1,7 +1,7 @@
 # Mainnet-Edge Release Specification
 
-**Status:** Non-broadcast engineering candidate in qualification
-**Last verified:** 2026-07-29
+**Status:** Signed non-broadcast candidate; qualification incomplete
+**Last verified:** 2026-07-30
 
 ## Environments
 
@@ -70,7 +70,7 @@ a reviewed, committed manifest and an on-chain registry update.
 
 ## AI and research
 
-DecisionContext V4 contains a compact row for every eligible asset and full
+DecisionContext V6 contains a compact row for every eligible asset and full
 dossiers for current holdings plus the deterministic top 64. Its input budget
 is 96,000 tokens. If the complete compact directory cannot fit, the cycle
 holds and raises an operational alert.
@@ -115,6 +115,18 @@ Engineering acceptance requires:
   `0xaf5cde0a946982dbca8ce947ea510d9c4f9766e02c8bc4ab331f450a02b22dbc`.
   The acceptance artifact is
   `var/testnet-readiness/v3-2h-acceptance.json`.
+- Completed 2026-07-30: self-hosted DEX V5 passed seven checkpoints across
+  2.0109875 active hours from source candidate `bc67a484...` through exact
+  pushed repair release `3c640ae1...`. The preserved ledger records 21
+  three-actor scenarios, 21 responsive checks, atomic BRAINS buys and sells,
+  four executed autonomous-cycle checkpoints, fresh DEX TWAP marks, reconciled
+  NAV, zero protocol failures, zero queued sales, and zero application browser
+  errors. The final natural DecisionContext V6 rebalance executed transaction
+  `0x4b1eaf353076d407cf7b6ff56a1b9698b6b7dab33c9447926150231d3c68e180`.
+  Final public Browser UAT passed Brain, braincell detail, Basket, and Decisions
+  at desktop, tablet, and mobile widths in both themes without horizontal
+  overflow. The acceptance source hash is
+  `940fae207af636691316a8c96d0121c926d04c78ec150eb04540200a223f90f6`.
 - Forty-eight continuous passing mainnet-shadow hours for every launch asset,
   including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
@@ -153,6 +165,23 @@ The remaining inputs are intentionally not fabricated in the repository:
 
 No mainnet transaction or real-value activation is authorized by this
 engineering specification.
+
+## Current mainnet-shadow result
+
+The latest read-only chain-4663 run completed on 2026-07-30 with canonical
+identity, Chainlink mapping, and self-hosted Uniswap venue checks passing.
+NVDA and WETH satisfy the current $25,000 impact and $250,000 depth tests.
+AAPL and SPY do not currently satisfy the locked liquidity requirements. All
+four required assets still lack the full local history/48-hour window, and WETH
+still lacks approved capitalization evidence.
+
+The regenerated signed candidate report has hash
+`3c993f2b0aa26614a598b2f3400626150423fc25e72b53cde0f50f382a580d8b`.
+It contains no included launch assets and is correctly marked
+`readyToBroadcast: false`. The paused fork rehearsal is also not yet complete:
+`/etc/mdb/mainnet.env` has not been installed from the checked-in template, so
+required sequencer/USDG feed and deployment-array inputs are absent. This is a
+release blocker, not a reason to relax the script.
 
 ## Graduation and canary controls
 

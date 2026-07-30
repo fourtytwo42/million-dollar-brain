@@ -4,22 +4,71 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
-  BRAINS NAV, validate on devnet, then promote the exact accepted release to
-  Robinhood Testnet.
-- Last meaningful change: Acceptance checkpoint 5 found that the synthetic
-  control-change path could change Piece 4's review cadence beyond the
-  95-minute acceptance freshness window. It also exposed a second legacy
-  120-second DecisionContext freshness check even though the DEX vault's
-  on-chain maximum price age is 900 seconds.
-- Next step: Keep cadence-affecting controls stable during synthetic
-  acceptance, use the vault-validated aggregate oracle freshness result, restore
-  Pieces 4, 6, and 38 to canonical scheduler defaults, verify a natural V6 AI
-  cycle, and resume the preserved acceptance run.
-- Blockers: The fresh two-hour acceptance remains incomplete. Mainnet
-  deployment remains unauthorized.
+- Current task: Self-hosted Uniswap execution and DEX TWAP-marked BRAINS NAV
+  are accepted on Robinhood Testnet. Continue the read-only mainnet shadow and
+  qualification work without broadcasting.
+- Last meaningful change: The exact repaired release
+  `3c640ae19fa01744554cfa85a2cebea209c98366` completed seven passing
+  checkpoints over 2.0109875 active hours. The immutable acceptance artifact
+  and signed non-broadcast mainnet candidate were regenerated.
+- Next step: Accumulate valid mainnet DEX history and 48 continuous
+  qualification hours, resolve the core-asset evidence and liquidity failures,
+  configure the missing mainnet rehearsal environment, and run the paused
+  mainnet-fork deployment rehearsal.
+- Blockers: AAPL, NVDA, SPY, and WETH are not yet qualified. Mainnet fork
+  rehearsal inputs are incomplete, the Alchemy failover gateway is not
+  configured, and mainnet deployment remains unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Self-hosted DEX V5 testnet acceptance complete
+
+- Context: The production-shaped DEX V5 release required a fresh two-hour,
+  three-actor Robinhood Testnet acceptance after the in-place BasketVault and
+  adapter migration.
+- Decision: Preserve the original source clock and every failed harness attempt,
+  exclude only recorded repair downtime, and bind the final artifact to the
+  exact pushed repair release
+  `3c640ae19fa01744554cfa85a2cebea209c98366`.
+- Files: `var/testnet-readiness/v3-2h-acceptance.json`,
+  `var/testnet-v3-endurance/{state.json,checkpoints.jsonl,summary.json}`,
+  `MAINNET_EDGE_RELEASE.md`, `TESTNET_READINESS.md`.
+- Commands/tests: Seven passing endurance checkpoints; final public Browser UAT
+  at 1440x900, 768x1024, and 390x844 in light and dark themes; Brain, Basket,
+  braincell detail, and Decisions inspection; mainnet-shadow run and
+  `scripts/build-mainnet-candidate.mjs`.
+- Result: The run completed at `2026-07-30T21:08:59.646Z` after 2.0109875
+  active hours and 4,284,685 ms of excluded repair downtime. It records 21
+  three-actor scenarios, 21 responsive checks, atomic BRAINS buys and sells,
+  autonomous cycles, four executed-cycle checkpoints, zero protocol failures,
+  zero queued sales, fresh DEX marks, reconciled NAV, and zero application
+  browser errors. The latest natural DecisionContext V6 AI rebalance executed
+  transaction
+  `0x4b1eaf353076d407cf7b6ff56a1b9698b6b7dab33c9447926150231d3c68e180`.
+  The canonical artifact source hash is
+  `940fae207af636691316a8c96d0121c926d04c78ec150eb04540200a223f90f6`.
+- Follow-up: Keep the completed endurance service disabled. Continue the
+  read-only mainnet shadow; do not broadcast mainnet.
+
+### 2026-07-30 - Mainnet DEX shadow readiness checkpoint
+
+- Context: Final release closure regenerated read-only Robinhood mainnet DEX
+  evidence and the signed, non-broadcast candidate report.
+- Decision: Treat actual canonical Uniswap liquidity and accumulated local
+  history as hard evidence. Do not weaken thresholds or fabricate a fork pass.
+- Files: `var/mainnet-shadow/state.json`,
+  `var/mainnet-readiness/mainnet-candidate-v4.json`.
+- Result: The shadow completed on chain 4663 with no signing key, canonical
+  identities verified, Chainlink mappings configured, and self-hosted Uniswap
+  routing verified. NVDA and WETH currently satisfy the DEX impact/depth checks;
+  AAPL and SPY do not. All required assets still lack the accumulated history
+  window, WETH lacks approved capitalization evidence, and no launch asset is
+  included yet. Candidate report
+  `3c993f2b0aa26614a598b2f3400626150423fc25e72b53cde0f50f382a580d8b`
+  is signed and explicitly `readyToBroadcast: false`.
+- Follow-up: Supply `/etc/mdb/mainnet.env` from the checked-in template,
+  including sequencer/USDG feed and deployment arrays, configure Alchemy
+  failover, complete the fork rehearsal, and allow qualification to mature.
 
 ### 2026-07-30 - Acceptance scheduler and DEX freshness repair
 
