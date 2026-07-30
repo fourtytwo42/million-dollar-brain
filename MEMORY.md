@@ -460,9 +460,14 @@ When sources conflict, use this order:
 - Result: Source repaired from the shared devnet code line. The runner now
   requires an initial purchase only when an unowned piece existed before the
   checkpoint; after sellout, all actors still execute real resale transactions.
-  Repair downtime remains excluded from the original two active hours.
-- Follow-up: Verify the corrected sold-out checkpoint, then continue the
-  original run.
+  A second harness defect was found at the nominal last interval: when the next
+  regular 20-minute checkpoint fell after the repair-adjusted end time, the
+  runner completed early instead of scheduling a final checkpoint at the exact
+  end time. `nextCheckpointAt` is now clamped to `endAt`, so the evidence cannot
+  claim two active hours before two active hours have elapsed. Repair downtime
+  remains excluded from the original clock.
+- Follow-up: Complete the final clamped checkpoint, regenerate the acceptance
+  artifact, and verify `durationHours >= 2`.
 
 ### 2026-07-29 - Control Catalog v1 PRD Consolidation
 

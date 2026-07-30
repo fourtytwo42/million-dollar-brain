@@ -495,8 +495,10 @@ try {
       state.completedCheckpoints += 1;
       state.lastCheckpoint = result;
       state.lastFailure = null;
-      state.nextCheckpointAt =
-        state.startedAt + state.completedCheckpoints * state.intervalMs;
+      state.nextCheckpointAt = Math.min(
+        state.startedAt + state.completedCheckpoints * state.intervalMs,
+        state.endAt,
+      );
       state.failureAt = null;
       await atomicJson(statePath, state);
       console.log(
