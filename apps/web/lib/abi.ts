@@ -53,6 +53,31 @@ const swapPlanComponents = [
   { name: "authorizerSignature", type: "bytes" },
 ] as const;
 
+const dexRouteComponents = [
+  { name: "tokenIn", type: "address" },
+  { name: "tokenOut", type: "address" },
+  { name: "intermediate", type: "address" },
+  { name: "firstFee", type: "uint24" },
+  { name: "secondFee", type: "uint24" },
+] as const;
+
+const dexPlanComponents = [
+  {
+    name: "plan",
+    type: "tuple",
+    components: [
+      { name: "route", type: "tuple", components: dexRouteComponents },
+      { name: "amountIn", type: "uint256" },
+      { name: "quotedAmountOut", type: "uint256" },
+      { name: "minimumAmountOut", type: "uint256" },
+      { name: "recipient", type: "address" },
+      { name: "issuedAt", type: "uint64" },
+      { name: "deadline", type: "uint64" },
+      { name: "referenceBlock", type: "uint64" },
+    ],
+  },
+] as const;
+
 export const basketAbi = [
   {
     type: "function",
@@ -92,6 +117,13 @@ export const basketAbi = [
   {
     type: "function",
     name: "totalAssetsUsd",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "maximumPriceAge",
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "uint256" }],
@@ -213,6 +245,30 @@ export const basketAbi = [
   },
   {
     type: "function",
+    name: "depositWithDexPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "grossAmount", type: "uint256" },
+      { name: "minimumShares", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+      { name: "plans", type: "tuple[]", components: dexPlanComponents },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "redeemWithDexPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "shares", type: "uint256" },
+      { name: "minimumNet", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+      { name: "plans", type: "tuple[]", components: dexPlanComponents },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "canRedeemImmediately",
     stateMutability: "view",
     inputs: [
@@ -287,6 +343,18 @@ export const basketAbi = [
       { name: "weights", type: "uint16[]" },
       { name: "cycleHash", type: "bytes32" },
       { name: "plans", type: "tuple[]", components: swapPlanComponents },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "rebalanceWithDexPlan",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "targetAssets", type: "address[]" },
+      { name: "weights", type: "uint16[]" },
+      { name: "cycleHash", type: "bytes32" },
+      { name: "plans", type: "tuple[]", components: dexPlanComponents },
     ],
     outputs: [],
   },

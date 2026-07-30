@@ -32,7 +32,4 @@ create_identity() {
 }
 
 create_identity mainnet-operator
-create_identity mainnet-quote-authorizer
 printf 'operator=%s\n' "$(cat "$base/mainnet-operator.address")"
-printf 'quote_authorizer=%s\n' \
-  "$(cat "$base/mainnet-quote-authorizer.address")"

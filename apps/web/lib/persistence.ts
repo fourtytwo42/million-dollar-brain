@@ -261,7 +261,66 @@ async function ensureSchema(client: PoolClient) {
       broadcast boolean NOT NULL CHECK (broadcast = false),
       evidence_hash text NOT NULL
     );
-    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4), (5)
+    CREATE TABLE IF NOT EXISTS mdb_dex_pool_observations_v6 (
+      symbol text NOT NULL,
+      pool_address text NOT NULL,
+      observed_at timestamptz NOT NULL,
+      block_number numeric NOT NULL,
+      twap_price_usdg numeric NOT NULL,
+      spot_price_usdg numeric NOT NULL,
+      liquidity_raw numeric NOT NULL,
+      observation_cardinality integer NOT NULL,
+      buy_impact_bps integer,
+      sell_impact_bps integer,
+      route jsonb NOT NULL,
+      valid boolean NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (symbol, pool_address, block_number)
+    );
+    CREATE INDEX IF NOT EXISTS mdb_dex_pool_observations_v6_time_idx
+      ON mdb_dex_pool_observations_v6 (symbol, observed_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_dex_price_candles_v6 (
+      symbol text NOT NULL,
+      interval text NOT NULL CHECK (interval IN ('1m','15m','1h','1d')),
+      bucket_start timestamptz NOT NULL,
+      open numeric NOT NULL,
+      high numeric NOT NULL,
+      low numeric NOT NULL,
+      close numeric NOT NULL,
+      sample_count integer NOT NULL,
+      source_hash text NOT NULL,
+      PRIMARY KEY (symbol, interval, bucket_start)
+    );
+    CREATE TABLE IF NOT EXISTS mdb_dex_quote_bundles_v6 (
+      quote_hash text PRIMARY KEY,
+      created_at timestamptz NOT NULL,
+      action text NOT NULL CHECK (action IN ('deposit','redeem','rebalance','qualification')),
+      amount numeric NOT NULL,
+      quote_block numeric NOT NULL,
+      expires_at timestamptz NOT NULL,
+      selected_routes jsonb NOT NULL,
+      rejected_routes jsonb NOT NULL,
+      bundle jsonb NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS mdb_dex_quote_bundles_v6_time_idx
+      ON mdb_dex_quote_bundles_v6 (created_at DESC);
+    CREATE TABLE IF NOT EXISTS mdb_dex_execution_receipts_v6 (
+      tx_hash text NOT NULL,
+      log_index integer NOT NULL,
+      block_number numeric NOT NULL,
+      observed_at timestamptz NOT NULL,
+      token_in text NOT NULL,
+      token_out text NOT NULL,
+      amount_in numeric NOT NULL,
+      amount_out numeric NOT NULL,
+      first_pool text NOT NULL,
+      second_pool text NOT NULL,
+      reference_block numeric NOT NULL,
+      effective_price numeric NOT NULL,
+      receipt jsonb NOT NULL,
+      PRIMARY KEY (tx_hash, log_index)
+    );
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4), (5), (6)
       ON CONFLICT (version) DO NOTHING;
   `);
 }
@@ -501,6 +560,119 @@ export async function persistShadowSimulation(input: {
         input.evidenceHash,
       ],
     );
+    return true;
+  });
+}
+
+export async function persistDexQuoteBundle(input: {
+  quoteHash: string;
+  createdAt: string;
+  action: "deposit" | "redeem" | "rebalance" | "qualification";
+  amount: string;
+  quoteBlock: string;
+  expiresAt: string;
+  selectedRoutes: unknown;
+  rejectedRoutes: unknown;
+  bundle: unknown;
+}) {
+  return withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO mdb_dex_quote_bundles_v6
+        (quote_hash,created_at,action,amount,quote_block,expires_at,
+         selected_routes,rejected_routes,bundle)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       ON CONFLICT(quote_hash) DO NOTHING`,
+      [
+        input.quoteHash,
+        input.createdAt,
+        input.action,
+        input.amount,
+        input.quoteBlock,
+        input.expiresAt,
+        json(input.selectedRoutes),
+        json(input.rejectedRoutes),
+        json(input.bundle),
+      ],
+    );
+    return true;
+  });
+}
+
+export async function persistDexPoolObservation(input: {
+  symbol: string;
+  poolAddress: string;
+  observedAt: string;
+  blockNumber: string;
+  twapPriceUsdG: string;
+  spotPriceUsdG: string;
+  liquidityRaw: string;
+  observationCardinality: number;
+  buyImpactBps: number | null;
+  sellImpactBps: number | null;
+  route: unknown;
+  valid: boolean;
+  sourceHash: string;
+}) {
+  return withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO mdb_dex_pool_observations_v6
+        (symbol,pool_address,observed_at,block_number,twap_price_usdg,
+         spot_price_usdg,liquidity_raw,observation_cardinality,buy_impact_bps,
+         sell_impact_bps,route,valid,source_hash)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+       ON CONFLICT(symbol,pool_address,block_number) DO UPDATE SET
+         observed_at=excluded.observed_at,twap_price_usdg=excluded.twap_price_usdg,
+         spot_price_usdg=excluded.spot_price_usdg,
+         liquidity_raw=excluded.liquidity_raw,
+         observation_cardinality=excluded.observation_cardinality,
+         buy_impact_bps=excluded.buy_impact_bps,
+         sell_impact_bps=excluded.sell_impact_bps,route=excluded.route,
+         valid=excluded.valid,source_hash=excluded.source_hash`,
+      [
+        input.symbol,
+        input.poolAddress.toLowerCase(),
+        input.observedAt,
+        input.blockNumber,
+        input.twapPriceUsdG,
+        input.spotPriceUsdG,
+        input.liquidityRaw,
+        input.observationCardinality,
+        input.buyImpactBps,
+        input.sellImpactBps,
+        json(input.route),
+        input.valid,
+        input.sourceHash,
+      ],
+    );
+    const buckets = [
+      ["1m", "date_trunc('minute',observed_at)"],
+      [
+        "15m",
+        "date_trunc('hour',observed_at) + floor(extract(minute from observed_at) / 15) * interval '15 minutes'",
+      ],
+      ["1h", "date_trunc('hour',observed_at)"],
+      ["1d", "date_trunc('day',observed_at)"],
+    ] as const;
+    for (const [interval, bucket] of buckets) {
+      await client.query(
+        `INSERT INTO mdb_dex_price_candles_v6
+          (symbol,interval,bucket_start,open,high,low,close,sample_count,source_hash)
+         SELECT symbol,'${interval}',${bucket},
+                (array_agg(twap_price_usdg ORDER BY observed_at ASC))[1],
+                max(twap_price_usdg),min(twap_price_usdg),
+                (array_agg(twap_price_usdg ORDER BY observed_at DESC))[1],
+                count(*)::integer,
+                md5(string_agg(source_hash,'' ORDER BY observed_at))
+           FROM mdb_dex_pool_observations_v6
+          WHERE symbol=$1 AND valid=true
+          GROUP BY symbol,${bucket}
+         ON CONFLICT(symbol,interval,bucket_start) DO UPDATE SET
+           open=excluded.open,high=excluded.high,low=excluded.low,
+           close=excluded.close,sample_count=excluded.sample_count,
+           source_hash=excluded.source_hash`,
+        [input.symbol],
+      );
+    }
     return true;
   });
 }

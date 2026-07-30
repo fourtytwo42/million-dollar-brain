@@ -27,28 +27,13 @@ import {
 } from "@/lib/abi";
 import { controlSpec, packAssetIds, packScalars } from "@/lib/brain-controls";
 import { withAdminTransactionLock } from "@/lib/admin-transaction-lock";
-import { buildTestnetSwapPlans, type JsonSwapPlan } from "@/lib/quote-planner";
+import { buildDexSwapPlans, reviveDexSwapPlans } from "@/lib/quote-planner";
 import { networkConfig } from "@/lib/network";
 import { syncLocalMarketPrices } from "@/lib/market-price-sync";
 import { collectOfficialMarketData } from "@/lib/market-history";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function revivePlans(plans: JsonSwapPlan[]) {
-  return plans.map((plan) => ({
-    intent: {
-      ...plan.intent,
-      amountIn: BigInt(plan.intent.amountIn),
-      minimumAmountOut: BigInt(plan.intent.minimumAmountOut),
-      expiry: BigInt(plan.intent.expiry),
-      referenceBlock: BigInt(plan.intent.referenceBlock),
-      nonce: BigInt(plan.intent.nonce),
-    },
-    executionData: plan.executionData,
-    authorizerSignature: plan.authorizerSignature,
-  }));
-}
 
 async function write(
   client: typeof adminClient,
@@ -252,17 +237,17 @@ export async function POST(request: NextRequest) {
         functionName: "approve",
         args: [d.basket, gross],
       });
-      const depositQuote = await buildTestnetSwapPlans("deposit", gross);
+      const depositQuote = await buildDexSwapPlans("deposit", gross);
       transactions.buy = await write(actor.client, {
         address: d.basket,
         abi: basketAbi,
-        functionName: "depositWithPlan",
+        functionName: "depositWithDexPlan",
         gas: 6_000_000n,
         args: [
           gross,
           (depositPreview[2] * 99n) / 100n,
           BigInt(depositQuote.expiresAt),
-          revivePlans(depositQuote.plans),
+          reviveDexSwapPlans(depositQuote.plans),
         ],
       });
 
@@ -278,17 +263,17 @@ export async function POST(request: NextRequest) {
         functionName: "previewRedeem",
         args: [sellShares],
       });
-      const redeemQuote = await buildTestnetSwapPlans("redeem", sellShares);
+      const redeemQuote = await buildDexSwapPlans("redeem", sellShares);
       transactions.sell = await write(actor.client, {
         address: d.basket,
         abi: basketAbi,
-        functionName: "redeemWithPlan",
+        functionName: "redeemWithDexPlan",
         gas: 6_000_000n,
         args: [
           sellShares,
           (redeemPreview[2] * 99n) / 100n,
           BigInt(redeemQuote.expiresAt),
-          revivePlans(redeemQuote.plans),
+          reviveDexSwapPlans(redeemQuote.plans),
         ],
       });
 
@@ -298,7 +283,7 @@ export async function POST(request: NextRequest) {
           account: actor.account.address,
           address: d.basket,
           abi: basketAbi,
-          functionName: "redeemWithPlan",
+          functionName: "redeemWithDexPlan",
           args: [
             ownedShares + 1n,
             0n,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dashboard } from "@/lib/chain";
 import { collectOfficialMarketData } from "@/lib/market-history";
 import { syncLocalMarketPrices } from "@/lib/market-price-sync";
+import { collectDexMarketObservations } from "@/lib/quote-planner";
 import {
   buildPortfolioAccounting,
   matureDecisionOutcomes,
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest) {
     const before = await dashboard().catch(() => undefined);
     const market = await collectOfficialMarketData(before);
     const priceSync = await syncLocalMarketPrices();
+    const dexMarket = await collectDexMarketObservations();
     const ledger = await syncVaultLedger();
     const after = await dashboard();
     const accounting = await buildPortfolioAccounting(after);
@@ -33,6 +35,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       market,
       priceSync,
+      dexMarket,
       ledger,
       accounting,
       outcomes,

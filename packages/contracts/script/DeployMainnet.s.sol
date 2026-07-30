@@ -6,7 +6,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {AssetRegistry} from "../src/AssetRegistry.sol";
 import {ChainlinkValuationAdapter} from "../src/ChainlinkValuationAdapter.sol";
-import {ZeroExExecutionAdapter} from "../src/ZeroExExecutionAdapter.sol";
+import {DexTwapValuationAdapter} from "../src/DexTwapValuationAdapter.sol";
+import {UniswapExecutionAdapter} from "../src/UniswapExecutionAdapter.sol";
 import {RewardDistributor} from "../src/RewardDistributor.sol";
 import {CreatorVault} from "../src/CreatorVault.sol";
 import {BrainMarketplace} from "../src/BrainMarketplace.sol";
@@ -14,6 +15,10 @@ import {BasketVault} from "../src/BasketVault.sol";
 
 interface IRobinhoodIdentity {
     function uid() external view returns (bytes32);
+}
+
+interface IUniswapPoolFee {
+    function fee() external view returns (uint24);
 }
 
 /// @notice Broadcast-disabled production deployment package for Robinhood mainnet.
@@ -26,7 +31,6 @@ contract DeployMainnet is Script {
     function run() external {
         require(block.chainid == CHAIN_ID, "mainnet chain only");
         address deployer = vm.envAddress("MDB_DEPLOYER_ADDRESS");
-        address quoteAuthorizer = vm.envAddress("MDB_QUOTE_AUTHORIZER");
         address sequencerFeed = vm.envAddress("MDB_CHAINLINK_SEQUENCER_FEED");
         address usdgFeed = vm.envAddress("MDB_USDG_CHAINLINK_FEED");
         uint256 usdgHeartbeat = vm.envUint("MDB_USDG_FEED_HEARTBEAT");
@@ -36,15 +40,24 @@ contract DeployMainnet is Script {
         uint256[] memory assetKinds = vm.envUint("MDB_MAINNET_ASSET_KINDS", ",");
         uint256[] memory riskClasses = vm.envUint("MDB_MAINNET_RISK_CLASSES", ",");
         uint256[] memory maximumWeights = vm.envUint("MDB_MAINNET_MAX_WEIGHTS_BPS", ",");
-        address zeroExTarget = vm.envAddress("MDB_ZEROEX_TARGET");
-        address zeroExAllowanceTarget = vm.envAddress("MDB_ZEROEX_ALLOWANCE_TARGET");
-        bytes4 zeroExSelector = bytes4(vm.envBytes32("MDB_ZEROEX_SELECTOR"));
+        address uniswapFactory = vm.envAddress("MDB_UNISWAP_FACTORY");
+        address uniswapRouter = vm.envAddress("MDB_UNISWAP_ROUTER");
+        address[] memory directPools = vm.envAddress("MDB_MAINNET_DIRECT_POOLS", ",");
+        address[] memory bridgePools = vm.envAddress("MDB_MAINNET_BRIDGE_POOLS", ",");
+        uint256[] memory minimumDirectLiquidity = vm.envUint("MDB_MAINNET_MIN_DIRECT_LIQUIDITY", ",");
+        uint256[] memory minimumBridgeLiquidity = vm.envUint("MDB_MAINNET_MIN_BRIDGE_LIQUIDITY", ",");
         address wethSupplyAdapter = vm.envAddress("MDB_WETH_SUPPLY_ADAPTER");
-        require(deployer != address(0) && quoteAuthorizer != address(0) && sequencerFeed != address(0), "zero role");
+        require(
+            deployer != address(0) && sequencerFeed != address(0) && uniswapFactory != address(0)
+                && uniswapRouter != address(0),
+            "zero role"
+        );
         require(
             riskAssets.length > 0 && riskAssets.length == feeds.length && feeds.length == heartbeats.length
                 && feeds.length == assetKinds.length && feeds.length == riskClasses.length
-                && feeds.length == maximumWeights.length,
+                && feeds.length == maximumWeights.length && feeds.length == directPools.length
+                && feeds.length == bridgePools.length && feeds.length == minimumDirectLiquidity.length
+                && feeds.length == minimumBridgeLiquidity.length,
             "feed manifest"
         );
         vm.startBroadcast();
@@ -56,7 +69,7 @@ contract DeployMainnet is Script {
                 )
             )
         );
-        ChainlinkValuationAdapter valuation = ChainlinkValuationAdapter(
+        ChainlinkValuationAdapter circuitBreaker = ChainlinkValuationAdapter(
             address(
                 new ERC1967Proxy(
                     address(new ChainlinkValuationAdapter()),
@@ -64,20 +77,15 @@ contract DeployMainnet is Script {
                 )
             )
         );
-        ZeroExExecutionAdapter execution = ZeroExExecutionAdapter(
+        DexTwapValuationAdapter valuation = DexTwapValuationAdapter(
             address(
                 new ERC1967Proxy(
-                    address(new ZeroExExecutionAdapter()),
-                    abi.encodeCall(
-                        ZeroExExecutionAdapter.initialize, (deployer, address(valuation), quoteAuthorizer, 100, 600)
-                    )
+                    address(new DexTwapValuationAdapter()),
+                    abi.encodeCall(DexTwapValuationAdapter.initialize, (deployer, CANONICAL_USDG, CANONICAL_WETH, 1_800))
                 )
             )
         );
-        execution.configureVenue(zeroExTarget, zeroExAllowanceTarget, true);
-        execution.configureSelector(zeroExSelector, true);
-        execution.configureToken(CANONICAL_USDG, true);
-        valuation.configureFeed(CANONICAL_USDG, usdgFeed, uint32(usdgHeartbeat), false, true);
+        circuitBreaker.configureFeed(CANONICAL_USDG, usdgFeed, uint32(usdgHeartbeat), false, true);
 
         for (uint256 i; i < riskAssets.length; ++i) {
             address token = riskAssets[i];
@@ -87,23 +95,19 @@ contract DeployMainnet is Script {
             require(assetKinds[i] > 0 && assetKinds[i] <= uint8(AssetRegistry.AssetKind.TOKEN), "kind");
             require(riskClasses[i] > 0 && riskClasses[i] <= uint8(AssetRegistry.RiskClass.HIGH_VOLATILITY), "risk");
             require(maximumWeights[i] > 0 && maximumWeights[i] <= 2_000, "weight");
-            bytes32 uid = isWeth ? bytes32(0) : IRobinhoodIdentity(token).uid();
-            registry.registerAsset(
-                AssetRegistry.AssetRecord({
-                    token: token,
-                    robinhoodUid: uid,
-                    kind: AssetRegistry.AssetKind(assetKinds[i]),
-                    riskClass: AssetRegistry.RiskClass(riskClasses[i]),
-                    valuationAdapter: address(valuation),
-                    executionAdapter: address(execution),
-                    circulatingSupplyAdapter: isWeth ? wethSupplyAdapter : address(0),
-                    maximumWeightBps: uint16(maximumWeights[i]),
-                    registered: false,
-                    active: false
+            circuitBreaker.configureFeed(token, feeds[i], uint32(heartbeats[i]), !isWeth, true);
+            valuation.configureRoute(
+                token,
+                DexTwapValuationAdapter.TwapRoute({
+                    directPool: directPools[i],
+                    bridgePool: bridgePools[i],
+                    minimumDirectLiquidity: uint128(minimumDirectLiquidity[i]),
+                    minimumBridgeLiquidity: uint128(minimumBridgeLiquidity[i]),
+                    minimumObservationCardinality: 2,
+                    maximumObservationAge: 3_600,
+                    enabled: true
                 })
             );
-            valuation.configureFeed(token, feeds[i], uint32(heartbeats[i]), !isWeth, true);
-            execution.configureToken(token, true);
         }
 
         uint256[] memory rewardWeights = new uint256[](42);
@@ -163,7 +167,7 @@ contract DeployMainnet is Script {
                         (
                             deployer,
                             CANONICAL_USDG,
-                            address(execution),
+                            deployer,
                             address(rewards),
                             address(creatorVault),
                             deployer,
@@ -178,22 +182,71 @@ contract DeployMainnet is Script {
         bootstrapAssets[0] = CANONICAL_USDG;
         bootstrapWeights[0] = 10_000;
         basket.reinitializeV2(address(valuation), 900, 100, bootstrapAssets, bootstrapWeights);
+        UniswapExecutionAdapter execution = UniswapExecutionAdapter(
+            address(
+                new ERC1967Proxy(
+                    address(new UniswapExecutionAdapter()),
+                    abi.encodeCall(
+                        UniswapExecutionAdapter.initialize,
+                        (
+                            deployer,
+                            address(basket),
+                            CANONICAL_USDG,
+                            CANONICAL_WETH,
+                            uniswapFactory,
+                            uniswapRouter,
+                            address(valuation),
+                            address(circuitBreaker),
+                            uint32(3_600)
+                        )
+                    )
+                )
+            )
+        );
+        for (uint256 i; i < riskAssets.length; ++i) {
+            address token = riskAssets[i];
+            bool isWeth = token == CANONICAL_WETH;
+            bytes32 uid = isWeth ? bytes32(0) : IRobinhoodIdentity(token).uid();
+            registry.registerAsset(
+                AssetRegistry.AssetRecord({
+                    token: token,
+                    robinhoodUid: uid,
+                    kind: AssetRegistry.AssetKind(assetKinds[i]),
+                    riskClass: AssetRegistry.RiskClass(riskClasses[i]),
+                    valuationAdapter: address(valuation),
+                    executionAdapter: address(execution),
+                    circulatingSupplyAdapter: isWeth ? wethSupplyAdapter : address(0),
+                    maximumWeightBps: uint16(maximumWeights[i]),
+                    registered: false,
+                    active: false
+                })
+            );
+            execution.setPool(directPools[i], true);
+            execution.setFeeTier(IUniswapPoolFee(directPools[i]).fee(), true);
+            if (bridgePools[i] != address(0)) {
+                execution.setPool(bridgePools[i], true);
+                execution.setFeeTier(IUniswapPoolFee(bridgePools[i]).fee(), true);
+            }
+        }
         basket.reinitializeV3(address(registry), address(execution));
         basket.reinitializeV4(false, false, false);
-        execution.grantRole(execution.VAULT_ROLE(), address(basket));
+        basket.reinitializeV5(address(valuation), address(execution));
+        basket.setDexPriceAge(1 hours);
 
         string memory root = "mainnet";
-        vm.serializeUint(root, "schemaVersion", 3);
+        vm.serializeUint(root, "schemaVersion", 4);
         vm.serializeString(root, "environment", "robinhood-mainnet");
         vm.serializeUint(root, "chainId", CHAIN_ID);
         vm.serializeBool(root, "canonicalAssets", true);
         vm.serializeBool(root, "productionParityReplicas", false);
         vm.serializeString(root, "activationState", "paused-canary");
         vm.serializeAddress(root, "deployer", deployer);
-        vm.serializeAddress(root, "quoteAuthorizer", quoteAuthorizer);
         vm.serializeAddress(root, "usdg", CANONICAL_USDG);
         vm.serializeAddress(root, "assetRegistry", address(registry));
-        vm.serializeAddress(root, "valuation", address(valuation));
+        vm.serializeAddress(root, "circuitBreaker", address(circuitBreaker));
+        vm.serializeAddress(root, "dexValuationAdapter", address(valuation));
+        vm.serializeAddress(root, "dexFactory", uniswapFactory);
+        vm.serializeAddress(root, "dexRouter", uniswapRouter);
         vm.serializeAddress(root, "executionAdapter", address(execution));
         vm.serializeAddress(root, "rewards", address(rewards));
         vm.serializeAddress(root, "creatorVault", address(creatorVault));

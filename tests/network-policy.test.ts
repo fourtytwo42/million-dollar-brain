@@ -262,7 +262,9 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
     /request\.headers\.get\("x-mdb-cycle-token"\) !== expected/,
   );
   assert.match(acceptance, /networkConfig\.mode !== "testnet"/);
-  assert.match(acceptance, /functionName: "redeemWithPlan"/);
+  assert.match(acceptance, /functionName: "redeemWithDexPlan"/);
+  assert.match(acceptance, /buildDexSwapPlans\("deposit"/);
+  assert.match(acceptance, /buildDexSwapPlans\("redeem"/);
   assert.match(endurance, /locator\("\.editorial-banner"\)/);
   assert.match(endurance, /2 \* 60 \* 60 \* 1000/);
   assert.match(endurance, /existing\.repairDowntimeMs \?\?=/);

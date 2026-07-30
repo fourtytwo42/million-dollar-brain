@@ -56,6 +56,27 @@ export type DeploymentAsset = {
   tags?: string[];
 };
 
+export type DexVenuePool = {
+  address: Address;
+  token0: Address;
+  token1: Address;
+  fee: number;
+  approved: boolean;
+};
+
+export type DexVenueManifestV1 = {
+  venue: "uniswap-v3";
+  factory: Address;
+  router: Address;
+  quoter: Address;
+  weth: Address;
+  feeTiers: number[];
+  twapWindowSeconds: number;
+  quoteLifetimeSeconds: number;
+  maximumReferenceBlockAge: number;
+  pools: DexVenuePool[];
+};
+
 export type Deployment = LegacyDeployment & {
   schemaVersion?: number;
   environment?: string;
@@ -64,6 +85,9 @@ export type Deployment = LegacyDeployment & {
   assetRegistry?: Address;
   executionAdapter?: Address;
   quoteAuthorizer?: Address;
+  dexExecutionAdapter?: Address;
+  dexValuationAdapter?: Address;
+  dexVenue?: DexVenueManifestV1;
   pricePublisher?: Address;
   brainControlRegistry?: Address;
   controlCatalogHash?: `0x${string}`;
@@ -74,6 +98,8 @@ export type Deployment = LegacyDeployment & {
     oracle?: Address;
     valuation?: Address;
     executionAdapter?: Address;
+    dexExecutionAdapter?: Address;
+    dexValuationAdapter?: Address;
     assetRegistry?: Address;
     brainControlRegistry?: Address;
     pricePublisher?: Address;
@@ -152,6 +178,10 @@ export function normalizeDeployment(raw: Record<string, unknown>): Deployment {
     oracle: raw.oracle ?? contracts?.oracle ?? contracts?.valuation,
     assetRegistry: raw.assetRegistry ?? contracts?.assetRegistry,
     executionAdapter: raw.executionAdapter ?? contracts?.executionAdapter,
+    dexExecutionAdapter:
+      raw.dexExecutionAdapter ?? contracts?.dexExecutionAdapter,
+    dexValuationAdapter:
+      raw.dexValuationAdapter ?? contracts?.dexValuationAdapter,
     pricePublisher: raw.pricePublisher ?? contracts?.pricePublisher,
     brainControlRegistry:
       raw.brainControlRegistry ?? contracts?.brainControlRegistry,
@@ -520,9 +550,14 @@ export async function dashboard(
     }
   }
 
-  const [results, latestBlock] = await Promise.all([
+  const [results, latestBlock, maximumPriceAge] = await Promise.all([
     dashboardReads(contracts),
     publicClient.getBlock(),
+    publicClient.readContract({
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "maximumPriceAge",
+    }),
   ]);
   let cursor = 0;
   const basketControlsConfigured = results[cursor++] as boolean;
@@ -741,7 +776,8 @@ export async function dashboard(
         (row) =>
           row.oracle[2] &&
           Number(row.oracle[1]) > 0 &&
-          Number(latestBlock.timestamp) - Number(row.oracle[1]) <= 120,
+          Number(latestBlock.timestamp) - Number(row.oracle[1]) <=
+            Number(maximumPriceAge),
       ),
     },
     previews: {

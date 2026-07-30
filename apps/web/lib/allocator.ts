@@ -42,7 +42,7 @@ import {
   persistAccountingSnapshot,
   syncVaultLedger,
 } from "./portfolio-accounting";
-import { buildTestnetRebalancePlans, reviveSwapPlans } from "./quote-planner";
+import { buildDexRebalancePlans, reviveDexSwapPlans } from "./quote-planner";
 import { collectOfficialMarketData } from "./market-history";
 import { syncLocalMarketPrices } from "./market-price-sync";
 import { networkConfig } from "./network";
@@ -865,17 +865,17 @@ export async function runCycle() {
     );
     ({ hash, receipt } = await withAdminTransactionLock(async () => {
       if (dynamicMode && decision.allocationById) {
-        const quote = await buildTestnetRebalancePlans(decision.allocationById);
+        const quote = await buildDexRebalancePlans(decision.allocationById);
         const transactionHash = await adminClient.writeContract({
           address: d.basket,
           abi: basketAbi,
-          functionName: "rebalanceWithPlan",
+          functionName: "rebalanceWithDexPlan",
           gas: networkConfig.mode === "testnet" ? 8_000_000n : undefined,
           args: [
             quote.targetAssets,
             quote.weights,
             cycleHash,
-            reviveSwapPlans(quote.plans),
+            reviveDexSwapPlans(quote.plans),
           ],
         });
         return {

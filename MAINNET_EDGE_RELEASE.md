@@ -5,12 +5,12 @@
 
 ## Environments
 
-| Environment          | Chain | Purpose                                                                     | Broadcast policy         |
-| -------------------- | ----: | --------------------------------------------------------------------------- | ------------------------ |
-| Devnet               | 31337 | Deterministic development and destructive tests                             | Local only               |
-| Robinhood Testnet V3 | 46630 | Production-interface replicas, signed RFQ execution, wallets, and endurance | Test assets only         |
-| Mainnet shadow       |  4663 | Asset qualification worker and fork/simulation evidence                     | Read-only; keys rejected |
-| Mainnet canary       |  4663 | Paused canonical deployment and LAN verification on port 3003               | Staged activation only   |
+| Environment          | Chain | Purpose                                                                          | Broadcast policy         |
+| -------------------- | ----: | -------------------------------------------------------------------------------- | ------------------------ |
+| Devnet               | 31337 | Deterministic development and destructive tests                                  | Local only               |
+| Robinhood Testnet V3 | 46630 | Production-interface replicas, self-hosted DEX execution, wallets, and endurance | Test assets only         |
+| Mainnet shadow       |  4663 | Asset qualification worker and fork/simulation evidence                          | Read-only; keys rejected |
+| Mainnet canary       |  4663 | Paused canonical deployment and LAN verification on port 3003                    | Staged activation only   |
 
 Robinhood does not publish canonical Stock Token deployments on chain 46630.
 The V3 testnet deployment therefore uses clearly labelled ERC-8056-compatible
@@ -37,7 +37,7 @@ sessions; weekend-only observations cannot qualify:
   stocks and crypto, or official AUM of at least $100 million for funds.
 - Non-stock ERC-20 supply comes from an explicitly approved circulating-supply
   adapter. `totalSupply * price` is not sufficient.
-- A valid two-sided $250,000 0x quote and no more than 1% estimated impact for
+- A valid two-sided $250,000 on-chain Uniswap quote and no more than 1% estimated impact for
   both sides of a $25,000 quote.
 - Fresh approved valuation feed, valid token code and identity, sufficient
   official history, supported transfer behavior, and no halt, oracle pause, or
@@ -55,18 +55,16 @@ a reviewed, committed manifest and an on-chain registry update.
 
 ## Valuation and execution
 
-- `ChainlinkValuationAdapter` reads feed decimals dynamically, requires positive
-  completed rounds, checks age and sequencer recovery, and rejects
-  `oraclePaused` Stock Tokens. Chainlink Stock Token prices already include the
-  multiplier; the protocol never applies it twice.
-- `ZeroExExecutionAdapter` accepts only EIP-712 intents signed by the dedicated
-  quote authorizer. Each intent binds chain, vault, token pair, exact input,
-  minimum output, recipient, target, allowance target, calldata hash, expiry,
-  reference block, and nonce.
-- Targets, spenders, selectors, and tokens are allowlisted. The adapter uses
-  exact temporary allowances, measures balance deltas, checks oracle deviation
-  and output, returns assets to the vault, and clears approvals.
-- `BasketVault` V3 uses `SwapPlan[]` for buys, sells, and rebalances. User sales
+- `DexTwapValuationAdapter` marks BRAINS NAV from a 30-minute TWAP on the
+  deepest approved USDG route, using WETH only as an approved two-hop bridge.
+- `UniswapExecutionAdapter` accepts only structured direct or two-hop routes
+  through the canonical factory and router. Pools and fee tiers are approved;
+  arbitrary calldata is impossible.
+- `ChainlinkValuationAdapter` is only a 5% emergency circuit breaker for buys
+  and rebalances. It never calculates NAV, expected output, or settlement.
+- Exact temporary allowances, measured balance deltas, 1% exact-quote
+  slippage, and 3% TWAP deviation are enforced on chain.
+- `BasketVault` V5 uses `DexSwapPlanV1[]` for buys, sells, and rebalances. User sales
   are atomic. If any underlying sale fails, the transaction reverts and the
   user retains MDBS. Queue creation and processing are disabled.
 
@@ -79,7 +77,7 @@ holds and raises an operational alert.
 
 Ornith may request one research round covering at most 16 registered assets.
 The orchestrator returns only structured SEC, Robinhood, Chainlink, on-chain,
-local-history, portfolio-history, and validated 0x evidence. It exposes no
+local-history, portfolio-history, and validated on-chain DEX evidence. It exposes no
 arbitrary URL, web prose, user-selected contract, or browsing tool. Both model
 requests, all evidence, hashes, raw outputs, validated targets, and
 execution/simulation receipts are persisted. Every inference is stateless.
@@ -120,14 +118,15 @@ Engineering acceptance requires:
 - Forty-eight continuous passing mainnet-shadow hours for every launch asset,
   including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
-  oracle mappings, and real 0x quote simulation.
+  circuit-breaker mappings, Uniswap pools, TWAP observations, and structured
+  route simulation.
 
 `scripts/check-release.sh`, `scripts/promote-to-testnet.sh`,
 `scripts/rehearse-mainnet.sh`, and `scripts/check-mainnet-canary.sh` produce
 non-broadcast release evidence. `scripts/build-mainnet-candidate.mjs` writes
-the immutable `mainnet-candidate-v3.json` report and signs its hash with the
-encrypted, unfunded protocol-operator identity. The quote authorizer is a
-separate encrypted, no-funds identity. `scripts/deploy-mainnet.sh` remains
+the immutable `mainnet-candidate-v4.json` report and signs its hash with the
+encrypted, unfunded protocol-operator identity. No quote signer or trading API
+credential exists. `scripts/deploy-mainnet.sh` remains
 fail-closed. It requires chain 4663, a clean
 pushed commit, encrypted signer, explicit broadcast flag, non-mock manifest,
 runtime-bytecode verification, storage checks, fork evidence, testnet
@@ -141,7 +140,7 @@ The remaining inputs are intentionally not fabricated in the repository:
 - A production Alchemy Robinhood mainnet HTTPS RPC endpoint for the configured
   secondary and a production WebSocket endpoint. The LAN Nitro primary is
   already fixed at `192.168.50.173:8547`.
-- Production 0x API credentials and validated current venue contracts.
+- Verified canonical Uniswap factory, router, quoter, pools, and route evidence.
 - Final Safe/role addresses and funded mainnet gas wallet.
 - Stable production domain.
 - Forty-eight continuous qualification hours, including two regular sessions

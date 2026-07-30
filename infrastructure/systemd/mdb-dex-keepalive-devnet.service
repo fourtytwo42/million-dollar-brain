@@ -1,0 +1,16 @@
+[Unit]
+Description=Refresh 42 Braincells devnet DEX TWAP observations
+After=mdb-anvil.service
+Requires=mdb-anvil.service
+
+[Service]
+Type=oneshot
+User=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/devnet.env
+Environment=MDB_NETWORK_MODE=local
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/run-dex-keepalive.sh
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/hendo420/projects/million-dollar-brain/packages/contracts/broadcast /home/hendo420/projects/million-dollar-brain/packages/contracts/cache

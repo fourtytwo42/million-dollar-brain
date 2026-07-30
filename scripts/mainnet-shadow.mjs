@@ -7,7 +7,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { createPublicClient, http, isAddress, parseAbi } from "viem";
+import {
+  createPublicClient,
+  encodePacked,
+  http,
+  isAddress,
+  parseAbi,
+} from "viem";
 import {
   continuousPassingWindow,
   qualificationWindowPassed,
@@ -18,7 +24,6 @@ import {
   MAINNET_NOMINATED_SYMBOLS,
   chainlinkMappingsFromCatalog,
   officialHistoryCoverage,
-  parseAllowlist,
   sessionAwareMaximumAgeSeconds,
   summarizeMainnetReadiness,
 } from "./lib/mainnet-readiness.mjs";
@@ -27,10 +32,13 @@ const CHAIN_ID = 4663;
 const PUBLIC_RPC = "https://rpc.mainnet.chain.robinhood.com";
 const ROBINHOOD_ASSETS = "https://api.robinhood.com/rhj/assets";
 const ROBINHOOD_PRICE = "https://api.robinhood.com/rhj/prices";
-const ZERO_EX_QUOTE = "https://api.0x.org/swap/allowance-holder/quote";
 const MULTICALL3 = "0xcA11bde05977b3631167028862bE2a173976CA11";
 const USDG = "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168";
 const WETH = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
+const UNISWAP_FACTORY = "0x1f7d7550B1b028f7571E69A784071F0205FD2EfA";
+const UNISWAP_QUOTER = "0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7";
+const UNISWAP_ROUTER = "0xCaf681a66D020601342297493863E78C959E5cb2";
+const APPROVED_FEES = [100, 500, 3_000, 10_000];
 const repoRoot = resolve(import.meta.dirname, "..");
 const statePath =
   process.env.MDB_MAINNET_SHADOW_STATE ??
@@ -39,8 +47,6 @@ const evidencePath =
   process.env.MDB_MAINNET_SHADOW_EVIDENCE ??
   resolve(repoRoot, "var/mainnet-shadow/qualification-evidence.jsonl");
 const rpcUrl = process.env.MDB_MAINNET_SHADOW_RPC_URL ?? PUBLIC_RPC;
-const apiKey = process.env.ZEROX_API_KEY ?? "";
-const taker = process.env.MDB_MAINNET_SHADOW_TAKER ?? "";
 const configuredChainlinkFeeds = JSON.parse(
   process.env.MDB_MAINNET_CHAINLINK_FEEDS_JSON ?? "{}",
 );
@@ -53,15 +59,6 @@ const capitalizationEvidence = JSON.parse(
 const secUserAgent =
   process.env.MDB_SEC_USER_AGENT ??
   "42-Braincells/1.0 operations@42braincells.com";
-const allowedZeroExTargets = parseAllowlist(
-  process.env.MDB_ZEROEX_ALLOWED_TARGETS,
-);
-const allowedZeroExAllowanceTargets = parseAllowlist(
-  process.env.MDB_ZEROEX_ALLOWED_ALLOWANCE_TARGETS,
-);
-const allowedZeroExSelectors = parseAllowlist(
-  process.env.MDB_ZEROEX_ALLOWED_SELECTORS,
-);
 const CAPITALIZATION_MINIMUM_USD = 100_000_000;
 const IMPACT_NOTIONAL_USD = 25_000;
 const DEPTH_NOTIONAL_USD = 250_000;
@@ -87,6 +84,20 @@ const tokenAbi = parseAbi([
 const feedAbi = parseAbi([
   "function decimals() view returns (uint8)",
   "function latestRoundData() view returns (uint80 roundId,int256 answer,uint256 startedAt,uint256 updatedAt,uint80 answeredInRound)",
+]);
+const factoryAbi = parseAbi([
+  "function getPool(address tokenA,address tokenB,uint24 fee) view returns (address pool)",
+]);
+const poolAbi = parseAbi([
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function liquidity() view returns (uint128)",
+  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)",
+  "function observe(uint32[] secondsAgos) view returns (int56[] tickCumulatives,uint160[] secondsPerLiquidityCumulativeX128s)",
+]);
+const quoterAbi = parseAbi([
+  "function quoteExactInputSingle((address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) returns (uint256 amountOut,uint160 sqrtPriceX96After,uint32 initializedTicksCrossed,uint256 gasEstimate)",
+  "function quoteExactInput(bytes path,uint256 amountIn) returns (uint256 amountOut,uint160[] sqrtPriceX96AfterList,uint32[] initializedTicksCrossedList,uint256 gasEstimate)",
 ]);
 
 const hash = (value) =>
@@ -327,88 +338,240 @@ async function inspectTokens(assets) {
   return rows;
 }
 
-async function quotePair(asset, direction, priceUsd, notionalUsd) {
-  if (!apiKey) return { valid: false, reason: "ZEROX_API_KEY not configured" };
-  if (!isAddress(taker)) {
-    return { valid: false, reason: "MDB_MAINNET_SHADOW_TAKER not configured" };
-  }
-  const sellToken = direction === "buy" ? USDG : asset.address;
-  const buyToken = direction === "buy" ? asset.address : USDG;
-  const sellAmount =
-    direction === "buy"
-      ? BigInt(notionalUsd) * 10n ** 6n
-      : ((BigInt(notionalUsd) * 10n ** BigInt(asset.decimals ?? 18)) /
-          BigInt(Math.max(1, Math.round(priceUsd * 1e6)))) *
-        1_000_000n;
-  const parameters = new URLSearchParams({
-    chainId: String(CHAIN_ID),
-    sellToken,
-    buyToken,
-    sellAmount: sellAmount.toString(),
-    taker,
-    slippageBps: "100",
+async function dexPool(tokenA, tokenB, fee, blockNumber) {
+  const address = await client.readContract({
+    address: UNISWAP_FACTORY,
+    abi: factoryAbi,
+    functionName: "getPool",
+    args: [tokenA, tokenB, fee],
+    blockNumber,
   });
-  try {
-    const quote = await json(`${ZERO_EX_QUOTE}?${parameters}`, {
-      headers: { "0x-api-key": apiKey, "0x-version": "v2" },
-    });
-    const target = quote.transaction?.to;
-    const allowanceTarget =
-      quote.issues?.allowance?.spender ?? quote.allowanceTarget ?? null;
-    const selector = quote.transaction?.data?.slice(0, 10)?.toLowerCase();
-    const policyConfigured =
-      allowedZeroExTargets.size > 0 &&
-      allowedZeroExAllowanceTargets.size > 0 &&
-      allowedZeroExSelectors.size > 0;
-    const policyValid =
-      policyConfigured &&
-      allowedZeroExTargets.has(target?.toLowerCase()) &&
-      allowedZeroExAllowanceTargets.has(allowanceTarget?.toLowerCase()) &&
-      allowedZeroExSelectors.has(selector);
-    const structurallyValid =
-      isAddress(target) &&
-      isAddress(allowanceTarget) &&
-      BigInt(quote.sellAmount ?? 0) === sellAmount &&
-      BigInt(quote.buyAmount ?? 0) > 0n &&
-      typeof quote.transaction?.data === "string" &&
-      quote.transaction.data.startsWith("0x");
-    const valid = structurallyValid && policyValid;
-    const realizedUsd =
-      direction === "buy"
-        ? (Number(quote.buyAmount ?? 0) / 10 ** Number(asset.decimals ?? 18)) *
-          priceUsd
-        : Number(quote.buyAmount ?? 0) / 1e6;
-    const impactBps = Math.max(
-      0,
-      Math.round(((notionalUsd - realizedUsd) / notionalUsd) * 10_000),
+  if (/^0x0{40}$/i.test(address)) return null;
+  const [token0, token1, liquidity, slot0, observation] = await Promise.all([
+    client.readContract({
+      address,
+      abi: poolAbi,
+      functionName: "token0",
+      blockNumber,
+    }),
+    client.readContract({
+      address,
+      abi: poolAbi,
+      functionName: "token1",
+      blockNumber,
+    }),
+    client.readContract({
+      address,
+      abi: poolAbi,
+      functionName: "liquidity",
+      blockNumber,
+    }),
+    client.readContract({
+      address,
+      abi: poolAbi,
+      functionName: "slot0",
+      blockNumber,
+    }),
+    client
+      .readContract({
+        address,
+        abi: poolAbi,
+        functionName: "observe",
+        args: [[1_800, 0]],
+        blockNumber,
+      })
+      .catch(() => null),
+  ]);
+  if (slot0[3] < 2 || !observation) return null;
+  let tickDelta = observation[0][1] - observation[0][0];
+  let meanTick = tickDelta / 1_800n;
+  if (tickDelta < 0n && tickDelta % 1_800n !== 0n) meanTick -= 1n;
+  return {
+    address,
+    token0,
+    token1,
+    fee,
+    liquidity,
+    observationCardinality: slot0[3],
+    meanTick: Number(meanTick),
+  };
+}
+
+async function dexRoutes(tokenIn, tokenOut, blockNumber) {
+  const direct = (
+    await Promise.all(
+      APPROVED_FEES.map((fee) => dexPool(tokenIn, tokenOut, fee, blockNumber)),
+    )
+  )
+    .filter(Boolean)
+    .map((pool) => ({ pools: [pool], path: [tokenIn, tokenOut] }));
+  if (
+    tokenIn.toLowerCase() === WETH.toLowerCase() ||
+    tokenOut.toLowerCase() === WETH.toLowerCase()
+  ) {
+    return direct;
+  }
+  const [first, second] = await Promise.all([
+    Promise.all(
+      APPROVED_FEES.map((fee) => dexPool(tokenIn, WETH, fee, blockNumber)),
+    ),
+    Promise.all(
+      APPROVED_FEES.map((fee) => dexPool(WETH, tokenOut, fee, blockNumber)),
+    ),
+  ]);
+  const routes = [...direct];
+  for (const a of first.filter(Boolean)) {
+    for (const b of second.filter(Boolean)) {
+      routes.push({ pools: [a, b], path: [tokenIn, WETH, tokenOut] });
+    }
+  }
+  return routes;
+}
+
+function twapAmountOut(route, amountIn) {
+  let amount = Number(amountIn);
+  for (let index = 0; index < route.pools.length; index += 1) {
+    const pool = route.pools[index];
+    const input = route.path[index].toLowerCase();
+    const ratio = 1.0001 ** pool.meanTick;
+    amount =
+      input === pool.token0.toLowerCase() ? amount * ratio : amount / ratio;
+  }
+  if (!Number.isFinite(amount) || amount <= 0) return 0n;
+  return BigInt(Math.floor(amount));
+}
+
+async function quoteRoute(route, amountIn, blockNumber) {
+  const result =
+    route.pools.length === 1
+      ? await client.simulateContract({
+          address: UNISWAP_QUOTER,
+          abi: quoterAbi,
+          functionName: "quoteExactInputSingle",
+          args: [
+            {
+              tokenIn: route.path[0],
+              tokenOut: route.path[1],
+              amountIn,
+              fee: route.pools[0].fee,
+              sqrtPriceLimitX96: 0n,
+            },
+          ],
+          blockNumber,
+        })
+      : await client.simulateContract({
+          address: UNISWAP_QUOTER,
+          abi: quoterAbi,
+          functionName: "quoteExactInput",
+          args: [
+            encodePacked(
+              ["address", "uint24", "address", "uint24", "address"],
+              [
+                route.path[0],
+                route.pools[0].fee,
+                route.path[1],
+                route.pools[1].fee,
+                route.path[2],
+              ],
+            ),
+            amountIn,
+          ],
+          blockNumber,
+        });
+  return {
+    route,
+    amountOut: result.result[0],
+    gasEstimate: result.result[3],
+    twapAmountOut: twapAmountOut(route, amountIn),
+  };
+}
+
+async function bestDexQuote(tokenIn, tokenOut, amountIn, blockNumber) {
+  const routes = await dexRoutes(tokenIn, tokenOut, blockNumber);
+  const settled = await Promise.allSettled(
+    routes.map((route) => quoteRoute(route, amountIn, blockNumber)),
+  );
+  const valid = settled
+    .filter((row) => row.status === "fulfilled" && row.value.twapAmountOut > 0n)
+    .map((row) => row.value)
+    .sort(
+      (a, b) =>
+        Number(b.amountOut > a.amountOut) - Number(b.amountOut < a.amountOut) ||
+        a.route.pools[0].address.localeCompare(b.route.pools[0].address),
     );
-    return {
-      valid,
+  if (!valid.length) throw new Error("no qualified on-chain Uniswap route");
+  const selected = valid[0];
+  const difference =
+    selected.amountOut > selected.twapAmountOut
+      ? selected.amountOut - selected.twapAmountOut
+      : selected.twapAmountOut - selected.amountOut;
+  return {
+    ...selected,
+    impactBps: Number((difference * 10_000n) / selected.twapAmountOut),
+    rejectedRoutes: settled.flatMap((row, index) =>
+      row.status === "rejected"
+        ? [
+            {
+              pools: routes[index].pools.map((pool) => pool.address),
+              reason:
+                row.reason instanceof Error
+                  ? row.reason.message
+                  : String(row.reason),
+            },
+          ]
+        : [],
+    ),
+  };
+}
+
+async function quotePair(asset, direction, notionalUsd, reserveDecimals) {
+  const blockNumber = await client.getBlockNumber();
+  try {
+    const unit = 10n ** BigInt(asset.decimals ?? 18);
+    const unitMark = await bestDexQuote(asset.address, USDG, unit, blockNumber);
+    const notionalRaw = BigInt(notionalUsd) * 10n ** BigInt(reserveDecimals);
+    const sellAmount =
+      direction === "buy"
+        ? notionalRaw
+        : (notionalRaw * unit) / unitMark.twapAmountOut;
+    const quote = await bestDexQuote(
+      direction === "buy" ? USDG : asset.address,
+      direction === "buy" ? asset.address : USDG,
+      sellAmount,
+      blockNumber,
+    );
+    const evidence = {
       direction,
       notionalUsd,
-      sellAmount: quote.sellAmount ?? null,
-      buyAmount: quote.buyAmount ?? null,
-      realizedUsd,
-      impactBps,
-      blockNumber: quote.blockNumber ?? null,
-      target: target ?? null,
-      allowanceTarget,
-      selector: selector ?? null,
-      policyConfigured,
-      policyValid,
-      simulationIncomplete: quote.issues?.simulationIncomplete ?? false,
-      sourceHash: hash(quote),
-      reason: valid
-        ? null
-        : !structurallyValid
-          ? "0x response failed structural validation"
-          : "0x target, allowance target, or selector is not frozen in policy",
+      sellAmount: sellAmount.toString(),
+      buyAmount: quote.amountOut.toString(),
+      twapAmountOut: quote.twapAmountOut.toString(),
+      impactBps: quote.impactBps,
+      blockNumber: blockNumber.toString(),
+      factory: UNISWAP_FACTORY,
+      router: UNISWAP_ROUTER,
+      quoter: UNISWAP_QUOTER,
+      pools: quote.route.pools.map((pool) => ({
+        address: pool.address,
+        fee: pool.fee,
+        liquidity: pool.liquidity.toString(),
+        observationCardinality: pool.observationCardinality,
+      })),
+      path: quote.route.path,
+      rejectedRoutes: quote.rejectedRoutes,
+    };
+    return {
+      valid: quote.amountOut > 0n,
+      ...evidence,
+      sourceHash: hash(evidence),
+      reason: quote.amountOut > 0n ? null : "DEX quote returned zero",
     };
   } catch (error) {
     return {
       valid: false,
       direction,
-      reason: error instanceof Error ? error.message : "0x quote failed",
+      reason:
+        error instanceof Error ? error.message : "on-chain DEX quote failed",
     };
   }
 }
@@ -635,6 +798,8 @@ const feedEvidence = await parallelMap(nominatedAssets, 6, inspectFeed);
 const priorEvidence = priorQualificationEvidence();
 const quoteEvidence = [];
 const marketEvidence = [];
+const reserveDecimals =
+  inspected.find((asset) => asset.symbol === "USDG")?.decimals ?? 6;
 for (const asset of nominatedAssets) {
   let priceUsd = null;
   if (asset.symbol === "WETH") {
@@ -670,28 +835,32 @@ for (const asset of nominatedAssets) {
       ? await collectSecCapitalization(asset, priceUsd)
       : null);
   const capitalization = inspectCapitalization(asset, collectedCapitalization);
-  if (!priceUsd || priceUsd <= 0) {
-    quoteEvidence.push({
-      symbol: asset.symbol,
-      impactBuy: { valid: false, reason: "official token price unavailable" },
-      impactSell: { valid: false, reason: "official token price unavailable" },
-      depthBuy: { valid: false, reason: "official token price unavailable" },
-      depthSell: { valid: false, reason: "official token price unavailable" },
-    });
-    marketEvidence.push({
-      symbol: asset.symbol,
-      capitalization,
-      history,
-      officialPriceUsd: null,
-    });
-    continue;
-  }
   quoteEvidence.push({
     symbol: asset.symbol,
-    impactBuy: await quotePair(asset, "buy", priceUsd, IMPACT_NOTIONAL_USD),
-    impactSell: await quotePair(asset, "sell", priceUsd, IMPACT_NOTIONAL_USD),
-    depthBuy: await quotePair(asset, "buy", priceUsd, DEPTH_NOTIONAL_USD),
-    depthSell: await quotePair(asset, "sell", priceUsd, DEPTH_NOTIONAL_USD),
+    impactBuy: await quotePair(
+      asset,
+      "buy",
+      IMPACT_NOTIONAL_USD,
+      reserveDecimals,
+    ),
+    impactSell: await quotePair(
+      asset,
+      "sell",
+      IMPACT_NOTIONAL_USD,
+      reserveDecimals,
+    ),
+    depthBuy: await quotePair(
+      asset,
+      "buy",
+      DEPTH_NOTIONAL_USD,
+      reserveDecimals,
+    ),
+    depthSell: await quotePair(
+      asset,
+      "sell",
+      DEPTH_NOTIONAL_USD,
+      reserveDecimals,
+    ),
   });
   marketEvidence.push({
     symbol: asset.symbol,
@@ -726,7 +895,10 @@ const qualification = inspected
       quote.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
       quote.impactSell.impactBps <= MAXIMUM_IMPACT_BPS;
     const depthValid =
-      quote?.depthBuy?.valid === true && quote?.depthSell?.valid === true;
+      quote?.depthBuy?.valid === true &&
+      quote?.depthSell?.valid === true &&
+      quote.depthBuy.impactBps <= 300 &&
+      quote.depthSell.impactBps <= 300;
     const passed =
       identityValid &&
       asset.oraclePaused !== true &&
@@ -820,7 +992,7 @@ const qualificationHours =
 const allQualificationWindowsPassed = readiness.coreQualificationPassed;
 
 const result = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   mode: "robinhood-mainnet-shadow",
   startedAt,
   completedAt: new Date().toISOString(),
@@ -852,11 +1024,11 @@ const result = {
           asset.onchainUid?.toLowerCase() === asset.uid.toLowerCase())
       );
     }),
-    zeroExConfigured: Boolean(apiKey),
-    zeroExPolicyFrozen:
-      allowedZeroExTargets.size > 0 &&
-      allowedZeroExAllowanceTargets.size > 0 &&
-      allowedZeroExSelectors.size > 0,
+    dexVenueVerified:
+      isAddress(UNISWAP_FACTORY) &&
+      isAddress(UNISWAP_ROUTER) &&
+      isAddress(UNISWAP_QUOTER),
+    selfHostedRouting: true,
     twoSidedQuotesValid: MAINNET_CORE_SYMBOLS.every((symbol) => {
       const row = quoteEvidence.find(
         (candidate) => candidate.symbol === symbol,
@@ -868,7 +1040,9 @@ const result = {
         row.impactBuy.impactBps <= MAXIMUM_IMPACT_BPS &&
         row.impactSell.impactBps <= MAXIMUM_IMPACT_BPS &&
         row.depthBuy.valid &&
-        row.depthSell.valid
+        row.depthSell.valid &&
+        row.depthBuy.impactBps <= 300 &&
+        row.depthSell.impactBps <= 300
       );
     }),
     chainlinkMappingsConfigured: MAINNET_CORE_SYMBOLS.every(
@@ -881,8 +1055,8 @@ const result = {
 result.readyToBuildCandidate =
   result.gates.noSigningKey &&
   result.gates.canonicalIdentityChecked &&
-  result.gates.zeroExConfigured &&
-  result.gates.zeroExPolicyFrozen &&
+  result.gates.dexVenueVerified &&
+  result.gates.selfHostedRouting &&
   result.gates.twoSidedQuotesValid &&
   result.gates.chainlinkMappingsConfigured &&
   result.gates.qualificationWindowPassed;

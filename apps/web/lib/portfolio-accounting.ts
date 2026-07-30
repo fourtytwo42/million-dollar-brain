@@ -1,5 +1,6 @@
 import {
   decodeEventLog,
+  formatUnits,
   keccak256,
   parseAbi,
   stringToHex,
@@ -76,6 +77,9 @@ const vaultEvents = parseAbi([
   "event RedemptionAssetSold(address indexed account,address indexed asset,uint256 assetSold,uint256 usdgReceived)",
   "event QueuedRedemptionSettled(uint256 indexed requestId,address indexed account,uint256 shares,uint256 net,uint256 fee)",
   "event RebalanceAssetTraded(bytes32 indexed cycleHash,address indexed asset,bool isBuy,uint256 assetAmount,uint256 usdgAmount,uint256 valuationUsd)",
+]);
+const dexExecutionEvents = parseAbi([
+  "event SwapExecuted(address indexed tokenIn,address indexed tokenOut,uint256 amountIn,uint256 amountOut,address firstPool,address secondPool,uint64 referenceBlock)",
 ]);
 
 const sum = (values: bigint[]) =>
@@ -342,15 +346,20 @@ export async function syncVaultLedger() {
       fromBlock,
       toBlock: currentBlock,
     });
-    const symbols = new Map<string, string>([
-      [d.nvda.toLowerCase(), "NVDA"],
-      [d.aapl.toLowerCase(), "AAPL"],
-      [d.ethx.toLowerCase(), "ETHX"],
-      [d.usdg.toLowerCase(), "USDG"],
-    ]);
+    const manifestAssets = d.assets ?? [];
+    const symbols = new Map(
+      manifestAssets.map((asset) => [
+        asset.address.toLowerCase(),
+        asset.symbol,
+      ]),
+    );
+    const assetsByAddress = new Map(
+      manifestAssets.map((asset) => [asset.address.toLowerCase(), asset]),
+    );
     const blockTimes = new Map<bigint, Date>();
     const gasByTx = new Map<string, bigint>();
     const gasRecorded = new Set<string>();
+    const dexReceiptsRecorded = new Set<string>();
     let indexed = 0;
     await client.query("BEGIN");
     try {
@@ -382,6 +391,82 @@ export async function syncVaultLedger() {
             txHash,
             receipt.gasUsed * (receipt.effectiveGasPrice ?? 0n),
           );
+          if (d.dexExecutionAdapter && !dexReceiptsRecorded.has(txHash)) {
+            for (const receiptLog of receipt.logs) {
+              if (
+                receiptLog.address.toLowerCase() !==
+                d.dexExecutionAdapter.toLowerCase()
+              ) {
+                continue;
+              }
+              let swap;
+              try {
+                swap = decodeEventLog({
+                  abi: dexExecutionEvents,
+                  eventName: "SwapExecuted",
+                  data: receiptLog.data,
+                  topics: receiptLog.topics,
+                });
+              } catch {
+                continue;
+              }
+              const swapArgs = swap.args as {
+                tokenIn: Address;
+                tokenOut: Address;
+                amountIn: bigint;
+                amountOut: bigint;
+                firstPool: Address;
+                secondPool: Address;
+                referenceBlock: bigint;
+              };
+              const tokenIn = assetsByAddress.get(
+                swapArgs.tokenIn.toLowerCase(),
+              );
+              const tokenOut = assetsByAddress.get(
+                swapArgs.tokenOut.toLowerCase(),
+              );
+              if (!tokenIn || !tokenOut) continue;
+              const input = Number(
+                formatUnits(swapArgs.amountIn, tokenIn.decimals),
+              );
+              const output = Number(
+                formatUnits(swapArgs.amountOut, tokenOut.decimals),
+              );
+              const effectivePrice =
+                tokenIn.kind === "reserve" ? input / output : output / input;
+              await client.query(
+                `INSERT INTO mdb_dex_execution_receipts_v6
+                  (tx_hash,log_index,block_number,observed_at,token_in,token_out,
+                   amount_in,amount_out,first_pool,second_pool,reference_block,
+                   effective_price,receipt)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                 ON CONFLICT(tx_hash,log_index) DO NOTHING`,
+                [
+                  txHash,
+                  receiptLog.logIndex,
+                  blockNumber.toString(),
+                  observedAt,
+                  swapArgs.tokenIn.toLowerCase(),
+                  swapArgs.tokenOut.toLowerCase(),
+                  swapArgs.amountIn.toString(),
+                  swapArgs.amountOut.toString(),
+                  swapArgs.firstPool.toLowerCase(),
+                  swapArgs.secondPool.toLowerCase(),
+                  swapArgs.referenceBlock.toString(),
+                  effectivePrice,
+                  JSON.stringify({
+                    eventName: "SwapExecuted",
+                    tokenIn: tokenIn.symbol,
+                    tokenOut: tokenOut.symbol,
+                    amountIn: swapArgs.amountIn.toString(),
+                    amountOut: swapArgs.amountOut.toString(),
+                    effectivePrice,
+                  }),
+                ],
+              );
+            }
+            dexReceiptsRecorded.add(txHash);
+          }
         }
         const args = decoded.args as Record<string, unknown>;
         if (

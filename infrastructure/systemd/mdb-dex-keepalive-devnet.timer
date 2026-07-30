@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep 42 Braincells devnet DEX TWAP observations fresh
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=10min
+AccuracySec=5s
+Persistent=true
+Unit=mdb-dex-keepalive-devnet.service
+
+[Install]
+WantedBy=timers.target

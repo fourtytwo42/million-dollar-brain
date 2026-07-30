@@ -447,6 +447,43 @@ function researchOmen(assetLimit: number): string {
   return "The corkboard has become self-aware";
 }
 
+type DexQuoteSummary = {
+  quoteBlock: string;
+  expiresAt: number;
+  plans: {
+    plan: {
+      route: {
+        tokenIn: string;
+        tokenOut: string;
+        intermediate: string;
+        firstFee: number;
+        secondFee: number;
+      };
+      quotedAmountOut: string;
+      minimumAmountOut: string;
+    };
+    evidence: {
+      firstPool: string;
+      secondPool: string | null;
+      estimatedGasCostUsdG: string;
+      twapAmountOut: string;
+      priceImpactBps: number;
+    };
+  }[];
+};
+
+type DexReceiptSummary = {
+  action: "buy" | "sell";
+  txHash: `0x${string}`;
+  blockNumber: string;
+  legs: {
+    input: string;
+    output: string;
+    route: string;
+    effectivePrice: string;
+  }[];
+};
+
 export function EditorialDashboard({
   data,
   account,
@@ -462,6 +499,10 @@ export function EditorialDashboard({
   setAmount,
   sellAmount,
   setSellAmount,
+  buyDexQuote,
+  sellDexQuote,
+  dexQuoteError,
+  lastDexReceipt,
   setScreen,
   setSelectedId,
   onToggleTheme,
@@ -499,6 +540,10 @@ export function EditorialDashboard({
   setAmount: (value: string) => void;
   sellAmount: string;
   setSellAmount: (value: string) => void;
+  buyDexQuote: DexQuoteSummary | null;
+  sellDexQuote: DexQuoteSummary | null;
+  dexQuoteError: string | null;
+  lastDexReceipt: DexReceiptSummary | null;
   setScreen: (screen: "Brain" | "Basket" | "Decisions") => void;
   setSelectedId: (pieceId: number) => void;
   onToggleTheme: () => void;
@@ -557,6 +602,20 @@ export function EditorialDashboard({
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
   const reserveMoney = (value: string | bigint) =>
     moneyAtDecimals(value, reserveDecimals);
+  const dexAsset = (address: string) =>
+    data?.assets.find(
+      (asset) => asset.address.toLowerCase() === address.toLowerCase(),
+    );
+  const dexRouteLabel = (quote: DexQuoteSummary["plans"][number]) => {
+    const input = dexAsset(quote.plan.route.tokenIn)?.symbol ?? "token";
+    const output = dexAsset(quote.plan.route.tokenOut)?.symbol ?? "token";
+    const middle =
+      quote.plan.route.intermediate ===
+      "0x0000000000000000000000000000000000000000"
+        ? ""
+        : ` → ${dexAsset(quote.plan.route.intermediate)?.symbol ?? "WETH"}`;
+    return `${input}${middle} → ${output}`;
+  };
   useEffect(() => {
     const update = () => setCountdownText(calculateCountdown());
     update();
@@ -2117,7 +2176,7 @@ export function EditorialDashboard({
             <article className="large-ledger-card">
               <div className="snapshot-metrics nav-metrics">
                 <Metric
-                  label="BRAINS price"
+                  label="DEX TWAP BRAINS price"
                   value={`$${data ? usd(data.navPerShare) : "—"}`}
                 />
                 <Metric
@@ -2129,7 +2188,7 @@ export function EditorialDashboard({
                   }
                 />
                 <Metric
-                  label="Basket NAV"
+                  label="DEX-marked NAV"
                   value={`$${data ? usd(data.nav) : "—"}`}
                 />
                 <Metric
@@ -2312,9 +2371,47 @@ export function EditorialDashboard({
                           enters the basket
                         </p>
                         <p>
-                          BRAINS price ${usd(data.navPerShare)} · minimum
-                          received is 99% of this quote
+                          DEX TWAP BRAINS price ${usd(data.navPerShare)} ·
+                          minimum received is 99% of this quote
                         </p>
+                        {buyDexQuote ? (
+                          <>
+                            <b>
+                              Live DEX routes · block {buyDexQuote.quoteBlock}
+                            </b>
+                            {buyDexQuote.plans.map((quote, index) => {
+                              const output = dexAsset(
+                                quote.plan.route.tokenOut,
+                              );
+                              return (
+                                <small
+                                  key={`${quote.evidence.firstPool}-${index}`}
+                                >
+                                  {dexRouteLabel(quote)} ·{" "}
+                                  {moneyAtDecimals(
+                                    quote.plan.quotedAmountOut,
+                                    output?.decimals ?? 18,
+                                  )}{" "}
+                                  {output?.symbol ?? "tokens"} · impact{" "}
+                                  {(
+                                    quote.evidence.priceImpactBps / 100
+                                  ).toFixed(2)}
+                                  % · pool {short(quote.evidence.firstPool)}
+                                </small>
+                              );
+                            })}
+                            <small>
+                              Quote expires at{" "}
+                              {new Date(
+                                buyDexQuote.expiresAt * 1_000,
+                              ).toLocaleTimeString()}
+                            </small>
+                          </>
+                        ) : dexQuoteError ? (
+                          <small>Live DEX quote: {dexQuoteError}</small>
+                        ) : (
+                          <small>Refreshing the exact-size DEX quote…</small>
+                        )}
                         <b>Your USDG buys</b>
                         {Object.entries(data.currentWeightsBps)
                           .filter(([, weight]) => weight > 0)
@@ -2392,6 +2489,34 @@ export function EditorialDashboard({
                           Settlement is atomic: the complete sale succeeds in
                           this transaction or nothing changes.
                         </p>
+                        {sellDexQuote ? (
+                          <>
+                            <b>
+                              Live DEX routes · block {sellDexQuote.quoteBlock}
+                            </b>
+                            {sellDexQuote.plans.map((quote, index) => (
+                              <small
+                                key={`${quote.evidence.firstPool}-${index}`}
+                              >
+                                {dexRouteLabel(quote)} · estimated{" "}
+                                {reserveMoney(quote.plan.quotedAmountOut)} USDG
+                                · impact{" "}
+                                {(quote.evidence.priceImpactBps / 100).toFixed(
+                                  2,
+                                )}
+                                % · pool {short(quote.evidence.firstPool)}
+                              </small>
+                            ))}
+                            <small>
+                              Estimated sell proceeds use this exact-size quote.
+                              Your receipt will show actual proceeds.
+                            </small>
+                          </>
+                        ) : dexQuoteError ? (
+                          <small>Live DEX quote: {dexQuoteError}</small>
+                        ) : (
+                          <small>Refreshing the exact-size DEX quote…</small>
+                        )}
                       </details>
                     </div>
                   )}
@@ -2412,6 +2537,29 @@ export function EditorialDashboard({
               )}
 
               <p className="trade-status">{message}</p>
+              {lastDexReceipt && lastDexReceipt.legs.length > 0 && (
+                <details className="dex-receipt">
+                  <summary>
+                    Last DEX receipt ·{" "}
+                    {lastDexReceipt.action === "buy" ? "Buy" : "Sell"} · block{" "}
+                    {lastDexReceipt.blockNumber}
+                  </summary>
+                  <div>
+                    {lastDexReceipt.legs.map((leg, index) => (
+                      <p key={`${leg.route}-${index}`}>
+                        <b>
+                          {leg.input} → {leg.output}
+                        </b>
+                        <small>
+                          Actual on-chain output · {leg.effectivePrice} · pools{" "}
+                          {leg.route}
+                        </small>
+                      </p>
+                    ))}
+                    <small>Transaction {short(lastDexReceipt.txHash)}</small>
+                  </div>
+                </details>
+              )}
             </aside>
           </section>
           {data && (

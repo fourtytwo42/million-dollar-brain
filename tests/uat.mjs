@@ -410,7 +410,9 @@ try {
     .getByText("Wallet funded with 100,000 test USDG and 2 test ETH.")
     .waitFor({ timeout: 30000 });
 
-  await page.getByRole("button", { name: /Buy (piece|next)/ }).click();
+  await page
+    .getByRole("button", { name: /Buy (braincell|piece|next)/ })
+    .click();
   await page
     .getByText(/Brain piece \d+ is now yours\./)
     .waitFor({ timeout: 45000 });

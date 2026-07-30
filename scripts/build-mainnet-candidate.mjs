@@ -17,7 +17,7 @@ const statePath =
   resolve(repoRoot, "var/mainnet-shadow/state.json");
 const stableOutput = resolve(
   repoRoot,
-  "var/mainnet-readiness/mainnet-candidate-v3.json",
+  "var/mainnet-readiness/mainnet-candidate-v4.json",
 );
 const run = (command, args, options = {}) =>
   execFileSync(command, args, {
@@ -32,8 +32,8 @@ const gitSha = run("git", ["rev-parse", "HEAD"]);
 const pushed = gitSha === run("git", ["rev-parse", "@{u}"]);
 const clean = run("git", ["status", "--porcelain"]) === "";
 const state = JSON.parse(readFileSync(statePath, "utf8"));
-if (state.schemaVersion !== 3 || state.chainId !== 4663)
-  throw new Error("Decision-ready mainnet shadow schema v3 is required");
+if (state.schemaVersion !== 4 || state.chainId !== 4663)
+  throw new Error("DEX-qualified mainnet shadow schema v4 is required");
 if (state.broadcastPermitted !== false)
   throw new Error("Shadow evidence unexpectedly permits broadcast");
 
@@ -52,7 +52,7 @@ const acceptancePassed =
   acceptance?.atomicSells === true &&
   acceptance?.autonomousCycles === true;
 const forkPassed =
-  fork?.schemaVersion === 3 &&
+  fork?.schemaVersion === 4 &&
   fork?.chainId === 4663 &&
   fork?.canonicalAssets === true &&
   fork?.activationState === "paused-canary";
@@ -101,9 +101,11 @@ const venues = Object.fromEntries(
     .map((quote) => [
       quote.symbol,
       {
-        target: quote.impactBuy?.target ?? null,
-        allowanceTarget: quote.impactBuy?.allowanceTarget ?? null,
-        selector: quote.impactBuy?.selector ?? null,
+        factory: quote.impactBuy?.factory ?? null,
+        router: quote.impactBuy?.router ?? null,
+        quoter: quote.impactBuy?.quoter ?? null,
+        buyPools: quote.impactBuy?.pools ?? [],
+        sellPools: quote.impactSell?.pools ?? [],
         buyEvidenceHash: quote.impactBuy?.sourceHash ?? null,
         sellEvidenceHash: quote.impactSell?.sourceHash ?? null,
       },
@@ -114,18 +116,10 @@ const operatorAddress =
   (existsSync("/etc/mdb/keys/mainnet-operator.address")
     ? readFileSync("/etc/mdb/keys/mainnet-operator.address", "utf8").trim()
     : null);
-const quoteAuthorizerAddress =
-  process.env.MDB_QUOTE_AUTHORIZER ??
-  (existsSync("/etc/mdb/keys/mainnet-quote-authorizer.address")
-    ? readFileSync(
-        "/etc/mdb/keys/mainnet-quote-authorizer.address",
-        "utf8",
-      ).trim()
-    : null);
 const buildExists = existsSync(resolve(repoRoot, "apps/web/.next/BUILD_ID"));
 const payload = {
   schemaVersion: 1,
-  manifestSchemaVersion: 3,
+  manifestSchemaVersion: 4,
   environment: "robinhood-mainnet-candidate",
   chainId: 4663,
   gitSha,
@@ -150,7 +144,7 @@ const payload = {
     ? directoryHash(resolve(repoRoot, "apps/web/.next"))
     : null,
   operatorAddress,
-  quoteAuthorizerAddress,
+  executionAuthority: "self-hosted-uniswap-structured-routes",
   evidence: {
     clean,
     pushed,
@@ -159,7 +153,7 @@ const payload = {
     acceptancePassed,
     forkPassed,
     noMainnetManifest: !existsSync(
-      resolve(repoRoot, "packages/contracts/deployments/mainnet-v3.json"),
+      resolve(repoRoot, "packages/contracts/deployments/mainnet-v4.json"),
     ),
   },
   acceptanceHash: acceptance ? sha256(JSON.stringify(acceptance)) : null,
@@ -195,7 +189,7 @@ report.readyToBroadcast = report.readyToBroadcast && report.signed;
 
 const shaOutput = resolve(
   repoRoot,
-  `var/releases/${gitSha}/mainnet-candidate-v3.json`,
+  `var/releases/${gitSha}/mainnet-candidate-v4.json`,
 );
 for (const output of [stableOutput, shaOutput]) {
   mkdirSync(dirname(output), { recursive: true });

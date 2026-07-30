@@ -168,16 +168,16 @@ The MVP consists of the following upgradeable components:
    - Stores approved asset IDs, token contracts, categories, risk tiers, and active status.
 
 8. **Oracle Adapter**
-   - Normalizes approved price sources.
-   - Enforces freshness and deviation rules.
+   - Marks basket assets from approved Uniswap pool TWAPs.
+   - Uses Chainlink only as an emergency divergence circuit breaker for new exposure.
 
 9. **Allocation and Risk Controller**
    - Accepts signed AI target proposals.
    - Enforces schema, schedule, asset, exposure, turnover, and circuit-breaker rules.
 
 10. **Trade Executor**
-    - Converts accepted targets into bounded trades.
-    - Interacts only with approved venues and assets.
+    - Converts accepted targets into structured, bounded Uniswap routes.
+    - Measures actual vault balance changes as the final execution value.
 
 11. **Automation and Reimbursement Module**
     - Tracks scheduled cycles.
@@ -210,10 +210,15 @@ At a high level:
 NAV must include:
 
 - Current approved asset balances.
-- Fresh approved oracle prices.
+- Fresh 30-minute DEX TWAP marks from the deepest qualified USDG route.
 - Accrued creator and brain-owner fee liabilities.
 - Reserved redemption and execution costs where applicable.
 - Conservative treatment of paused, stale, or illiquid assets.
+
+Chainlink does not calculate NAV. A fresh Chainlink observation is used only as
+a 5% emergency divergence circuit breaker for buys and rebalances. Exact-size
+DEX quotes estimate transactions, and actual token balance changes determine
+settlement.
 
 ### 7.3 Deposit
 
@@ -233,7 +238,9 @@ Requirements:
 - The transaction reverts if prices are stale or minted shares fall below the user's minimum.
 - The vault retains the current USDG reserve fraction and buys every positively held risk asset in proportion to its pre-deposit basket value.
 - At zero supply, governance-configured bootstrap weights replace pre-deposit actual weights and initial shares mint at one USDG of actual NAV added.
-- Valuation and execution are separate: accepted swap results must remain inside protocol and user slippage bounds around fresh valuation-adapter prices.
+- Valuation and execution are separate: a fresh exact-size DEX quote sets the
+  user's minimum-output range, actual execution must remain within 3% of the
+  DEX TWAP, and entering users bear their own execution loss.
 - Sub-trade dust below one basis point may remain in USDG and is included in actual NAV added.
 - The user pays only their deposit transaction gas.
 
@@ -558,7 +565,8 @@ is no fixed candidate-count ceiling. It receives full dossiers for current
 holdings and the deterministic top 64 assets, but may return no more than nine
 risk positions plus USDG. All external information comes from structured
 Robinhood, Chainlink, Robinhood Chain, SEC EDGAR, FRED, Coinbase, portfolio,
-and validated 0x sources. Versioned protocol code calculates derived metrics.
+and self-hosted on-chain DEX observations. Versioned protocol code calculates
+derived metrics.
 
 Every model request is stateless, contains one freshly built
 `DecisionContextV4`, has no conversation ID or prior messages, and is rejected
@@ -721,7 +729,13 @@ The compiler must consider:
 - Circuit-breaker state.
 - Estimated gas and execution cost.
 
-Execution uses allowlisted venue adapters rather than model-authored calldata. The adapter boundary can support Uniswap-compatible AMMs, signed RFQ or aggregator quotes, validated propAMMs, and validated order books. Every trade enforces an exact input or bounded maximum input, minimum proceeds, deadline, oracle deviation, slippage, token, venue, and allowance target.
+Execution uses a self-hosted router and an allowlisted Uniswap adapter rather
+than model-authored or externally supplied calldata. The server evaluates
+approved direct `asset/USDG` and two-hop `asset/WETH/USDG` pools at one pinned
+block and submits a structured `DexSwapPlanV1`. Every trade enforces exact
+input, minimum proceeds, deadline, quote-block age, TWAP deviation, approved
+factory/router/pools/fees, path endpoints, and recipient. No external trading
+API or private quote signer is required.
 
 The system is architected for standard ERC-20 assets and Robinhood Stock Tokens using ERC-8056. Every official Stock Token may be discovered and represented, but an asset cannot enter the active decision universe until its canonical contract, multiplier behavior, oracle, sequencer checks, liquidity, execution route, transfer behavior, permissions, and legal eligibility pass review.
 
@@ -1158,8 +1172,14 @@ confidence reason codes, and non-blocking warnings.
 - Candidates come from Robinhood's canonical metadata but require explicit risk-administrator approval.
 - The discoverable universe includes canonical Robinhood Stock Tokens and supported standard ERC-20s; discovery never grants trading approval.
 - Stock Token integration supports ERC-8056 multipliers and keeps raw balances, UI-scaled amounts, underlying quotes, and multiplier-adjusted Chainlink feeds distinct.
-- Venue adapters support safe expansion across validated AMM, RFQ or aggregator, propAMM, and order-book routes.
-- The MVP implements signed RFQ, Uniswap-compatible, and deterministic mock venue adapters; Rialto and Lighter are post-MVP adapters.
+- The MVP execution venue is the verified Robinhood Chain Uniswap deployment.
+  Additional venues require separate qualification and governance activation.
+- The self-hosted router reads factories, pools, ticks, observations, liquidity,
+  and quoters through the server RPC gateway. It never accepts arbitrary
+  calldata or an externally generated execution quote.
+- BRAINS NAV is DEX TWAP-marked. Exact-size DEX quotes drive previews, actual
+  balance deltas determine settlement, and Chainlink remains only a circuit
+  breaker for increased exposure and rebalancing.
 - All agent information comes from free structured feeds or deterministic protocol calculations.
 - Ornith has no browsing, news, social, arbitrary HTTP, or user-directed
   research. One bounded structured research round is permitted for at most 16

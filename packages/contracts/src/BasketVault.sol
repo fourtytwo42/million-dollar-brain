@@ -66,6 +66,31 @@ interface IExecutionAdapterV3 {
     ) external returns (uint256 amountOut);
 }
 
+interface IDexExecutionAdapterV1 {
+    struct DexRouteV1 {
+        address tokenIn;
+        address tokenOut;
+        address intermediate;
+        uint24 firstFee;
+        uint24 secondFee;
+    }
+
+    struct DexSwapPlanV1 {
+        DexRouteV1 route;
+        uint256 amountIn;
+        uint256 quotedAmountOut;
+        uint256 minimumAmountOut;
+        address recipient;
+        uint64 issuedAt;
+        uint64 deadline;
+        uint64 referenceBlock;
+    }
+
+    function execute(DexSwapPlanV1 calldata plan, bool increasesExposure)
+        external
+        returns (uint256 amountOut);
+}
+
 contract BasketVault is
     Initializable,
     UUPSUpgradeable,
@@ -97,6 +122,8 @@ contract BasketVault is
     error MinimumRedemption();
     error ProceedsBelowMinimum();
     error InvalidSwapPlan();
+    error LegacyExecutionDisabled();
+    error DexExecutionNotConfigured();
     error InvalidPrice();
     error StalePrice();
     error InvalidWeights();
@@ -130,6 +157,10 @@ contract BasketVault is
         bytes authorizerSignature;
     }
 
+    struct DexSwapPlan {
+        IDexExecutionAdapterV1.DexSwapPlanV1 plan;
+    }
+
     // V1 storage. Do not reorder.
     IERC20 public usdg;
     IExecutionRouter public router;
@@ -158,7 +189,11 @@ contract BasketVault is
     bool public buysEnabled;
     bool public sellsEnabled;
     bool public rebalancesEnabled;
-    uint256[41] private __gap;
+    // V5 storage. The legacy signed-calldata adapter remains readable but cannot execute.
+    IDexExecutionAdapterV1 public dexExecutionAdapter;
+    bool public dexExecutionEnabled;
+    bool public legacyPlanExecutionDisabled;
+    uint256[40] private __gap;
 
     event Deposited(address indexed account, uint256 gross, uint256 shares, uint256 fee);
     event DepositAssetPurchased(
@@ -190,6 +225,8 @@ contract BasketVault is
     );
     event BasketV3Configured(address indexed assetRegistry, address indexed executionAdapter);
     event CanaryControlsConfigured(bool buysEnabled, bool sellsEnabled, bool rebalancesEnabled);
+    event BasketV5Configured(address indexed dexValuation, address indexed dexExecutionAdapter);
+    event DexPriceAgeConfigured(uint256 maximumPriceAge);
     event SupportedAssetAdded(address indexed asset);
     event SupportedAssetRemoved(address indexed asset);
 
@@ -269,6 +306,45 @@ contract BasketVault is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         _setCanaryControls(buysEnabled_, sellsEnabled_, rebalancesEnabled_);
+    }
+
+    function reinitializeV5(address dexValuation_, address dexExecutionAdapter_)
+        external
+        reinitializer(5)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (dexValuation_ == address(0) || dexExecutionAdapter_ == address(0)) {
+            revert InvalidConfiguration();
+        }
+        valuation = IValuationAdapter(dexValuation_);
+        dexExecutionAdapter = IDexExecutionAdapterV1(dexExecutionAdapter_);
+        dexExecutionEnabled = true;
+        legacyPlanExecutionDisabled = true;
+        swapPlansRequired = true;
+        emit BasketV5Configured(dexValuation_, dexExecutionAdapter_);
+    }
+
+    function setDexPriceAge(uint256 maximumPriceAge_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!dexExecutionEnabled || maximumPriceAge_ == 0 || maximumPriceAge_ > 1 hours) {
+            revert InvalidConfiguration();
+        }
+        maximumPriceAge = maximumPriceAge_;
+        emit DexPriceAgeConfigured(maximumPriceAge_);
+    }
+
+    function setDexAdapters(address dexValuation_, address dexExecutionAdapter_)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        if (
+            !dexExecutionEnabled || dexValuation_ == address(0)
+                || dexExecutionAdapter_ == address(0)
+        ) {
+            revert InvalidConfiguration();
+        }
+        valuation = IValuationAdapter(dexValuation_);
+        dexExecutionAdapter = IDexExecutionAdapterV1(dexExecutionAdapter_);
+        emit BasketV5Configured(dexValuation_, dexExecutionAdapter_);
     }
 
     function setCanaryControls(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_)
@@ -388,14 +464,22 @@ contract BasketVault is
         return _depositLegacy(grossAmount, minimumShares, deadline);
     }
 
-    function depositWithPlan(
+    function depositWithPlan(uint256, uint256, uint256, SwapPlan[] calldata)
+        external
+        pure
+        returns (uint256)
+    {
+        revert LegacyExecutionDisabled();
+    }
+
+    function depositWithDexPlan(
         uint256 grossAmount,
         uint256 minimumShares,
         uint256 deadline,
-        SwapPlan[] calldata plans
+        DexSwapPlan[] calldata plans
     ) external nonReentrant returns (uint256 shares) {
         if (!_buysEnabled()) revert BuysDisabled();
-        if (!swapPlansRequired) revert SwapPlansNotConfigured();
+        if (!dexExecutionEnabled) revert DexExecutionNotConfigured();
         if (block.timestamp > deadline) revert Expired();
         if (grossAmount < _usdWadToReserve(10e18)) revert MinimumDeposit();
         uint256 beforeNav = totalAssetsUsd();
@@ -409,7 +493,7 @@ contract BasketVault is
         if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
         if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
         _routeFee(fee);
-        _investDepositWithPlans(msg.sender, net, beforeNav, plans);
+        _investDepositWithDexPlans(msg.sender, net, beforeNav, plans);
         uint256 afterNav = totalAssetsUsd();
         if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
@@ -460,21 +544,29 @@ contract BasketVault is
         return _redeemLegacy(shares, minimumNet, deadline);
     }
 
-    function redeemWithPlan(
+    function redeemWithPlan(uint256, uint256, uint256, SwapPlan[] calldata)
+        external
+        pure
+        returns (uint256)
+    {
+        revert LegacyExecutionDisabled();
+    }
+
+    function redeemWithDexPlan(
         uint256 shares,
         uint256 minimumNet,
         uint256 deadline,
-        SwapPlan[] calldata plans
+        DexSwapPlan[] calldata plans
     ) external nonReentrant returns (uint256 net) {
         if (!_sellsEnabled()) revert SellsDisabled();
-        if (!swapPlansRequired) revert SwapPlansNotConfigured();
+        if (!dexExecutionEnabled) revert DexExecutionNotConfigured();
         if (block.timestamp > deadline) revert Expired();
         uint256 supply = totalSupply();
         if (shares == 0 || shares > balanceOf(msg.sender)) revert InvalidShares();
         if (supply == 0) revert NoSupply();
         uint256 expectedGross = (shares * totalAssetsUsd()) / supply;
         if (expectedGross < MIN_REDEMPTION_VALUE) revert MinimumRedemption();
-        uint256 gross = _liquidateProRataWithPlans(msg.sender, shares, supply, plans);
+        uint256 gross = _liquidateProRataWithDexPlans(msg.sender, shares, supply, plans);
         uint256 fee = (gross * FEE_BPS) / BPS;
         net = gross - fee;
         if (net < minimumNet) revert ProceedsBelowMinimum();
@@ -533,14 +625,21 @@ contract BasketVault is
         _rebalanceLegacy(targetAssets, weights, cycleHash);
     }
 
-    function rebalanceWithPlan(
+    function rebalanceWithPlan(address[] calldata, uint16[] calldata, bytes32, SwapPlan[] calldata)
+        external
+        pure
+    {
+        revert LegacyExecutionDisabled();
+    }
+
+    function rebalanceWithDexPlan(
         address[] calldata targetAssets,
         uint16[] calldata weights,
         bytes32 cycleHash,
-        SwapPlan[] calldata plans
+        DexSwapPlan[] calldata plans
     ) external onlyRole(KEEPER_ROLE) nonReentrant {
         if (!_rebalancesEnabled()) revert RebalancesDisabled();
-        if (!swapPlansRequired) revert SwapPlansNotConfigured();
+        if (!dexExecutionEnabled) revert DexExecutionNotConfigured();
         _validateTargetWeights(targetAssets, weights);
         uint256 totalNav = totalAssetsUsd();
         uint256 dustValue = (totalNav * DUST_BPS) / BPS;
@@ -555,13 +654,8 @@ contract BasketVault is
             if (sellAmount == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 expectedValue = _quoteUsd(asset, sellAmount);
-            uint256 received = _executePlan(
-                plans[planIndex++],
-                asset,
-                address(usdg),
-                sellAmount,
-                _usdWadToReserve((expectedValue * (BPS - maximumSlippageBps)) / BPS)
-            );
+            uint256 received =
+                _executeDexPlan(plans[planIndex++], asset, address(usdg), sellAmount, false);
             emit RebalanceAssetTraded(cycleHash, asset, false, sellAmount, received, expectedValue);
         }
         for (uint256 i; i < assets.length; ++i) {
@@ -573,10 +667,8 @@ contract BasketVault is
             uint256 reserveIn = _usdWadToReserve(buyValue);
             if (reserveIn == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 minimumOut = (buyValue * _unitAmount(asset) * (BPS - maximumSlippageBps))
-                / (_unitPrice(asset) * BPS);
             uint256 received =
-                _executePlan(plans[planIndex++], address(usdg), asset, reserveIn, minimumOut);
+                _executeDexPlan(plans[planIndex++], address(usdg), asset, reserveIn, true);
             emit RebalanceAssetTraded(cycleHash, asset, true, received, reserveIn, buyValue);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
@@ -680,11 +772,11 @@ contract BasketVault is
         }
     }
 
-    function _investDepositWithPlans(
+    function _investDepositWithDexPlans(
         address account,
         uint256 net,
         uint256 beforeNav,
-        SwapPlan[] calldata plans
+        DexSwapPlan[] calldata plans
     ) private {
         uint256 dustValue = (net * DUST_BPS) / BPS;
         uint256 planIndex;
@@ -696,21 +788,18 @@ contract BasketVault is
             uint256 buyValue = (net * weight) / BPS;
             if (buyValue == 0 || buyValue <= dustValue) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 minimumOut =
-                (_reserveToUsdWad(buyValue) * _unitAmount(asset) * (BPS - maximumSlippageBps))
-                    / (_unitPrice(asset) * BPS);
             uint256 received =
-                _executePlan(plans[planIndex++], address(usdg), asset, buyValue, minimumOut);
+                _executeDexPlan(plans[planIndex++], address(usdg), asset, buyValue, true);
             emit DepositAssetPurchased(account, asset, buyValue, received);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
     }
 
-    function _liquidateProRataWithPlans(
+    function _liquidateProRataWithDexPlans(
         address account,
         uint256 shares,
         uint256 supply,
-        SwapPlan[] calldata plans
+        DexSwapPlan[] calldata plans
     ) private returns (uint256 gross) {
         gross = (usdg.balanceOf(address(this)) * shares) / supply;
         uint256 planIndex;
@@ -719,39 +808,29 @@ contract BasketVault is
             uint256 tokenAmount = (IERC20(asset).balanceOf(address(this)) * shares) / supply;
             if (tokenAmount == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 expectedValue = _quoteUsd(asset, tokenAmount);
-            uint256 received = _executePlan(
-                plans[planIndex++],
-                asset,
-                address(usdg),
-                tokenAmount,
-                _usdWadToReserve((expectedValue * (BPS - maximumSlippageBps)) / BPS)
-            );
+            uint256 received =
+                _executeDexPlan(plans[planIndex++], asset, address(usdg), tokenAmount, false);
             gross += received;
             emit RedemptionAssetSold(account, asset, tokenAmount, received);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
     }
 
-    function _executePlan(
-        SwapPlan calldata plan,
+    function _executeDexPlan(
+        DexSwapPlan calldata wrapped,
         address tokenIn,
         address tokenOut,
         uint256 amountIn,
-        uint256 protocolMinimumOut
+        bool increasesExposure
     ) private returns (uint256 amountOut) {
+        IDexExecutionAdapterV1.DexSwapPlanV1 calldata plan = wrapped.plan;
         if (
-            plan.intent.vault != address(this) || plan.intent.recipient != address(this)
-                || plan.intent.tokenIn != tokenIn || plan.intent.tokenOut != tokenOut
-                || plan.intent.amountIn != amountIn
-                || plan.intent.minimumAmountOut < protocolMinimumOut
-        ) {
-            revert InvalidSwapPlan();
-        }
-        IERC20(tokenIn).approve(address(executionAdapter), amountIn);
-        amountOut =
-            executionAdapter.execute(plan.intent, plan.executionData, plan.authorizerSignature);
-        IERC20(tokenIn).approve(address(executionAdapter), 0);
+            plan.recipient != address(this) || plan.route.tokenIn != tokenIn
+                || plan.route.tokenOut != tokenOut || plan.amountIn != amountIn
+        ) revert InvalidSwapPlan();
+        IERC20(tokenIn).approve(address(dexExecutionAdapter), amountIn);
+        amountOut = dexExecutionAdapter.execute(plan, increasesExposure);
+        IERC20(tokenIn).approve(address(dexExecutionAdapter), 0);
     }
 
     function _quoteUsd(address asset, uint256 tokenAmount) private view returns (uint256) {

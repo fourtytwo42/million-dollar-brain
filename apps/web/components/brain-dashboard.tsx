@@ -5,10 +5,12 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import {
   createPublicClient,
   createWalletClient,
+  decodeEventLog,
   defineChain,
   formatUnits,
   http,
   keccak256,
+  parseAbi,
   parseUnits,
 } from "viem";
 import {
@@ -282,39 +284,66 @@ type Data = {
 };
 
 type QuotePlanResponse = {
+  quoteBlock: string;
   expiresAt: number;
   plans: {
-    intent: {
-      vault: `0x${string}`;
-      tokenIn: `0x${string}`;
-      tokenOut: `0x${string}`;
+    plan: {
+      route: {
+        tokenIn: `0x${string}`;
+        tokenOut: `0x${string}`;
+        intermediate: `0x${string}`;
+        firstFee: number;
+        secondFee: number;
+      };
       amountIn: string;
+      quotedAmountOut: string;
       minimumAmountOut: string;
       recipient: `0x${string}`;
-      target: `0x${string}`;
-      allowanceTarget: `0x${string}`;
-      callDataHash: `0x${string}`;
-      expiry: string;
+      issuedAt: string;
+      deadline: string;
       referenceBlock: string;
-      nonce: string;
     };
-    executionData: `0x${string}`;
-    authorizerSignature: `0x${string}`;
+    evidence: {
+      firstPool: `0x${string}`;
+      secondPool: `0x${string}` | null;
+      quoteBlock: string;
+      expiresAt: number;
+      gasEstimate: string;
+      estimatedGasCostUsdG: string;
+      twapAmountOut: string;
+      priceImpactBps: number;
+      path: `0x${string}`;
+    };
   }[];
 };
 
+type DexReceiptSummary = {
+  action: "buy" | "sell";
+  txHash: `0x${string}`;
+  blockNumber: string;
+  legs: {
+    input: string;
+    output: string;
+    route: string;
+    effectivePrice: string;
+  }[];
+};
+
+const dexSwapReceiptAbi = parseAbi([
+  "event SwapExecuted(address indexed tokenIn,address indexed tokenOut,uint256 amountIn,uint256 amountOut,address firstPool,address secondPool,uint64 referenceBlock)",
+]);
+
 function reviveClientSwapPlans(response: QuotePlanResponse) {
-  return response.plans.map((plan) => ({
-    intent: {
-      ...plan.intent,
-      amountIn: BigInt(plan.intent.amountIn),
-      minimumAmountOut: BigInt(plan.intent.minimumAmountOut),
-      expiry: BigInt(plan.intent.expiry),
-      referenceBlock: BigInt(plan.intent.referenceBlock),
-      nonce: BigInt(plan.intent.nonce),
+  return response.plans.map((entry) => ({
+    plan: {
+      ...entry.plan,
+      amountIn: BigInt(entry.plan.amountIn),
+      quotedAmountOut: BigInt(entry.plan.quotedAmountOut),
+      minimumAmountOut: BigInt(entry.plan.minimumAmountOut),
+      issuedAt: BigInt(entry.plan.issuedAt),
+      deadline: BigInt(entry.plan.deadline),
+      referenceBlock: BigInt(entry.plan.referenceBlock),
     },
-    executionData: plan.executionData,
-    authorizerSignature: plan.authorizerSignature,
   }));
 }
 
@@ -343,6 +372,71 @@ const moneyAtDecimals = (value: string | bigint, decimals: number) =>
   Number(formatUnits(BigInt(value), decimals)).toLocaleString(undefined, {
     maximumFractionDigits: 2,
   });
+
+function summarizeDexReceipt(
+  action: "buy" | "sell",
+  txHash: `0x${string}`,
+  blockNumber: bigint,
+  logs: readonly {
+    data: `0x${string}`;
+    topics: readonly `0x${string}`[];
+  }[],
+  assets: Data["assets"],
+): DexReceiptSummary {
+  const byAddress = new Map(
+    assets.map((asset) => [asset.address.toLowerCase(), asset]),
+  );
+  const legs = logs.flatMap((log) => {
+    try {
+      if (log.topics.length === 0) return [];
+      const topics = [...log.topics] as [`0x${string}`, ...`0x${string}`[]];
+      const decoded = decodeEventLog({
+        abi: dexSwapReceiptAbi,
+        eventName: "SwapExecuted",
+        data: log.data,
+        topics,
+        strict: false,
+      });
+      const args = decoded.args as {
+        tokenIn: `0x${string}`;
+        tokenOut: `0x${string}`;
+        amountIn: bigint;
+        amountOut: bigint;
+        firstPool: `0x${string}`;
+        secondPool: `0x${string}`;
+      };
+      const inputAsset = byAddress.get(args.tokenIn.toLowerCase());
+      const outputAsset = byAddress.get(args.tokenOut.toLowerCase());
+      if (!inputAsset || !outputAsset) return [];
+      const inputAmount = Number(
+        formatUnits(args.amountIn, inputAsset.decimals),
+      );
+      const outputAmount = Number(
+        formatUnits(args.amountOut, outputAsset.decimals),
+      );
+      const effectivePrice =
+        inputAsset.kind === "reserve"
+          ? inputAmount / outputAmount
+          : outputAmount / inputAmount;
+      return [
+        {
+          input: `${inputAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${inputAsset.symbol}`,
+          output: `${outputAmount.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${outputAsset.symbol}`,
+          route: `${short(args.firstPool)}${args.secondPool === "0x0000000000000000000000000000000000000000" ? "" : ` → ${short(args.secondPool)}`}`,
+          effectivePrice: `$${effectivePrice.toLocaleString(undefined, { maximumFractionDigits: 6 })} per ${inputAsset.kind === "reserve" ? outputAsset.symbol : inputAsset.symbol}`,
+        },
+      ];
+    } catch {
+      return [];
+    }
+  });
+  return {
+    action,
+    txHash,
+    blockNumber: blockNumber.toString(),
+    legs,
+  };
+}
 const inputAmount = (value: bigint) =>
   Number(formatUnits(value, 18)).toLocaleString("en-US", {
     useGrouping: false,
@@ -362,6 +456,15 @@ export function BrainDashboard() {
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [sellAmount, setSellAmount] = useState("");
+  const [buyDexQuote, setBuyDexQuote] = useState<QuotePlanResponse | null>(
+    null,
+  );
+  const [sellDexQuote, setSellDexQuote] = useState<QuotePlanResponse | null>(
+    null,
+  );
+  const [dexQuoteError, setDexQuoteError] = useState<string | null>(null);
+  const [lastDexReceipt, setLastDexReceipt] =
+    useState<DexReceiptSummary | null>(null);
   const [crewFilter, setCrewFilter] = useState("All minds");
   const [screen, setScreen] = useState<"Brain" | "Basket" | "Decisions">(
     "Brain",
@@ -378,6 +481,45 @@ export function BrainDashboard() {
     () => (key ? privateKeyToAccount(key, { nonceManager }) : null),
     [key],
   );
+  useEffect(() => {
+    if (!data || data.deployment.schemaVersion !== 4 || screen !== "Basket") {
+      setBuyDexQuote(null);
+      setSellDexQuote(null);
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const reserveDecimals =
+          data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
+        const buyValue = parseUnits(amount || "0", reserveDecimals);
+        const sellValue = parseUnits(sellAmount || "0", 18);
+        const [buy, sell] = await Promise.all([
+          buyValue > 0n ? requestQuotePlan("deposit", buyValue) : null,
+          sellValue > 0n && sellValue <= BigInt(data.shares)
+            ? requestQuotePlan("redeem", sellValue)
+            : null,
+        ]);
+        if (!cancelled) {
+          setBuyDexQuote(buy);
+          setSellDexQuote(sell);
+          setDexQuoteError(null);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setBuyDexQuote(null);
+          setSellDexQuote(null);
+          setDexQuoteError(
+            error instanceof Error ? error.message : "DEX quote unavailable",
+          );
+        }
+      }
+    }, 500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [amount, data, screen, sellAmount]);
   const account = useMemo(
     () =>
       external.address
@@ -607,7 +749,7 @@ export function BrainDashboard() {
       ...receiptWaitPolicy,
     });
     const quote =
-      data.deployment.schemaVersion === 3
+      data.deployment.schemaVersion === 4
         ? await requestQuotePlan("deposit", value)
         : null;
     setMessage(
@@ -615,14 +757,15 @@ export function BrainDashboard() {
         ? "Buying BRAINS and atomically purchasing your share of the basket…"
         : "Buying BRAINS and adding your funds to the basket…",
     );
-    const deadline = BigInt(
-      quote?.expiresAt ?? Math.floor(Date.now() / 1000) + 3600,
-    );
+    const deadline =
+      quote !== null
+        ? BigInt(quote.expiresAt)
+        : (await publicClient.getBlock()).timestamp + 3600n;
     const tx = await retryApprovalDependentWrite(() =>
       wallet.writeContract({
         address: data.deployment.basket,
         abi: basketAbi,
-        functionName: quote ? "depositWithPlan" : "deposit",
+        functionName: quote ? "depositWithDexPlan" : "deposit",
         gas: quote && data.network.mode === "testnet" ? 6_000_000n : undefined,
         args: quote
           ? [
@@ -634,10 +777,21 @@ export function BrainDashboard() {
           : [value, (preview[2] * 99n) / 100n, deadline],
       }),
     );
-    await publicClient.waitForTransactionReceipt({
+    const receipt = await publicClient.waitForTransactionReceipt({
       hash: tx,
       ...receiptWaitPolicy,
     });
+    if (quote) {
+      setLastDexReceipt(
+        summarizeDexReceipt(
+          "buy",
+          tx,
+          receipt.blockNumber,
+          receipt.logs,
+          data.assets,
+        ),
+      );
+    }
     const refreshed = await refreshAfterConfirmedAction();
     setMessage(
       confirmedActionMessage(
@@ -661,16 +815,13 @@ export function BrainDashboard() {
       hash: approve,
       ...receiptWaitPolicy,
     });
+    const deadline = (await publicClient.getBlock()).timestamp + 3600n;
     const tx = await retryApprovalDependentWrite(() =>
       wallet.writeContract({
         address: data.deployment.brain,
         abi: brainAbi,
         functionName: "buy",
-        args: [
-          BigInt(piece.id),
-          cost,
-          BigInt(Math.floor(Date.now() / 1000) + 3600),
-        ],
+        args: [BigInt(piece.id), cost, deadline],
       }),
     );
     await publicClient.waitForTransactionReceipt({
@@ -846,7 +997,7 @@ export function BrainDashboard() {
       throw new Error("You cannot sell more BRAINS than you own.");
     }
     setMessage("Selling BRAINS for USDG…");
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+    const deadline = (await publicClient.getBlock()).timestamp + 3600n;
     const preview = await publicClient.readContract({
       address: data.deployment.basket,
       abi: basketAbi,
@@ -855,13 +1006,13 @@ export function BrainDashboard() {
     });
     const minimumNet = (preview[2] * 99n) / 100n;
     const quote =
-      data.deployment.schemaVersion === 3
+      data.deployment.schemaVersion === 4
         ? await requestQuotePlan("redeem", shares)
         : null;
     const tx = await wallet.writeContract({
       address: data.deployment.basket,
       abi: basketAbi,
-      functionName: quote ? "redeemWithPlan" : "redeem",
+      functionName: quote ? "redeemWithDexPlan" : "redeem",
       gas: quote && data.network.mode === "testnet" ? 6_000_000n : undefined,
       args: quote
         ? [
@@ -872,10 +1023,21 @@ export function BrainDashboard() {
           ]
         : [shares, minimumNet, deadline],
     });
-    await publicClient.waitForTransactionReceipt({
+    const receipt = await publicClient.waitForTransactionReceipt({
       hash: tx,
       ...receiptWaitPolicy,
     });
+    if (quote) {
+      setLastDexReceipt(
+        summarizeDexReceipt(
+          "sell",
+          tx,
+          receipt.blockNumber,
+          receipt.logs,
+          data.assets,
+        ),
+      );
+    }
     const refreshed = await refreshAfterConfirmedAction();
     const reserveDecimals =
       data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
@@ -939,6 +1101,10 @@ export function BrainDashboard() {
         setAmount={setAmount}
         sellAmount={sellAmount}
         setSellAmount={setSellAmount}
+        buyDexQuote={buyDexQuote}
+        sellDexQuote={sellDexQuote}
+        dexQuoteError={dexQuoteError}
+        lastDexReceipt={lastDexReceipt}
         setScreen={setScreen}
         setSelectedId={setSelectedId}
         onToggleTheme={() => setDark(!dark)}

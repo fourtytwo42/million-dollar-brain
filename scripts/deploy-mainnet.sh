@@ -3,9 +3,9 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
-manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
+manifest="$repo_root/packages/contracts/deployments/mainnet-v4.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
-candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v3.json"
+candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v4.json"
 testnet_acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
@@ -40,7 +40,6 @@ rpc_health="$(curl --fail --silent --show-error "${MDB_RPC_HEALTH_URL:?}")"
 [[ "$(jq -r '.secondary.chainId' <<<"$rpc_health")" == "4663" ]]
 [[ "$(cast chain-id --rpc-url "${MDB_RPC_URL:?}")" == "4663" ]]
 [[ "$(cast chain-id --rpc-url "$MDB_BACKUP_RPC_URL")" == "4663" ]]
-[[ -n "${ZEROX_API_KEY:-}" ]]
 [[ -r "${MDB_OPERATOR_KEYSTORE:?}" ]]
 [[ -r "${MDB_OPERATOR_PASSWORD_FILE:?}" ]]
 [[ ! -e "$manifest" ]] || {
@@ -56,10 +55,10 @@ forge fmt --check packages/contracts
 forge test --root packages/contracts
 
 jq -e '
-  .schemaVersion == 3 and .chainId == 4663 and .broadcastPermitted == false and
+  .schemaVersion == 4 and .chainId == 4663 and .broadcastPermitted == false and
   .gates.noSigningKey == true and
   .gates.canonicalIdentityChecked == true and
-  .gates.zeroExConfigured == true and
+  .gates.dexVenueVerified == true and .gates.selfHostedRouting == true and
   .gates.twoSidedQuotesValid == true and
   .gates.chainlinkMappingsConfigured == true and
   .gates.qualificationWindowPassed == true
@@ -98,7 +97,7 @@ MDB_DEPLOYMENT_OUTPUT="$manifest" \
     --gas-estimate-multiplier 175
 
 jq -e '
-  .schemaVersion == 3 and .chainId == 4663 and
+  .schemaVersion == 4 and .chainId == 4663 and
   .environment == "robinhood-mainnet" and .canonicalAssets == true and
   .productionParityReplicas == false and .activationState == "paused-canary"
 ' "$manifest" >/dev/null

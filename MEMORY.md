@@ -4,17 +4,18 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Braincell Inspector and Owner Profile V2 testnet acceptance is
-  complete.
-- Last meaningful change: The accepted runtime includes source release
-  `d9f25b444d5fbfafe120c52efa4bb88d958a19b3`, promotion evidence
-  `22db52abd8a1c9fc930025929cc9e12944f2e568`, and acceptance repairs
-  `fa0b255af18dcb2877cf0df55eef68655a072d59` and
-  `a8a351aacb76ba783ded535a33a344615248a76b`.
-- Next step: Continue ordinary changes from devnet. Any future contract,
-  wallet, valuation, execution, or accounting change requires a new exact-build
-  testnet acceptance before mainnet promotion.
-- Blockers: None on testnet. Mainnet remains unauthorized.
+- Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
+  BRAINS NAV, validate on devnet, then promote the exact accepted release to
+  Robinhood Testnet.
+- Last meaningful change: Devnet now passes the complete self-hosted DEX
+  contract, web, transaction, and responsive Browser acceptance suite. Fresh
+  Uniswap pools were seeded from the independent circuit-breaker prices, and
+  live 1,000 and 100 USDG BRAINS buys plus an atomic sale completed.
+- Next step: Freeze and push the exact devnet release, then perform the
+  state-preserving testnet pool/adapter/vault migration and fresh two-hour
+  acceptance.
+- Blockers: Testnet promotion and acceptance remain incomplete. Mainnet
+  deployment remains unauthorized.
 
 ## Current State
 
@@ -1538,3 +1539,69 @@ build`; authenticated live `/api/collect-market`.
 - Result: Most active testnet replicas have coverage score zero and no mature returns, spread, liquidity, or fundamentals. Only AAPL and NVDA currently have meaningful official dossiers, while AAPL is prohibited by the active brain directive. The dynamic validator treats every active manifest asset as allocatable and enforces at most nine positions; the four-position brain preference is not a hard validator limit.
 - Result: The current roughly 58% USDG portfolio is the last executed allocation. New 50% proposals are held because the selected four-hour cooldown remains active.
 - Follow-up: Before treating testnet behavior as representative, restore intentional post-endurance controls and require usable evidence for model selection. Consider making preferred position count more explicit in the prompt or deterministically bounded.
+### 2026-07-30 - Self-hosted DEX execution implementation checkpoint
+
+- Context: The approved V5 migration replaces signed 0x calldata with structured self-hosted Uniswap routes and DEX TWAP NAV.
+- Decision: Use canonical Robinhood mainnet Uniswap V3 factory `0x1f7d7550B1b028f7571E69A784071F0205FD2EfA`, SwapRouter02 `0xCaf681a66D020601342297493863E78C959E5cb2`, and QuoterV2 `0x33e885eD0Ec9bF04EcfB19341582aADCb4c8A9E7`. Routes are direct asset/USDG or asset/WETH/USDG only. Chainlink remains a 5% increase-only circuit breaker and never sets NAV or settlement.
+- Files: `packages/contracts/src/UniswapExecutionAdapter.sol`, `packages/contracts/src/DexTwapValuationAdapter.sol`, `packages/contracts/src/lib/{FullMath,TickMath}.sol`, `packages/contracts/src/BasketVault.sol`, `packages/contracts/test/{DexExecution,DexTwapValuation}.t.sol`.
+- Commands/tests: `forge build --root packages/contracts`; `forge test --root packages/contracts --match-contract DexExecutionTest -vv` (5 passed); `forge test --root packages/contracts --match-contract DexTwapValuationTest -vv` (3 passed).
+- Result: Structured route validation, 30-second/3-block quote bounds, 1% quote slippage, 3% execution/TWAP deviation, exact temporary allowances, balance-delta settlement, stale-Chainlink-safe reductions, 30-minute TWAP valuation, observation age/cardinality, and liquidity checks compile and have focused passing tests. BasketVault V5 entrypoints compile and permanently gate legacy signed-plan execution after migration.
+- Follow-up: Complete storage-layout/regression tests, official Uniswap devnet/testnet venue deployment, server-side pinned-block routing and DEX observation persistence, manifest V4/UI conversion, devnet UAT, then exact-commit testnet upgrade and two-hour acceptance. Do not broadcast mainnet.
+
+### 2026-07-30 - DEX TWAP heartbeat durability repair
+
+- Context: Live devnet DEX buys and atomic sells succeeded, but the status API
+  intermittently failed closed with `InvalidPrice()` because a successful
+  fixed-size heartbeat did not always cross an integer tick in the AAPL pool.
+  Uniswap therefore did not append a new oracle observation.
+- Decision: Heartbeat success means the pool observation index advanced, not
+  merely that a swap transaction succeeded. Process each asset independently,
+  begin with a small round trip, and escalate through bounded amounts only when
+  its index does not advance. Extend configured observation freshness from five
+  to 15 minutes, capped on-chain at one hour, and run the devnet timer every ten
+  minutes with a dedicated signer.
+- Files: `packages/contracts/src/DexTwapValuationAdapter.sol`,
+  `packages/contracts/test/DexTwapValuation.t.sol`,
+  `packages/contracts/script/UpgradeDexValuation.s.sol`,
+  `scripts/run-dex-keepalive.sh`,
+  `infrastructure/systemd/mdb-dex-keepalive-devnet.timer`,
+  `packages/contracts/deployments/local-v3.json`.
+- Commands/tests: Five focused valuation tests passed. The live valuation proxy
+  was upgraded without changing its address; all three devnet routes were set
+  to 900 seconds. A live adaptive heartbeat advanced AAPL, NVDA, and ETHX pool
+  observations at the bounded 2,500 USDG step, and `/api/status` returned 200.
+- Result: TWAP freshness is now verified directly and no longer depends on the
+  false assumption that every successful tiny swap creates an observation.
+- Follow-up: Prove sustained freshness through the full devnet acceptance
+  gates, then reuse the same dedicated-signer policy on testnet.
+
+### 2026-07-30 - Self-hosted DEX devnet acceptance complete
+
+- Context: Full UAT found two additional integration defects after focused DEX
+  execution tests had passed: browser wall-clock deadlines expired when seeded
+  Anvil history moved chain time forward, and status freshness still used the
+  legacy fixed 120-second window instead of the vault's configured DEX window.
+  Earlier oversized heartbeat experiments had also left the AAPL pool more than
+  5% from the independent circuit breaker.
+- Decision: Derive all wallet transaction deadlines from the latest block
+  timestamp; report freshness using `BasketVault.maximumPriceAge`; retain the
+  5% circuit breaker; and rotate to freshly seeded pools rather than weakening
+  or rewriting the independent safety price. Add an admin-only DEX adapter
+  rotation path for governed venue maintenance.
+- Files: `apps/web/components/brain-dashboard.tsx`,
+  `apps/web/lib/{abi,chain}.ts`, `packages/contracts/src/BasketVault.sol`,
+  `packages/contracts/script/DeployDexV5.s.sol`,
+  `scripts/merge-dex-manifest.mjs`, and DEX tests/tooling.
+- Commands/tests: Full Foundry suite passed 50/50 before the final adapter
+  rotation addition; the focused DEX suite passed 9/9 afterward. Sixteen web
+  test scripts passed, the Next.js production build passed, and
+  `npm run test:uat` passed. Live in-app Browser inspection at 1280x720 showed
+  zero horizontal overflow, DEX-marked NAV, positive-only colored holdings,
+  compact trade details, actual per-leg receipt values, effective prices, pool
+  routes, and the transaction hash.
+- Result: Devnet uses only structured self-hosted Uniswap routes for V5
+  execution and DEX TWAP for BRAINS NAV. A 1,000 USDG and 100 USDG buy, a
+  50-BRAINS atomic sale, and a braincell purchase all completed through the
+  wallet UI. The independent price breaker remains effective.
+- Follow-up: Run the final full contract suite after adapter rotation, commit
+  and push the exact candidate, then promote that exact build to testnet.
