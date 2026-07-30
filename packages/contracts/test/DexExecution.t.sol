@@ -97,6 +97,18 @@ contract SwapRouterMock {
     }
 }
 
+contract ArbSysBlockNumberMock {
+    uint256 public l2BlockNumber;
+
+    function setL2BlockNumber(uint256 value) external {
+        l2BlockNumber = value;
+    }
+
+    function arbBlockNumber() external view returns (uint256) {
+        return l2BlockNumber;
+    }
+}
+
 contract DexExecutionTest is Test {
     MockToken internal usdg;
     MockToken internal asset;
@@ -213,6 +225,22 @@ contract DexExecutionTest is Test {
         vm.roll(block.number + 4);
         UniswapExecutionAdapter.DexSwapPlanV1 memory plan = _buyPlan(100e18, 50e18);
         plan.referenceBlock = uint64(block.number - 4);
+        vm.expectRevert(UniswapExecutionAdapter.StaleReferenceBlock.selector);
+        adapter.execute(plan, true);
+    }
+
+    function testRobinhoodUsesArbSysL2ReferenceBlock() public {
+        ArbSysBlockNumberMock implementation = new ArbSysBlockNumberMock();
+        vm.etch(address(100), address(implementation).code);
+        ArbSysBlockNumberMock(address(100)).setL2BlockNumber(1_000);
+        vm.chainId(46_630);
+
+        UniswapExecutionAdapter.DexSwapPlanV1 memory plan = _buyPlan(100e18, 50e18);
+        plan.referenceBlock = 997;
+        assertEq(adapter.execute(plan, true), 50e18);
+
+        plan = _buyPlan(100e18, 50e18);
+        plan.referenceBlock = 996;
         vm.expectRevert(UniswapExecutionAdapter.StaleReferenceBlock.selector);
         adapter.execute(plan, true);
     }

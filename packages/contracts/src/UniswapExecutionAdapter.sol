@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    AccessControlUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 interface IUniswapV3FactoryExecution {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address);
@@ -30,8 +36,14 @@ interface ISwapRouter02 {
         uint256 amountOutMinimum;
     }
 
-    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
-    function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
+    function exactInputSingle(ExactInputSingleParams calldata params)
+        external
+        payable
+        returns (uint256 amountOut);
+    function exactInput(ExactInputParams calldata params)
+        external
+        payable
+        returns (uint256 amountOut);
 }
 
 interface IDexMark {
@@ -42,7 +54,14 @@ interface IDexMark {
 }
 
 interface ICircuitBreakerPrice {
-    function quoteStatus(address token) external view returns (uint256 priceWad, uint256 updatedAt, bool valid);
+    function quoteStatus(address token)
+        external
+        view
+        returns (uint256 priceWad, uint256 updatedAt, bool valid);
+}
+
+interface IArbSysBlockNumber {
+    function arbBlockNumber() external view returns (uint256);
 }
 
 contract UniswapExecutionAdapter is
@@ -128,9 +147,10 @@ contract UniswapExecutionAdapter is
         uint32 maximumCircuitBreakerAge_
     ) external initializer {
         if (
-            admin == address(0) || vault_ == address(0) || reserve_ == address(0) || weth_ == address(0)
-                || factory_ == address(0) || router_ == address(0) || dexMark_ == address(0)
-                || circuitBreaker_ == address(0) || maximumCircuitBreakerAge_ == 0
+            admin == address(0) || vault_ == address(0) || reserve_ == address(0)
+                || weth_ == address(0) || factory_ == address(0) || router_ == address(0)
+                || dexMark_ == address(0) || circuitBreaker_ == address(0)
+                || maximumCircuitBreakerAge_ == 0
         ) revert InvalidConfiguration();
         __UUPSUpgradeable_init();
         __AccessControl_init();
@@ -223,23 +243,33 @@ contract UniswapExecutionAdapter is
         );
     }
 
-    function _validatePlan(DexSwapPlanV1 calldata plan) private view returns (address firstPool, address secondPool) {
+    function _validatePlan(DexSwapPlanV1 calldata plan)
+        private
+        view
+        returns (address firstPool, address secondPool)
+    {
         if (
-            plan.recipient != vault || plan.amountIn == 0 || plan.quotedAmountOut == 0 || plan.minimumAmountOut == 0
-                || plan.minimumAmountOut > plan.quotedAmountOut
-                || plan.minimumAmountOut < (plan.quotedAmountOut * (BPS - MAX_QUOTE_SLIPPAGE_BPS)) / BPS
+            plan.recipient != vault || plan.amountIn == 0 || plan.quotedAmountOut == 0
+                || plan.minimumAmountOut == 0 || plan.minimumAmountOut > plan.quotedAmountOut
+                || plan.minimumAmountOut
+                    < (plan.quotedAmountOut * (BPS - MAX_QUOTE_SLIPPAGE_BPS)) / BPS
         ) revert InvalidPlan();
         if (
             plan.issuedAt > block.timestamp || plan.deadline < block.timestamp
                 || plan.deadline - plan.issuedAt > MAX_PLAN_LIFETIME
         ) revert ExpiredPlan();
-        if (plan.referenceBlock > block.number || block.number - plan.referenceBlock > MAX_REFERENCE_BLOCK_AGE) {
+        uint256 currentReferenceBlock = _currentReferenceBlock();
+        if (
+            plan.referenceBlock > currentReferenceBlock
+                || currentReferenceBlock - plan.referenceBlock > MAX_REFERENCE_BLOCK_AGE
+        ) {
             revert StaleReferenceBlock();
         }
         if (!((plan.route.tokenIn == reserve && plan.route.tokenOut != reserve)
                     || (plan.route.tokenOut == reserve && plan.route.tokenIn != reserve))) revert UnsupportedRoute();
         if (!approvedFeeTier[plan.route.firstFee]) revert UnsupportedRoute();
-        address firstOut = plan.route.intermediate == address(0) ? plan.route.tokenOut : plan.route.intermediate;
+        address firstOut =
+            plan.route.intermediate == address(0) ? plan.route.tokenOut : plan.route.intermediate;
         firstPool = factory.getPool(plan.route.tokenIn, firstOut, plan.route.firstFee);
         if (firstPool == address(0) || !approvedPool[firstPool]) revert UnsupportedRoute();
         if (plan.route.intermediate != address(0)) {
@@ -247,14 +277,20 @@ contract UniswapExecutionAdapter is
                 plan.route.intermediate != weth || !approvedIntermediate[plan.route.intermediate]
                     || !approvedFeeTier[plan.route.secondFee]
             ) revert UnsupportedRoute();
-            secondPool = factory.getPool(plan.route.intermediate, plan.route.tokenOut, plan.route.secondFee);
+            secondPool =
+                factory.getPool(plan.route.intermediate, plan.route.tokenOut, plan.route.secondFee);
             if (secondPool == address(0) || !approvedPool[secondPool]) revert UnsupportedRoute();
         } else if (plan.route.secondFee != 0) {
             revert UnsupportedRoute();
         }
     }
 
-    function _checkTwapDeviation(address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut) private view {
+    function _checkTwapDeviation(
+        address tokenIn,
+        address tokenOut,
+        uint256 amountIn,
+        uint256 amountOut
+    ) private view {
         (uint256 markedOut, bool valid) = dexMark.quoteAmount(tokenIn, tokenOut, amountIn);
         if (!valid || markedOut == 0) revert TwapDeviation();
         uint256 difference = amountOut > markedOut ? amountOut - markedOut : markedOut - amountOut;
@@ -263,12 +299,14 @@ contract UniswapExecutionAdapter is
 
     function _checkCircuitBreaker(address exposureToken) private view {
         (uint256 dexPrice,, bool dexValid) = _price(exposureToken, dexMark);
-        (uint256 breakerPrice, uint256 updatedAt, bool breakerValid) = circuitBreaker.quoteStatus(exposureToken);
+        (uint256 breakerPrice, uint256 updatedAt, bool breakerValid) =
+            circuitBreaker.quoteStatus(exposureToken);
         if (
             !dexValid || !breakerValid || breakerPrice == 0 || updatedAt > block.timestamp
                 || block.timestamp - updatedAt > maximumCircuitBreakerAge
         ) revert CircuitBreakerUnavailable();
-        uint256 difference = dexPrice > breakerPrice ? dexPrice - breakerPrice : breakerPrice - dexPrice;
+        uint256 difference =
+            dexPrice > breakerPrice ? dexPrice - breakerPrice : breakerPrice - dexPrice;
         if (difference * BPS > breakerPrice * MAX_CIRCUIT_BREAKER_DEVIATION_BPS) {
             revert CircuitBreakerDivergence();
         }
@@ -279,10 +317,18 @@ contract UniswapExecutionAdapter is
         view
         returns (uint256 priceWad, uint256 updatedAt, bool valid)
     {
-        (bool ok, bytes memory data) = address(mark).staticcall(abi.encodeWithSignature("quoteStatus(address)", token));
+        (bool ok, bytes memory data) =
+            address(mark).staticcall(abi.encodeWithSignature("quoteStatus(address)", token));
         if (!ok || data.length < 96) return (0, 0, false);
         return abi.decode(data, (uint256, uint256, bool));
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+    function _currentReferenceBlock() private view returns (uint256) {
+        if (block.chainid == 46_630 || block.chainid == 4_663) {
+            return IArbSysBlockNumber(address(100)).arbBlockNumber();
+        }
+        return block.number;
+    }
+
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
 }

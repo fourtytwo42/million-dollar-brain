@@ -3,7 +3,11 @@ pragma solidity ^0.8.28;
 
 /// @notice 512-bit multiplication and division adapted from Uniswap V3 Core.
 library FullMath {
-    function mulDiv(uint256 a, uint256 b, uint256 denominator) internal pure returns (uint256 result) {
+    function mulDiv(uint256 a, uint256 b, uint256 denominator)
+        internal
+        pure
+        returns (uint256 result)
+    {
         unchecked {
             uint256 prod0;
             uint256 prod1;

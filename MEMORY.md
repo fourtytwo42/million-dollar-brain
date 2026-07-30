@@ -7,18 +7,38 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Implement self-hosted Uniswap execution and DEX TWAP-marked
   BRAINS NAV, validate on devnet, then promote the exact accepted release to
   Robinhood Testnet.
-- Last meaningful change: Robinhood Testnet now has 11 seeded Uniswap-compatible
-  pools, DEX TWAP valuation and structured execution adapters, and the existing
-  BasketVault proxy upgraded in place to V5. Legacy plan execution is disabled
-  and old-adapter token allowances are zero.
-- Next step: Let the real 30-minute testnet TWAP window mature, reconcile the
-  pre/post protocol state, deploy the exact schema-V4-compatible web build, run
-  transactional smoke and public responsive UAT, then begin a fresh two-hour
-  three-actor acceptance.
-- Blockers: Testnet TWAP history is still maturing and the fresh two-hour
-  acceptance remains incomplete. Mainnet deployment remains unauthorized.
+- Last meaningful change: Testnet DEX TWAP matured and the full preserved state
+  reconciled exactly. The first live BRAINS buy then safely reverted because
+  the adapter compared an RPC L2 reference block with Arbitrum's L1-derived
+  Solidity `block.number`; the adapter now uses ArbSys L2 block numbers on
+  Robinhood chains and the regression is covered by the full contract suite.
+- Next step: Upgrade only the testnet DEX execution adapter to the corrected
+  implementation, rerun the transactional smoke, complete public responsive
+  UAT, then begin a fresh two-hour three-actor acceptance.
+- Blockers: The adapter hotfix is tested but not yet promoted on testnet, and
+  the fresh two-hour acceptance remains incomplete. Mainnet deployment remains
+  unauthorized.
 
 ## Current State
+
+### 2026-07-30 - Robinhood L2 reference-block correction
+
+- Context: The first post-migration testnet `depositWithDexPlan` reverted
+  atomically with `StaleReferenceBlock` even though its pinned RPC reference was
+  exactly three L2 blocks old.
+- Decision: On Robinhood mainnet/testnet, validate plan age against the
+  canonical ArbSys `arbBlockNumber()` at precompile address `0x64`. Retain
+  Solidity `block.number` on devnet and other chains. Keep the three-L2-block
+  maximum unchanged.
+- Files: `packages/contracts/src/UniswapExecutionAdapter.sol`,
+  `packages/contracts/test/DexExecution.t.sol`.
+- Commands/tests: Historical transaction replay and custom-error decoding;
+  focused DEX execution 10/10; full Foundry 51/51.
+- Result: The failure was an Arbitrum block-number namespace mismatch, not a
+  stale route or loose quote. The corrected adapter accepts a reference three
+  L2 blocks old and rejects one four blocks old on chain 46630.
+- Follow-up: Push the exact fix, upgrade only the testnet adapter proxy, and
+  rerun the failed BRAINS buy/sell smoke.
 
 ### 2026-07-30 - Self-hosted DEX testnet migration checkpoint
 
