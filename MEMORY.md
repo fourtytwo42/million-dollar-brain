@@ -7,22 +7,41 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: The exact torture candidate completed all 56
-  regression tests and all six stateful invariants at 256 runs and depth
-  1,000. Its first soak exposed chain-time DEX-mark expiry under dense mining
-  and unbounded Anvil historical-state disk growth. The runner now refreshes
-  DEX marks every two seconds, prunes clone history to 256 blocks, and retries
-  transient live-status reads. Focused replay
-  `20260731T025731Z-13b685391fa9` passed the original failure point with 1,931
-  confirmed transactions, 515 expected reverts, zero unexpected failures,
-  zero queued sales, and reconciled NAV/supply.
-- Next step: Commit and push the harness repair, then restart the complete
-  two-hour/10,000-transaction run under a new evidence ID. Finish with isolated
-  responsive Browser UAT and live port `3000` smoke verification.
+- Last meaningful change: Full repaired run
+  `20260731T030323Z-a0fa8ca6ca12` again passed 56 regressions and all six
+  invariants at 256 runs/depth 1,000. The soak reached 13,320 confirmed
+  transactions with zero unexpected reverts before exposing that a shell/Forge
+  keepalive cannot refresh every pool fast enough under dense concurrent
+  mining. Live devnet remained byte-for-byte unchanged.
+- Next step: Move DEX observation maintenance into the deterministic
+  transaction runner so every pool receives a lightweight round-trip at a
+  bounded block interval, remove the competing background Forge process,
+  replay the failure seed, then restart the complete two-hour run under a new
+  evidence ID.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
 ## Current State
+
+### 2026-07-30 - Dense-soak DEX maintenance must be block-bounded
+
+- Context: Run `20260731T030323Z-a0fa8ca6ca12` passed the complete Foundry
+  phase and 15 one-minute soak checkpoints, including 13,320 confirmed
+  transactions, 4,164 expected reverts, zero unexpected reverts, zero queued
+  sales, and reconciled NAV/supply. It then failed `totalAssetsUsd` with
+  `InvalidPrice`.
+- Decision: Replace the competing background Forge keepalive with deterministic
+  in-run Uniswap round trips for every manifest asset after at most 250
+  confirmed transactions. The initial and post-restart Forge warm-up remain,
+  while ongoing freshness becomes block-bounded and replayable in the action
+  ledger.
+- Files: `tests/devnet-torture.mjs`, `scripts/run-devnet-torture.sh`.
+- Result: Evidence and random state
+  `0xb1efb85e637cfc4e4859399fe2e7332fd5fd5ab3b6e1ce446b32394c8eaebc51`
+  were preserved. Cleanup proved the live-devnet fingerprint remained
+  `198777d398afa3fda5d884040d753907e67e9798639a968455bc97ce0e2b70f0`.
+- Follow-up: Commit/push, run a focused replay beyond the prior 900-block
+  freshness boundary, then restart the complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 

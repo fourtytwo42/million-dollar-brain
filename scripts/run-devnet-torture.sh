@@ -15,7 +15,6 @@ fuzz_runs="${MDB_TORTURE_FUZZ_RUNS:-10000}"
 invariant_runs="${MDB_TORTURE_INVARIANT_RUNS:-256}"
 invariant_depth="${MDB_TORTURE_INVARIANT_DEPTH:-1000}"
 uat_hold_seconds="${MDB_TORTURE_UAT_HOLD_SECONDS:-600}"
-keepalive_interval_seconds="${MDB_TORTURE_KEEPALIVE_INTERVAL_SECONDS:-2}"
 run_id="${MDB_TORTURE_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$(git -C "$repo_root" rev-parse --short=12 HEAD)}"
 run_root="$repo_root/var/devnet-torture/$run_id"
 evidence_dir="$run_root/evidence"
@@ -31,7 +30,6 @@ live_status_before="$evidence_dir/live-devnet-before.json"
 live_status_after="$evidence_dir/live-devnet-after.json"
 anvil_pid=""
 web_pid=""
-keepalive_pid=""
 soak_pid=""
 cleanup_complete=false
 
@@ -59,10 +57,6 @@ cleanup() {
   if [[ -n "$web_pid" ]] && kill -0 "$web_pid" 2>/dev/null; then
     kill "$web_pid" 2>/dev/null || true
     wait "$web_pid" 2>/dev/null || true
-  fi
-  if [[ -n "$keepalive_pid" ]] && kill -0 "$keepalive_pid" 2>/dev/null; then
-    kill "$keepalive_pid" 2>/dev/null || true
-    wait "$keepalive_pid" 2>/dev/null || true
   fi
   if [[ -n "$anvil_pid" ]] && kill -0 "$anvil_pid" 2>/dev/null; then
     kill -INT "$anvil_pid" 2>/dev/null || true
@@ -255,13 +249,6 @@ export MDB_NETWORK_MODE=local
 export MDB_RPC_URL="http://127.0.0.1:$rpc_port"
 export MDB_DEPLOYMENT_FILE="$clone_manifest"
 scripts/run-dex-keepalive.sh > "$evidence_dir/dex-keepalive.log" 2>&1
-(
-  while kill -0 "$anvil_pid" 2>/dev/null; do
-    sleep "$keepalive_interval_seconds"
-    scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1 || exit 1
-  done
-) &
-keepalive_pid=$!
 
 export NEXT_PUBLIC_MDB_RPC_URL="http://127.0.0.1:$rpc_port"
 export MDB_STATE_DIR="$run_root/state"
@@ -315,10 +302,6 @@ while kill -0 "$soak_pid" 2>/dev/null; do
   fi
 
   if [[ -f "$run_root/restart-anvil-request" && ! -f "$run_root/restart-anvil-complete" ]]; then
-    if [[ -n "$keepalive_pid" ]] && kill -0 "$keepalive_pid" 2>/dev/null; then
-      kill "$keepalive_pid" 2>/dev/null || true
-      wait "$keepalive_pid" 2>/dev/null || true
-    fi
     kill -INT "$anvil_pid" 2>/dev/null || true
     wait "$anvil_pid" 2>/dev/null || true
     cp "$final_state" "$restart_state"
@@ -350,13 +333,6 @@ while kill -0 "$soak_pid" 2>/dev/null; do
       cast rpc evm_mine --rpc-url "http://127.0.0.1:$rpc_port" >/dev/null
     fi
     scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1
-    (
-      while kill -0 "$anvil_pid" 2>/dev/null; do
-        sleep "$keepalive_interval_seconds"
-        scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1 || exit 1
-      done
-    ) &
-    keepalive_pid=$!
     touch "$run_root/restart-anvil-complete"
   fi
   sleep 1

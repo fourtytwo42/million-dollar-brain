@@ -57,6 +57,30 @@ const [
   artifact("MockToken"),
 ]);
 
+const routerAbi = [
+  {
+    type: "function",
+    name: "exactInputSingle",
+    stateMutability: "payable",
+    inputs: [
+      {
+        name: "params",
+        type: "tuple",
+        components: [
+          { name: "tokenIn", type: "address" },
+          { name: "tokenOut", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "recipient", type: "address" },
+          { name: "amountIn", type: "uint256" },
+          { name: "amountOutMinimum", type: "uint256" },
+          { name: "sqrtPriceLimitX96", type: "uint160" },
+        ],
+      },
+    ],
+    outputs: [{ name: "amountOut", type: "uint256" }],
+  },
+];
+
 const chain = defineChain({
   id: 31337,
   name: "42 Braincells Torture Clone",
@@ -92,7 +116,20 @@ const addresses = {
   creator: deployment.creatorVault,
   usdg: deployment.usdg,
   adapter: deployment.dexExecutionAdapter,
+  router: deployment.dexVenue.router,
 };
+const dexAssets = deployment.assets
+  .filter((asset) => asset.kind !== "reserve")
+  .map((asset) => ({
+    address: asset.address,
+    fee: Number(
+      deployment.dexVenue.pools.find(
+        (pool) =>
+          pool.token0.toLowerCase() === asset.address.toLowerCase() ||
+          pool.token1.toLowerCase() === asset.address.toLowerCase(),
+      )?.fee ?? 3000,
+    ),
+  }));
 const receiptsPath = resolve(evidenceDirectory, "transactions.jsonl");
 const checkpointsPath = resolve(evidenceDirectory, "checkpoints.jsonl");
 const failuresPath = resolve(evidenceDirectory, "failures.jsonl");
@@ -105,6 +142,8 @@ let checkpointNumber = 0;
 const actionCounts = {};
 const gasSamples = [];
 const restartResults = [];
+let lastDexMaintenanceTransaction = -1;
+let dexMaintenanceApprovalsReady = false;
 const actorPieces = new Map(actors.map(({ account }) => [account.address.toLowerCase(), new Set()]));
 
 let randomState = BigInt(keccak256(stringToHex(masterSeed)));
@@ -781,6 +820,95 @@ async function randomAction(actor, forcedCollisionPiece) {
   return buyBrain(actor);
 }
 
+async function maintainDexObservations() {
+  if (!dexMaintenanceApprovalsReady) {
+    await write(
+      adminClient,
+      {
+        address: addresses.usdg,
+        abi: tokenArtifact.abi,
+        functionName: "approve",
+        args: [addresses.router, (1n << 256n) - 1n],
+      },
+      "dex-maintenance-approve-reserve",
+    );
+    for (const asset of dexAssets) {
+      await write(
+        adminClient,
+        {
+          address: asset.address,
+          abi: tokenArtifact.abi,
+          functionName: "approve",
+          args: [addresses.router, (1n << 256n) - 1n],
+        },
+        "dex-maintenance-approve-asset",
+      );
+    }
+    dexMaintenanceApprovalsReady = true;
+  }
+
+  const amountIn = parseUnits("1", 18);
+  for (const asset of dexAssets) {
+    const before = await publicClient.readContract({
+      address: asset.address,
+      abi: tokenArtifact.abi,
+      functionName: "balanceOf",
+      args: [admin.address],
+    });
+    await write(
+      adminClient,
+      {
+        address: addresses.router,
+        abi: routerAbi,
+        functionName: "exactInputSingle",
+        args: [
+          {
+            tokenIn: addresses.usdg,
+            tokenOut: asset.address,
+            fee: asset.fee,
+            recipient: admin.address,
+            amountIn,
+            amountOutMinimum: 0n,
+            sqrtPriceLimitX96: 0n,
+          },
+        ],
+      },
+      "dex-maintenance-buy",
+    );
+    const after = await publicClient.readContract({
+      address: asset.address,
+      abi: tokenArtifact.abi,
+      functionName: "balanceOf",
+      args: [admin.address],
+    });
+    const received = after - before;
+    if (received <= 0n) {
+      throw new Error(`DEX maintenance buy returned no ${asset.address}`);
+    }
+    await write(
+      adminClient,
+      {
+        address: addresses.router,
+        abi: routerAbi,
+        functionName: "exactInputSingle",
+        args: [
+          {
+            tokenIn: asset.address,
+            tokenOut: addresses.usdg,
+            fee: asset.fee,
+            recipient: admin.address,
+            amountIn: received,
+            amountOutMinimum: 0n,
+            sqrtPriceLimitX96: 0n,
+          },
+        ],
+      },
+      "dex-maintenance-sell",
+    );
+  }
+  lastDexMaintenanceTransaction = confirmedTransactions;
+}
+
 async function runSoak() {
   soakStartedAt = Date.now();
   let nextCheckpoint = Date.now() + 60_000;
@@ -788,6 +916,12 @@ async function runSoak() {
     Date.now() - soakStartedAt < durationMs ||
     confirmedTransactions < transactionTarget
   ) {
+    if (
+      lastDexMaintenanceTransaction < 0 ||
+      confirmedTransactions - lastDexMaintenanceTransaction >= 250
+    ) {
+      await maintainDexObservations();
+    }
     const collision = random(12) === 0 ? 1 + random(42) : undefined;
     const offset = random(actors.length);
     const batch = Array.from({ length: concurrency }, (_, index) =>

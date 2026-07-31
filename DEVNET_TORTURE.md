@@ -21,10 +21,11 @@ removes disposable chain state, drops the disposable database schema, and
 records a canonical before/after live-devnet fingerprint.
 
 Dense Anvil automining advances clone chain time much faster than wall time.
-The runner therefore refreshes clone DEX marks every two seconds and launches
-the disposable node with 256-block history pruning. This preserves the
-adapter's reference window without allowing a two-hour run to exhaust host
-storage.
+The transaction runner therefore performs a recorded lightweight round trip
+through every DEX pool after at most 250 confirmed transactions. Initial and
+post-restart Forge warm-ups establish the observation baseline, while ongoing
+maintenance is block-bounded and deterministic. The disposable node also
+prunes history to 256 blocks so a two-hour run cannot exhaust host storage.
 
 ## Coverage
 
