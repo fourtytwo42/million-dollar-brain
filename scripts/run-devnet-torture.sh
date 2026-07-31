@@ -51,6 +51,20 @@ fetch_status() {
   return 1
 }
 
+dump_anvil_state() {
+  local rpc_url=$1
+  local destination=$2
+  local compressed="${destination}.hex.tmp"
+  local decoded="${destination}.tmp"
+  rm -f "$compressed" "$decoded"
+  cast rpc anvil_dumpState --rpc-url "$rpc_url" \
+    | cut -c2- | rev | cut -c2- | rev > "$compressed"
+  tail -c +3 "$compressed" | xxd -r -p | gzip -dc > "$decoded"
+  jq -e . "$decoded" >/dev/null
+  mv "$decoded" "$destination"
+  rm -f "$compressed"
+}
+
 cleanup() {
   local exit_code=$?
   trap - EXIT INT TERM
@@ -154,11 +168,7 @@ fi
 
 fetch_status "http://127.0.0.1:3000/api/status" "$live_status_before"
 cp packages/contracts/deployments/local-v3.json "$clone_manifest"
-cast rpc anvil_dumpState --rpc-url http://127.0.0.1:8545 \
-  | cut -c2- | rev | cut -c2- | rev > "$compressed_state"
-tail -c +3 "$compressed_state" | xxd -r -p | gzip -dc > "$clone_state"
-rm -f "$compressed_state"
-jq -e . "$clone_state" >/dev/null
+dump_anvil_state "http://127.0.0.1:8545" "$clone_state"
 
 git_sha="$(git rev-parse HEAD)"
 manifest_hash="$(sha256sum "$clone_manifest" | cut -d' ' -f1)"
@@ -220,7 +230,6 @@ anvil \
   --chain-id 31337 \
   --prune-history 256 \
   --load-state "$clone_state" \
-  --dump-state "$final_state" \
   > "$evidence_dir/anvil.log" 2>&1 &
 anvil_pid=$!
 
@@ -304,9 +313,13 @@ while kill -0 "$soak_pid" 2>/dev/null; do
   fi
 
   if [[ -f "$run_root/restart-anvil-request" && ! -f "$run_root/restart-anvil-complete" ]]; then
+    dump_started_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    dump_anvil_state "http://127.0.0.1:$rpc_port" "$restart_state"
+    printf '%s state_bytes=%s\n' \
+      "$dump_started_at" "$(stat -c %s "$restart_state")" \
+      >> "$evidence_dir/anvil-restarts.log"
     kill -INT "$anvil_pid" 2>/dev/null || true
     wait "$anvil_pid" 2>/dev/null || true
-    cp "$final_state" "$restart_state"
     anvil \
       --host 127.0.0.1 \
       --port "$rpc_port" \

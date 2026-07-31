@@ -11,7 +11,7 @@ import {
   stringToHex,
 } from "viem";
 import { nonceManager, privateKeyToAccount } from "viem/accounts";
-import { access, appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
 
@@ -19,6 +19,10 @@ const repo = resolve(import.meta.dirname, "..");
 const durationMs = Number(process.env.MDB_TORTURE_DURATION_SECONDS ?? "7200") * 1_000;
 const transactionTarget = Number(process.env.MDB_TORTURE_TRANSACTION_TARGET ?? "10000");
 const concurrency = Math.max(1, Math.min(8, Number(process.env.MDB_TORTURE_CONCURRENCY ?? "8")));
+const anvilRestartTransactions = Math.max(
+  1_000,
+  Number(process.env.MDB_TORTURE_ANVIL_RESTART_TRANSACTIONS ?? "10000"),
+);
 const rpcUrl = process.env.MDB_RPC_URL ?? "http://127.0.0.1:18550";
 const webUrl = process.env.MDB_TORTURE_WEB_URL ?? "http://127.0.0.1:3010";
 const evidenceDirectory = process.env.MDB_TORTURE_EVIDENCE_DIR;
@@ -180,6 +184,7 @@ let checkpointNumber = 0;
 const actionCounts = {};
 const gasSamples = [];
 const restartResults = [];
+let lastAnvilRecoveryTransaction = 0;
 let lastDexMaintenanceTransaction = -1;
 let dexMaintenanceApprovalsReady = false;
 const actorPieces = new Map(actors.map(({ account }) => [account.address.toLowerCase(), new Set()]));
@@ -537,6 +542,8 @@ async function requestRecovery(kind) {
   const requestedAt = Date.now();
   const requestPath = resolve(runDirectory, `restart-${kind}-request`);
   const completePath = resolve(runDirectory, `restart-${kind}-complete`);
+  await rm(requestPath, { force: true });
+  await rm(completePath, { force: true });
   await writeFile(
     requestPath,
     bigintJson({
@@ -556,6 +563,10 @@ async function requestRecovery(kind) {
         recoveryMs: Date.now() - requestedAt,
       };
       restartResults.push(result);
+      if (kind === "anvil") {
+        lastAnvilRecoveryTransaction = confirmedTransactions;
+        lastDexMaintenanceTransaction = -1;
+      }
       await record(checkpointsPath, { type: "recovery", ...result });
       return;
     } catch {
@@ -1138,6 +1149,13 @@ async function runSoak() {
     Date.now() - soakStartedAt < durationMs ||
     confirmedTransactions < transactionTarget
   ) {
+    if (
+      confirmedTransactions - lastAnvilRecoveryTransaction >=
+      anvilRestartTransactions
+    ) {
+      await requestRecovery("anvil");
+      await assertInvariants(`periodic-anvil-restart-${restartResults.length}`);
+    }
     if (
       lastDexMaintenanceTransaction < 0 ||
       confirmedTransactions - lastDexMaintenanceTransaction >= 250

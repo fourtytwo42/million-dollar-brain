@@ -8,13 +8,12 @@ Durable project context lives here. Update this file whenever information should
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
 - Last meaningful change: Full run
-  `20260731T061350Z-0f219190474f` passed 56 regression tests and all six
-  stateful invariants, then accepted 6,249 soak transactions before a
-  DEX-maintenance sell reverted. The estimate was produced against the current
-  block, while the mined block crossed into the costlier observation-write
-  path, exhausting the exact estimated gas.
-- Next step: The buffered focused replay passed 1,776 transactions with zero
-  unexpected failures; restart the complete run under a new evidence ID.
+  `20260731T065443Z-b699128b65d2` passed 56 regression tests and all six
+  stateful invariants, then remained reconciled for 74,208 soak transactions
+  before the isolated Anvil retained 4.6 GB and the kernel OOM-killed it.
+- Next step: Checkpoint and restart the disposable Anvil every 10,000 confirmed
+  transactions, verify each state snapshot is bounded, replay with a shortened
+  restart interval, then restart the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -150,6 +149,25 @@ Durable project context lives here. Update this file whenever information should
   and supply. It completed 33 maintenance buys and 33 maintenance sells across
   more than 1,300 post-restart blocks.
 - Follow-up: Restart the complete run.
+
+### 2026-07-31 - Bound long-soak Anvil memory
+
+- Context: Run `20260731T065443Z-b699128b65d2` reached 74,208 confirmed
+  transactions, 64,502 expected reverts, 31 recovered DEX safety holds, zero
+  unexpected failures, zero queued sales, and reconciled NAV/supply. At minute
+  84, the clone Anvil retained 4.6 GB of anonymous memory plus swap and was
+  selected by the kernel OOM killer.
+- Decision: At a default interval of 10,000 confirmed transactions, pause the
+  runner, export and validate a pruned Anvil checkpoint, restart the isolated
+  node from that checkpoint, refresh the DEX pools, and verify invariants
+  before continuing. Recovery request files are reusable so the same two-hour
+  run can perform multiple bounded restarts.
+- Files: `scripts/run-devnet-torture.sh`, `tests/devnet-torture.mjs`.
+- Result: The failure produced no contract invariant breach; cleanup closed
+  clone ports, reduced root usage back to 74%, and preserved a healthy,
+  unchanged live devnet.
+- Follow-up: Prove multiple periodic restarts in a focused replay, including
+  bounded checkpoint sizes and full state reconciliation.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
