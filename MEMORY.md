@@ -14,11 +14,11 @@ Durable project context lives here. Update this file whenever information should
   observations were block-bounded. This is the intended short/long TWAP
   divergence circuit breaker under sustained isolated net flow, not stale
   observations or a failed transaction.
-- Next step: Treat a confirmed DEX-safety invalidation as an expected safe hold,
-  preserve per-asset quote/safety diagnostics, advance one isolated long-TWAP
-  settlement window, refresh every pool, require safety recovery, and continue.
-  Commit/push and force this recovery path in a focused replay before restarting
-  the complete run.
+- Next step: The first forced recovery correctly recorded the safe hold but
+  proved that a $1 maintenance swap is below the pool's effective observation
+  advancement threshold. Match the already-proven Forge warm-up notional of
+  $500, record slot/index/latest-observation evidence, and repeat the forced
+  recovery before restarting the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -89,7 +89,13 @@ Durable project context lives here. Update this file whenever information should
 - Result: The failed run preserved random state
   `0x77ee6e71b6fa64eafdbec5e45f969e7fbd9a0b543090555a9c48a6650c218223`;
   cleanup again proved live devnet unchanged.
-- Follow-up: Forced focused recovery replay, then restart the complete run.
+- Result: Forced replay `20260731T053149Z-7b3470efa343` confirmed the
+  classification: all three safety checks remained valid while every
+  `quoteStatus` was invalid solely because its latest observation was stale.
+  Advancing the long window aligned short and long ticks, but $1 round trips
+  did not advance `updatedAt`; recovery correctly failed closed.
+- Follow-up: Use the proven $500 maintenance notional and record pool
+  observation indices/timestamps, then repeat the forced replay.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 

@@ -82,6 +82,35 @@ const routerAbi = [
     outputs: [{ name: "amountOut", type: "uint256" }],
   },
 ];
+const poolAbi = [
+  {
+    type: "function",
+    name: "slot0",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { name: "sqrtPriceX96", type: "uint160" },
+      { name: "tick", type: "int24" },
+      { name: "observationIndex", type: "uint16" },
+      { name: "observationCardinality", type: "uint16" },
+      { name: "observationCardinalityNext", type: "uint16" },
+      { name: "feeProtocol", type: "uint8" },
+      { name: "unlocked", type: "bool" },
+    ],
+  },
+  {
+    type: "function",
+    name: "observations",
+    stateMutability: "view",
+    inputs: [{ name: "index", type: "uint256" }],
+    outputs: [
+      { name: "blockTimestamp", type: "uint32" },
+      { name: "tickCumulative", type: "int56" },
+      { name: "secondsPerLiquidityCumulativeX128", type: "uint160" },
+      { name: "initialized", type: "bool" },
+    ],
+  },
+];
 
 const chain = defineChain({
   id: 31337,
@@ -265,7 +294,7 @@ async function anvilRpc(method, params = []) {
 async function dexDiagnostics() {
   return Promise.all(
     dexAssets.map(async (asset) => {
-      const [quote, safety] = await Promise.all([
+      const [quote, safety, slot] = await Promise.all([
         publicClient.readContract({
           address: deployment.dexValuationAdapter,
           abi: valuationArtifact.abi,
@@ -278,11 +307,30 @@ async function dexDiagnostics() {
           functionName: "safetyStatus",
           args: [asset.address],
         }),
+        publicClient.readContract({
+          address: asset.pool,
+          abi: poolAbi,
+          functionName: "slot0",
+        }),
       ]);
+      const observation = await publicClient.readContract({
+        address: asset.pool,
+        abi: poolAbi,
+        functionName: "observations",
+        args: [slot[2]],
+      });
       return {
         symbol: asset.symbol,
         asset: asset.address,
         pool: asset.pool,
+        poolState: {
+          tick: slot[1],
+          observationIndex: slot[2],
+          observationCardinality: slot[3],
+          observationCardinalityNext: slot[4],
+          latestObservationTimestamp: observation[0],
+          latestObservationInitialized: observation[3],
+        },
         quote: {
           priceWad: quote[0],
           updatedAt: quote[1],
@@ -955,7 +1003,10 @@ async function maintainDexObservations() {
     dexMaintenanceApprovalsReady = true;
   }
 
-  const amountIn = parseUnits("1", 18);
+  const amountIn = parseUnits(
+    process.env.MDB_TORTURE_DEX_MAINTENANCE_USDG ?? "500",
+    18,
+  );
   for (const asset of dexAssets) {
     const before = await publicClient.readContract({
       address: asset.address,
