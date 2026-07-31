@@ -161,15 +161,20 @@ Durable project context lives here. Update this file whenever information should
   runner, export and validate a pruned Anvil checkpoint, restart the isolated
   node from that checkpoint, refresh the DEX pools, and verify invariants
   before continuing. Strip serialized historical blocks, transactions, and
-  historical states from each checkpoint while preserving current block,
-  accounts, storage, and best block number. Recovery request files are reusable
-  so the same two-hour run can perform multiple bounded restarts.
+  historical states from each checkpoint while retaining the single current
+  block required to resolve `best_block_number`, plus accounts and storage.
+  Recovery request files are reusable so the same two-hour run can perform
+  multiple bounded restarts.
 - Files: `scripts/run-devnet-torture.sh`, `tests/devnet-torture.mjs`.
 - Result: The failure produced no contract invariant breach; cleanup closed
   clone ports, reduced root usage back to 74%, and preserved a healthy,
   unchanged live devnet. A raw 1,000-transaction checkpoint was 195 MB because
   it serialized 22,581 blocks and 22,774 transactions; removing historical
   arrays reduced the same current state to 3.3 MB.
+- Result: An empty block array was correctly rejected by Anvil because it could
+  not resolve the best block hash. Retaining only the block whose header number
+  matches the current block produced a 3.2 MB checkpoint that loaded
+  successfully on isolated port `18550`.
 - Follow-up: Prove multiple periodic restarts in a focused replay, including
   bounded checkpoint sizes and full state reconciliation.
 

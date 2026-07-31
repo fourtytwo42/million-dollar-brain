@@ -62,7 +62,10 @@ dump_anvil_state() {
     | cut -c2- | rev | cut -c2- | rev > "$compressed"
   tail -c +3 "$compressed" | xxd -r -p | gzip -dc > "$decoded"
   jq -e \
-    '.blocks = [] | .transactions = [] | .historical_states = null' \
+    '.block.number as $number
+    | .blocks = [.blocks[] | select(.header.number == $number)]
+    | .transactions = [.transactions[] | select(.block_number == $number)]
+    | .historical_states = null' \
     "$decoded" > "$compact"
   mv "$compact" "$destination"
   rm -f "$compressed" "$decoded"
