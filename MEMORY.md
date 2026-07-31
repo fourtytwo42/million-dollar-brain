@@ -14,10 +14,10 @@ Durable project context lives here. Update this file whenever information should
   observations were block-bounded. This is the intended short/long TWAP
   divergence circuit breaker under sustained isolated net flow, not stale
   observations or a failed transaction.
-- Next step: The second forced recovery proved $500 advances AAPL and NVDA but
-  not ETHX. Use the same bounded $500/$2,500/$10,000 escalation as the proven
-  Forge warm-up, verify each pool's latest observation timestamp advances, and
-  repeat the forced recovery before restarting the complete run.
+- Next step: Restart the complete run under the exact pushed safety-recovery
+  release. Forced replay `20260731T053559Z-84deaa27cd5b` passed with one
+  expected safety hold, all three pool timestamps advanced, every quote/safety
+  check recovered, 884 transactions completed, and no unexpected failures.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -102,6 +102,13 @@ Durable project context lives here. Update this file whenever information should
   rather than assume one notional works for every pool.
 - Follow-up: Escalate per pool until its latest timestamp advances, bounded at
   $10,000, then repeat the forced replay.
+- Result: Forced replay `20260731T053559Z-84deaa27cd5b` accepted 884
+  transactions, 192 expected reverts, one expected DEX safety hold, zero
+  unexpected failures, zero queued sales, and reconciled NAV/supply. AAPL and
+  NVDA advanced at $500; ETHX advanced on the bounded escalation. All
+  `quoteStatus` and `safetyStatus` values were valid after recovery, and live
+  devnet remained unchanged.
+- Follow-up: Start the new complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
