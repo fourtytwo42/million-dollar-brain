@@ -75,6 +75,21 @@ Durable project context lives here. Update this file whenever information should
   upgrades. The official faucet request was rate-limited for the connected
   wallet for another 22 hours 52 minutes. A user-controlled wallet must send
   sufficient valueless testnet ETH to the operator before promotion can resume.
+- Testnet gas recovery: Added `scripts/recover-testnet-gas.mjs`, guarded to
+  chain `46630` and explicit execution. It recovered `526669482000000` wei
+  from the three deterministic acceptance actors to operator
+  `0x4365543D9e895bb48835CEcedf0903E8770A3A63` in transactions recorded under
+  `var/testnet-v3/gas-recovery/`. Post-recovery operator balance is
+  `529082134651000` wei; DEX keeper
+  `0x828F2AdF98f693a22701B8982Ec425ce3612Bdc0` retains `64978680000000` wei.
+- Testnet gas recovery: Accumulated replica stock tokens cannot fund native
+  gas. The testnet WETH identity is `Test Replica Wrapped Ether` (`trWETH`),
+  rejects `deposit` and `withdraw`, and holds zero native ETH. Selling replicas
+  can only produce USDG or replica WETH and must not consume vault assets.
+- Blocker: Do not spend the recovered balance on the upgrade alone. The
+  rehearsed upgrade, 0.003 ETH operator reserve floor, 0.0005 ETH keeper
+  target, three acceptance actors, and two-hour transactions require at least
+  approximately 0.005 additional testnet ETH for a complete safe run.
 - Testnet preflight: USDG plus AAPL, NVDA, MSFT, AMZN, GOOGL, META, TSLA, SPY,
   QQQ, SOXX, and WETH are currently eligible V3. GME, SPCX, and VIRTUAL remain
   unqualified. `upgrade-creator-risk.sh` now derives initial creator approval
