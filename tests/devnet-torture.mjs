@@ -48,6 +48,7 @@ const [
   rewardsArtifact,
   creatorArtifact,
   tokenArtifact,
+  valuationArtifact,
 ] = await Promise.all([
   artifact("BasketVault"),
   artifact("BrainMarketplace"),
@@ -55,6 +56,7 @@ const [
   artifact("RewardDistributor"),
   artifact("CreatorVault"),
   artifact("MockToken"),
+  artifact("DexTwapValuationAdapter"),
 ]);
 
 const routerAbi = [
@@ -122,6 +124,12 @@ const dexAssets = deployment.assets
   .filter((asset) => asset.kind !== "reserve")
   .map((asset) => ({
     address: asset.address,
+    symbol: asset.symbol,
+    pool: deployment.dexVenue.pools.find(
+      (pool) =>
+        pool.token0.toLowerCase() === asset.address.toLowerCase() ||
+        pool.token1.toLowerCase() === asset.address.toLowerCase(),
+    )?.address,
     fee: Number(
       deployment.dexVenue.pools.find(
         (pool) =>
@@ -138,6 +146,7 @@ let soakStartedAt;
 let confirmedTransactions = 0;
 let expectedReverts = 0;
 let unexpectedFailures = 0;
+let expectedSafetyHolds = 0;
 let checkpointNumber = 0;
 const actionCounts = {};
 const gasSamples = [];
@@ -240,6 +249,98 @@ async function fetchJson(path, init) {
   return body;
 }
 
+async function anvilRpc(method, params = []) {
+  const response = await fetch(rpcUrl, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 42, method, params }),
+  });
+  const body = await response.json();
+  if (!response.ok || body.error) {
+    throw new Error(`${method}: ${body.error?.message ?? response.status}`);
+  }
+  return body.result;
+}
+
+async function dexDiagnostics() {
+  return Promise.all(
+    dexAssets.map(async (asset) => {
+      const [quote, safety] = await Promise.all([
+        publicClient.readContract({
+          address: deployment.dexValuationAdapter,
+          abi: valuationArtifact.abi,
+          functionName: "quoteStatus",
+          args: [asset.address],
+        }),
+        publicClient.readContract({
+          address: deployment.dexValuationAdapter,
+          abi: valuationArtifact.abi,
+          functionName: "safetyStatus",
+          args: [asset.address],
+        }),
+      ]);
+      return {
+        symbol: asset.symbol,
+        asset: asset.address,
+        pool: asset.pool,
+        quote: {
+          priceWad: quote[0],
+          updatedAt: quote[1],
+          valid: quote[2],
+        },
+        safety: {
+          valid: safety[0],
+          directHarmonicLiquidity: safety[1],
+          bridgeHarmonicLiquidity: safety[2],
+          directShortTick: safety[3],
+          directLongTick: safety[4],
+        },
+      };
+    }),
+  );
+}
+
+async function recoverExpectedDexSafetyHold(label, error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (!message.includes("InvalidPrice()")) throw error;
+  const before = await dexDiagnostics();
+  if (!before.some((asset) => !asset.quote.valid || !asset.safety.valid)) throw error;
+  expectedSafetyHolds++;
+  await record(checkpointsPath, {
+    type: "expected-safety-hold",
+    label,
+    at: new Date().toISOString(),
+    error: message,
+    before,
+  });
+
+  const longWindow = await publicClient.readContract({
+    address: deployment.dexValuationAdapter,
+    abi: valuationArtifact.abi,
+    functionName: "longTwapWindow",
+  });
+  await anvilRpc("evm_increaseTime", [Number(longWindow) + 1]);
+  await anvilRpc("evm_mine");
+  await maintainDexObservations();
+
+  const after = await dexDiagnostics();
+  if (after.some((asset) => !asset.quote.valid || !asset.safety.valid)) {
+    await record(checkpointsPath, {
+      type: "failed-safety-recovery",
+      label,
+      at: new Date().toISOString(),
+      after,
+    });
+    throw error;
+  }
+  await record(checkpointsPath, {
+    type: "safety-recovered",
+    label,
+    at: new Date().toISOString(),
+    after,
+  });
+}
+
 async function quote(action, amount) {
   const result = await fetchJson("/api/quote-plan", {
     method: "POST",
@@ -328,7 +429,13 @@ async function coreState(client = publicClient) {
 }
 
 async function assertInvariants(label) {
-  const state = await coreState();
+  let state;
+  try {
+    state = await coreState();
+  } catch (error) {
+    await recoverExpectedDexSafetyHold(label, error);
+    state = await coreState();
+  }
   if (state.nextRequest !== 1n || state.nextToProcess !== 1n) {
     throw new Error(`${label}: queued redemption cursor changed`);
   }
@@ -354,6 +461,7 @@ async function assertInvariants(label) {
     elapsedMs: Date.now() - (soakStartedAt ?? processStartedAt),
     confirmedTransactions,
     expectedReverts,
+    expectedSafetyHolds,
     unexpectedFailures,
     state,
     actionCounts,
@@ -912,6 +1020,11 @@ async function maintainDexObservations() {
 async function runSoak() {
   soakStartedAt = Date.now();
   let nextCheckpoint = Date.now() + 60_000;
+  if (process.env.MDB_TORTURE_FORCE_SAFETY_HOLD === "true") {
+    await anvilRpc("evm_increaseTime", [3_601]);
+    await anvilRpc("evm_mine");
+    await assertInvariants("forced-safety-hold");
+  }
   while (
     Date.now() - soakStartedAt < durationMs ||
     confirmedTransactions < transactionTarget
@@ -978,6 +1091,7 @@ try {
     transactionTarget,
     confirmedTransactions,
     expectedReverts,
+    expectedSafetyHolds,
     unexpectedFailures,
     actionCounts,
     restartResults,

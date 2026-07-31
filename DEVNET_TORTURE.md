@@ -46,7 +46,11 @@ exercises:
 The two-hour system phase targets at least 10,000 confirmed transactions with
 up to eight concurrent actors. It also exercises pause/resume controls, UUPS
 upgrades, stale exact-quote races, cap and balance rejection, collision buys,
-and deterministic replay evidence.
+and deterministic replay evidence. Sustained isolated flow may intentionally
+activate the short/long DEX-TWAP circuit breaker. The runner records complete
+per-asset safety evidence, treats the event as an expected safe hold, advances
+one clone-only settlement window, and requires every DEX safety check to
+recover before transactions continue.
 
 ## Run
 

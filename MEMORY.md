@@ -7,17 +7,18 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: Deterministic block-bounded DEX maintenance passed
-  focused replay `20260731T035205Z-a5a880a58a59` with 2,572 transactions,
-  699 expected reverts, zero unexpected failures, and reconciled NAV/supply
-  across more than 2,000 clone blocks. The next full attempt confirmed the
-  logic through four healthy checkpoints, then was stopped proactively because
-  Anvil's post-restart `--dump-state` was serializing roughly 100 KB per dense
-  transaction and projected to consume most remaining disk.
-- Next step: Restart the complete two-hour run under the exact pushed storage
-  safeguard. Focused restart replay `20260731T043025Z-3ab248dafa13` passed
-  1,344 transactions with zero unexpected failures; post-restart state files
-  stayed fixed at 115 MB and cleanup reduced the archived run to 13 MB.
+- Last meaningful change: Full run
+  `20260731T043348Z-a04edbd20b03` passed Foundry and 15 soak checkpoints with
+  13,401 transactions, zero unexpected transaction failures, zero queued
+  sales, and reconciled NAV/supply. It then hit `InvalidPrice` even though pool
+  observations were block-bounded. This is the intended short/long TWAP
+  divergence circuit breaker under sustained isolated net flow, not stale
+  observations or a failed transaction.
+- Next step: Treat a confirmed DEX-safety invalidation as an expected safe hold,
+  preserve per-asset quote/safety diagnostics, advance one isolated long-TWAP
+  settlement window, refresh every pool, require safety recovery, and continue.
+  Commit/push and force this recovery path in a focused replay before restarting
+  the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -70,6 +71,25 @@ Durable project context lives here. Update this file whenever information should
   checkpoint files stayed fixed at 115 MB; cleanup archived only 13 MB and
   again proved the live-devnet fingerprint unchanged.
 - Follow-up: Start the new complete run.
+
+### 2026-07-31 - Expected DEX circuit-breaker recovery
+
+- Context: Run `20260731T043348Z-a04edbd20b03` kept every pool observation
+  fresh with 156 recorded maintenance buys and sells through checkpoint 15,
+  then `totalAssetsUsd` returned `InvalidPrice` after 13,401 transactions.
+  Sustained isolated flow can legitimately move spot/short TWAP far enough from
+  the four-hour TWAP to activate the DEX manipulation circuit breaker.
+- Decision: Do not weaken or bypass the adapter. When an invariant read fails
+  specifically with `InvalidPrice`, capture every asset's `quoteStatus` and
+  `safetyStatus`, require an invalid DEX-safety signal, classify it as an
+  expected safe hold, advance one long-TWAP settlement window on the disposable
+  clone, refresh every pool, and require every quote/safety status to recover
+  before continuing.
+- Files: `tests/devnet-torture.mjs`.
+- Result: The failed run preserved random state
+  `0x77ee6e71b6fa64eafdbec5e45f969e7fbd9a0b543090555a9c48a6650c218223`;
+  cleanup again proved live devnet unchanged.
+- Follow-up: Forced focused recovery replay, then restart the complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
