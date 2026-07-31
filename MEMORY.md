@@ -1991,11 +1991,17 @@ build`; authenticated live `/api/collect-market`.
   stateless arithmetic-only correction attempt for that exact error; a second
   invalid response still fails closed. Live Decisions UAT also corrected held
   cycles mislabeled as executed and now prefers the embedded context schema
-  for legacy records. The current pushed repair runtime is
-  `14fbd65bc47b3cd16915a944292d772df2a67e73`; the preserved two-hour
+  for legacy records. At `2026-07-31T01:01Z`, the isolated DEX keeper depleted
+  its test ETH and stopped observation maintenance. The keepalive now restores
+  its signer to a bounded `0.0005 ETH` target only on testnet, only below
+  `0.0001 ETH`, and only when the operator remains above its configured
+  `0.003 ETH` reserve floor. Network-policy 19/19 passed, the focused live run
+  restored the keeper to `0.0004499277 ETH`, and all 14 pool observations
+  advanced. The current pushed repair runtime is
+  `7b64e52b4dec1fd71e5766cb7c8f78c66a2ae9cc`; the preserved two-hour
   acceptance clock began at `2026-07-31T00:03:48Z` and now ends at
   `2026-07-31T02:17:21.876Z` after `813409` milliseconds of recorded repair
-  downtime.
+  downtime plus the active AI-freshness pause.
 - Follow-up: Verify the next naturally eligible DecisionContext V7 cycle,
   supervise the remaining acceptance checkpoints, complete public
   desktop/tablet/mobile UAT, then regenerate non-broadcast mainnet-shadow
