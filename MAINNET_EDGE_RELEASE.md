@@ -155,6 +155,18 @@ Engineering acceptance requires:
   at desktop, tablet, and mobile widths in both themes without horizontal
   overflow. The acceptance source hash is
   `940fae207af636691316a8c96d0121c926d04c78ec150eb04540200a223f90f6`.
+- Completed 2026-07-31: Creator Risk Limits V7 exact release
+  `d5cb38e104e6d87713bd68537391fb631e49c3ac` passed seven checkpoints over
+  2.026 active hours with zero failures or repair downtime. The ledger records
+  21 three-actor scenarios, 21 responsive checks, atomic BRAINS buys and sells,
+  creator-capacity enforcement, policy visibility, fresh DEX marks, reconciled
+  NAV/share, zero queued sales, and no browser errors. Natural DecisionContext
+  V7 execution transaction
+  `0x9411681a828d6c983c4f07236a6d4b09932dba6880cf593980ca401e37790b1f`
+  proved the bounded JSON parser and active universe; GME, SPCX, and VIRTUAL
+  remained excluded. Final public Browser UAT passed desktop, tablet, mobile,
+  and both themes. The canonical acceptance source hash is
+  `c1898f763d42293b024f171bb6bee0b37bde34ea9c74fc885dc626b664fd3ec2`.
 - Forty-eight continuous passing mainnet-shadow hours for every launch asset,
   including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,

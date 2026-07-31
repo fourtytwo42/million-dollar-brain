@@ -117,6 +117,33 @@ rejected. A contract, wallet, valuation, execution, or accounting change
 invalidates older acceptance and requires a new two-hour run. Presentation-only
 releases use focused testnet browser UAT.
 
+## Creator Risk Limits V7 acceptance
+
+Exact pushed release
+`d5cb38e104e6d87713bd68537391fb631e49c3ac` passed the fresh two-hour policy
+from `2026-07-31T21:04:36.903Z` through `2026-07-31T23:06:10.878Z`:
+
+- Seven of seven checkpoints passed with zero protocol failures, harness
+  failures, or repair downtime.
+- Twenty-one three-actor scenarios completed atomic BRAINS buys and sells,
+  brain purchases and resales, control updates, claims, oversized-exit
+  rejection, concurrency, and creator-capacity preview rejection.
+- The naturally scheduled DecisionContext V7 allocator executed transaction
+  `0x9411681a828d6c983c4f07236a6d4b09932dba6880cf593980ca401e37790b1f`.
+  A later natural AI review held correctly because its 20 bps drift was below
+  the 200 bps execution threshold.
+- All 21 automated responsive checks passed with no browser errors. Final
+  public in-app Browser UAT also passed Brain, dedicated tablet/mobile detail,
+  Basket capacity, Decisions V7, and light/dark themes without horizontal
+  overflow.
+- The 60,000 USDG cap, creator risk authority, active-asset policy, fresh DEX
+  marks, zero queued sales, NAV/share reconciliation, and LAN-primary RPC
+  failover state remained healthy.
+
+The canonical artifact is `var/testnet-readiness/v3-2h-acceptance.json` with
+source hash
+`c1898f763d42293b024f171bb6bee0b37bde34ea9c74fc885dc626b664fd3ec2`.
+
 ## Graduation path
 
 - Devnet uses `local-v3.json`, `var/devnet`, and

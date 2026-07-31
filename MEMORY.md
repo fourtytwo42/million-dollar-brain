@@ -4,22 +4,50 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Finish the creator-controlled risk-limit V7 release on devnet,
-  now promoted in place to Robinhood Testnet, and run a fresh two-hour
-  acceptance from the exact pushed release. Mainnet work remains rehearsal and
+- Current task: Graduate the accepted creator-controlled risk-limit V7 release
+  toward a non-broadcast mainnet candidate. Mainnet work remains rehearsal and
   qualification only.
-- Last meaningful change: The testnet BasketVault and AssetRegistry proxies
-  were upgraded without changing their addresses, creator risk policy is live,
-  and the allocator now safely parses the first complete JSON object when the
-  local model appends duplicate trailing output.
-- Next step: Commit and push the promoted manifest plus the corrected
-  protocol-capacity preview assertion, deploy that exact web build, complete
-  public responsive UAT, and start a new two-hour acceptance clock.
+- Last meaningful change: Exact pushed release
+  `d5cb38e104e6d87713bd68537391fb631e49c3ac` completed a fresh two-hour
+  Robinhood Testnet acceptance with seven passing checkpoints, 21 three-actor
+  scenarios, and final public responsive Browser UAT.
+- Next step: Seal and push the acceptance evidence, run the unfiltered
+  non-broadcast mainnet-shadow and fork/candidate checks, then allow the new
+  48-hour asset qualification clocks and two-session requirements to mature.
 - Blockers: The mainnet 48-hour qualification window, two market sessions,
   paid RPC failover input, and explicit activation approval remain outstanding.
   No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Creator risk limits V7 exact-release acceptance passed
+
+- Context: The in-place testnet risk-policy upgrade required a fresh acceptance
+  clock after a naturally scheduled AI-sourced DecisionContext V7 cycle proved
+  the bounded first-JSON parser and executable asset directory.
+- Decision: Bind acceptance to exact pushed release
+  `d5cb38e104e6d87713bd68537391fb631e49c3ac`; retain the 60,000 USDG cap,
+  creator authority, 48-hour delayed increases, immediate reductions, and
+  inactive GME/SPCX/VIRTUAL exclusions.
+- Files: `var/testnet-readiness/v3-2h-acceptance.json`,
+  `var/testnet-v3-endurance/{state.json,checkpoints.jsonl,summary.json}`,
+  `TESTNET_READINESS.md`, and `MAINNET_EDGE_RELEASE.md`.
+- Commands/tests: Natural V7 allocation transaction
+  `0x9411681a828d6c983c4f07236a6d4b09932dba6880cf593980ca401e37790b1f`
+  executed before the run; the following natural V7 review held safely because
+  20 bps drift was below the 200 bps threshold. Seven checkpoints ran from
+  `2026-07-31T21:04:36.903Z` through `2026-07-31T23:06:10.878Z` with 21
+  three-actor scenarios and 21 responsive checks. Final in-app Browser UAT
+  covered Brain, dedicated tablet/mobile detail, Basket capacity, Decisions V7,
+  light/dark themes, and desktop/tablet/mobile layouts with no horizontal
+  overflow or console errors.
+- Result: Zero protocol failures, zero failed attempts, zero repair downtime,
+  atomic buys and sells, no queued sales, fresh DEX marks, reconciled NAV/share,
+  capacity-preview rejection, creator-policy visibility, and LAN-primary RPC
+  health all passed. Canonical acceptance source hash is
+  `c1898f763d42293b024f171bb6bee0b37bde34ea9c74fc885dc626b664fd3ec2`.
+- Follow-up: Push the evidence-only checkpoint and run non-broadcast mainnet
+  shadow, fork rehearsal, and candidate V5 checks. Do not deploy mainnet.
 
 ### 2026-07-31 - Creator risk limits promoted to testnet
 
