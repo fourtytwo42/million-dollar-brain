@@ -14,8 +14,9 @@ Durable project context lives here. Update this file whenever information should
   create another AAPL observation.
 - Next step: Accept a non-advancing maintenance attempt only when the existing
   observation is already no more than 60 seconds old; continue failing closed
-  for any older observation. Run a focused immediate-maintenance replay, then
-  restart the complete run.
+  for any older observation. Focused replay
+  `20260731T061015Z-5a5fc0bb083a` passed 929 transactions with zero unexpected
+  failures; restart the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -122,7 +123,12 @@ Durable project context lives here. Update this file whenever information should
 - Result: The failure seed
   `0xee5f97ecfdb7f867b3dc95cd5c9ba15aaf3480948c76d90a638f3439219ebc3e`
   and evidence were preserved; live devnet remained unchanged.
-- Follow-up: Focused immediate-maintenance replay, then full restart.
+- Result: Focused immediate-maintenance replay
+  `20260731T061015Z-5a5fc0bb083a` accepted 929 transactions, 223 expected
+  reverts, zero unexpected failures, zero queued sales, and reconciled
+  NAV/supply. The same-timestamp fresh no-op path passed and subsequent pool
+  maintenance advanced normally. Live devnet remained unchanged.
+- Follow-up: Start the complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
