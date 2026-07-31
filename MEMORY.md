@@ -63,6 +63,18 @@ Durable project context lives here. Update this file whenever information should
   migration, transactional/responsive devnet UAT, fresh two-hour testnet
   acceptance, and non-broadcast mainnet rehearsal. Mainnet activation remains
   unauthorized.
+- Testnet preflight: Chain `46630`, the LAN-primary failover gateway, and all
+  isolated units are reachable. The encrypted operator
+  `0x4365543D9e895bb48835CEcedf0903E8770A3A63` holds DEFAULT_ADMIN_ROLE on
+  BasketVault and AssetRegistry, but has only `2412652651000` wei. DEX
+  keepalive is failing closed because both keeper gas and the operator reserve
+  are depleted, so TWAP marks and `/api/status` are stale. Fund the operator
+  from the official testnet faucet before any promotion transaction.
+- Testnet preflight: USDG plus AAPL, NVDA, MSFT, AMZN, GOOGL, META, TSLA, SPY,
+  QQQ, SOXX, and WETH are currently eligible V3. GME, SPCX, and VIRTUAL remain
+  unqualified. `upgrade-creator-risk.sh` now derives initial creator approval
+  from live `isEligibleV3` results instead of trusting the manifest's legacy
+  `active` field.
 
 ### 2026-07-31 - Disposable-devnet torture acceptance complete
 

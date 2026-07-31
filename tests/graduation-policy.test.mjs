@@ -59,3 +59,13 @@ test("mainnet services stay disabled until explicit activation", () => {
     /MDB_MAINNET_ACTIVATION_APPROVED/,
   );
 });
+
+test("risk migration seeds approval only from live qualification", () => {
+  const script = readFileSync("scripts/upgrade-creator-risk.sh", "utf8");
+  assert.match(script, /isEligibleV3\(address\)\(bool\)/);
+  assert.match(script, /kind" == "reserve"/);
+  assert.doesNotMatch(
+    script,
+    /\[\.assets\[\] \| select\(\.active \/\/ true\) \| \.address\]/,
+  );
+});

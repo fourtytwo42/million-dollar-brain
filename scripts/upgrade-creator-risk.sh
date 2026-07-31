@@ -43,7 +43,16 @@ set +a
 
 basket="$(jq -er '.contracts.basket // .basket' "$manifest")"
 registry="$(jq -er '.contracts.assetRegistry // .assetRegistry' "$manifest")"
-approved_assets="$(jq -er '[.assets[] | select(.active // true) | .address] | join(",")' "$manifest")"
+approved_assets="$(
+  while IFS=$'\t' read -r token kind; do
+    if [[ "$kind" == "reserve" ]] || \
+      [[ "$(cast call "$registry" 'isEligibleV3(address)(bool)' "$token" --rpc-url "$rpc")" == "true" ]]; then
+      printf '%s\n' "$token"
+    fi
+  done < <(jq -r '.assets[] | select(.active // true) | [.address,.kind] | @tsv' "$manifest") |
+    paste -sd, -
+)"
+[[ -n "$approved_assets" ]]
 evidence_dir="$repo_root/var/$mode-readiness/creator-risk"
 mkdir -p "$evidence_dir"
 evidence="$evidence_dir/migration.json"
