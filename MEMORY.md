@@ -7,19 +7,17 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: Full repaired run
-  `20260731T030323Z-a0fa8ca6ca12` again passed 56 regressions and all six
-  invariants at 256 runs/depth 1,000. The soak reached 13,320 confirmed
-  transactions with zero unexpected reverts before exposing that a shell/Forge
-  keepalive cannot refresh every pool fast enough under dense concurrent
-  mining. Live devnet remained byte-for-byte unchanged.
-- Next step: Move DEX observation maintenance into the deterministic
-  transaction runner so every pool receives a lightweight round-trip at a
-  bounded block interval, remove the competing background Forge process,
-  replay the failure seed, then restart the complete two-hour run under a new
-  evidence ID. Focused replay `20260731T035205Z-a5a880a58a59` is accepted:
-  2,572 transactions, 699 expected reverts, zero unexpected failures, and
-  reconciled NAV/supply across more than 2,000 clone blocks.
+- Last meaningful change: Deterministic block-bounded DEX maintenance passed
+  focused replay `20260731T035205Z-a5a880a58a59` with 2,572 transactions,
+  699 expected reverts, zero unexpected failures, and reconciled NAV/supply
+  across more than 2,000 clone blocks. The next full attempt confirmed the
+  logic through four healthy checkpoints, then was stopped proactively because
+  Anvil's post-restart `--dump-state` was serializing roughly 100 KB per dense
+  transaction and projected to consume most remaining disk.
+- Next step: Keep the required pre-restart checkpoint, but run the post-restart
+  clone without continuous state serialization. Commit/push this storage
+  safeguard, run a focused restart replay, then restart the complete two-hour
+  run under a new evidence ID.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -50,6 +48,23 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Commit/push, run a focused replay beyond the prior 900-block
   freshness boundary, then restart the complete run. The focused replay is now
   complete; restart the full two-hour run.
+
+### 2026-07-30 - Post-restart Anvil dump growth bounded
+
+- Context: Healthy full attempt `20260731T035621Z-ae28c1cd0f28` reached 3,435
+  transactions with zero unexpected failures, but its continuously written
+  post-restart `anvil-final.json` had already grown to 335 MB. At the measured
+  rate, a two-hour 100K-transaction run would consume about 10 GB of the 13 GB
+  free root filesystem and risk another PostgreSQL outage.
+- Decision: Preserve the required state checkpoint produced immediately before
+  the restart, then launch the recovered Anvil without `--dump-state`.
+  End-of-run reconciliation remains in `DevnetTortureReportV1`; cleanup hashes
+  the last restart checkpoint rather than continuously serializing historical
+  transactions.
+- Files: `scripts/run-devnet-torture.sh`, `DEVNET_TORTURE.md`.
+- Result: The run was stopped before disk pressure, cleanup proved the live
+  devnet fingerprint unchanged, and root disk returned to 71% utilization.
+- Follow-up: Focused restart replay, then a new complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 

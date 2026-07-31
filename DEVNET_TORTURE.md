@@ -25,7 +25,10 @@ The transaction runner therefore performs a recorded lightweight round trip
 through every DEX pool after at most 250 confirmed transactions. Initial and
 post-restart Forge warm-ups establish the observation baseline, while ongoing
 maintenance is block-bounded and deterministic. The disposable node also
-prunes history to 256 blocks so a two-hour run cannot exhaust host storage.
+prunes history to 256 blocks. It writes a restart checkpoint only before the
+required Anvil recovery test; the post-restart node does not continuously
+serialize its expanding transaction history. Together these controls prevent a
+two-hour run from exhausting host storage.
 
 ## Coverage
 

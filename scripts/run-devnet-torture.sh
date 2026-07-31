@@ -63,8 +63,10 @@ cleanup() {
     wait "$anvil_pid" 2>/dev/null || true
   fi
 
-  if [[ -f "$final_state" ]]; then
-    sha256sum "$final_state" > "$evidence_dir/anvil-final.sha256"
+  if [[ -f "$restart_state" ]]; then
+    sha256sum "$restart_state" > "$evidence_dir/anvil-last-checkpoint.sha256"
+  elif [[ -f "$final_state" ]]; then
+    sha256sum "$final_state" > "$evidence_dir/anvil-last-checkpoint.sha256"
   fi
   pg_dump --schema-only --no-owner "$DATABASE_URL" --schema="$database_schema" \
     > "$evidence_dir/database-schema.sql" 2>/dev/null || true
@@ -311,7 +313,6 @@ while kill -0 "$soak_pid" 2>/dev/null; do
       --chain-id 31337 \
       --prune-history 256 \
       --load-state "$restart_state" \
-      --dump-state "$final_state" \
       >> "$evidence_dir/anvil.log" 2>&1 &
     anvil_pid=$!
     for _ in $(seq 1 60); do
