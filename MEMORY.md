@@ -49,6 +49,16 @@ Durable project context lives here. Update this file whenever information should
   qualification-failed assets cannot re-enter AI allocation. Gross deposit
   previews correctly account for the entry fee before comparing net TVL and
   asset capacity.
+- Result: Devnet upgraded in place at proxy addresses
+  `0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f` (BasketVault) and
+  `0x09F8E13ec5CFde5689654241463fe9a5c5837970` (AssetRegistry), with
+  controller `0xD6dEA921495b2A36A82C1cC3e378D5Ea9EC0E185`. The migration
+  reconciled supply, NAV, holdings, weights, and brain state exactly.
+- Result: Live status exposed and fixed a Viem named-struct decoding defect in
+  `riskPolicy`; the endpoint now returns the $60,000 cap, 48-hour delay,
+  creator authority, current DEX qualification, effective caps, utilization,
+  and pending policies. Migration tooling now updates implementation-address
+  fields in the manifest as well as independently recording proxy-slot hashes.
 - Follow-up: Commit/push the candidate, perform the state-preserving devnet
   migration, transactional/responsive devnet UAT, fresh two-hour testnet
   acceptance, and non-broadcast mainnet rehearsal. Mainnet activation remains

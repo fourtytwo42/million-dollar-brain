@@ -730,14 +730,18 @@ export async function dashboard(
       const active = Boolean(results[cursor++]);
       const qualified = Boolean(results[cursor++]);
       const policy = results[cursor++] as readonly [
-        readonly [bigint, bigint, boolean],
+        {
+          creatorCapUsdWad: bigint;
+          version: bigint;
+          approved: boolean;
+        },
         bigint,
       ];
       asset.active = active;
       asset.qualified = qualified;
-      asset.creatorCapUsdWad = policy[0][0].toString();
-      asset.policyVersion = Number(policy[0][1]);
-      asset.creatorApproved = policy[0][2];
+      asset.creatorCapUsdWad = policy[0].creatorCapUsdWad.toString();
+      asset.policyVersion = Number(policy[0].version);
+      asset.creatorApproved = policy[0].approved;
       asset.maximumExposureUsdWad = policy[1].toString();
       const qualificationResult = results[cursor++] as readonly [
         {
@@ -788,7 +792,8 @@ export async function dashboard(
           longTwapWindowSeconds: 14_400,
           shortTwapValid: qualification.shortTwapValid,
           longTwapValid: qualification.longTwapValid,
-          timeWeightedLiquidityValid: qualification.timeWeightedLiquidityValid,
+          timeWeightedLiquidityValid:
+            qualification.timeWeightedLiquidityValid,
           spotToShortDeviationBps: null,
           shortToLongDeviationBps: null,
           observationCardinality: 0,

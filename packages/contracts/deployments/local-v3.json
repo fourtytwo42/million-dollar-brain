@@ -94,14 +94,15 @@
     "dexValuationAdapter": "0x31532Fe1F6802f9A3a22790Aa584636076cE4DCb",
     "dexValuationImplementation": "0xfc7f67c45e7083d5f86ad347b2d8d07da051adc1",
     "assetRegistry": "0x09F8E13ec5CFde5689654241463fe9a5c5837970",
-    "assetRegistryImplementation": "0x4ae99c90e5f5d21bbc2bd946f7a50feea0640662",
+    "assetRegistryImplementation": "0xe3c6cde73a1dafd916af50a5c4dd03ea084dc735",
     "brainControlRegistry": "0x95A13B7F46f569B0633Cc48c42103F526c269d4F",
     "rewards": "0x3Aa5ebB10DC797CAC828524e59A333d0A371443c",
     "creatorVault": "0x9A9f2CCfdE556A7E9Ff0848998Aa4a0CFD8863AE",
     "brain": "0x59b670e9fA9D0A427751Af201D676719a970857b",
     "basket": "0xa85233C63b9Ee964Add6F2cffe00Fd84eb32338f",
-    "basketImplementation": "0xee3f77fe2c6fe533026489635dd0229bd6e5edf3",
-    "dexExecutionImplementation": "0x6699e889831e647c768537ad3d4167c11d710b92"
+    "basketImplementation": "0xf226db7711be4fb578cd00167483402001f847ff",
+    "dexExecutionImplementation": "0x6699e889831e647c768537ad3d4167c11d710b92",
+    "riskController": "0xD6dEA921495b2A36A82C1cC3e378D5Ea9EC0E185"
   },
   "dexExecutionAdapter": "0x40ec018CDa28e11c3BfF23487dcE6102459A25B9",
   "dexValuationAdapter": "0x31532Fe1F6802f9A3a22790Aa584636076cE4DCb",
@@ -156,5 +157,14 @@
         "approved": true
       }
     ]
+  },
+  "riskController": "0xD6dEA921495b2A36A82C1cC3e378D5Ea9EC0E185",
+  "riskPolicy": {
+    "schemaVersion": 1,
+    "authority": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "increaseDelaySeconds": 172800,
+    "initialTvlCapUsdWad": "60000000000000000000000",
+    "previousTvlCapUsdWad": "60000000000000000000000",
+    "preservedStateHash": "0238508a77dd9a6152c8667e7cd5720d5c0c5751b70508d4c2165f22b5f67374"
   }
 }

@@ -151,9 +151,13 @@ mv "$tmp_evidence" "$evidence"
 
 tmp_manifest="$(mktemp)"
 jq --arg controller "$controller" --arg creator "$creator" --arg beforeCap "$before_cap" \
+  --arg basketImplementation "$after_basket_implementation" \
+  --arg assetRegistryImplementation "$after_registry_implementation" \
   --arg stateSnapshotHash "$state_snapshot_hash" '
   .riskController = $controller |
   .contracts.riskController = $controller |
+  .contracts.basketImplementation = $basketImplementation |
+  .contracts.assetRegistryImplementation = $assetRegistryImplementation |
   .riskPolicy = {
     schemaVersion: 1,
     authority: $creator,
