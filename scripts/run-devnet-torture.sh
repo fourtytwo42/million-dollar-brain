@@ -56,13 +56,16 @@ dump_anvil_state() {
   local destination=$2
   local compressed="${destination}.hex.tmp"
   local decoded="${destination}.tmp"
-  rm -f "$compressed" "$decoded"
+  local compact="${destination}.compact.tmp"
+  rm -f "$compressed" "$decoded" "$compact"
   cast rpc anvil_dumpState --rpc-url "$rpc_url" \
     | cut -c2- | rev | cut -c2- | rev > "$compressed"
   tail -c +3 "$compressed" | xxd -r -p | gzip -dc > "$decoded"
-  jq -e . "$decoded" >/dev/null
-  mv "$decoded" "$destination"
-  rm -f "$compressed"
+  jq -e \
+    '.blocks = [] | .transactions = [] | .historical_states = null' \
+    "$decoded" > "$compact"
+  mv "$compact" "$destination"
+  rm -f "$compressed" "$decoded"
 }
 
 cleanup() {
