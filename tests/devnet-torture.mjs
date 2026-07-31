@@ -1003,67 +1003,100 @@ async function maintainDexObservations() {
     dexMaintenanceApprovalsReady = true;
   }
 
-  const amountIn = parseUnits(
-    process.env.MDB_TORTURE_DEX_MAINTENANCE_USDG ?? "500",
-    18,
-  );
+  const maintenanceAmounts = (
+    process.env.MDB_TORTURE_DEX_MAINTENANCE_USDG ?? "500,2500,10000"
+  )
+    .split(",")
+    .map((amount) => parseUnits(amount.trim(), 18));
   for (const asset of dexAssets) {
-    const before = await publicClient.readContract({
-      address: asset.address,
-      abi: tokenArtifact.abi,
-      functionName: "balanceOf",
-      args: [admin.address],
+    const beforeSlot = await publicClient.readContract({
+      address: asset.pool,
+      abi: poolAbi,
+      functionName: "slot0",
     });
-    await write(
-      adminClient,
-      {
-        address: addresses.router,
-        abi: routerAbi,
-        functionName: "exactInputSingle",
-        args: [
-          {
-            tokenIn: addresses.usdg,
-            tokenOut: asset.address,
-            fee: asset.fee,
-            recipient: admin.address,
-            amountIn,
-            amountOutMinimum: 0n,
-            sqrtPriceLimitX96: 0n,
-          },
-        ],
-      },
-      "dex-maintenance-buy",
-    );
-    const after = await publicClient.readContract({
-      address: asset.address,
-      abi: tokenArtifact.abi,
-      functionName: "balanceOf",
-      args: [admin.address],
+    const beforeObservation = await publicClient.readContract({
+      address: asset.pool,
+      abi: poolAbi,
+      functionName: "observations",
+      args: [beforeSlot[2]],
     });
-    const received = after - before;
-    if (received <= 0n) {
-      throw new Error(`DEX maintenance buy returned no ${asset.address}`);
+    let advanced = false;
+    for (const amountIn of maintenanceAmounts) {
+      const before = await publicClient.readContract({
+        address: asset.address,
+        abi: tokenArtifact.abi,
+        functionName: "balanceOf",
+        args: [admin.address],
+      });
+      await write(
+        adminClient,
+        {
+          address: addresses.router,
+          abi: routerAbi,
+          functionName: "exactInputSingle",
+          args: [
+            {
+              tokenIn: addresses.usdg,
+              tokenOut: asset.address,
+              fee: asset.fee,
+              recipient: admin.address,
+              amountIn,
+              amountOutMinimum: 0n,
+              sqrtPriceLimitX96: 0n,
+            },
+          ],
+        },
+        "dex-maintenance-buy",
+      );
+      const after = await publicClient.readContract({
+        address: asset.address,
+        abi: tokenArtifact.abi,
+        functionName: "balanceOf",
+        args: [admin.address],
+      });
+      const received = after - before;
+      if (received <= 0n) {
+        throw new Error(`DEX maintenance buy returned no ${asset.address}`);
+      }
+      await write(
+        adminClient,
+        {
+          address: addresses.router,
+          abi: routerAbi,
+          functionName: "exactInputSingle",
+          args: [
+            {
+              tokenIn: asset.address,
+              tokenOut: addresses.usdg,
+              fee: asset.fee,
+              recipient: admin.address,
+              amountIn: received,
+              amountOutMinimum: 0n,
+              sqrtPriceLimitX96: 0n,
+            },
+          ],
+        },
+        "dex-maintenance-sell",
+      );
+      const afterSlot = await publicClient.readContract({
+        address: asset.pool,
+        abi: poolAbi,
+        functionName: "slot0",
+      });
+      const afterObservation = await publicClient.readContract({
+        address: asset.pool,
+        abi: poolAbi,
+        functionName: "observations",
+        args: [afterSlot[2]],
+      });
+      if (afterObservation[0] > beforeObservation[0]) {
+        advanced = true;
+        break;
+      }
     }
-    await write(
-      adminClient,
-      {
-        address: addresses.router,
-        abi: routerAbi,
-        functionName: "exactInputSingle",
-        args: [
-          {
-            tokenIn: asset.address,
-            tokenOut: addresses.usdg,
-            fee: asset.fee,
-            recipient: admin.address,
-            amountIn: received,
-            amountOutMinimum: 0n,
-            sqrtPriceLimitX96: 0n,
-          },
-        ],
-      },
-      "dex-maintenance-sell",
-    );
+    if (!advanced) {
+      throw new Error(`DEX observation did not advance for ${asset.symbol}`);
+    }
   }
   lastDexMaintenanceTransaction = confirmedTransactions;
 }

@@ -14,11 +14,10 @@ Durable project context lives here. Update this file whenever information should
   observations were block-bounded. This is the intended short/long TWAP
   divergence circuit breaker under sustained isolated net flow, not stale
   observations or a failed transaction.
-- Next step: The first forced recovery correctly recorded the safe hold but
-  proved that a $1 maintenance swap is below the pool's effective observation
-  advancement threshold. Match the already-proven Forge warm-up notional of
-  $500, record slot/index/latest-observation evidence, and repeat the forced
-  recovery before restarting the complete run.
+- Next step: The second forced recovery proved $500 advances AAPL and NVDA but
+  not ETHX. Use the same bounded $500/$2,500/$10,000 escalation as the proven
+  Forge warm-up, verify each pool's latest observation timestamp advances, and
+  repeat the forced recovery before restarting the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -96,6 +95,13 @@ Durable project context lives here. Update this file whenever information should
   did not advance `updatedAt`; recovery correctly failed closed.
 - Follow-up: Use the proven $500 maintenance notional and record pool
   observation indices/timestamps, then repeat the forced replay.
+- Result: Replay `20260731T053352Z-0cd68e7a95d5` showed exact pool evidence:
+  AAPL and NVDA advanced from observation index 55 to 56 at $500 and became
+  valid; ETHX stayed at index 55 and remained stale. Recovery again failed
+  closed, proving the runner must preserve the existing bounded escalation
+  rather than assume one notional works for every pool.
+- Follow-up: Escalate per pool until its latest timestamp advances, bounded at
+  $10,000, then repeat the forced replay.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
