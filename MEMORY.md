@@ -7,16 +7,15 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: Forced DEX safety recovery is proven, but full run
-  `20260731T053824Z-aed772d83191` exposed an initialization race: in-run
-  maintenance began immediately after the post-restart Forge warm-up while
-  Anvil was still within the same wall-clock timestamp, so no swap size could
-  create another AAPL observation.
-- Next step: Accept a non-advancing maintenance attempt only when the existing
-  observation is already no more than 60 seconds old; continue failing closed
-  for any older observation. Focused replay
-  `20260731T061015Z-5a5fc0bb083a` passed 929 transactions with zero unexpected
-  failures; restart the complete run.
+- Last meaningful change: Full run
+  `20260731T061350Z-0f219190474f` passed 56 regression tests and all six
+  stateful invariants, then accepted 6,249 soak transactions before a
+  DEX-maintenance sell reverted. The estimate was produced against the current
+  block, while the mined block crossed into the costlier observation-write
+  path, exhausting the exact estimated gas.
+- Next step: Apply a 175% gas buffer to the deterministic maintenance buy and
+  sell transactions, replay the preserved seed first, then restart the complete
+  run under a new evidence ID.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -129,6 +128,25 @@ Durable project context lives here. Update this file whenever information should
   NAV/supply. The same-timestamp fresh no-op path passed and subsequent pool
   maintenance advanced normally. Live devnet remained unchanged.
 - Follow-up: Start the complete run.
+
+### 2026-07-31 - Buffer maintenance swaps across observation writes
+
+- Context: Full run `20260731T061350Z-0f219190474f` passed the complete
+  Foundry phase and reached 6,249 confirmed soak transactions with two
+  correctly recovered DEX safety holds, zero queued sales, and reconciled NAV
+  and supply. A later maintenance sell reverted after its gas estimate
+  succeeded.
+- Decision: Estimate each maintenance swap explicitly and submit it with a 175%
+  gas limit. A Uniswap swap mined one second after estimation can take the
+  costlier observation-write path even when no application state changes
+  between estimate and submission.
+- Files: `tests/devnet-torture.mjs`.
+- Result: Failure transaction
+  `0x1c482bcaa2c66d80417b90be6e5adabbbe174e497d666f40f159c6483c2690df`,
+  seed, action ledger, and pool recovery evidence are preserved. Cleanup
+  proved live devnet remained healthy and unchanged.
+- Follow-up: Replay the preserved seed and restart the complete run only after
+  the focused replay passes.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 

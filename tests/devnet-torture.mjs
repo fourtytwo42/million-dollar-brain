@@ -266,6 +266,21 @@ async function write(
   }
 }
 
+async function writeWithGasBuffer(client, request, action, multiplierBps = 17_500n) {
+  const estimatedGas = await publicClient.estimateContractGas({
+    ...request,
+    account: client.account.address,
+  });
+  return write(
+    client,
+    {
+      ...request,
+      gas: (estimatedGas * multiplierBps + 9_999n) / 10_000n,
+    },
+    action,
+  );
+}
+
 async function send(client, request, action) {
   const hash = await client.sendTransaction(request);
   return waitFor(hash, action);
@@ -1028,7 +1043,7 @@ async function maintainDexObservations() {
         functionName: "balanceOf",
         args: [admin.address],
       });
-      await write(
+      await writeWithGasBuffer(
         adminClient,
         {
           address: addresses.router,
@@ -1058,7 +1073,7 @@ async function maintainDexObservations() {
       if (received <= 0n) {
         throw new Error(`DEX maintenance buy returned no ${asset.address}`);
       }
-      await write(
+      await writeWithGasBuffer(
         adminClient,
         {
           address: addresses.router,
