@@ -4,19 +4,49 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Run a destructive smart-contract torture test against a
-  disposable clone of devnet. Live devnet ports `3000` and `8545`, all
-  testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: Full run
-  `20260731T065443Z-b699128b65d2` passed 56 regression tests and all six
-  stateful invariants, then remained reconciled for 74,208 soak transactions
-  before the isolated Anvil retained 4.6 GB and the kernel OOM-killed it.
-- Next step: The compact-restart replay passed three Anvil recoveries and 2,470
-  transactions; restart the complete run under a new evidence ID.
+- Current task: The disposable-devnet smart-contract torture test is complete
+  and accepted. Live devnet ports `3000` and `8545` remained unchanged; all
+  testnet/mainnet services and shared RPC hosts stayed out of scope.
+- Last meaningful change: Exact release
+  `538bb2ffa5c7a40e0db669f9dce51bab7d1e565f` completed the two-hour run
+  `20260731T090205Z-538bb2ffa5c7` with 107,990 confirmed transactions, zero
+  unexpected failures, 44 recovered DEX safety holds, and passing responsive
+  in-app Browser UAT.
+- Next step: Use the accepted report as devnet stress evidence. Any promotion
+  to testnet or mainnet is a separate explicitly authorized task.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
 ## Current State
+
+### 2026-07-31 - Disposable-devnet torture acceptance complete
+
+- Context: The complete destructive suite ran only against an isolated clone
+  of live devnet at ports `18550` and `3010`, with an isolated PostgreSQL
+  schema and deterministic actor identities.
+- Decision: Bound the long soak by exporting a compact current-state Anvil
+  checkpoint and restarting the clone every 10,000 confirmed transactions.
+  Each checkpoint retains the current best block plus accounts and storage,
+  while discarding historical blocks, transactions, and historical states.
+- Files: `scripts/run-devnet-torture.sh`, `tests/devnet-torture.mjs`,
+  `DEVNET_TORTURE.md`, and
+  `var/devnet-torture/20260731T090205Z-538bb2ffa5c7/evidence/`.
+- Commands/tests: 56 Foundry regression tests; six stateful invariants at 256
+  runs and depth 1,000; 10,000-case focused fuzzing; two active soak hours;
+  in-app Browser UAT at 1440x900, 768x1024, and 390x844.
+- Result: `DevnetTortureReportV1` accepted 107,990 confirmed transactions and
+  103,122 expected reverts with zero unexpected failures. All 44 expected DEX
+  safety holds recovered, queued sales remained zero, and final NAV and supply
+  reconciled. The setup recovery and ten periodic Anvil recoveries succeeded;
+  compact checkpoints stayed approximately 3.4 MB.
+- Result: Brain, Basket, Decisions, tablet braincell detail, and mobile layouts
+  rendered without horizontal overflow or console warnings/errors. Clone ports
+  closed during cleanup, live ports `8545` and `3000` remained healthy, and the
+  live-devnet canonical fingerprint was unchanged at
+  `198777d398afa3fda5d884040d753907e67e9798639a968455bc97ce0e2b70f0`.
+- Follow-up: Preserve this run as the accepted stress baseline. Re-run the
+  complete suite after material contract, execution, accounting, or upgrade
+  changes.
 
 ### 2026-07-30 - Dense-soak DEX maintenance must be block-bounded
 

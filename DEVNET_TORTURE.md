@@ -83,3 +83,27 @@ sequence can be replayed before restarting a complete run under a new ID.
 After a successful soak the isolated web remains available for up to ten
 minutes. Browser UAT can release it early by creating
 `var/devnet-torture/<run-id>/uat-complete`.
+
+## Accepted Baseline
+
+Run `20260731T090205Z-538bb2ffa5c7` is the accepted torture baseline for Git
+SHA `538bb2ffa5c7a40e0db669f9dce51bab7d1e565f`.
+
+- Foundry: 56 regression tests and six stateful invariants at 256 runs and
+  depth 1,000 passed.
+- Soak: 107,990 transactions completed during two active hours.
+- Expected failures: 103,122 classified reverts and 44 DEX safety holds; every
+  safety hold recovered.
+- Unexpected failures: zero.
+- Accounting: zero queued sales with reconciled NAV and BRAINS supply.
+- Recovery: the setup recovery plus ten periodic Anvil recoveries passed; the
+  compact state checkpoints remained approximately 3.4 MB.
+- Browser UAT: Brain, Basket, Decisions, tablet detail, and mobile views passed
+  at 1440x900, 768x1024, and 390x844 with no horizontal overflow or console
+  warnings/errors.
+- Isolation: clone ports closed during cleanup and the live-devnet fingerprint
+  remained
+  `198777d398afa3fda5d884040d753907e67e9798639a968455bc97ce0e2b70f0`.
+
+The machine-readable report and Browser UAT result are preserved in
+`var/devnet-torture/20260731T090205Z-538bb2ffa5c7/evidence/` on the devnet VM.
