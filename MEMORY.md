@@ -1947,3 +1947,44 @@ build`; authenticated live `/api/collect-market`.
   turning it into a fallback Hold.
 - Follow-up: Verify the next naturally eligible live V7 cycle while completing
   the exact-commit testnet migration and acceptance preparation.
+
+### 2026-07-31 - Capacity V3 testnet migration and acceptance start
+
+- Context: The DEX-native qualification release was promoted in place on
+  Robinhood Testnet. Initial integration exposed three defects:
+  inactive GME/SPCX/VIRTUAL candidates entered live portfolio valuation and
+  official-price synchronization, the synthetic acceptance route retained a
+  pre-V3 gas ceiling, and the DecisionContext manifest adapter reactivated
+  inactive candidates and made required freshness fail closed.
+- Decision: Keep candidate replicas registered but inactive until their
+  qualification clocks pass; exclude inactive assets from live valuation and
+  source synchronization and the executable AI directory while preserving
+  zero-balance visibility. Raise only the testnet rehearsal gas ceiling and
+  funding target; real wallet transactions continue using normal RPC gas
+  estimation. DEX keepalive round trips sell 99% of the separately simulated
+  output so concurrent pool movement cannot create a false STF failure.
+- Files: `apps/web/lib/{chain,market-price-sync}.ts`,
+  `apps/web/lib/decision-context.ts`,
+  `apps/web/app/api/testnet-acceptance/route.ts`,
+  `packages/contracts/deployments/testnet-v3.json`,
+  `scripts/warm-dex-pools.s.sol`, `tests/decision-context.test.ts`.
+- Commands/tests: Asset-universe 10/10, market-data 9/9, production build,
+  DecisionContext 11/11, successful DEX keepalive, HTTP 200 status, and a
+  focused live three-leg DEX transaction checkpoint. Buy transaction
+  `0xb3d038ec58d7d6da0be797e47c06759456df7163216e4c5c09f5d843a8dc4110`
+  and atomic sell
+  `0xcb06754e94d44359502324197b95fe24471b2d853942a27a1820380b23a51e92`
+  passed. Fresh acceptance checkpoint 0 passed at
+  `2026-07-31T00:04:27.858Z` with three actors, no browser errors, and no
+  responsive overflow. Repair downtime is excluded without resetting the
+  original acceptance clock.
+- Result: AssetRegistry, DEX valuation, DEX execution, and BasketVault proxies
+  are upgraded without changing BRAINS supply, owners, profiles, controls, or
+  rewards. GME, SPCX, and VIRTUAL use stable IDs 13-15 and remain inactive with
+  zero balances. The current pushed repair runtime is
+  `f9c07295df77221d08ffb8109777818c7315de57`; the preserved two-hour
+  acceptance clock began at `2026-07-31T00:03:48Z`.
+- Follow-up: Verify the next naturally eligible DecisionContext V7 cycle,
+  supervise the remaining acceptance checkpoints, complete public
+  desktop/tablet/mobile UAT, then regenerate non-broadcast mainnet-shadow
+  readiness evidence.
