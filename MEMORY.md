@@ -7,17 +7,15 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: Full run
-  `20260731T043348Z-a04edbd20b03` passed Foundry and 15 soak checkpoints with
-  13,401 transactions, zero unexpected transaction failures, zero queued
-  sales, and reconciled NAV/supply. It then hit `InvalidPrice` even though pool
-  observations were block-bounded. This is the intended short/long TWAP
-  divergence circuit breaker under sustained isolated net flow, not stale
-  observations or a failed transaction.
-- Next step: Restart the complete run under the exact pushed safety-recovery
-  release. Forced replay `20260731T053559Z-84deaa27cd5b` passed with one
-  expected safety hold, all three pool timestamps advanced, every quote/safety
-  check recovered, 884 transactions completed, and no unexpected failures.
+- Last meaningful change: Forced DEX safety recovery is proven, but full run
+  `20260731T053824Z-aed772d83191` exposed an initialization race: in-run
+  maintenance began immediately after the post-restart Forge warm-up while
+  Anvil was still within the same wall-clock timestamp, so no swap size could
+  create another AAPL observation.
+- Next step: Accept a non-advancing maintenance attempt only when the existing
+  observation is already no more than 60 seconds old; continue failing closed
+  for any older observation. Run a focused immediate-maintenance replay, then
+  restart the complete run.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -109,6 +107,22 @@ Durable project context lives here. Update this file whenever information should
   `quoteStatus` and `safetyStatus` values were valid after recovery, and live
   devnet remained unchanged.
 - Follow-up: Start the new complete run.
+
+### 2026-07-31 - Same-timestamp observation maintenance
+
+- Context: After the full Foundry suite and required Anvil restart, run
+  `20260731T053824Z-aed772d83191` failed before user soak actions because the
+  deterministic maintenance ran immediately after the synchronous Forge
+  warm-up. Anvil had not advanced wall-clock time, so no swap size could create
+  a second observation timestamp.
+- Decision: A maintenance attempt may be a successful fresh no-op only when the
+  pool's existing latest observation is at most 60 seconds old. Older
+  non-advancing observations remain a hard failure.
+- Files: `tests/devnet-torture.mjs`.
+- Result: The failure seed
+  `0xee5f97ecfdb7f867b3dc95cd5c9ba15aaf3480948c76d90a638f3439219ebc3e`
+  and evidence were preserved; live devnet remained unchanged.
+- Follow-up: Focused immediate-maintenance replay, then full restart.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 

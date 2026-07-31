@@ -1095,7 +1095,17 @@ async function maintainDexObservations() {
       }
     }
     if (!advanced) {
-      throw new Error(`DEX observation did not advance for ${asset.symbol}`);
+      const latestBlock = await publicClient.getBlock({ blockTag: "latest" });
+      const observationAge =
+        latestBlock.timestamp - BigInt(beforeObservation[0]);
+      const freshNoAdvanceLimit = BigInt(
+        process.env.MDB_TORTURE_DEX_FRESH_NO_ADVANCE_SECONDS ?? "60",
+      );
+      if (observationAge > freshNoAdvanceLimit) {
+        throw new Error(
+          `DEX observation did not advance for ${asset.symbol}; age=${observationAge}`,
+        );
+      }
     }
   }
   lastDexMaintenanceTransaction = confirmedTransactions;
