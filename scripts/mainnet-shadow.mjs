@@ -20,6 +20,7 @@ import {
 } from "./lib/qualification-window.mjs";
 import {
   CAPACITY_PROBES_USD,
+  fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
   summarizeMainnetReadiness,
 } from "./lib/mainnet-readiness.mjs";
@@ -497,8 +498,14 @@ if (chainId !== CHAIN_ID)
   throw new Error(`shadow RPC chain is ${chainId}, expected 4663`);
 
 const registry = await json(ROBINHOOD_ASSETS);
-const stockAssets = (registry.assets ?? [])
+const officialMainnetDeployments = (registry.assets ?? [])
   .filter((asset) => asset.status === "ASSET_STATUS_ACTIVE")
+  .filter((asset) =>
+    asset.deployments?.some(
+      (row) => row.chainId === CHAIN_ID && isAddress(row.contractAddress),
+    ),
+  );
+const stockAssets = officialMainnetDeployments
   .map((asset) => {
     const deployment = asset.deployments?.find(
       (row) => row.chainId === CHAIN_ID,
@@ -557,7 +564,8 @@ const canonicalAssets = [
 ];
 const inspected = await inspectTokens(canonicalAssets);
 const symbolFilter = (process.env.MDB_MAINNET_SHADOW_SYMBOLS ?? "").trim();
-const diagnosticMode = process.env.MDB_MAINNET_SHADOW_DIAGNOSTIC_MODE === "true";
+const diagnosticMode =
+  process.env.MDB_MAINNET_SHADOW_DIAGNOSTIC_MODE === "true";
 if (symbolFilter && !diagnosticMode) {
   throw new Error(
     "MDB_MAINNET_SHADOW_SYMBOLS is diagnostic-only and must be empty in readiness mode",
@@ -742,7 +750,13 @@ const result = {
   readiness,
   gates: {
     noSigningKey: true,
-    fullCanonicalStockUniverseInspected: stockAssets.length >= 98,
+    fullCanonicalStockUniverseInspected: fullCanonicalUniverseInspected({
+      officialMainnetDeploymentCount: officialMainnetDeployments.length,
+      inspectedStockAssetCount: inspected.filter(
+        (asset) => asset.kind === "stock" || asset.kind === "etf",
+      ).length,
+      diagnosticFilterEnabled: requestedSymbols.size > 0,
+    }),
     diagnosticFilterDisabled: requestedSymbols.size === 0,
     dexVenueVerified:
       isAddress(UNISWAP_FACTORY) &&

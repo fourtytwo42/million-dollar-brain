@@ -19,6 +19,19 @@ export const CAPACITY_PROBES_USD = Object.freeze([
   1_000, 5_000, 10_000, 25_000, 100_000, 250_000,
 ]);
 
+export function fullCanonicalUniverseInspected({
+  officialMainnetDeploymentCount,
+  inspectedStockAssetCount,
+  diagnosticFilterEnabled = false,
+}) {
+  return (
+    diagnosticFilterEnabled === false &&
+    Number.isInteger(officialMainnetDeploymentCount) &&
+    officialMainnetDeploymentCount >= 90 &&
+    inspectedStockAssetCount === officialMainnetDeploymentCount
+  );
+}
+
 export function summarizeMainnetReadiness(qualification) {
   const ranked = qualification
     .filter((asset) => asset.qualificationWindowPassed === true)

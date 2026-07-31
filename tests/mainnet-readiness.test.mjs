@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CAPACITY_PROBES_USD,
+  fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
   summarizeMainnetReadiness,
 } from "../scripts/lib/mainnet-readiness.mjs";
@@ -36,6 +37,38 @@ test("capacity ladder is deterministic and begins at a usable small trade", () =
     "SPCX",
     "VIRTUAL",
   ]);
+});
+
+test("full-universe gate follows the official deployable registry count", () => {
+  assert.equal(
+    fullCanonicalUniverseInspected({
+      officialMainnetDeploymentCount: 96,
+      inspectedStockAssetCount: 96,
+    }),
+    true,
+  );
+  assert.equal(
+    fullCanonicalUniverseInspected({
+      officialMainnetDeploymentCount: 96,
+      inspectedStockAssetCount: 95,
+    }),
+    false,
+  );
+  assert.equal(
+    fullCanonicalUniverseInspected({
+      officialMainnetDeploymentCount: 96,
+      inspectedStockAssetCount: 96,
+      diagnosticFilterEnabled: true,
+    }),
+    false,
+  );
+  assert.equal(
+    fullCanonicalUniverseInspected({
+      officialMainnetDeploymentCount: 12,
+      inspectedStockAssetCount: 12,
+    }),
+    false,
+  );
 });
 
 test("readiness requires four assets and enough post-risk-cap capacity for 80% exposure", () => {

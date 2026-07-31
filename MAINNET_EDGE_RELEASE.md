@@ -205,19 +205,23 @@ engineering specification.
 ## Current mainnet-shadow result
 
 The previous fixed-symbol evidence is archived and does not establish current
-readiness. The next candidate must run the unfiltered 98-token scan, build a
-creator-approved witness of no more than nine assets, and prove enough effective
-capacity for 80% of the $60,000 launch cap. Newly discovered assets begin their
-own qualification clock at zero; unchanged identity, route, and evidence rules
-may retain an existing asset's hours.
+readiness. The worker now runs without a symbol filter against LAN mainnet node
+`192.168.50.173:8547`. Its current universe contains USDG, WETH, and all 96
+active Robinhood mainnet stock/ETF deployments returned by the official
+registry. The completeness gate follows that authoritative deployable count,
+requires at least 90 assets, and fails if any expected deployment is omitted.
 
-The regenerated signed candidate report has hash
-`3c993f2b0aa26614a598b2f3400626150423fc25e72b53cde0f50f382a580d8b`.
-It contains no included launch assets and is correctly marked
-`readyToBroadcast: false`. The paused fork rehearsal is also not yet complete:
-`/etc/mdb/mainnet.env` has not been installed from the checked-in template, so
-required sequencer/USDG feed and deployment-array inputs are absent. This is a
-release blocker, not a reason to relax the script.
+Fifteen assets currently pass one observation's identity, DEX route,
+TWAP/TWAL, and capacity checks. None has completed the required 48 continuous
+hours or two regular market sessions, so no launch witness or included launch
+set exists and `readyToBroadcast` remains false. Newly discovered assets begin
+their own qualification clock at zero; unchanged identity, route, and evidence
+rules may retain existing hours.
+
+The paused fork rehearsal is also incomplete. The owner-readable Alchemy
+secondary has not been supplied, so the loopback mainnet RPC failover gateway
+cannot yet be enabled; shadow qualification uses the verified LAN primary
+directly. These are release blockers, not reasons to relax readiness checks.
 
 ## Graduation and canary controls
 

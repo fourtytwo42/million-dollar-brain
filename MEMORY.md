@@ -20,6 +20,33 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
+### 2026-07-31 - Unfiltered mainnet shadow universe gate repaired
+
+- Context: The first post-acceptance unfiltered mainnet-shadow pass inspected
+  98 configured assets: USDG, WETH, and all 96 currently active Robinhood
+  mainnet stock/ETF deployments. Its gate incorrectly demanded 98 stock/ETF
+  deployments in addition to USDG and WETH.
+- Decision: Derive the expected stock/ETF count from the current official
+  registry response, require at least 90 deployable canonical assets, require
+  every expected deployment to be inspected, and continue rejecting any
+  readiness-mode symbol filter.
+- Files: `scripts/mainnet-shadow.mjs`,
+  `scripts/lib/mainnet-readiness.mjs`,
+  `tests/mainnet-readiness.test.mjs`, and `/etc/mdb/mainnet-shadow.env`.
+- Commands/tests: Mainnet-readiness 6/6 and Prettier checks passed. The live
+  non-broadcast worker used LAN node `192.168.50.173:8547`, scanned all 98
+  configured assets, and reported
+  `fullCanonicalStockUniverseInspected: true` with diagnostic filtering off.
+- Result: Fifteen assets currently pass the single observation's identity,
+  DEX route, TWAP/TWAL, and capacity checks, but none has completed 48 hours or
+  two required market sessions. Mainnet remains correctly unready. The
+  loopback mainnet failover gateway remains blocked on the missing owner-only
+  Alchemy endpoint file; the shadow uses the LAN primary directly meanwhile.
+- Follow-up: Let hourly qualification accumulate without resetting unchanged
+  evidence. Configure Alchemy failover, complete the paused fork rehearsal, and
+  generate the final exact-commit candidate only after the readiness witness
+  passes. Never broadcast during qualification.
+
 ### 2026-07-31 - Creator risk limits V7 exact-release acceptance passed
 
 - Context: The in-place testnet risk-policy upgrade required a fresh acceptance
@@ -46,8 +73,8 @@ Durable project context lives here. Update this file whenever information should
   capacity-preview rejection, creator-policy visibility, and LAN-primary RPC
   health all passed. Canonical acceptance source hash is
   `c1898f763d42293b024f171bb6bee0b37bde34ea9c74fc885dc626b664fd3ec2`.
-- Follow-up: Push the evidence-only checkpoint and run non-broadcast mainnet
-  shadow, fork rehearsal, and candidate V5 checks. Do not deploy mainnet.
+- Follow-up: The evidence-only checkpoint is pushed. Continue non-broadcast
+  mainnet qualification and complete the fork rehearsal. Do not deploy mainnet.
 
 ### 2026-07-31 - Creator risk limits promoted to testnet
 
