@@ -333,6 +333,7 @@ type DashboardState = {
     maximumWeightBps: number;
     robinhoodUid: string | null;
     tags?: string[];
+    active?: boolean;
   }[];
   nav: string;
   navPerShare: string;
@@ -929,7 +930,7 @@ function legacyAssetRecords(state: DashboardState): AssetRecordV1[] {
         ? "local-development-manifest"
         : "robinhood-testnet-replica-manifest",
     qualification: null,
-    active: true,
+    active: asset.active !== false,
   }));
 }
 

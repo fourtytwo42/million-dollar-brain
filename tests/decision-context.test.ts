@@ -84,6 +84,14 @@ test("V6 builds dossiers from the active manifest and preserves its tags", () =>
   assert.match(context, /coinbaseEthTicker/);
 });
 
+test("inactive manifest candidates stay outside the executable V7 context", () => {
+  const context = readFileSync(
+    new URL("../apps/web/lib/decision-context.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(context, /active: asset\.active !== false/);
+});
+
 test("V6 evidence never turns unavailable history into a neutral return", () => {
   const context = readFileSync(
     new URL("../apps/web/lib/decision-context.ts", import.meta.url),
