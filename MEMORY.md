@@ -11,9 +11,8 @@ Durable project context lives here. Update this file whenever information should
   `20260731T065443Z-b699128b65d2` passed 56 regression tests and all six
   stateful invariants, then remained reconciled for 74,208 soak transactions
   before the isolated Anvil retained 4.6 GB and the kernel OOM-killed it.
-- Next step: Checkpoint and restart the disposable Anvil every 10,000 confirmed
-  transactions, verify each state snapshot is bounded, replay with a shortened
-  restart interval, then restart the complete run.
+- Next step: The compact-restart replay passed three Anvil recoveries and 2,470
+  transactions; restart the complete run under a new evidence ID.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -175,6 +174,14 @@ Durable project context lives here. Update this file whenever information should
   not resolve the best block hash. Retaining only the block whose header number
   matches the current block produced a 3.2 MB checkpoint that loaded
   successfully on isolated port `18550`.
+- Result: Focused replay `20260731T-replay-71498e7` accepted 2,470
+  transactions, 776 expected reverts, two recovered safety holds, zero
+  unexpected failures, zero queued sales, and reconciled NAV/supply. It
+  completed the required setup restart plus two periodic Anvil restarts at a
+  1,000-transaction test interval; all three checkpoints stayed between 3.3
+  and 3.4 MB.
+- Follow-up: Restart the complete two-hour run with the default 10,000-
+  transaction restart interval.
 - Follow-up: Prove multiple periodic restarts in a focused replay, including
   bounded checkpoint sizes and full state reconciliation.
 
