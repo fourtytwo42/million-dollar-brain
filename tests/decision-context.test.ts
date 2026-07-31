@@ -116,6 +116,16 @@ test("V7 prompt uses DEX-only authority and treats position count as a maximum",
   assert.match(allocator, /allocationWarnings/);
 });
 
+test("V7 gets one bounded arithmetic correction before failing closed", () => {
+  const allocator = readFileSync(
+    new URL("../apps/web/lib/allocator.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(allocator, /Correct the allocation arithmetic/);
+  assert.match(allocator, /error\.message !== "weights must total 10000"/);
+  assert.match(allocator, /schemaVersion: market\.schemaVersion/);
+});
+
 test("every accepted AI allocation carries a validated Brain Pulse", () => {
   const allocator = readFileSync(
     new URL("../apps/web/lib/allocator.ts", import.meta.url),

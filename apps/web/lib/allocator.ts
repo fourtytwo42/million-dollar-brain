@@ -380,16 +380,63 @@ export async function runDynamicResearchAllocator(
       throw new Error("model returned neither research nor allocation");
     }
     if (!brainPulse) throw new Error("model returned an invalid Brain Pulse");
-    const rawAllocationById = normalizeDynamicAllocationProposal(
-      proposed,
-      context.assetRecords,
-      context.reserveAssetId,
-    );
-    const allocationById = constrainDynamicAllocationProposal(
-      proposed,
-      context.assetRecords,
-      context.reserveAssetId,
-    );
+    let rawAllocationById: DynamicAllocation;
+    let allocationById: DynamicAllocation;
+    try {
+      rawAllocationById = normalizeDynamicAllocationProposal(
+        proposed,
+        context.assetRecords,
+        context.reserveAssetId,
+      );
+      allocationById = constrainDynamicAllocationProposal(
+        proposed,
+        context.assetRecords,
+        context.reserveAssetId,
+      );
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        error.message !== "weights must total 10000"
+      ) {
+        throw error;
+      }
+      const correctionPrompt = [
+        "Correct the allocation arithmetic from your immediately previous response.",
+        "No research, new thesis, new asset, or explanation is allowed.",
+        "Return exactly one JSON object with kind allocation, integer weights totaling exactly 10000, a valid brainPulse, and optional confidenceByAssetId.",
+        `Reserve weight must be at least ${context.compiledBrain.reserveMinimumBps}; use at most ${context.compiledBrain.preferredPositionCount} risk positions; every asset must respect maximumWeightBps.`,
+        "Omitted active asset IDs count as zero.",
+        `Eligible assets: ${JSON.stringify(context.eligibleAssetDirectory)}`,
+        `Previous response: ${rawOutputs.at(-1) ?? ""}`,
+      ].join(" ");
+      promptHashes.push(keccak256(stringToHex(correctionPrompt)));
+      const corrected = await requestModelJson(
+        provider,
+        model,
+        correctionPrompt,
+        modelConfig.maximumOutputTokens,
+      );
+      rawOutputs.push(corrected.rawOutput);
+      if (corrected.parsed.kind !== "allocation") {
+        throw new Error("arithmetic correction did not return an allocation");
+      }
+      proposed = corrected.parsed.allocation;
+      confidenceSourceRaw = corrected.parsed.confidenceByAssetId;
+      brainPulse = validateAiBrainPulse(corrected.parsed.brainPulse);
+      if (!brainPulse) {
+        throw new Error("arithmetic correction returned an invalid Brain Pulse");
+      }
+      rawAllocationById = normalizeDynamicAllocationProposal(
+        proposed,
+        context.assetRecords,
+        context.reserveAssetId,
+      );
+      allocationById = constrainDynamicAllocationProposal(
+        proposed,
+        context.assetRecords,
+        context.reserveAssetId,
+      );
+    }
     const confidenceSource =
       (confidenceSourceRaw as Record<string, unknown> | undefined) ?? {};
     const allowedReasons = new Set<AllocationConfidenceReasonV1>([
@@ -441,7 +488,7 @@ export async function runDynamicResearchAllocator(
       rationale:
         researchResults.length > 0
           ? "Allocation proposed after one recorded structured research round."
-          : "Allocation proposed from the bounded DecisionContext V6.",
+          : "Allocation proposed from the bounded DecisionContext V7.",
       source: "ai",
       rawOutputs,
       promptHashes,
@@ -991,11 +1038,7 @@ export async function runCycle() {
     Boolean(hash),
   );
   const record = {
-    schemaVersion: state.activation.controlBundlesEnabled
-      ? 6
-      : dynamicMode
-        ? 4
-        : 3,
+    schemaVersion: market.schemaVersion,
     at: new Date().toISOString(),
     allocation: decision.allocation,
     allocationById: decision.allocationById,
