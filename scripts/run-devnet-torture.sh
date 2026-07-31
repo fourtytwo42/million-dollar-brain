@@ -15,6 +15,7 @@ fuzz_runs="${MDB_TORTURE_FUZZ_RUNS:-10000}"
 invariant_runs="${MDB_TORTURE_INVARIANT_RUNS:-256}"
 invariant_depth="${MDB_TORTURE_INVARIANT_DEPTH:-1000}"
 uat_hold_seconds="${MDB_TORTURE_UAT_HOLD_SECONDS:-600}"
+keepalive_interval_seconds="${MDB_TORTURE_KEEPALIVE_INTERVAL_SECONDS:-2}"
 run_id="${MDB_TORTURE_RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)-$(git -C "$repo_root" rev-parse --short=12 HEAD)}"
 run_root="$repo_root/var/devnet-torture/$run_id"
 evidence_dir="$run_root/evidence"
@@ -35,6 +36,22 @@ soak_pid=""
 cleanup_complete=false
 
 mkdir -p "$evidence_dir"
+
+fetch_status() {
+  local url=$1
+  local destination=$2
+  for _ in $(seq 1 60); do
+    if curl -fsS "$url" > "$destination.tmp" 2>/dev/null \
+      && jq -e . "$destination.tmp" >/dev/null 2>&1
+    then
+      mv "$destination.tmp" "$destination"
+      return 0
+    fi
+    sleep 1
+  done
+  rm -f "$destination.tmp"
+  return 1
+}
 
 cleanup() {
   local exit_code=$?
@@ -64,7 +81,7 @@ cleanup() {
     -c "drop schema if exists \"$database_schema\" cascade" >/dev/null 2>&1 || true
   rm -f "$clone_state" "$compressed_state" "$final_state" "$restart_state"
 
-  curl -fsS "http://127.0.0.1:3000/api/status" > "$live_status_after" 2>/dev/null || true
+  fetch_status "http://127.0.0.1:3000/api/status" "$live_status_after" || true
   if [[ -s "$live_status_before" && -s "$live_status_after" ]]; then
     jq -S '{
       network: .network,
@@ -139,7 +156,7 @@ if [[ ! -s packages/contracts/deployments/local-v3.json ]]; then
   exit 1
 fi
 
-curl -fsS "http://127.0.0.1:3000/api/status" > "$live_status_before"
+fetch_status "http://127.0.0.1:3000/api/status" "$live_status_before"
 cp packages/contracts/deployments/local-v3.json "$clone_manifest"
 cast rpc anvil_dumpState --rpc-url http://127.0.0.1:8545 \
   | cut -c2- | rev | cut -c2- | rev > "$compressed_state"
@@ -205,6 +222,7 @@ anvil \
   --host 127.0.0.1 \
   --port "$rpc_port" \
   --chain-id 31337 \
+  --prune-history 256 \
   --load-state "$clone_state" \
   --dump-state "$final_state" \
   > "$evidence_dir/anvil.log" 2>&1 &
@@ -239,7 +257,7 @@ export MDB_DEPLOYMENT_FILE="$clone_manifest"
 scripts/run-dex-keepalive.sh > "$evidence_dir/dex-keepalive.log" 2>&1
 (
   while kill -0 "$anvil_pid" 2>/dev/null; do
-    sleep 60
+    sleep "$keepalive_interval_seconds"
     scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1 || exit 1
   done
 ) &
@@ -308,6 +326,7 @@ while kill -0 "$soak_pid" 2>/dev/null; do
       --host 127.0.0.1 \
       --port "$rpc_port" \
       --chain-id 31337 \
+      --prune-history 256 \
       --load-state "$restart_state" \
       --dump-state "$final_state" \
       >> "$evidence_dir/anvil.log" 2>&1 &
@@ -333,7 +352,7 @@ while kill -0 "$soak_pid" 2>/dev/null; do
     scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1
     (
       while kill -0 "$anvil_pid" 2>/dev/null; do
-        sleep 60
+        sleep "$keepalive_interval_seconds"
         scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1 || exit 1
       done
     ) &

@@ -20,6 +20,12 @@ trap stops isolated processes, archives database structure and table counts,
 removes disposable chain state, drops the disposable database schema, and
 records a canonical before/after live-devnet fingerprint.
 
+Dense Anvil automining advances clone chain time much faster than wall time.
+The runner therefore refreshes clone DEX marks every two seconds and launches
+the disposable node with 256-block history pruning. This preserves the
+adapter's reference window without allowing a two-hour run to exhaust host
+storage.
+
 ## Coverage
 
 The Foundry phase runs the complete regression suite with 10,000 focused fuzz

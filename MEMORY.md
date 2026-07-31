@@ -7,20 +7,45 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Run a destructive smart-contract torture test against a
   disposable clone of devnet. Live devnet ports `3000` and `8545`, all
   testnet/mainnet services, and shared RPC hosts are out of scope.
-- Last meaningful change: The isolated runner, stateful Foundry handler,
-  deterministic 12-actor system soak, evidence report, disabled systemd unit,
-  and live-devnet fingerprint proof are implemented. A 20-second smoke passed
-  with 289 confirmed transactions, 50 classified quote-race reverts, zero
-  unexplained failures, zero queued sales, reconciled NAV/supply, and an
-  identical live-devnet fingerprint.
-- Next step: Commit and push the exact torture candidate, then run 10,000 fuzz
-  cases, 256 invariant runs at depth 1,000, and the complete two-hour/10,000
-  transaction soak. Finish with isolated responsive Browser UAT and live port
-  `3000` smoke verification.
+- Last meaningful change: The exact torture candidate completed all 56
+  regression tests and all six stateful invariants at 256 runs and depth
+  1,000. Its first soak exposed chain-time DEX-mark expiry under dense mining
+  and unbounded Anvil historical-state disk growth. The runner now refreshes
+  DEX marks every two seconds, prunes clone history to 256 blocks, and retries
+  transient live-status reads. Focused replay
+  `20260731T025731Z-13b685391fa9` passed the original failure point with 1,931
+  confirmed transactions, 515 expected reverts, zero unexpected failures,
+  zero queued sales, and reconciled NAV/supply.
+- Next step: Commit and push the harness repair, then restart the complete
+  two-hour/10,000-transaction run under a new evidence ID. Finish with isolated
+  responsive Browser UAT and live port `3000` smoke verification.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
 ## Current State
+
+### 2026-07-30 - Full torture run findings and focused repair replay
+
+- Context: Full run `20260731T021620Z-13b685391fa9` passed 56 regression tests
+  and six stateful invariants at 256 runs and depth 1,000, then failed during
+  the high-density soak when Anvil chain time advanced faster than wall time
+  and the 60-second DEX keepalive allowed 900-second marks to expire.
+- Decision: Refresh clone DEX marks every two seconds, launch both initial and
+  restarted clone nodes with `--prune-history 256`, and retry live status
+  capture for up to 60 seconds. These changes apply only to the disposable
+  torture environment.
+- Files: `scripts/run-devnet-torture.sh`.
+- Commands/tests: Focused deterministic replay
+  `20260731T025731Z-13b685391fa9` ran 130 active seconds and accepted 1,931
+  confirmed transactions, 515 expected reverts, zero unexpected failures,
+  successful web/Anvil restarts, zero queued sales, and reconciled NAV/supply.
+- Result: The replay passed the original minute-one failure point. A separate
+  focused attempt also exposed unbounded Anvil historical-state growth that
+  filled the root filesystem and briefly stopped PostgreSQL. Only verified
+  stale/disposable Anvil temp directories were removed, recovering about
+  14 GB; PostgreSQL was restarted and live devnet returned healthy with its
+  canonical state intact.
+- Follow-up: Restart the complete two-hour run under the repaired exact commit.
 
 ### 2026-07-30 - Disposable devnet torture harness ready
 
