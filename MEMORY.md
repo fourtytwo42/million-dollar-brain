@@ -7,14 +7,15 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Complete and promote the DEX-native capacity V3 release. It
   replaces fixed launch assets, Chainlink authority, capitalization/AUM gates,
   and the universal $250K threshold with dynamic on-chain capacity.
-- Last meaningful change: The guarded devnet V3/V6 migration completed at
-  pushed release `5a4c40996677a22e34e4e0446da400158eb81d16`.
-  All four proxies upgraded successfully; BRAINS supply and DEX-marked NAV
-  remained byte-for-byte unchanged, and the live vault cap is $60,000.
-- Next step: Push the Foundry evidence-path allowlist correction, deploy the
-  inactive GME/SPCX/VIRTUAL devnet candidates and identity-negative fixtures,
-  complete responsive devnet UAT, then promote the exact commit to testnet and
-  run a fresh two-hour acceptance.
+- Last meaningful change: The in-place testnet migration and two-hour
+  acceptance are running on pushed repair release
+  `14fbd65bc47b3cd16915a944292d772df2a67e73`. The acceptance retains the
+  original `2026-07-31T00:03:48Z` start and excludes only recorded repair
+  downtime.
+- Next step: Obtain a naturally eligible AI-sourced DecisionContext V7 after
+  the bounded arithmetic-correction repair, finish the preserved acceptance
+  checkpoints and public responsive UAT, then regenerate non-broadcast
+  mainnet-shadow and candidate V5 evidence.
 - Blockers: The mainnet failover service lacks `/etc/mdb/mainnet-rpc.env` and
   therefore no Alchemy backup is configured. Mainnet fork inputs are
   incomplete, the new 48-hour clocks have only started, current aggregate DEX
@@ -1962,14 +1963,17 @@ build`; authenticated live `/api/collect-market`.
   zero-balance visibility. Raise only the testnet rehearsal gas ceiling and
   funding target; real wallet transactions continue using normal RPC gas
   estimation. DEX keepalive round trips sell 99% of the separately simulated
-  output so concurrent pool movement cannot create a false STF failure.
+  output so concurrent pool movement cannot create a false STF failure, and
+  uses a 175% gas-estimate multiplier because an Arbitrum approval consumed
+  exactly its estimated gas and reverted out of gas.
 - Files: `apps/web/lib/{chain,market-price-sync}.ts`,
   `apps/web/lib/decision-context.ts`,
   `apps/web/app/api/testnet-acceptance/route.ts`,
   `packages/contracts/deployments/testnet-v3.json`,
   `scripts/warm-dex-pools.s.sol`, `tests/decision-context.test.ts`.
 - Commands/tests: Asset-universe 10/10, market-data 9/9, production build,
-  DecisionContext 11/11, successful DEX keepalive, HTTP 200 status, and a
+  DecisionContext 12/12, cycle-history 4/4, successful DEX keepalive, HTTP 200
+  status, and a
   focused live three-leg DEX transaction checkpoint. Buy transaction
   `0xb3d038ec58d7d6da0be797e47c06759456df7163216e4c5c09f5d843a8dc4110`
   and atomic sell
@@ -1977,13 +1981,21 @@ build`; authenticated live `/api/collect-market`.
   passed. Fresh acceptance checkpoint 0 passed at
   `2026-07-31T00:04:27.858Z` with three actors, no browser errors, and no
   responsive overflow. Repair downtime is excluded without resetting the
-  original acceptance clock.
+  original acceptance clock. Checkpoint 1 also passed at
+  `2026-07-31T00:35:08.563Z`.
 - Result: AssetRegistry, DEX valuation, DEX execution, and BasketVault proxies
   are upgraded without changing BRAINS supply, owners, profiles, controls, or
   rewards. GME, SPCX, and VIRTUAL use stable IDs 13-15 and remain inactive with
-  zero balances. The current pushed repair runtime is
-  `f9c07295df77221d08ffb8109777818c7315de57`; the preserved two-hour
-  acceptance clock began at `2026-07-31T00:03:48Z`.
+  zero balances. The first natural V7 model response totaled 12,000 basis
+  points and correctly failed closed. The allocator now makes one bounded,
+  stateless arithmetic-only correction attempt for that exact error; a second
+  invalid response still fails closed. Live Decisions UAT also corrected held
+  cycles mislabeled as executed and now prefers the embedded context schema
+  for legacy records. The current pushed repair runtime is
+  `14fbd65bc47b3cd16915a944292d772df2a67e73`; the preserved two-hour
+  acceptance clock began at `2026-07-31T00:03:48Z` and now ends at
+  `2026-07-31T02:17:21.876Z` after `813409` milliseconds of recorded repair
+  downtime.
 - Follow-up: Verify the next naturally eligible DecisionContext V7 cycle,
   supervise the remaining acceptance checkpoints, complete public
   desktop/tablet/mobile UAT, then regenerate non-broadcast mainnet-shadow
