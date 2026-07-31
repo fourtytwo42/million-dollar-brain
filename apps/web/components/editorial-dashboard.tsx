@@ -2172,7 +2172,7 @@ export function EditorialDashboard({
                   portfolio. Sell BRAINS to receive USDG based on the
                   basket&apos;s live value.
                   {network?.mode === "testnet" &&
-                    " Testnet uses clearly labelled production-interface replicas priced from official mainnet market data."}
+                    " Testnet uses clearly labelled production-interface replicas traded through its on-chain DEX pools."}
                 </p>
               </div>
             </div>
@@ -2201,7 +2201,7 @@ export function EditorialDashboard({
                   value={data ? money(data.supply) : "—"}
                 />
                 <Metric
-                  label="Oracle"
+                  label="DEX mark"
                   value={
                     data?.oracle.fresh
                       ? `Fresh · ${oracleAge(data.oracle.oldestTimestamp, data.oracle.chainTimestamp)} old`
