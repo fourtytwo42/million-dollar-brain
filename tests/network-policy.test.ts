@@ -297,6 +297,19 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.doesNotMatch(acceptance, /const minimumUsdg = parseUnits\("5000"/);
 });
 
+test("testnet DEX keepalive restores bounded gas without breaching the operator reserve", () => {
+  const keepalive = readFileSync("scripts/run-dex-keepalive.sh", "utf8");
+
+  assert.match(keepalive, /top_up_testnet_keeper/);
+  assert.match(keepalive, /MDB_DEX_KEEPALIVE_MINIMUM_GAS_WEI/);
+  assert.match(keepalive, /MDB_DEX_KEEPALIVE_TARGET_GAS_WEI/);
+  assert.match(keepalive, /MDB_OPERATOR_GAS_RESERVE_FLOOR_WEI/);
+  assert.match(keepalive, /operator_balance >= reserve_floor \+ deficit/);
+  assert.match(keepalive, /--value "\$\{deficit\}wei"/);
+  assert.match(keepalive, /--gas-limit 100000/);
+  assert.match(keepalive, /\[\[ "\$mode" == "testnet" \]\]/);
+});
+
 test("test-only wallet controls are visible locally but hidden on testnet", () => {
   const dashboard = readFileSync(
     "apps/web/components/editorial-dashboard.tsx",
