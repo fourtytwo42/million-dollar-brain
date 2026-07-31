@@ -28,6 +28,12 @@ contract WarmDexPools is Script {
                 })
                 );
             IERC20(assets[i]).approve(routerAddress, received);
+            // Forge broadcasts each scripted call separately. Another pool
+            // transaction can land after simulation but before this sell,
+            // making the actual buy output microscopically smaller than the
+            // simulated return value. Keep a 1% token buffer so observation
+            // maintenance remains robust without weakening any vault limit.
+            uint256 sellAmount = (received * 99) / 100;
             ISwapRouter02(routerAddress)
                 .exactInputSingle(
                     ISwapRouter02.ExactInputSingleParams({
@@ -35,7 +41,7 @@ contract WarmDexPools is Script {
                     tokenOut: reserve,
                     fee: 3000,
                     recipient: recipient,
-                    amountIn: received,
+                    amountIn: sellAmount,
                     amountOutMinimum: 0,
                     sqrtPriceLimitX96: 0
                 })
