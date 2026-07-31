@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { cycleSelectionKey } from "../apps/web/lib/cycle-history.ts";
 
@@ -38,4 +39,17 @@ test("legacy HOLD cycles without input hashes remain selectable", () => {
     "hold:legacy:2026-07-30T10:00:00.000Z",
   );
   assert.equal(cycleSelectionKey(null), null);
+});
+
+test("decision details distinguish held cycles and prefer the context schema", () => {
+  const dashboard = readFileSync(
+    new URL("../apps/web/components/editorial-dashboard.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    dashboard,
+    /selectedCycle\.executionStatus === "executed" \|\|\s+selectedCycle\.txHash/,
+  );
+  assert.match(dashboard, /selectedCycle\.decisionContext\?\.schemaVersion/);
 });

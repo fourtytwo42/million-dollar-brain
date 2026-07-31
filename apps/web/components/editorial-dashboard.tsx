@@ -2872,7 +2872,13 @@ export function EditorialDashboard({
                   </h2>
                 </div>
                 {selectedCycle?.block && (
-                  <span>EXECUTED · BLOCK {selectedCycle.block}</span>
+                  <span>
+                    {selectedCycle.executionStatus === "executed" ||
+                    selectedCycle.txHash
+                      ? "EXECUTED"
+                      : "HELD"}{" "}
+                    · BLOCK {selectedCycle.block}
+                  </span>
                 )}
               </div>
               {selectedCycle?.rationale && (
@@ -2887,7 +2893,11 @@ export function EditorialDashboard({
                     <div>
                       <span>Decision package</span>
                       <b>
-                        V{selectedCycle.schemaVersion ?? 2} ·{" "}
+                        V
+                        {selectedCycle.decisionContext?.schemaVersion ??
+                          selectedCycle.schemaVersion ??
+                          2}{" "}
+                        ·{" "}
                         {selectedCycle.inputHash?.slice(0, 12)}…
                       </b>
                     </div>
