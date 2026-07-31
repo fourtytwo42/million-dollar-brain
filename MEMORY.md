@@ -70,11 +70,22 @@ Durable project context lives here. Update this file whenever information should
   keepalive is failing closed because both keeper gas and the operator reserve
   are depleted, so TWAP marks and `/api/status` are stale. Fund the operator
   from the official testnet faucet before any promotion transaction.
+- Testnet preflight: The exact migration rehearsed successfully without
+  broadcasting and estimated `0.000433352541667626 ETH` for deployment and
+  upgrades. The official faucet request was rate-limited for the connected
+  wallet for another 22 hours 52 minutes. A user-controlled wallet must send
+  sufficient valueless testnet ETH to the operator before promotion can resume.
 - Testnet preflight: USDG plus AAPL, NVDA, MSFT, AMZN, GOOGL, META, TSLA, SPY,
   QQQ, SOXX, and WETH are currently eligible V3. GME, SPCX, and VIRTUAL remain
   unqualified. `upgrade-creator-risk.sh` now derives initial creator approval
   from live `isEligibleV3` results instead of trusting the manifest's legacy
   `active` field.
+- Devnet UAT: The deployed Basket capacity and Protocol limits surfaces passed
+  Browser checks at 1440x900, 768x1024, and 390x844 with no horizontal
+  overflow. A $50,000 buy was rejected before wallet confirmation with the
+  calculated `$25,252.53` maximum and limiting rule. No application console
+  errors or warnings appeared; observed warnings belonged to the MetaMask
+  extension process.
 
 ### 2026-07-31 - Disposable-devnet torture acceptance complete
 
