@@ -106,6 +106,7 @@ warm_asset() {
       "${signer[@]}" \
       --broadcast \
       --slow \
+      --gas-estimate-multiplier "${MDB_DEX_KEEPALIVE_GAS_ESTIMATE_MULTIPLIER:-175}" \
       --non-interactive
     after="$(observation_index "$pool")"
     if [[ "$after" != "$before" ]]; then
