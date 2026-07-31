@@ -14,10 +14,10 @@ Durable project context lives here. Update this file whenever information should
   logic through four healthy checkpoints, then was stopped proactively because
   Anvil's post-restart `--dump-state` was serializing roughly 100 KB per dense
   transaction and projected to consume most remaining disk.
-- Next step: Keep the required pre-restart checkpoint, but run the post-restart
-  clone without continuous state serialization. Commit/push this storage
-  safeguard, run a focused restart replay, then restart the complete two-hour
-  run under a new evidence ID.
+- Next step: Restart the complete two-hour run under the exact pushed storage
+  safeguard. Focused restart replay `20260731T043025Z-3ab248dafa13` passed
+  1,344 transactions with zero unexpected failures; post-restart state files
+  stayed fixed at 115 MB and cleanup reduced the archived run to 13 MB.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -64,7 +64,12 @@ Durable project context lives here. Update this file whenever information should
 - Files: `scripts/run-devnet-torture.sh`, `DEVNET_TORTURE.md`.
 - Result: The run was stopped before disk pressure, cleanup proved the live
   devnet fingerprint unchanged, and root disk returned to 71% utilization.
-- Follow-up: Focused restart replay, then a new complete run.
+- Result: Focused replay `20260731T043025Z-3ab248dafa13` accepted 1,344
+  transactions, 356 expected reverts, zero unexpected failures, zero queued
+  sales, and reconciled NAV/supply. During the post-restart soak both state
+  checkpoint files stayed fixed at 115 MB; cleanup archived only 13 MB and
+  again proved the live-devnet fingerprint unchanged.
+- Follow-up: Start the new complete run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
