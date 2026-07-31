@@ -5,19 +5,46 @@ Durable project context lives here. Update this file whenever information should
 ## Active Handoff
 
 - Current task: Finish the creator-controlled risk-limit V7 release on devnet,
-  then promote the exact accepted commit to testnet for a fresh two-hour
-  acceptance. Mainnet work remains rehearsal and qualification only.
-- Last meaningful change: The release passes 75 Foundry tests, including all
-  six invariants at 256 runs and depth 1,000, the complete Node regression set,
-  the production web build, and a non-broadcast devnet upgrade rehearsal.
-- Next step: Commit and push the clean devnet candidate, perform the
-  state-preserving devnet upgrade, exercise policy and authority paths on an
-  isolated clone, and complete responsive Browser UAT before testnet promotion.
+  now promoted in place to Robinhood Testnet, and run a fresh two-hour
+  acceptance from the exact pushed release. Mainnet work remains rehearsal and
+  qualification only.
+- Last meaningful change: The testnet BasketVault and AssetRegistry proxies
+  were upgraded without changing their addresses, the creator risk controller
+  is live, the cap is 60,000 USDG, policy schedule/cancel smoke transactions
+  passed, and a full three-actor transaction scenario passed.
+- Next step: Commit and push the promoted manifest plus the corrected
+  protocol-capacity preview assertion, deploy that exact web build, complete
+  public responsive UAT, and start a new two-hour acceptance clock.
 - Blockers: The mainnet 48-hour qualification window, two market sessions,
   paid RPC failover input, and explicit activation approval remain outstanding.
   No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Creator risk limits promoted to testnet
+
+- Context: Faucet funding restored the Robinhood Testnet operator and DEX
+  keeper so the creator-risk migration and transaction-path smoke checks could
+  continue.
+- Decision: Preserve the existing BasketVault and AssetRegistry proxy
+  addresses, deploy the CreatorRiskController, initialize the active basket cap
+  at 60,000 USDG, and seed approvals only from live qualification state.
+- Files: `packages/contracts/deployments/testnet-v3.json`,
+  `apps/web/app/api/testnet-acceptance/route.ts`, and runtime evidence under
+  `var/testnet-readiness/creator-risk/`.
+- Commands/tests: The migration reconciled pre/post state. Live schedule and
+  cancellation smoke tests passed for both a 61,000 USDG basket-cap increase
+  and an AAPL creator-cap increase. Transaction scenario 1 completed a brain
+  resale, control update, BRAINS buy, atomic sell, and reward claim. The
+  capacity-policy suite passes 4/4 and the production web build passes.
+- Result: Creator policy is active on testnet with controller
+  `0x4444423DE227365026421D874473B28bb4e3e06d`; active basket cap remains
+  60,000 USDG and no pending policy remains. The acceptance route now derives
+  its deliberately oversized quote from the same anonymous protocol-capacity
+  view as the server planner; the former actor-scoped comparison could be
+  limited by the separate per-wallet rule and yield a false-negative test.
+- Follow-up: Push the exact release, deploy the matching testnet web build,
+  complete public responsive UAT, and begin a fresh two-hour acceptance run.
 
 ### 2026-07-31 - Creator risk limits release candidate verified
 

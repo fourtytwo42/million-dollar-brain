@@ -141,7 +141,14 @@ export async function POST(request: NextRequest) {
       );
       assertCreatorRiskState(before);
       let capacityPreviewRejected = false;
-      const maximumGrossWad = BigInt(before.capacity.maximumDepositUsdWad);
+      // The quote planner evaluates protocol-wide capacity without a wallet
+      // address. Use the same anonymous dashboard view here; the actor-scoped
+      // view can be lower because of the separate per-wallet limit and would
+      // not necessarily be oversized for the planner itself.
+      const plannerState = await dashboard();
+      const maximumGrossWad = BigInt(
+        plannerState.capacity.maximumDepositUsdWad,
+      );
       const oversizedGross =
         (maximumGrossWad * 10n ** BigInt(reserve.decimals) + 10n ** 18n - 1n) /
           10n ** 18n +
@@ -404,10 +411,7 @@ function assertCreatorRiskState(status: Awaited<ReturnType<typeof dashboard>>) {
   if (status.capacity.tvlCapUsdWad !== "60000000000000000000000") {
     throw new Error("testnet creator risk cap is not $60,000");
   }
-  if (
-    !status.creatorRiskPolicy?.controller ||
-    !status.creatorRiskPolicy.authority
-  ) {
+  if (!status.creatorRiskPolicy?.controller || !status.creatorRiskPolicy.authority) {
     throw new Error("testnet creator risk controller is unavailable");
   }
 }
