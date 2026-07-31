@@ -9,9 +9,9 @@ Durable project context lives here. Update this file whenever information should
   acceptance from the exact pushed release. Mainnet work remains rehearsal and
   qualification only.
 - Last meaningful change: The testnet BasketVault and AssetRegistry proxies
-  were upgraded without changing their addresses, the creator risk controller
-  is live, the cap is 60,000 USDG, policy schedule/cancel smoke transactions
-  passed, and a full three-actor transaction scenario passed.
+  were upgraded without changing their addresses, creator risk policy is live,
+  and the allocator now safely parses the first complete JSON object when the
+  local model appends duplicate trailing output.
 - Next step: Commit and push the promoted manifest plus the corrected
   protocol-capacity preview assertion, deploy that exact web build, complete
   public responsive UAT, and start a new two-hour acceptance clock.
@@ -45,6 +45,25 @@ Durable project context lives here. Update this file whenever information should
   limited by the separate per-wallet rule and yield a false-negative test.
 - Follow-up: Push the exact release, deploy the matching testnet web build,
   complete public responsive UAT, and begin a fresh two-hour acceptance run.
+
+### 2026-07-31 - Bounded model JSON parsing repair
+
+- Context: The first post-migration natural V7 review returned a valid object
+  followed by a duplicate JSON object. The greedy object regex combined both,
+  producing `Unexpected non-whitespace character after JSON` and a safe
+  deterministic hold.
+- Decision: Scan from the first opening brace to the first complete balanced
+  object while respecting quoted strings and escapes. Ignore trailing model
+  output, then apply the unchanged schema, allocation, Brain Pulse, and risk
+  validation to that one object.
+- Files: `apps/web/lib/model-json.ts`, `apps/web/lib/allocator.ts`, and
+  `tests/model-json.test.ts`.
+- Commands/tests: Model-JSON regressions pass 2/2, DecisionContext regressions
+  pass 12/12, and the production web build passes.
+- Result: Duplicate trailing output no longer causes a false fallback; missing,
+  incomplete, malformed, or semantically invalid JSON still fails closed.
+- Follow-up: Deploy the exact pushed repair and verify the next naturally
+  eligible AI-sourced V7 cycle before starting the two-hour acceptance clock.
 
 ### 2026-07-31 - Creator risk limits release candidate verified
 

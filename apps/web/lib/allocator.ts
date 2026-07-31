@@ -32,6 +32,7 @@ import {
   type ResearchResultV1,
 } from "./decision-research.ts";
 import { BRAIN_CATALOG_VERSION } from "./brain-catalog";
+import { parseFirstJsonObject } from "./model-json";
 import {
   CHARACTER_ROSTER_VERSION,
   generateMemeRecap,
@@ -217,9 +218,7 @@ async function askAllocator(
     });
     if (!response.ok) throw new Error(`provider ${response.status}`);
     const rawOutput = responseText(await response.json());
-    const match = rawOutput.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("model did not return JSON");
-    const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+    const parsed = parseFirstJsonObject(rawOutput);
     const brainPulse = validateAiBrainPulse(parsed.brainPulse);
     if (!brainPulse) throw new Error("model returned an invalid Brain Pulse");
     return {
@@ -268,9 +267,7 @@ async function requestModelJson(
   });
   if (!response.ok) throw new Error(`provider ${response.status}`);
   const rawOutput = responseText(await response.json());
-  const match = rawOutput.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error("model did not return JSON");
-  return { rawOutput, parsed: JSON.parse(match[0]) as Record<string, unknown> };
+  return { rawOutput, parsed: parseFirstJsonObject(rawOutput) };
 }
 
 export async function runDynamicResearchAllocator(
