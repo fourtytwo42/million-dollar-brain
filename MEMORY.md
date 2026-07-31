@@ -17,7 +17,9 @@ Durable project context lives here. Update this file whenever information should
   transaction runner so every pool receives a lightweight round-trip at a
   bounded block interval, remove the competing background Forge process,
   replay the failure seed, then restart the complete two-hour run under a new
-  evidence ID.
+  evidence ID. Focused replay `20260731T035205Z-a5a880a58a59` is accepted:
+  2,572 transactions, 699 expected reverts, zero unexpected failures, and
+  reconciled NAV/supply across more than 2,000 clone blocks.
 - Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
   unrelated to this test.
 
@@ -40,8 +42,14 @@ Durable project context lives here. Update this file whenever information should
   `0xb1efb85e637cfc4e4859399fe2e7332fd5fd5ab3b6e1ce446b32394c8eaebc51`
   were preserved. Cleanup proved the live-devnet fingerprint remained
   `198777d398afa3fda5d884040d753907e67e9798639a968455bc97ce0e2b70f0`.
+- Result: The block-bounded repair passed focused replay
+  `20260731T035205Z-a5a880a58a59` for 180 active seconds and 2,572 confirmed
+  transactions. It recorded 30 DEX maintenance buys and 30 sells, 699 expected
+  reverts, zero unexpected failures, zero queued sales, and reconciled
+  NAV/supply after advancing from block 20,247 to 22,253.
 - Follow-up: Commit/push, run a focused replay beyond the prior 900-block
-  freshness boundary, then restart the complete run.
+  freshness boundary, then restart the complete run. The focused replay is now
+  complete; restart the full two-hour run.
 
 ### 2026-07-30 - Full torture run findings and focused repair replay
 
