@@ -4,25 +4,49 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete and promote the DEX-native capacity V3 release. It
-  replaces fixed launch assets, Chainlink authority, capitalization/AUM gates,
-  and the universal $250K threshold with dynamic on-chain capacity.
-- Last meaningful change: The in-place testnet migration and two-hour
-  acceptance are running on pushed repair release
-  `14fbd65bc47b3cd16915a944292d772df2a67e73`. The acceptance retains the
-  original `2026-07-31T00:03:48Z` start and excludes only recorded repair
-  downtime.
-- Next step: Obtain a naturally eligible AI-sourced DecisionContext V7 after
-  the bounded arithmetic-correction repair, finish the preserved acceptance
-  checkpoints and public responsive UAT, then regenerate non-broadcast
-  mainnet-shadow and candidate V5 evidence.
-- Blockers: The mainnet failover service lacks `/etc/mdb/mainnet-rpc.env` and
-  therefore no Alchemy backup is configured. Mainnet fork inputs are
-  incomplete, the new 48-hour clocks have only started, current aggregate DEX
-  capacity is below the 80% readiness gate, and mainnet broadcast remains
-  unauthorized.
+- Current task: Run a destructive smart-contract torture test against a
+  disposable clone of devnet. Live devnet ports `3000` and `8545`, all
+  testnet/mainnet services, and shared RPC hosts are out of scope.
+- Last meaningful change: The isolated runner, stateful Foundry handler,
+  deterministic 12-actor system soak, evidence report, disabled systemd unit,
+  and live-devnet fingerprint proof are implemented. A 20-second smoke passed
+  with 289 confirmed transactions, 50 classified quote-race reverts, zero
+  unexplained failures, zero queued sales, reconciled NAV/supply, and an
+  identical live-devnet fingerprint.
+- Next step: Commit and push the exact torture candidate, then run 10,000 fuzz
+  cases, 256 invariant runs at depth 1,000, and the complete two-hour/10,000
+  transaction soak. Finish with isolated responsive Browser UAT and live port
+  `3000` smoke verification.
+- Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
+  unrelated to this test.
 
 ## Current State
+
+### 2026-07-30 - Disposable devnet torture harness ready
+
+- Context: Smart-contract stress testing must be destructive and exhaustive
+  without mutating the live devnet or any testnet/mainnet environment.
+- Decision: Capture live Anvil using read-only `anvil_dumpState`, restore it on
+  loopback `18550`, clone PostgreSQL into a unique schema, run an isolated web
+  runtime on `3010`, and use deterministic funded actor/admin/attacker
+  identities. AI behavior uses fixed fixtures.
+- Files: `scripts/run-devnet-torture.sh`, `tests/devnet-torture.mjs`,
+  `packages/contracts/test/DevnetTortureInvariant.t.sol`,
+  `ops/mdb-torture-devnet.service`, `DEVNET_TORTURE.md`.
+- Commands/tests: 55 existing Foundry tests passed; a short invariant run
+  passed; smoke run `20260731T020232Z-a83817f66391` accepted 289 confirmed
+  transactions with zero unexpected failures. The before/after canonical
+  live-devnet fingerprint was
+  `198777d398afa3fda5d884040d753907e67e9798639a968455bc97ce0e2b70f0`.
+- Result: The harness fails closed on occupied ports, preserves exact replay
+  seeds, archives evidence, cleans clone state/database/processes, and leaves
+  live devnet unchanged. An adversarial transfer-tax test exposed that output
+  delivery was not compared against the vault balance delta;
+  `UniswapExecutionAdapter` now enforces the recipient delta and the regression
+  passes.
+- Follow-up: Run the full two-hour candidate, perform Browser UAT while the
+  isolated runtime is held open, then archive the final
+  `DevnetTortureReportV1`.
 
 ### 2026-07-30 - DEX-native capacity V3 engineering checkpoint
 

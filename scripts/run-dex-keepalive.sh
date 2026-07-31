@@ -23,8 +23,8 @@ case "$mode" in
 esac
 
 network_config="$repo_root/config/networks.json"
-rpc_url="$(jq -r --arg key "$config_key" '.[$key].serverRpcUrl' "$network_config")"
-manifest="$(jq -r --arg key "$config_key" '.[$key].deploymentFile' "$network_config")"
+rpc_url="${MDB_RPC_URL:-$(jq -r --arg key "$config_key" '.[$key].serverRpcUrl' "$network_config")}"
+manifest="${MDB_DEPLOYMENT_FILE:-$(jq -r --arg key "$config_key" '.[$key].deploymentFile' "$network_config")}"
 (( $(jq -r '.schemaVersion // 0' "$manifest") >= 4 )) || {
   echo "DEX manifest V4 or newer is not active for $mode" >&2
   exit 1

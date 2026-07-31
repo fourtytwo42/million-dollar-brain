@@ -1,0 +1,29 @@
+[Unit]
+Description=42 Braincells disposable devnet contract torture run
+After=network-online.target postgresql.service mdb-anvil.service mdb-web.service
+Wants=network-online.target
+Conflicts=mdb-endurance-testnet.service
+
+[Service]
+Type=oneshot
+User=hendo420
+Group=hendo420
+WorkingDirectory=/home/hendo420/projects/million-dollar-brain
+EnvironmentFile=/etc/mdb/devnet.env
+Environment=MDB_TORTURE_RPC_PORT=18550
+Environment=MDB_TORTURE_WEB_PORT=3010
+Environment=MDB_TORTURE_DURATION_SECONDS=7200
+Environment=MDB_TORTURE_TRANSACTION_TARGET=10000
+Environment=MDB_TORTURE_FUZZ_RUNS=10000
+Environment=MDB_TORTURE_INVARIANT_RUNS=256
+Environment=MDB_TORTURE_INVARIANT_DEPTH=1000
+Environment=MDB_TORTURE_UAT_HOLD_SECONDS=600
+ExecStart=/home/hendo420/projects/million-dollar-brain/scripts/run-devnet-torture.sh
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+TimeoutStartSec=4h
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

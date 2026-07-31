@@ -23,6 +23,7 @@
     "test:market-data": "node --experimental-strip-types --test tests/market-data.test.ts",
     "test:network": "node --experimental-strip-types --test tests/network-policy.test.ts",
     "test:rpc-failover": "node --test tests/rpc-failover.test.mjs",
+    "test:torture:devnet": "scripts/run-devnet-torture.sh",
     "test:wallet": "node --experimental-strip-types --test tests/wallet-dependencies.test.ts tests/admin-transaction-lock.test.ts tests/approval-retry.test.ts",
     "test:graduation": "node --test tests/qualification-window.test.mjs tests/mainnet-readiness.test.mjs tests/graduation-policy.test.mjs",
     "mainnet:candidate": "node scripts/build-mainnet-candidate.mjs",

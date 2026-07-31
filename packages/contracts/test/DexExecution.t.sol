@@ -3,6 +3,7 @@ pragma solidity ^0.8.28;
 
 import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { MockToken } from "../src/MockToken.sol";
 import { UniswapExecutionAdapter, ISwapRouter02 } from "../src/UniswapExecutionAdapter.sol";
 import { BasketVault } from "../src/BasketVault.sol";
@@ -130,6 +131,23 @@ contract AssetCapacityRegistryMock {
 
     function maximumExposureUsdWad(address) external view returns (uint128) {
         return maximumExposure;
+    }
+}
+
+contract TransferTaxToken is ERC20 {
+    constructor() ERC20("Taxed Asset", "TAX") { }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
+
+    function _update(address from, address to, uint256 value) internal override {
+        if (from != address(0) && to != address(0)) {
+            uint256 tax = value / 100;
+            super._update(from, address(0), tax);
+            value -= tax;
+        }
+        super._update(from, to, value);
     }
 }
 
@@ -342,6 +360,57 @@ contract DexExecutionTest is Test {
 
         vm.expectRevert(BasketVault.AssetCapacityExceeded.selector);
         vault.rebalanceWithDexPlan(targetAssets, weights, keccak256("capacity"), plans);
+    }
+
+    function testRejectsTransferTaxOnInputAndOutput() public {
+        TransferTaxToken taxed = new TransferTaxToken();
+        factory.setPool(address(usdg), address(taxed), 3000, pool);
+        twap.set(address(taxed), 2e18, true);
+        breaker.set(address(taxed), 2e18, true);
+        router.setRate(address(usdg), address(taxed), 0.5e18);
+        taxed.mint(address(router), 1_000e18);
+
+        UniswapExecutionAdapter.DexSwapPlanV1 memory buyPlan = UniswapExecutionAdapter.DexSwapPlanV1({
+            route: UniswapExecutionAdapter.DexRouteV1({
+                tokenIn: address(usdg),
+                tokenOut: address(taxed),
+                intermediate: address(0),
+                firstFee: 3000,
+                secondFee: 0
+            }),
+            amountIn: 100e18,
+            quotedAmountOut: 50e18,
+            minimumAmountOut: 49.5e18,
+            recipient: address(this),
+            issuedAt: uint64(block.timestamp),
+            deadline: uint64(block.timestamp + 30),
+            referenceBlock: uint64(block.number)
+        });
+        vm.expectRevert(UniswapExecutionAdapter.TransferTaxUnsupported.selector);
+        adapter.execute(buyPlan, true);
+
+        taxed.mint(address(this), 10e18);
+        taxed.approve(address(adapter), type(uint256).max);
+        usdg.mint(address(router), 1_000e18);
+        router.setRate(address(taxed), address(usdg), 2e18);
+        UniswapExecutionAdapter.DexSwapPlanV1 memory sellPlan = UniswapExecutionAdapter.DexSwapPlanV1({
+            route: UniswapExecutionAdapter.DexRouteV1({
+                tokenIn: address(taxed),
+                tokenOut: address(usdg),
+                intermediate: address(0),
+                firstFee: 3000,
+                secondFee: 0
+            }),
+            amountIn: 10e18,
+            quotedAmountOut: 20e18,
+            minimumAmountOut: 19.8e18,
+            recipient: address(this),
+            issuedAt: uint64(block.timestamp),
+            deadline: uint64(block.timestamp + 30),
+            referenceBlock: uint64(block.number)
+        });
+        vm.expectRevert(UniswapExecutionAdapter.TransferTaxUnsupported.selector);
+        adapter.execute(sellPlan, false);
     }
 
     function _buyPlan(uint256 amountIn, uint256 quotedOut)

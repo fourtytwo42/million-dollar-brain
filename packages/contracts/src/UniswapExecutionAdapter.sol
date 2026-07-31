@@ -275,8 +275,14 @@ contract UniswapExecutionAdapter is
         amountOut = tokenOut.balanceOf(address(this)) - outputBefore;
         if (amountOut < plan.minimumAmountOut) revert InsufficientOutput();
         _checkTwapDeviation(plan.route.tokenIn, plan.route.tokenOut, plan.amountIn, amountOut);
+        uint256 vaultOutputBefore = tokenOut.balanceOf(vault);
         tokenOut.safeTransfer(vault, amountOut);
-        if (tokenOut.balanceOf(address(this)) != outputBefore) revert TransferTaxUnsupported();
+        if (
+            tokenOut.balanceOf(address(this)) != outputBefore
+                || tokenOut.balanceOf(vault) - vaultOutputBefore != amountOut
+        ) {
+            revert TransferTaxUnsupported();
+        }
         emit SwapExecuted(
             plan.route.tokenIn,
             plan.route.tokenOut,
