@@ -5,8 +5,8 @@
 
 ## Capacity V3 / Manifest V5 amendment
 
-This section supersedes the fixed launch-set, Chainlink, market-cap/AUM, and
-universal-liquidity requirements later in this document.
+This section supersedes the fixed launch-set, off-chain pricing,
+market-cap/AUM, and universal-liquidity requirements later in this document.
 
 - USDG remains the reserve, accounting unit, settlement asset, fee currency,
   and only user-facing buy/sell currency. Native ETH entry and exit are
@@ -29,9 +29,10 @@ universal-liquidity requirements later in this document.
   post-classification capacity to deploy 80% of TVL while preserving at least
   20% USDG, no more than 20% per asset, and no more than 30% combined
   high-volatility exposure.
-- Chainlink, capitalization, AUM, supply adapters, 0x, and quote-authorizer
-  evidence have no authority over NAV, execution, qualification, readiness, or
-  safe atomic exits. Historical evidence remains archived only.
+- Deprecated off-chain pricing, capitalization, AUM, supply-adapter, external
+  quote-service, and quote-authorizer evidence has no authority over NAV,
+  execution, qualification, readiness, or safe atomic exits. Historical
+  evidence remains archived only.
 - `DecisionContextV7` exposes activated assets, DEX capacity, route maturity,
   TWAP/TWAL safety, realized volatility, liquidity stability, and evidence
   coverage. Optional external research cannot authorize execution.
@@ -62,31 +63,22 @@ Identity is `(chainId, contractAddress)`. A Robinhood UID is recorded when one
 exists; symbols and names are display metadata only. Discovery never activates
 an asset.
 
-The required launch set is AAPL, NVDA, SPY, and WETH. MSFT, QQQ, and SOXX
-remain optional and cannot delay the required set. Every candidate must pass
-each check for 48 continuous hourly observations.
-Stocks and ETFs must also span at least two distinct regular US market
-sessions; weekend-only observations cannot qualify:
+The readiness worker scans all 98 canonical Robinhood Stock Tokens plus the
+committed crypto catalog. A symbol filter is diagnostic-only and causes release
+readiness to fail. Every launch asset must pass 48 continuous hourly
+observations; stocks and ETFs must also span two regular US market sessions.
 
-- Verified circulating market capitalization of at least $100 million for
-  stocks and crypto, or official AUM of at least $100 million for funds.
-- Non-stock ERC-20 supply comes from an explicitly approved circulating-supply
-  adapter. `totalSupply * price` is not sufficient.
-- A valid two-sided $250,000 on-chain Uniswap quote and no more than 1% estimated impact for
-  both sides of a $25,000 quote.
-- Fresh approved valuation feed, valid token code and identity, sufficient
-  official history, supported transfer behavior, and no halt, oracle pause, or
-  pending corporate-action multiplier transition.
+Capacity is measured rather than assumed. The worker probes two-sided DEX
+quotes at $1K, $5K, $10K, $25K, $100K, and $250K and records the highest level
+that stays within 1% of the 30-minute DEX TWAP. Qualification also requires
+canonical contract identity, supported transfer behavior, mature 30-minute and
+four-hour observations, time-weighted liquidity, a current route, and clear
+token/corporate-action state. A failure resets only that asset's clock.
 
-The hourly shadow runner automatically discovers Robinhood canonical
-identities, imports the official Chainlink Robinhood feed catalog, reads
-equity shares from SEC Company Facts, and reads ETF net assets from the latest
-SEC N-PORT filing. WETH uses its canonical deposit-backed supply on Robinhood
-Chain plus ETH/USD valuation. The runner writes per-asset checks and source
-hashes. A failed
-observation or a gap longer than 90 minutes resets only that asset's clock.
-Unrelated code releases do not reset qualification. Activation still requires
-a reviewed, committed manifest and an on-chain registry update.
+The creator initially approves the qualified launch assets and may set a lower
+dollar cap. Qualification, half of proven DEX capacity, configured asset weight,
+and the immutable 20% protocol maximum always override that approval. A future
+DAO or timelock receives the same risk authority through a two-step handover.
 
 ## Valuation and execution
 
@@ -95,8 +87,9 @@ a reviewed, committed manifest and an on-chain registry update.
 - `UniswapExecutionAdapter` accepts only structured direct or two-hop routes
   through the canonical factory and router. Pools and fee tiers are approved;
   arbitrary calldata is impossible.
-- `ChainlinkValuationAdapter` is only a 5% emergency circuit breaker for buys
-  and rebalances. It never calculates NAV, expected output, or settlement.
+- DEX evidence is the only operative pricing, qualification, and execution
+  authority. Deprecated oracle fields remain readable only for storage
+  compatibility and cannot block a safe reduction.
 - Exact temporary allowances, measured balance deltas, 1% exact-quote
   slippage, and 3% TWAP deviation are enforced on chain.
 - `BasketVault` V5 uses `DexSwapPlanV1[]` for buys, sells, and rebalances. User sales
@@ -111,7 +104,7 @@ is 96,000 tokens. If the complete compact directory cannot fit, the cycle
 holds and raises an operational alert.
 
 Ornith may request one research round covering at most 16 registered assets.
-The orchestrator returns only structured SEC, Robinhood, Chainlink, on-chain,
+The orchestrator returns only structured SEC, Robinhood, on-chain,
 local-history, portfolio-history, and validated on-chain DEX evidence. It exposes no
 arbitrary URL, web prose, user-selected contract, or browsing tool. Both model
 requests, all evidence, hashes, raw outputs, validated targets, and
@@ -165,7 +158,7 @@ Engineering acceptance requires:
 - Forty-eight continuous passing mainnet-shadow hours for every launch asset,
   including two regular sessions for stocks and ETFs.
 - A successful mainnet-fork rehearsal with canonical code, UIDs, decimals,
-  circuit-breaker mappings, Uniswap pools, TWAP observations, and structured
+  Uniswap pools, TWAP observations, creator risk policies, and structured
   route simulation.
 
 `scripts/check-release.sh`, `scripts/promote-to-testnet.sh`,
@@ -192,10 +185,6 @@ The remaining inputs are intentionally not fabricated in the repository:
 - Stable production domain.
 - Forty-eight continuous qualification hours, including two regular sessions
   for every launch stock or ETF.
-- WETH currently fails the locked $100 million circulating-capitalization
-  threshold when measured from canonical WETH deposited on Robinhood Chain.
-  This must be resolved through approved evidence or an explicitly approved
-  policy change; readiness must not fabricate a pass.
 - Independent audit and approved legal release path.
 
 No mainnet transaction or real-value activation is authorized by this
@@ -203,12 +192,12 @@ engineering specification.
 
 ## Current mainnet-shadow result
 
-The latest read-only chain-4663 run completed on 2026-07-30 with canonical
-identity, Chainlink mapping, and self-hosted Uniswap venue checks passing.
-NVDA and WETH satisfy the current $25,000 impact and $250,000 depth tests.
-AAPL and SPY do not currently satisfy the locked liquidity requirements. All
-four required assets still lack the full local history/48-hour window, and WETH
-still lacks approved capitalization evidence.
+The previous fixed-symbol evidence is archived and does not establish current
+readiness. The next candidate must run the unfiltered 98-token scan, build a
+creator-approved witness of no more than nine assets, and prove enough effective
+capacity for 80% of the $60,000 launch cap. Newly discovered assets begin their
+own qualification clock at zero; unchanged identity, route, and evidence rules
+may retain an existing asset's hours.
 
 The regenerated signed candidate report has hash
 `3c993f2b0aa26614a598b2f3400626150423fc25e72b53cde0f50f382a580d8b`.

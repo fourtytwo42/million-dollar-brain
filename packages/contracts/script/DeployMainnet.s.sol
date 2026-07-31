@@ -11,6 +11,7 @@ import { RewardDistributor } from "../src/RewardDistributor.sol";
 import { CreatorVault } from "../src/CreatorVault.sol";
 import { BrainMarketplace } from "../src/BrainMarketplace.sol";
 import { BasketVault } from "../src/BasketVault.sol";
+import { CreatorRiskController } from "../src/CreatorRiskController.sol";
 
 interface IRobinhoodIdentity {
     function uid() external view returns (bytes32);
@@ -327,6 +328,24 @@ contract DeployMainnet is Script {
         basket.reinitializeV5(address(valuation), address(execution));
         basket.reinitializeV6(INITIAL_TVL_CAP);
         basket.setDexPriceAge(1 hours);
+        CreatorRiskController riskController = CreatorRiskController(
+            address(
+                new ERC1967Proxy(
+                    address(new CreatorRiskController()),
+                    abi.encodeCall(
+                        CreatorRiskController.initialize,
+                        (deployer, address(basket), address(registry), uint64(48 hours))
+                    )
+                )
+            )
+        );
+        address[] memory initiallyApproved = new address[](riskAssets.length + 1);
+        initiallyApproved[0] = CANONICAL_USDG;
+        for (uint256 i; i < riskAssets.length; ++i) {
+            initiallyApproved[i + 1] = riskAssets[i];
+        }
+        registry.reinitializeV4(address(riskController), initiallyApproved);
+        basket.grantRole(keccak256("RISK_ADMIN_ROLE"), address(riskController));
 
         string memory root = "mainnet";
         vm.serializeUint(root, "schemaVersion", 5);
@@ -342,6 +361,7 @@ contract DeployMainnet is Script {
         vm.serializeAddress(root, "dexFactory", uniswapFactory);
         vm.serializeAddress(root, "dexRouter", uniswapRouter);
         vm.serializeAddress(root, "executionAdapter", address(execution));
+        vm.serializeAddress(root, "riskController", address(riskController));
         vm.serializeAddress(root, "rewards", address(rewards));
         vm.serializeAddress(root, "creatorVault", address(creatorVault));
         vm.serializeAddress(root, "brain", address(brain));

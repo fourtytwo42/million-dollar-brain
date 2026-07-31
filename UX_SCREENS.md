@@ -192,7 +192,7 @@ Avoid presenting the setting as a guaranteed trade.
 For an unowned piece:
 
 - Initial price.
-- Statement that 100% goes to the Creator DAO Vault.
+- Statement that 100% goes to the Creator Vault.
 - Always-for-sale terms.
 
 For a piece owned by another wallet:

@@ -112,13 +112,18 @@ contract ArbSysBlockNumberMock {
 
 contract AssetCapacityRegistryMock {
     uint128 public maximumExposure;
+    mapping(address token => bool inactive) public inactive;
 
     function setMaximumExposure(uint128 value) external {
         maximumExposure = value;
     }
 
-    function isActive(address) external pure returns (bool) {
-        return true;
+    function setActive(address token, bool active) external {
+        inactive[token] = !active;
+    }
+
+    function isActive(address token) external view returns (bool) {
+        return !inactive[token];
     }
 
     function isHighVolatility(address) external pure returns (bool) {
@@ -131,6 +136,16 @@ contract AssetCapacityRegistryMock {
 
     function maximumExposureUsdWad(address) external view returns (uint128) {
         return maximumExposure;
+    }
+
+    function effectiveExposureUsdWad(address token, uint256 activeTvlCapUsdWad)
+        external
+        view
+        returns (uint256)
+    {
+        if (inactive[token]) return 0;
+        uint256 weightCap = activeTvlCapUsdWad / 5;
+        return maximumExposure < weightCap ? maximumExposure : weightCap;
     }
 }
 
@@ -161,6 +176,8 @@ contract DexExecutionTest is Test {
     SwapRouterMock internal router;
     UniswapExecutionAdapter internal adapter;
     address internal pool = address(0xBEEF);
+
+    function fund(uint256) external { }
 
     function setUp() public {
         vm.warp(1_000);
@@ -360,6 +377,35 @@ contract DexExecutionTest is Test {
 
         vm.expectRevert(BasketVault.AssetCapacityExceeded.selector);
         vault.rebalanceWithDexPlan(targetAssets, weights, keccak256("capacity"), plans);
+    }
+
+    function testV7DepositSkipsDisabledAssetAndPreservesExistingBalance() public {
+        AssetCapacityRegistryMock registry = new AssetCapacityRegistryMock();
+        registry.setMaximumExposure(100e18);
+        address[] memory assets = new address[](1);
+        assets[0] = address(asset);
+        BasketVault vault = new BasketVault();
+        vault.initialize(
+            address(this),
+            address(usdg),
+            address(router),
+            address(this),
+            address(this),
+            address(this),
+            assets
+        );
+        vault.reinitializeV3(address(registry), address(adapter));
+        vault.reinitializeV5(address(twap), address(adapter));
+        vault.reinitializeV6(60_000e18);
+        registry.setActive(address(asset), false);
+        asset.mint(address(vault), 5e18);
+        usdg.approve(address(vault), type(uint256).max);
+
+        BasketVault.DexSwapPlan[] memory plans = new BasketVault.DexSwapPlan[](0);
+        vault.depositWithDexPlan(100e18, 0, block.timestamp + 1 minutes, plans);
+
+        assertEq(asset.balanceOf(address(vault)), 5e18);
+        assertGt(vault.balanceOf(address(this)), 0);
     }
 
     function testRejectsTransferTaxOnInputAndOutput() public {

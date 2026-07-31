@@ -556,8 +556,15 @@ const canonicalAssets = [
   ...configuredCrypto,
 ];
 const inspected = await inspectTokens(canonicalAssets);
+const symbolFilter = (process.env.MDB_MAINNET_SHADOW_SYMBOLS ?? "").trim();
+const diagnosticMode = process.env.MDB_MAINNET_SHADOW_DIAGNOSTIC_MODE === "true";
+if (symbolFilter && !diagnosticMode) {
+  throw new Error(
+    "MDB_MAINNET_SHADOW_SYMBOLS is diagnostic-only and must be empty in readiness mode",
+  );
+}
 const requestedSymbols = new Set(
-  (process.env.MDB_MAINNET_SHADOW_SYMBOLS ?? "")
+  symbolFilter
     .split(",")
     .map((symbol) => symbol.trim())
     .filter(Boolean),
@@ -735,13 +742,13 @@ const result = {
   readiness,
   gates: {
     noSigningKey: true,
-    fullCanonicalStockUniverseInspected: stockAssets.length > 0,
+    fullCanonicalStockUniverseInspected: stockAssets.length >= 98,
+    diagnosticFilterDisabled: requestedSymbols.size === 0,
     dexVenueVerified:
       isAddress(UNISWAP_FACTORY) &&
       isAddress(UNISWAP_ROUTER) &&
       isAddress(UNISWAP_QUOTER),
     selfHostedRouting: true,
-    noChainlinkAuthority: true,
     noOffchainCapitalizationGate: true,
     qualificationWindowPassed: readiness.coreQualificationPassed,
   },

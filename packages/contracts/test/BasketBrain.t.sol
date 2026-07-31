@@ -151,6 +151,9 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.reinitializeV6(60_000e18);
         assertEq(basket.tvlCapUsdWad(), 60_000e18);
+        bytes32 riskAdminRole = keccak256("RISK_ADMIN_ROLE");
+        vm.prank(admin);
+        basket.grantRole(riskAdminRole, admin);
         vm.prank(admin);
         basket.setTvlCapUsdWad(75_000e18);
         assertEq(basket.tvlCapUsdWad(), 75_000e18);
@@ -158,7 +161,66 @@ contract BasketBrainTest is Test {
         vm.startPrank(alice);
         usdg.approve(address(basket), type(uint256).max);
         vm.expectRevert(BasketVault.TvlCapExceeded.selector);
-        basket.deposit(75_001e18, 0, block.timestamp + 1 hours);
+        basket.deposit(75_759e18, 0, block.timestamp + 1 hours);
+        vm.stopPrank();
+    }
+
+    function testOnlyDedicatedRiskAdminCanChangeTvlCap() public {
+        vm.prank(admin);
+        basket.reinitializeV6(60_000e18);
+        vm.prank(admin);
+        vm.expectRevert();
+        basket.setTvlCapUsdWad(50_000e18);
+        bytes32 riskAdminRole = keccak256("RISK_ADMIN_ROLE");
+        vm.prank(admin);
+        basket.grantRole(riskAdminRole, admin);
+        vm.prank(admin);
+        basket.setTvlCapUsdWad(50_000e18);
+        assertEq(basket.tvlCapUsdWad(), 50_000e18);
+    }
+
+    function testCapReductionBelowLiveTvlBlocksDepositsButPreservesRedemptions() public {
+        bytes32 riskAdminRole = keccak256("RISK_ADMIN_ROLE");
+        vm.startPrank(admin);
+        basket.reinitializeV6(60_000e18);
+        basket.grantRole(riskAdminRole, admin);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        uint256 shares = basket.deposit(1_000e18, 0, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        vm.prank(admin);
+        basket.setTvlCapUsdWad(500e18);
+        vm.startPrank(bob);
+        usdg.approve(address(basket), type(uint256).max);
+        vm.expectRevert(BasketVault.TvlCapExceeded.selector);
+        basket.deposit(10e18, 0, block.timestamp + 1 hours);
+        vm.stopPrank();
+
+        vm.prank(alice);
+        uint256 proceeds = basket.redeem(shares, 0, block.timestamp + 1 hours);
+        assertGt(proceeds, 0);
+    }
+
+    function testSameBlockDepositorsCompeteForExactRemainingCapacity() public {
+        bytes32 riskAdminRole = keccak256("RISK_ADMIN_ROLE");
+        vm.startPrank(admin);
+        basket.reinitializeV6(1_500e18);
+        basket.grantRole(riskAdminRole, admin);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        usdg.approve(address(basket), type(uint256).max);
+        basket.deposit(1_000e18, 0, block.timestamp + 1 hours);
+        vm.stopPrank();
+        vm.startPrank(bob);
+        usdg.approve(address(basket), type(uint256).max);
+        basket.deposit(515_151_515_151_515_151_515, 0, block.timestamp + 1 hours);
+        assertApproxEqAbs(basket.totalAssetsUsd(), 1_500e18, 300);
+        vm.expectRevert(BasketVault.TvlCapExceeded.selector);
+        basket.deposit(10e18, 0, block.timestamp + 1 hours);
         vm.stopPrank();
     }
 

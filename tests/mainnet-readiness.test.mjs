@@ -90,3 +90,22 @@ test("selection is capacity-first with canonical asset ID as the stable tie-brea
     "4663:04",
   ]);
 });
+
+test("launch witness does not waste its nine slots on excess high-volatility capacity", () => {
+  const assets = [
+    qualified("WETH", 250_000, "high_volatility", "4663:00"),
+    ...Array.from({ length: 8 }, (_, index) =>
+      qualified(`HIGH${index}`, 250_000, "high_volatility", `4663:1${index}`),
+    ),
+    ...Array.from({ length: 4 }, (_, index) =>
+      qualified(`STANDARD${index}`, 25_000, "standard", `4663:2${index}`),
+    ),
+  ];
+  const readiness = summarizeMainnetReadiness(assets);
+  assert.equal(readiness.coreQualificationPassed, true);
+  assert.equal(readiness.includedAssetIds.length <= 9, true);
+  assert.equal(
+    readiness.includedAssetIds.filter((id) => id.startsWith("4663:2")).length,
+    4,
+  );
+});

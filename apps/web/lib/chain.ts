@@ -25,9 +25,11 @@ import {
 import { networkConfig, publicNetworkConfig, viemChain } from "./network";
 import {
   canonicalAssetId,
+  type AssetQualificationV3,
   type AssetKind,
   type RiskClass,
 } from "./asset-universe";
+import { maximumSupportedDeposit } from "./capacity-policy";
 
 type LegacyDeployment = Record<
   | "usdg"
@@ -57,6 +59,16 @@ export type DeploymentAsset = {
   controlId?: number;
   tags?: string[];
   active?: boolean;
+  qualified?: boolean;
+  creatorApproved?: boolean;
+  creatorCapUsdWad?: string;
+  policyVersion?: number;
+  pendingPolicy?: {
+    creatorCapUsdWad: string;
+    activationTime: number;
+    approved: boolean;
+  };
+  qualificationV3?: AssetQualificationV3;
 };
 
 export type DexVenuePool = {
@@ -94,6 +106,7 @@ export type Deployment = LegacyDeployment & {
   dexVenue?: DexVenueManifestV1;
   pricePublisher?: Address;
   brainControlRegistry?: Address;
+  riskController?: Address;
   controlCatalogHash?: `0x${string}`;
   controlSchemaVersion?: number;
   controlCatalogVersion?: number;
@@ -129,6 +142,19 @@ export const publicClient = createPublicClient({
     timeout: 30_000,
   }),
 });
+const riskRegistryAbi = parseAbi([
+  "function isActive(address token) view returns (bool)",
+  "function isEligibleV3(address token) view returns (bool)",
+  "function riskPolicy(address token) view returns ((uint128 creatorCapUsdWad,uint64 version,bool approved) policy,uint128 effectiveCapUsdWad)",
+  "function qualificationV3(address token) view returns ((bytes32 evidenceHash,uint64 observedAt,uint64 validUntil,uint32 consecutiveHours,uint8 regularMarketSessions,uint128 safeTwoSidedCapacityUsdWad,bool identityValid,bool routeMature,bool shortTwapValid,bool longTwapValid,bool timeWeightedLiquidityValid,bool liquidityValid,bool transferBehaviorValid,bool tokenStateClear) qualification,uint128 maximumExposureUsdWad)",
+]);
+const riskControllerReadAbi = parseAbi([
+  "function riskAuthority() view returns (address)",
+  "function pendingRiskAuthority() view returns (address)",
+  "function riskIncreaseDelay() view returns (uint64)",
+  "function pendingTvlCap() view returns (uint128 capUsdWad,uint64 activationTime,bytes32 witnessHash)",
+  "function pendingAssetPolicies(address token) view returns (uint128 creatorCapUsdWad,uint64 activationTime,bool approved)",
+]);
 const operatorPrivateKey =
   process.env.MDB_OPERATOR_PRIVATE_KEY ??
   process.env.MDB_DEV_PRIVATE_KEY ??
@@ -367,6 +393,11 @@ export async function dashboard(
     {
       address: d.basket,
       abi: basketAbi,
+      functionName: "tvlCapUsdWad",
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
       functionName: "navPerShareWad",
     },
     {
@@ -471,6 +502,67 @@ export async function dashboard(
       },
     );
   }
+  const hasCreatorRiskPolicy = Boolean(d.riskController && d.assetRegistry);
+  if (hasCreatorRiskPolicy) {
+    contracts.push(
+      {
+        address: d.riskController!,
+        abi: riskControllerReadAbi,
+        functionName: "riskAuthority",
+      },
+      {
+        address: d.riskController!,
+        abi: riskControllerReadAbi,
+        functionName: "pendingRiskAuthority",
+      },
+      {
+        address: d.riskController!,
+        abi: riskControllerReadAbi,
+        functionName: "riskIncreaseDelay",
+      },
+      {
+        address: d.riskController!,
+        abi: riskControllerReadAbi,
+        functionName: "pendingTvlCap",
+      },
+    );
+    for (const asset of assetManifest.filter(
+      (asset) => asset.kind !== "reserve",
+    )) {
+      contracts.push(
+        {
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "isActive",
+          args: [asset.address],
+        },
+        {
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "isEligibleV3",
+          args: [asset.address],
+        },
+        {
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "riskPolicy",
+          args: [asset.address],
+        },
+        {
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "qualificationV3",
+          args: [asset.address],
+        },
+        {
+          address: d.riskController!,
+          abi: riskControllerReadAbi,
+          functionName: "pendingAssetPolicies",
+          args: [asset.address],
+        },
+      );
+    }
+  }
   for (let pieceId = 1; pieceId <= 42; pieceId += 1) {
     const id = BigInt(pieceId);
     contracts.push(
@@ -574,6 +666,7 @@ export async function dashboard(
   const brainControlsConfigured = results[cursor++] as boolean;
   const brainPurchasesEnabled = results[cursor++] as boolean;
   const nav = results[cursor++] as bigint;
+  const tvlCap = results[cursor++] as bigint;
   const navPerShare = results[cursor++] as bigint;
   const supply = results[cursor++] as bigint;
   const balances = Object.fromEntries(
@@ -607,6 +700,119 @@ export async function dashboard(
   const controlCatalogHash = hasControlCatalog
     ? (results[cursor++] as `0x${string}`)
     : null;
+  const runtimeAssetManifest = assetManifest.map((asset) => ({ ...asset }));
+  let creatorRiskPolicy = null;
+  if (hasCreatorRiskPolicy) {
+    const riskAuthority = results[cursor++] as Address;
+    const pendingRiskAuthority = results[cursor++] as Address;
+    const riskIncreaseDelay = results[cursor++] as bigint;
+    const pendingTvlCap = results[cursor++] as readonly [
+      bigint,
+      bigint,
+      `0x${string}`,
+    ];
+    creatorRiskPolicy = {
+      controller: d.riskController!,
+      authority: riskAuthority,
+      pendingAuthority: pendingRiskAuthority,
+      increaseDelaySeconds: Number(riskIncreaseDelay),
+      pendingTvlCap:
+        pendingTvlCap[1] !== 0n
+          ? {
+              capUsdWad: pendingTvlCap[0].toString(),
+              activationTime: Number(pendingTvlCap[1]),
+            }
+          : null,
+    };
+    for (const asset of runtimeAssetManifest.filter(
+      (asset) => asset.kind !== "reserve",
+    )) {
+      const active = Boolean(results[cursor++]);
+      const qualified = Boolean(results[cursor++]);
+      const policy = results[cursor++] as readonly [
+        readonly [bigint, bigint, boolean],
+        bigint,
+      ];
+      asset.active = active;
+      asset.qualified = qualified;
+      asset.creatorCapUsdWad = policy[0][0].toString();
+      asset.policyVersion = Number(policy[0][1]);
+      asset.creatorApproved = policy[0][2];
+      asset.maximumExposureUsdWad = policy[1].toString();
+      const qualificationResult = results[cursor++] as readonly [
+        {
+          evidenceHash: `0x${string}`;
+          observedAt: bigint;
+          validUntil: bigint;
+          consecutiveHours: number;
+          regularMarketSessions: number;
+          safeTwoSidedCapacityUsdWad: bigint;
+          identityValid: boolean;
+          routeMature: boolean;
+          shortTwapValid: boolean;
+          longTwapValid: boolean;
+          timeWeightedLiquidityValid: boolean;
+          liquidityValid: boolean;
+          transferBehaviorValid: boolean;
+          tokenStateClear: boolean;
+        },
+        bigint,
+      ];
+      const qualification = qualificationResult[0];
+      asset.safeTwoSidedCapacityUsdWad =
+        qualification.safeTwoSidedCapacityUsdWad.toString();
+      asset.qualificationV3 = {
+        schemaVersion: 3,
+        evidenceHash: qualification.evidenceHash,
+        observedAt: new Date(
+          Number(qualification.observedAt) * 1_000,
+        ).toISOString(),
+        validUntil: new Date(
+          Number(qualification.validUntil) * 1_000,
+        ).toISOString(),
+        qualificationHours: Number(qualification.consecutiveHours),
+        regularMarketSessions: Number(qualification.regularMarketSessions),
+        safeTwoSidedCapacityUsdWad:
+          qualification.safeTwoSidedCapacityUsdWad.toString(),
+        maximumExposureUsdWad: qualificationResult[1].toString(),
+        capacityProbeUsdWad: [],
+        buyImpactBps: null,
+        sellImpactBps: null,
+        identityValid: qualification.identityValid,
+        routeMature: qualification.routeMature,
+        liquidityValid: qualification.liquidityValid,
+        transferBehaviorValid: qualification.transferBehaviorValid,
+        tokenStateClear: qualification.tokenStateClear,
+        dexSafety: {
+          shortTwapWindowSeconds: 1_800,
+          longTwapWindowSeconds: 14_400,
+          shortTwapValid: qualification.shortTwapValid,
+          longTwapValid: qualification.longTwapValid,
+          timeWeightedLiquidityValid: qualification.timeWeightedLiquidityValid,
+          spotToShortDeviationBps: null,
+          shortToLongDeviationBps: null,
+          observationCardinality: 0,
+          newestObservationAt: new Date(
+            Number(qualification.observedAt) * 1_000,
+          ).toISOString(),
+        },
+        lastFailureAt: null,
+        reasons: qualified
+          ? []
+          : ["current on-chain qualification is not valid"],
+      };
+      const pending = results[cursor++] as readonly [bigint, bigint, boolean];
+      if (pending[1] !== 0n) {
+        Object.assign(asset, {
+          pendingPolicy: {
+            creatorCapUsdWad: pending[0].toString(),
+            activationTime: Number(pending[1]),
+            approved: pending[2],
+          },
+        });
+      }
+    }
+  }
   const pieces = Array.from({ length: 42 }, (_, index) => {
     const owner = results[cursor++] as Address;
     const price = results[cursor++] as bigint;
@@ -721,6 +927,21 @@ export async function dashboard(
   const currentWeightsBps = Object.fromEntries(
     assetRows.map((row) => [row.symbol, Number(row.weightBps)]),
   );
+  const { maximumDepositUsdWad, limitingConstraint } = maximumSupportedDeposit({
+    navUsdWad: nav,
+    tvlCapUsdWad: tvlCap,
+    walletValueUsdWad: address && supply > 0n ? (shares * nav) / supply : null,
+    assets: runtimeAssetManifest
+      .filter((asset) => asset.kind !== "reserve")
+      .map((asset) => ({
+        symbol: asset.symbol,
+        active: asset.active !== false,
+        maximumWeightBps: asset.maximumWeightBps,
+        maximumExposureUsdWad: BigInt(asset.maximumExposureUsdWad ?? "0"),
+        currentExposureUsdWad: BigInt(assetValues[asset.symbol] ?? "0"),
+        currentWeightBps: currentWeightsBps[asset.symbol] ?? 0,
+      })),
+  });
   const oracleRows = Object.fromEntries(
     assetRows.map((row) => [
       row.symbol,
@@ -764,12 +985,21 @@ export async function dashboard(
     deployment: d,
     blockNumber: latestBlock.number.toString(),
     nav: nav.toString(),
+    capacity: {
+      tvlCapUsdWad: tvlCap.toString(),
+      remainingUsdWad: (nav >= tvlCap ? 0n : tvlCap - nav).toString(),
+      maximumDepositUsdWad: maximumDepositUsdWad.toString(),
+      limitingConstraint,
+      utilizationBps: tvlCap === 0n ? 0 : Number((nav * 10_000n) / tvlCap),
+      atOrAboveCap: tvlCap !== 0n && nav >= tvlCap,
+    },
+    creatorRiskPolicy,
     navPerShare: navPerShare.toString(),
     supply: supply.toString(),
     shares: shares.toString(),
     walletUsdg: walletUsdg.toString(),
     redemption: { pendingRequestId: pendingRedemption.toString() },
-    assets: assetManifest,
+    assets: runtimeAssetManifest,
     holdings: balances,
     holdingValues: assetValues,
     currentWeightsBps,

@@ -58,8 +58,8 @@ jq -e '
   .schemaVersion == 5 and .chainId == 4663 and .broadcastPermitted == false and
   .gates.noSigningKey == true and
   .gates.fullCanonicalStockUniverseInspected == true and
+  .gates.diagnosticFilterDisabled == true and
   .gates.dexVenueVerified == true and .gates.selfHostedRouting == true and
-  .gates.noChainlinkAuthority == true and
   .gates.noOffchainCapitalizationGate == true and
   .gates.qualificationWindowPassed == true
 ' "$shadow_state" >/dev/null

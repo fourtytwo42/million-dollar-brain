@@ -27,6 +27,10 @@ const dexMarkAbi = parseAbi([
 const basketAssetsAbi = parseAbi([
   "function supportedAssets() view returns (address[] assets)",
 ]);
+const riskRegistryAbi = parseAbi([
+  "function isActive(address token) view returns (bool)",
+  "function riskPolicy(address token) view returns ((uint128 creatorCapUsdWad,uint64 version,bool approved) policy,uint128 effectiveCapUsdWad)",
+]);
 const poolStateAbi = parseAbi([
   "function liquidity() view returns (uint128)",
   "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)",
@@ -130,6 +134,7 @@ function venue() {
 async function orderedRiskAssets(
   d: ReturnType<typeof deployment>,
   blockNumber: bigint,
+  includeInactive = false,
 ) {
   const addresses = await publicClient.readContract({
     address: d.basket,
@@ -140,7 +145,7 @@ async function orderedRiskAssets(
   const byAddress = new Map(
     d.assets?.map((asset) => [asset.address.toLowerCase(), asset]),
   );
-  return addresses.map((address) => {
+  const manifestAssets = addresses.map((address) => {
     const asset = byAddress.get(address.toLowerCase());
     if (!asset || asset.kind === "reserve") {
       throw new Error(
@@ -149,6 +154,33 @@ async function orderedRiskAssets(
     }
     return asset;
   });
+  if (!d.assetRegistry) return manifestAssets;
+  const states = await Promise.all(
+    manifestAssets.map(async (asset) => {
+      const [active, policy] = await Promise.all([
+        publicClient.readContract({
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "isActive",
+          args: [asset.address],
+          blockNumber,
+        }),
+        publicClient.readContract({
+          address: d.assetRegistry!,
+          abi: riskRegistryAbi,
+          functionName: "riskPolicy",
+          args: [asset.address],
+          blockNumber,
+        }),
+      ]);
+      return {
+        ...asset,
+        active: Boolean(active),
+        maximumExposureUsdWad: policy[1].toString(),
+      };
+    }),
+  );
+  return states.filter((asset) => includeInactive || asset.active);
 }
 
 function hasPair(pool: VenuePool, tokenA: Address, tokenB: Address) {
@@ -445,10 +477,24 @@ export async function buildDexSwapPlans(
   const state = await dashboard();
   const reserve = d.assets?.find((asset) => asset.kind === "reserve");
   if (!reserve) throw new Error("reserve asset missing");
+  if (action === "deposit") {
+    const grossUsdWad = (amount * 10n ** 18n) / 10n ** BigInt(reserve.decimals);
+    const tvlCap = BigInt(state.capacity.tvlCapUsdWad);
+    const maximumDeposit = BigInt(state.capacity.maximumDepositUsdWad);
+    if (tvlCap === 0n || grossUsdWad > maximumDeposit) {
+      throw new Error(
+        `Basket capacity exceeded by ${state.capacity.limitingConstraint}; at most $${formatUnits(maximumDeposit, 18)} can be deposited now`,
+      );
+    }
+  }
   const quoteBlock = await publicClient.getBlock();
   const blockNumber = quoteBlock.number;
   const issuedAt = Number(quoteBlock.timestamp);
-  const riskAssets = await orderedRiskAssets(d, blockNumber);
+  const riskAssets = await orderedRiskAssets(
+    d,
+    blockNumber,
+    action === "redeem",
+  );
   const plans: JsonDexSwapPlan[] = [];
   if (action === "deposit") {
     const net = (amount * 9_900n) / 10_000n;
@@ -457,9 +503,17 @@ export async function buildDexSwapPlans(
       const weight = BigInt(state.currentWeightsBps[asset.symbol] ?? 0);
       const buyValue = (net * weight) / 10_000n;
       if (buyValue === 0n || buyValue <= dust) continue;
+      const buyValueUsdWad =
+        (buyValue * 10n ** 18n) / 10n ** BigInt(reserve.decimals);
       const currentExposure = BigInt(state.holdingValues[asset.symbol] ?? "0");
-      const maximumExposure = BigInt(asset.maximumExposureUsdWad ?? "0");
-      const projectedExposure = currentExposure + buyValue;
+      const registryExposure = BigInt(asset.maximumExposureUsdWad ?? "0");
+      const weightExposure =
+        (BigInt(state.capacity.tvlCapUsdWad) *
+          BigInt(Math.min(asset.maximumWeightBps, 2_000))) /
+        10_000n;
+      const maximumExposure =
+        registryExposure < weightExposure ? registryExposure : weightExposure;
+      const projectedExposure = currentExposure + buyValueUsdWad;
       if (maximumExposure > 0n && projectedExposure > maximumExposure) {
         throw new Error(`${asset.symbol} DEX capacity would be exceeded`);
       }
@@ -526,6 +580,7 @@ export async function buildDexSwapPlans(
     quoteBlock: blockNumber.toString(),
     expiresAt: issuedAt + 30,
     plans,
+    basketCapacity: state.capacity,
   };
   await persistQuoteBundle(bundle, amount);
   return bundle;
@@ -548,9 +603,10 @@ export async function buildDexRebalancePlans(
   const quoteBlock = await publicClient.getBlock();
   const blockNumber = quoteBlock.number;
   const issuedAt = Number(quoteBlock.timestamp);
-  const riskAssets = await orderedRiskAssets(d, blockNumber);
+  const supportedRiskAssets = await orderedRiskAssets(d, blockNumber, true);
+  const riskAssets = supportedRiskAssets.filter((asset) => asset.active);
   const plans: JsonDexSwapPlan[] = [];
-  for (const asset of riskAssets) {
+  for (const asset of supportedRiskAssets) {
     const currentValue = BigInt(state.holdingValues[asset.symbol] ?? "0");
     const targetValue =
       (totalNav * BigInt(allocationById[asset.id] ?? 0)) / 10_000n;

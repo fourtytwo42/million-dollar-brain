@@ -14,7 +14,7 @@ It combines:
 - A 42-piece visual brain whose owners influence the AI's portfolio thesis and public personality.
 - A scheduled AI review that proposes target allocations.
 - A deterministic risk engine and on-chain executor that decide whether and how proposals become trades.
-- A creator DAO and brain-owner rewards funded by protocol fees.
+- A creator and brain-owner rewards funded by protocol fees.
 
 This is a product and protocol design document, not an implementation plan or launch authorization.
 
@@ -219,7 +219,7 @@ A failed cycle records the reason and tries again at the next scheduled cycle. I
 ### Scheduled-trigger gas
 
 - The scheduler or keeper pays transaction gas up front.
-- The creator DAO's share of protocol revenue funds the automation and gas budget.
+- The creator's share of protocol revenue funds the automation and gas budget.
 - A permissionless keeper design may reimburse the successful caller for actual gas plus a small capped incentive.
 - Failed, duplicate, early, expired, or invalid proposals receive no reimbursement.
 - The automation budget comes from the DAO's existing 50% share and does not reduce the brain-owner share.
@@ -355,7 +355,7 @@ This resembles a forced-sale or Harberger-style market. It needs very clear disc
 
 ### Initial purchase
 
-The full initial purchase price of every unowned brain piece goes to the creator DAO.
+The full initial purchase price of every unowned brain piece goes to the creator.
 
 No part of an initial purchase is distributed to brain-piece owners. Brain-owner rewards begin with basket entry and redemption fees and with the 20% price increase on subsequent brain-piece purchases. This removes the self-rebate and empty-recipient problems from initial sales.
 
@@ -367,7 +367,7 @@ On every later purchase:
 
 - The seller receives the previous settled price.
 - The 20% price increase is protocol revenue.
-- Half of the price increase goes to the creator DAO.
+- Half of the price increase goes to the creator.
 - Half of the price increase goes to the brain-owner reward pool.
 - The brain-owner distribution uses the ownership snapshot immediately before the transfer.
 
@@ -376,7 +376,7 @@ Example:
 - Previous settled price: 100 USDG.
 - Next buyer pays: 120 USDG.
 - Seller receives: 100 USDG.
-- Creator DAO receives: 10 USDG.
+- Creator receives: 10 USDG.
 - Brain-owner reward pool receives: 10 USDG.
 - The new settled price becomes 120 USDG and the next displayed purchase price becomes 144 USDG.
 
@@ -395,7 +395,7 @@ The working fee model preserves a 2% round-trip charge:
 
 Each collected fee is split:
 
-- 50% to the creator DAO.
+- 50% to the creator.
 - 50% to the brain-owner reward pool.
 
 The brain pool is distributed to brain-piece owners in proportion to their immutable piece weights using the ownership snapshot at the time the fee accrues.
@@ -407,7 +407,7 @@ The same 50/50 creator-DAO and brain-owner split applies to:
 - Basket entry and redemption fees.
 - Only the 20% price increase on every subsequent brain-piece purchase.
 
-The full initial purchase price of an unowned brain piece goes to the creator DAO. The principal portion of a subsequent purchase is returned to the seller. This lets the protocol monetize price appreciation without taking the seller's recorded purchase basis.
+The full initial purchase price of an unowned brain piece goes to the creator. The principal portion of a subsequent purchase is returned to the seller. This lets the protocol monetize price appreciation without taking the seller's recorded purchase basis.
 
 ### Reward accounting
 
@@ -449,11 +449,11 @@ The public dashboard should show:
 
 ## Upgradeability
 
-All protocol smart contracts must be upgradeable, including the basket vault/share, brain NFT, marketplace, settings registry, reward distributor, asset registry, oracle adapter, risk controller, trade executor, automation module, and Creator DAO Vault.
+All protocol smart contracts must be upgradeable, including the basket vault/share, brain NFT, marketplace, settings registry, reward distributor, asset registry, oracle adapter, risk controller, trade executor, automation module, and Creator Vault.
 
 The MVP uses creator-controlled upgrade authority. Upgrade implementations must preserve storage compatibility, use initializer protection, emit version and upgrade events, and be verified publicly. A multisig, timelock, and user exit window remain recommended because upgrade authority can change protocol behavior.
 
-## Creator DAO Vault
+## Creator Vault
 
 The MVP DAO is a simple upgradeable creator-controlled revenue vault, not a governance system.
 
@@ -463,7 +463,7 @@ It receives:
 - Half of basket entry and redemption fees.
 - Half of the 20% markup on later brain-piece purchases.
 
-The creator-controlled owner may withdraw available Creator DAO Vault funds. The vault must account only for creator-side protocol revenue and must not expose a normal withdrawal path into basket principal or brain-owner reward liabilities. Deposits, reimbursements, withdrawals, ownership transfers, and upgrades emit public events.
+The creator-controlled owner may withdraw available Creator Vault funds. The vault must account only for creator-side protocol revenue and must not expose a normal withdrawal path into basket principal or brain-owner reward liabilities. Deposits, reimbursements, withdrawals, ownership transfers, and upgrades emit public events.
 
 ## Legal and operational gate
 
@@ -544,15 +544,15 @@ For the first coherent version:
 - Run the AI review on a one-hour schedule independently of user activity.
 - Use a provider adapter that can send the same constrained decision package to OpenRouter or the local appliance.
 - Require a strict target-weight schema, complete context hashing, and fail-closed behavior.
-- Fund scheduled keeper gas and bounded reimbursement from the creator DAO's existing fee share.
+- Fund scheduled keeper gas and bounded reimbursement from the creator's existing fee share.
 - Keep deposits, redemptions, brain-piece activity, and reward claims available on-chain at any time, with each user paying only their own action gas.
 - Let a deterministic engine enforce all risk and execution rules.
 - Rebalance only beyond thresholds.
 - Model the basket share as a standard vault share.
 - Use a transparent 1% entry and 1% redemption fee rather than a universal token-transfer tax.
-- Split collected fees equally between the creator DAO and brain reward pool.
+- Split collected fees equally between the creator and brain reward pool.
 - Make every brain piece always purchasable through the marketplace at 120% of its last settled price.
-- Send each initial brain-piece sale entirely to the creator DAO.
+- Send each initial brain-piece sale entirely to the creator.
 - On later brain-piece purchases, return the prior settled price to the seller and split only the 20% increase equally between the DAO and brain reward pool.
 - Use a hybrid redemption queue in the design.
 - Treat legal structure as the gating item before any real-funds implementation.

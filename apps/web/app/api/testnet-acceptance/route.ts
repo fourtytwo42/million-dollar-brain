@@ -139,6 +139,20 @@ export async function POST(request: NextRequest) {
         grossOptions[scenario % grossOptions.length],
         reserve.decimals,
       );
+      assertCreatorRiskState(before);
+      let capacityPreviewRejected = false;
+      const maximumGrossWad = BigInt(before.capacity.maximumDepositUsdWad);
+      const oversizedGross =
+        (maximumGrossWad * 10n ** BigInt(reserve.decimals) + 10n ** 18n - 1n) /
+          10n ** 18n +
+        1n;
+      try {
+        await buildDexSwapPlans("deposit", oversizedGross);
+      } catch (error) {
+        capacityPreviewRejected = /capacity|limit/i.test(
+          error instanceof Error ? error.message : String(error),
+        );
+      }
 
       const unowned = before.pieces.filter((candidate) => candidate.unowned);
       const resale = before.pieces.find(
@@ -349,6 +363,19 @@ export async function POST(request: NextRequest) {
             ?.preset,
           oversizedSellRejected,
           actorFunded: BigInt(after.walletUsdg) > 0n,
+          basketCapacityEnforced:
+            after.capacity.tvlCapUsdWad === "60000000000000000000000" &&
+            BigInt(after.nav) <= BigInt(after.capacity.tvlCapUsdWad),
+          creatorPolicyVisible:
+            Boolean(after.creatorRiskPolicy?.controller) &&
+            after.assets
+              .filter((asset) => asset.kind !== "reserve")
+              .every(
+                (asset) =>
+                  typeof asset.qualified === "boolean" &&
+                  typeof asset.creatorApproved === "boolean",
+              ),
+          capacityPreviewRejected,
           accountingHash: keccak256(
             stringToHex(`${after.nav}:${after.supply}:${after.blockNumber}`),
           ),
@@ -370,5 +397,17 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
+  }
+}
+
+function assertCreatorRiskState(status: Awaited<ReturnType<typeof dashboard>>) {
+  if (status.capacity.tvlCapUsdWad !== "60000000000000000000000") {
+    throw new Error("testnet creator risk cap is not $60,000");
+  }
+  if (
+    !status.creatorRiskPolicy?.controller ||
+    !status.creatorRiskPolicy.authority
+  ) {
+    throw new Error("testnet creator risk controller is unavailable");
   }
 }

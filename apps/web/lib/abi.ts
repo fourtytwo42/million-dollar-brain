@@ -79,6 +79,8 @@ const dexPlanComponents = [
 ] as const;
 
 export const basketAbi = [
+  { type: "error", name: "TvlCapExceeded", inputs: [] },
+  { type: "error", name: "AssetCapacityExceeded", inputs: [] },
   {
     type: "function",
     name: "canaryControlsConfigured",
@@ -117,6 +119,13 @@ export const basketAbi = [
   {
     type: "function",
     name: "totalAssetsUsd",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "tvlCapUsdWad",
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "uint256" }],
@@ -693,5 +702,89 @@ export const rewardAbi = [
     stateMutability: "nonpayable",
     inputs: [{ name: "pieceIds", type: "uint256[]" }],
     outputs: [{ type: "uint256" }],
+  },
+] as const;
+
+export const creatorRiskControllerAbi = [
+  {
+    type: "function",
+    name: "reduceTvlCap",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newCapUsdWad", type: "uint128" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "scheduleTvlCapIncrease",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "newCapUsdWad", type: "uint128" },
+      { name: "capacityWitness", type: "address[]" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "executeTvlCapIncrease",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "capacityWitness", type: "address[]" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "cancelTvlCapIncrease",
+    stateMutability: "nonpayable",
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "reduceAssetPolicy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "approved", type: "bool" },
+      { name: "creatorCapUsdWad", type: "uint128" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "scheduleAssetPolicy",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "approved", type: "bool" },
+      { name: "creatorCapUsdWad", type: "uint128" },
+    ],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "executeAssetPolicy",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "cancelAssetPolicy",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "token", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "proposeRiskAuthority",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "newAuthority", type: "address" }],
+    outputs: [],
+  },
+  {
+    type: "function",
+    name: "acceptRiskAuthority",
+    stateMutability: "nonpayable",
+    inputs: [],
+    outputs: [],
   },
 ] as const;

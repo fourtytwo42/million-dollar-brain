@@ -15,6 +15,7 @@ import {
 contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeable {
     bytes32 public constant ASSET_ADMIN_ROLE = keccak256("ASSET_ADMIN_ROLE");
     bytes32 public constant QUALIFIER_ROLE = keccak256("QUALIFIER_ROLE");
+    bytes32 public constant RISK_ADMIN_ROLE = keccak256("RISK_ADMIN_ROLE");
     uint256 public constant BPS = 10_000;
     uint256 public constant MINIMUM_MARKET_CAP_USD = 100_000_000e18;
     uint256 public constant MINIMUM_EXECUTABLE_DEPTH_USD = 250_000e18;
@@ -83,6 +84,30 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         bool tokenStateClear;
     }
 
+    struct AssetRiskPolicyV1 {
+        uint128 creatorCapUsdWad;
+        uint64 version;
+        bool approved;
+    }
+
+    enum ExposureLimitConstraint {
+        NONE,
+        CREATOR_CAP,
+        DEX_CAPACITY,
+        CONFIGURED_WEIGHT,
+        PROTOCOL_MAXIMUM,
+        INACTIVE
+    }
+
+    struct AssetExposureLimitsV1 {
+        uint256 creatorCapUsdWad;
+        uint256 dexCapacityCapUsdWad;
+        uint256 configuredWeightCapUsdWad;
+        uint256 protocolMaximumUsdWad;
+        uint256 effectiveCapUsdWad;
+        ExposureLimitConstraint limitingConstraint;
+    }
+
     uint256 public registryChainId;
     address[] private _tokens;
     mapping(address token => AssetRecord record) private _records;
@@ -98,7 +123,11 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     mapping(address token => uint128 maximumExposure) private _maximumExposureUsdWad;
     uint16 public qualificationSchemaVersion;
     bool public qualificationV3Enabled;
-    uint256[38] private __gap;
+    // Appended V4 storage. Qualification remains machine-authored while approval and the
+    // creator cap are controlled by the separately transferable risk authority.
+    mapping(address token => AssetRiskPolicyV1 policy) private _riskPolicies;
+    uint16 public riskPolicySchemaVersion;
+    uint256[36] private __gap;
 
     event AssetRegistered(address indexed token, bytes32 indexed robinhoodUid, AssetKind kind);
     event AssetConfigurationUpdated(address indexed token);
@@ -120,6 +149,13 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         bool eligible
     );
     event QualificationV3Enabled(bool enabled);
+    event AssetRiskPolicyConfigured(
+        address indexed token,
+        bool approved,
+        uint128 creatorCapUsdWad,
+        uint128 effectiveCapUsdWad,
+        uint64 version
+    );
 
     function initialize(address admin, uint256 chainId_) external initializer {
         require(admin != address(0), "zero admin");
@@ -195,6 +231,29 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         qualificationSchemaVersion = 3;
     }
 
+    function reinitializeV4(address riskPolicyAuthority, address[] calldata initiallyApproved)
+        external
+        reinitializer(4)
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(riskPolicyAuthority != address(0), "zero risk authority");
+        riskPolicySchemaVersion = 1;
+        _grantRole(RISK_ADMIN_ROLE, riskPolicyAuthority);
+        for (uint256 i; i < initiallyApproved.length; ++i) {
+            address token = initiallyApproved[i];
+            AssetRecord storage record = _records[token];
+            require(record.registered, "unknown asset");
+            if (record.kind != AssetKind.RESERVE) {
+                require(_eligibleCurrent(record, token), "asset not qualified");
+            }
+            uint128 capacityCap = _maximumExposureUsdWad[token];
+            if (record.kind == AssetKind.RESERVE) capacityCap = type(uint128).max;
+            _riskPolicies[token] =
+                AssetRiskPolicyV1({ creatorCapUsdWad: capacityCap, version: 1, approved: true });
+            emit AssetRiskPolicyConfigured(token, true, capacityCap, capacityCap, 1);
+        }
+    }
+
     function recordQualificationV3(address token, AssetQualificationV3 calldata qualification)
         external
         onlyRole(QUALIFIER_ROLE)
@@ -235,6 +294,31 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         emit AssetActivationChanged(token, active);
     }
 
+    function applyRiskPolicy(address token, bool approved, uint128 creatorCapUsdWad)
+        external
+        onlyRole(RISK_ADMIN_ROLE)
+    {
+        AssetRecord storage record = _records[token];
+        require(record.registered, "unknown asset");
+        AssetRiskPolicyV1 storage policy = _riskPolicies[token];
+        if (record.kind == AssetKind.RESERVE) {
+            require(approved, "reserve required");
+            creatorCapUsdWad = type(uint128).max;
+        } else if (approved) {
+            require(creatorCapUsdWad != 0, "zero creator cap");
+            if (!policy.approved || creatorCapUsdWad > policy.creatorCapUsdWad) {
+                require(_eligibleCurrent(record, token), "asset not qualified");
+            }
+        }
+        uint64 version = policy.version + 1;
+        policy.creatorCapUsdWad = creatorCapUsdWad;
+        policy.version = version;
+        policy.approved = approved;
+        emit AssetRiskPolicyConfigured(
+            token, approved, creatorCapUsdWad, _effectiveExposureCap(token), version
+        );
+    }
+
     function asset(address token)
         external
         view
@@ -245,7 +329,19 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
 
     function isActive(address token) external view returns (bool) {
         AssetRecord storage record = _records[token];
-        return record.active && _eligibleCurrent(record, token);
+        return record.active && _approvedCurrent(token) && _eligibleCurrent(record, token);
+    }
+
+    function isCreatorApproved(address token) external view returns (bool) {
+        return _approvedCurrent(token);
+    }
+
+    function riskPolicy(address token)
+        external
+        view
+        returns (AssetRiskPolicyV1 memory policy, uint128 effectiveCapUsdWad)
+    {
+        return (_riskPolicies[token], _effectiveExposureCap(token));
     }
 
     function isHighVolatility(address token) external view returns (bool) {
@@ -264,13 +360,19 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         uint256 count;
         for (uint256 i; i < _tokens.length; ++i) {
             AssetRecord storage record = _records[_tokens[i]];
-            if (record.active && _eligibleCurrent(record, _tokens[i])) count++;
+            if (
+                record.active && _approvedCurrent(_tokens[i])
+                    && _eligibleCurrent(record, _tokens[i])
+            ) count++;
         }
         active = new address[](count);
         uint256 cursor;
         for (uint256 i; i < _tokens.length; ++i) {
             AssetRecord storage record = _records[_tokens[i]];
-            if (record.active && _eligibleCurrent(record, _tokens[i])) {
+            if (
+                record.active && _approvedCurrent(_tokens[i])
+                    && _eligibleCurrent(record, _tokens[i])
+            ) {
                 active[cursor++] = _tokens[i];
             }
         }
@@ -318,7 +420,7 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         address token = _tokensByAssetId[id];
         if (token == address(0)) return false;
         AssetRecord storage record = _records[token];
-        return record.active && _eligibleCurrent(record, token);
+        return record.active && _approvedCurrent(token) && _eligibleCurrent(record, token);
     }
 
     function qualificationV3(address token)
@@ -330,7 +432,63 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
     }
 
     function maximumExposureUsdWad(address token) external view returns (uint128) {
+        return _effectiveExposureCap(token);
+    }
+
+    function capacityExposureUsdWad(address token) external view returns (uint128) {
         return _maximumExposureUsdWad[token];
+    }
+
+    function effectiveExposureUsdWad(address token, uint256 activeTvlCapUsdWad)
+        external
+        view
+        returns (uint256)
+    {
+        uint256 exposureCap = _effectiveExposureCap(token);
+        uint256 weightBps = _records[token].maximumWeightBps;
+        if (weightBps > 2_000) weightBps = 2_000;
+        uint256 weightCap = (activeTvlCapUsdWad * weightBps) / BPS;
+        return exposureCap < weightCap ? exposureCap : weightCap;
+    }
+
+    function exposureLimits(address token, uint256 activeTvlCapUsdWad)
+        external
+        view
+        returns (AssetExposureLimitsV1 memory limits)
+    {
+        AssetRecord storage record = _records[token];
+        if (!record.registered || !_approvedCurrent(token) || !_eligibleCurrent(record, token)) {
+            limits.limitingConstraint = ExposureLimitConstraint.INACTIVE;
+            return limits;
+        }
+        if (record.kind == AssetKind.RESERVE) {
+            limits.creatorCapUsdWad = type(uint128).max;
+            limits.dexCapacityCapUsdWad = type(uint128).max;
+            limits.configuredWeightCapUsdWad = type(uint128).max;
+            limits.protocolMaximumUsdWad = type(uint128).max;
+            limits.effectiveCapUsdWad = type(uint128).max;
+            return limits;
+        }
+        AssetRiskPolicyV1 storage policy = _riskPolicies[token];
+        limits.creatorCapUsdWad =
+            riskPolicySchemaVersion == 0 ? type(uint128).max : policy.creatorCapUsdWad;
+        limits.dexCapacityCapUsdWad = _maximumExposureUsdWad[token];
+        limits.configuredWeightCapUsdWad = (activeTvlCapUsdWad * record.maximumWeightBps) / BPS;
+        limits.protocolMaximumUsdWad = (activeTvlCapUsdWad * 2_000) / BPS;
+        limits.effectiveCapUsdWad = limits.creatorCapUsdWad;
+        limits.limitingConstraint = ExposureLimitConstraint.CREATOR_CAP;
+        if (limits.dexCapacityCapUsdWad < limits.effectiveCapUsdWad) {
+            limits.effectiveCapUsdWad = limits.dexCapacityCapUsdWad;
+            limits.limitingConstraint = ExposureLimitConstraint.DEX_CAPACITY;
+        }
+        if (limits.configuredWeightCapUsdWad < limits.effectiveCapUsdWad) {
+            limits.effectiveCapUsdWad = limits.configuredWeightCapUsdWad;
+            limits.limitingConstraint = ExposureLimitConstraint.CONFIGURED_WEIGHT;
+        }
+        if (limits.protocolMaximumUsdWad < limits.effectiveCapUsdWad) {
+            limits.effectiveCapUsdWad = limits.protocolMaximumUsdWad;
+            limits.limitingConstraint = ExposureLimitConstraint.PROTOCOL_MAXIMUM;
+        }
     }
 
     function isEligibleV3(address token) external view returns (bool) {
@@ -345,6 +503,21 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         return qualificationV3Enabled
             ? _eligibleV3(record, _qualificationsV3[token])
             : _eligible(record, _qualifications[token]);
+    }
+
+    function _approvedCurrent(address token) private view returns (bool) {
+        return riskPolicySchemaVersion == 0 || _riskPolicies[token].approved;
+    }
+
+    function _effectiveExposureCap(address token) private view returns (uint128) {
+        uint128 capacityCap = _maximumExposureUsdWad[token];
+        if (riskPolicySchemaVersion == 0) return capacityCap;
+        AssetRiskPolicyV1 storage policy = _riskPolicies[token];
+        if (!policy.approved) return 0;
+        if (_records[token].kind == AssetKind.RESERVE) return type(uint128).max;
+        uint128 creatorCap = policy.creatorCapUsdWad;
+        if (creatorCap == 0) return 0;
+        return creatorCap < capacityCap ? creatorCap : capacityCap;
     }
 
     function _eligibleV3(AssetRecord memory record, AssetQualificationV3 memory qualification)

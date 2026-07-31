@@ -31,6 +31,7 @@ import {
   assessDynamicFreshness,
   canonicalAssetId,
   compileUniverseContext,
+  type AssetQualificationV3,
   type AssetRecordV1,
   type CompactAssetV1,
 } from "./asset-universe.ts";
@@ -334,6 +335,7 @@ type DashboardState = {
     robinhoodUid: string | null;
     tags?: string[];
     active?: boolean;
+    qualificationV3?: AssetQualificationV3;
   }[];
   nav: string;
   navPerShare: string;
@@ -929,7 +931,7 @@ function legacyAssetRecords(state: DashboardState): AssetRecordV1[] {
       networkConfig.mode === "local"
         ? "local-development-manifest"
         : "robinhood-testnet-replica-manifest",
-    qualification: null,
+    qualification: asset.qualificationV3 ?? null,
     active: asset.active !== false,
   }));
 }

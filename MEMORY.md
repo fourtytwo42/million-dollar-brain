@@ -4,20 +4,55 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: The disposable-devnet smart-contract torture test is complete
-  and accepted. Live devnet ports `3000` and `8545` remained unchanged; all
-  testnet/mainnet services and shared RPC hosts stayed out of scope.
-- Last meaningful change: Exact release
-  `538bb2ffa5c7a40e0db669f9dce51bab7d1e565f` completed the two-hour run
-  `20260731T090205Z-538bb2ffa5c7` with 107,990 confirmed transactions, zero
-  unexpected failures, 44 recovered DEX safety holds, and passing responsive
-  in-app Browser UAT.
-- Next step: Use the accepted report as devnet stress evidence. Any promotion
-  to testnet or mainnet is a separate explicitly authorized task.
-- Blockers: None for devnet torture. Mainnet broadcast remains unauthorized and
-  unrelated to this test.
+- Current task: Finish the creator-controlled risk-limit V7 release on devnet,
+  then promote the exact accepted commit to testnet for a fresh two-hour
+  acceptance. Mainnet work remains rehearsal and qualification only.
+- Last meaningful change: The release passes 75 Foundry tests, including all
+  six invariants at 256 runs and depth 1,000, the complete Node regression set,
+  the production web build, and a non-broadcast devnet upgrade rehearsal.
+- Next step: Commit and push the clean devnet candidate, perform the
+  state-preserving devnet upgrade, exercise policy and authority paths on an
+  isolated clone, and complete responsive Browser UAT before testnet promotion.
+- Blockers: The mainnet 48-hour qualification window, two market sessions,
+  paid RPC failover input, and explicit activation approval remain outstanding.
+  No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Creator risk limits release candidate verified
+
+- Context: The creator must control the initial $60,000 basket limit and the
+  AI asset allowlist until a future DAO or timelock accepts the same authority.
+- Decision: A UUPS `CreatorRiskController` holds `RISK_ADMIN_ROLE` on the
+  vault and registry. Reductions and disables are immediate; increases and new
+  approvals require two transactions separated by 48 hours. The risk role is
+  self-administered and transfers in two steps, while protocol upgrade/admin
+  authority remains separate.
+- Files: `packages/contracts/src/CreatorRiskController.sol`,
+  `packages/contracts/src/AssetRegistry.sol`,
+  `packages/contracts/src/BasketVault.sol`,
+  `apps/web/lib/chain.ts`, `apps/web/lib/quote-planner.ts`, and
+  `apps/web/components/editorial-dashboard.tsx`.
+- Commands/tests: The complete contract suite passes 75/75, including all six
+  stateful invariants at 256 runs and depth 1,000. All Node regression suites
+  and the Next.js production build pass. `forge build --sizes` leaves
+  BasketVault at 24,530 bytes with 46 bytes of runtime margin. A Forge-script
+  rehearsal simulated the controller deployment and both UUPS upgrades on the
+  live devnet state without broadcasting; the live manifest and implementation
+  slots remained unchanged afterward.
+- Result: Public status now exposes global and per-asset capacity, pending
+  policy changes, and current utilization. The creator UI prepares direct
+  wallet transactions and holds no server-side key. Readiness mode rejects a
+  symbol-filtered shadow run and requires the full 98-token stock universe.
+- Result: DecisionContext V7 now reads live on-chain qualification and capacity
+  evidence rather than static manifest qualification, so creator-disabled or
+  qualification-failed assets cannot re-enter AI allocation. Gross deposit
+  previews correctly account for the entry fee before comparing net TVL and
+  asset capacity.
+- Follow-up: Commit/push the candidate, perform the state-preserving devnet
+  migration, transactional/responsive devnet UAT, fresh two-hour testnet
+  acceptance, and non-broadcast mainnet rehearsal. Mainnet activation remains
+  unauthorized.
 
 ### 2026-07-31 - Disposable-devnet torture acceptance complete
 

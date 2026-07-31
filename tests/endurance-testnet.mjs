@@ -136,6 +136,24 @@ async function getHealthyStatus(page) {
       assert.equal(status.pieces.length, 42);
       assert.ok(BigInt(status.nav) > 0n);
       assert.ok(BigInt(status.navPerShare) > 0n);
+      assert.equal(
+        status.capacity?.tvlCapUsdWad,
+        "60000000000000000000000",
+        "testnet basket cap must remain $60,000",
+      );
+      assert.ok(status.creatorRiskPolicy?.controller);
+      assert.ok(status.creatorRiskPolicy?.authority);
+      assert.ok(BigInt(status.capacity.remainingUsdWad) >= 0n);
+      assert.ok(
+        status.assets
+          .filter((asset) => asset.kind !== "reserve")
+          .every(
+            (asset) =>
+              typeof asset.qualified === "boolean" &&
+              typeof asset.creatorApproved === "boolean",
+          ),
+        "asset qualification and creator approval must be public",
+      );
       assert.ok(status.latestCycle);
       assert.ok(
         status.latestCycle.source === "ai" ||
@@ -197,6 +215,9 @@ async function runAcceptanceActor(page, scenario) {
   assert.equal(body.assertions?.oracleFresh, true);
   assert.equal(body.assertions?.oversizedSellRejected, true);
   assert.equal(body.assertions?.actorFunded, true);
+  assert.equal(body.assertions?.basketCapacityEnforced, true);
+  assert.equal(body.assertions?.creatorPolicyVisible, true);
+  assert.equal(body.assertions?.capacityPreviewRejected, true);
   assert.equal(body.scenario, scenario);
   assert.ok(body.transactions?.buy);
   assert.ok(body.transactions?.sell);

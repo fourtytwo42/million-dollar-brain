@@ -68,10 +68,9 @@ Required local test contracts and fixtures include:
 - Mock USDG.
 - Standard ERC-20 assets with varied decimals.
 - Robinhood Stock Token mocks with 18 raw decimals and ERC-8056 multiplier behavior.
-- Chainlink-compatible price aggregators.
-- L2 sequencer-uptime feed and grace-period scenarios.
-- Trading halt, stale-price, negative-price, paused-oracle, and corporate-action states.
-- DEX or router adapters with configurable liquidity, spread, slippage, partial fill, expiry, and revert behavior.
+- Uniswap-compatible pools with controllable spot, 30-minute TWAP, four-hour TWAP, time-weighted liquidity, and observation history.
+- Trading halt, stale-route, thin-liquidity, manipulated-spot, and corporate-action states.
+- DEX routers with configurable liquidity, spread, slippage, expiry, route loss, and revert behavior.
 - Fee-on-transfer, rebasing, callback, and malformed tokens used to prove unsupported behavior is rejected.
 
 The local suite covers unit, integration, fuzz, invariant, upgrade, access-control, accounting, and end-to-end transaction tests. Local Anvil is the default environment for daily work; public testnet is not used as a substitute for deterministic testing.
@@ -88,7 +87,7 @@ The local suite covers unit, integration, fuzz, invariant, upgrade, access-contr
 | Upgrade validation | OpenZeppelin Foundry Upgrades plus storage-layout checks |
 | Static analysis    | Slither                                                  |
 
-The basket share is a custom ERC-20-compatible share token backed by a multi-asset vault. It is not described as ERC-4626 because the vault is multi-asset and supports queued USDG redemption.
+The basket share is a custom ERC-20-compatible share token backed by a multi-asset vault. It is not described as ERC-4626 because the vault is multi-asset. Redemptions are atomic and queued redemption entry points are disabled.
 
 The Brain NFT is ERC-721-compatible, but direct transfers are disabled. Ownership changes occur through the Brain Marketplace so settlement, reward checkpoints, and the mandatory 120% price are atomic.
 
@@ -159,7 +158,7 @@ The integration must support:
 
 Stock Tokens are not treated as rebasing tokens. Raw balances do not change when the multiplier changes.
 
-Robinhood quote prices are prices of the underlying asset and are not multiplier-adjusted. Chainlink Stock Token feeds are already multiplier-adjusted. The price adapter records source semantics and must never apply the multiplier twice.
+DEX routes trade raw token units, so their observed prices already reflect the token contract and current market multiplier state. The valuation path must never apply the ERC-8056 multiplier a second time.
 
 Corporate actions and pending multiplier changes can pause deposits, new purchases, NAV publication, or execution until the new state is reconciled. Historical accounting retains the multiplier and price-source version used at the time.
 
@@ -171,37 +170,37 @@ A discoverable asset becomes active only after all required checks pass:
 - Bytecode exists and required interfaces behave as expected.
 - Decimals and transfer behavior are validated.
 - Asset-adapter type is assigned.
-- Price feed is mapped and tested.
-- Feed decimals, heartbeat, positivity, timestamp, and pause behavior are configured.
-- L2 sequencer uptime and grace-period checks pass.
-- At least one approved execution route has executable liquidity.
+- Approved direct or WETH-bridged DEX routes are mapped and tested.
+- Thirty-minute and four-hour TWAPs, time-weighted liquidity, observation age, and cardinality pass.
+- Spot-to-short and short-to-long TWAP divergence remains inside policy.
+- At least one approved execution route has two-sided executable capacity.
 - Slippage, price impact, trade-size, and position limits are set.
 - Halt, buy-only, sell-only, hold-only, frozen, and corporate-action behavior is defined.
 - Legal and jurisdiction policy permits protocol use.
-- Thirty consecutive daily passes with verified $100 million circulating
-  market cap or official fund AUM, $250,000 two-sided executable depth, no more
-  than 1% impact on a $25,000 buy and sell, and sufficient official history.
+- Forty-eight continuous hourly DEX-native passes, plus two regular US market
+  sessions for stocks and ETFs. Capacity is the highest tested two-sided
+  notional that remains within 1% of the 30-minute TWAP.
 
 Unknown, fee-on-transfer, rebasing, callback-bearing, denylisted, pausable, or otherwise nonstandard tokens are rejected by default. They require a dedicated adapter, threat review, and test suite before approval.
 
-## 8. Oracle policy
+## 8. DEX price authority
 
 Qualified Uniswap pool TWAPs are the NAV mark, exact-size on-chain quotes are
 the execution estimate, and actual balance deltas are the final settlement
-value. Chainlink is only an emergency divergence circuit breaker for new
-exposure and rebalancing.
+value. No external oracle or pricing API can set NAV, authorize a route, qualify
+an asset, or determine settlement.
 
-Every read validates:
+Every authoritative price read validates:
 
-- Feed address from the current official source of truth rather than a hardcoded historical list.
-- Expected quote currency and feed decimals.
-- Positive answer.
-- Observation timestamp and maximum age.
-- L2 sequencer uptime.
-- Post-recovery grace period.
-- Robinhood oracle or corporate-action pause state when exposed.
+- Approved factory, router, pools, intermediates, and fee tiers.
+- Direct or approved two-hop path endpoints in USDG.
+- Thirty-minute and four-hour observation availability and freshness.
+- Observation cardinality and time-weighted liquidity.
+- Spot-to-short-TWAP and short-to-long-TWAP divergence.
+- Exact-size two-sided quote impact and recorded capacity.
+- Token halt, pause, multiplier transition, and corporate-action state when exposed on-chain.
 
-Stock Token feeds update on their documented market schedule, including 24/5 behavior rather than an assumed 24/7 schedule. A stale, paused, invalid, or unavailable required price blocks affected valuation or execution and follows the deterministic hold or asset-state policy.
+Stock Token qualification respects regular-market-session coverage rather than assuming 24/7 trading. A stale, immature, paused, internally inconsistent, or unavailable route blocks new exposure and follows the deterministic hold or asset-state policy. A safe DEX-valid reduction remains available whenever its route and user minimum-output checks pass.
 
 ## 9. Execution venue abstraction
 

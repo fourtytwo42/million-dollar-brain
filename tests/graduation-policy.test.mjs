@@ -30,6 +30,22 @@ test("mainnet deploy gate uses two-hour acceptance and 48-hour qualification", (
   assert.doesNotMatch(deployment, /72-hour|72h|diname/);
   assert.match(deployment, /qualificationWindowPassed/);
   assert.match(read("scripts/mainnet-shadow.mjs"), /QUALIFICATION_HOURS = 48/);
+  assert.match(
+    read("scripts/mainnet-shadow.mjs"),
+    /MDB_MAINNET_SHADOW_SYMBOLS is diagnostic-only and must be empty in readiness mode/,
+  );
+  assert.match(read("scripts/mainnet-shadow.mjs"), /stockAssets\.length >= 98/);
+  assert.match(read("scripts/deploy-mainnet.sh"), /diagnosticFilterDisabled/);
+  const candidateBuilder = read("scripts/build-mainnet-candidate.mjs");
+  assert.match(candidateBuilder, /creatorRiskPolicy/);
+  assert.match(candidateBuilder, /increaseDelaySeconds: 172_800/);
+  assert.match(candidateBuilder, /launchWitnessValid/);
+  assert.match(candidateBuilder, /riskAuthorityConfigured/);
+  const creatorRiskUpgrade = read("scripts/upgrade-creator-risk.sh");
+  assert.match(creatorRiskUpgrade, /MDB_CREATOR_RISK_MIGRATION/);
+  assert.match(creatorRiskUpgrade, /expected_chain=46630/);
+  assert.match(creatorRiskUpgrade, /git.*status --porcelain/);
+  assert.match(creatorRiskUpgrade, /riskIncreaseDelay/);
 });
 
 test("mainnet services stay disabled until explicit activation", () => {

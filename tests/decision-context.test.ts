@@ -90,6 +90,7 @@ test("inactive manifest candidates stay outside the executable V7 context", () =
     "utf8",
   );
   assert.match(context, /active: asset\.active !== false/);
+  assert.match(context, /qualification: asset\.qualificationV3 \?\? null/);
 });
 
 test("V6 evidence never turns unavailable history into a neutral return", () => {

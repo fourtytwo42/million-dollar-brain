@@ -457,8 +457,8 @@ This preference steers Ornith but does not guarantee a technology purchase.
 4. Piece 42 is Data Focus and affects evidence weighting, so every piece affects allocation.
 5. All MVP inputs are free structured sources or deterministic calculations:
    - Robinhood Stock Token APIs for canonical metadata, quotes, trading halts, and corporate actions.
-   - Chainlink feeds on Robinhood Chain as execution and NAV price truth when supported.
-   - Robinhood Chain RPC and approved on-chain venue reads for balances and liquidity.
+   - Qualified Uniswap pool TWAPs on Robinhood Chain as NAV price truth.
+   - Robinhood Chain RPC and approved on-chain venue reads for balances, exact-size quotes, liquidity, and execution.
    - SEC EDGAR structured filings for issuer fundamentals.
    - FRED for approved macro series.
    - Protocol-owned deterministic calculations for returns, volatility, drawdown, trend, correlation, valuation, quality, growth, dividends, spreads, and price impact.

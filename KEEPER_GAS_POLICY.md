@@ -28,7 +28,7 @@ Each collected fee is allocated:
 | Creator-withdrawable DAO revenue |                    40% |                                   0.40% |
 | Automation Reserve               |                    10% |                                   0.10% |
 
-The Automation Reserve is part of the Creator DAO Vault's original 50% share. This preserves the agreed 50/50 split between brain owners and the creator side.
+The Automation Reserve is part of the Creator Vault's original 50% share. This preserves the agreed 50/50 split between brain owners and the creator side.
 
 Initial brain-piece purchases and secondary markup revenue do not fund automation in the MVP. Governance may add those sources later.
 
@@ -100,7 +100,7 @@ The Keeper Wallet may:
 The Keeper Wallet may not:
 
 - Withdraw basket assets.
-- Withdraw Creator DAO revenue.
+- Withdraw Creator revenue.
 - Withdraw brain-owner rewards.
 - Add or change assets.
 - Change brain presets.

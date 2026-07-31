@@ -26,8 +26,8 @@ The frontend implements an accessible interactive 42-path SVG Brain marketplace 
 The Anvil universe intentionally retains its four legacy mocks for fast,
 deterministic regression tests. The isolated V3 Robinhood Testnet environment
 uses 12 production-interface replicas, while mainnet shadow inspects canonical
-assets without signing or broadcasting. Production Chainlink mappings, 0x
-credentials, multisig/timelock administration, fresh two-hour testnet evidence,
+assets without signing or broadcasting. DEX-native qualification, future
+timelock administration, fresh two-hour exact-commit testnet evidence,
 48-hour asset qualification,
 legal review, and independent audits remain release gates.
 
@@ -100,11 +100,11 @@ For a secondary brain sale:
 
 - The seller receives the previous settled price.
 - The buyer pays 120% of that price.
-- Half of the 20% markup goes to the Creator DAO Vault.
+- Half of the 20% markup goes to the Creator Vault.
 - Half of the 20% markup goes to eligible brain owners.
 - The transferred piece is excluded from its own sale distribution.
 
-Initial brain-piece revenue goes 100% to the Creator DAO Vault.
+Initial brain-piece revenue goes 100% to the Creator Vault.
 
 Rewards never expire. Ownership changes checkpoint rewards before settlement. Self-purchase is prohibited.
 
@@ -195,10 +195,11 @@ An asset is ineligible unless it has:
 - Canonical chain ID and contract identity.
 - Active official status.
 - Valid adapter and transfer-behavior tests.
-- Valid Chainlink or approved equivalent feed.
-- Passing heartbeat, positive-price, sequencer, and pause checks.
-- Buy and sell executable liquidity.
-- Complete required data.
+- Mature 30-minute and four-hour DEX observations with valid time-weighted
+  liquidity.
+- Buy and sell routes whose exact-size quotes satisfy the recorded capacity
+  and impact bounds.
+- Creator approval and an effective exposure cap greater than zero.
 - No unresolved corporate-action transition.
 - Explicit legal eligibility for the configured launch policy.
 
@@ -208,25 +209,30 @@ Eligible assets are ranked daily:
 
 | Factor                                        | Weight |
 | --------------------------------------------- | -----: |
-| Executable on-chain or signed-quote liquidity |    35% |
-| Underlying trading volume                     |    25% |
-| Oracle availability and freshness             |    15% |
-| Structured-data completeness                  |    15% |
-| Diversification contribution                  |    10% |
+| Proven two-sided DEX capacity and route maturity | 40% |
+| Time-weighted liquidity stability                | 25% |
+| DEX observation coverage and consistency         | 15% |
+| Structured-data completeness                     | 10% |
+| Diversification contribution                     | 10% |
 
 The top 24 passing assets become candidates, subject to the category and risk caps. Activation requires a versioned manifest committed to the repository, on-chain registration, and timelocked risk-administrator execution. Contract addresses are resolved from live canonical sources and are never selected by symbol.
 
 ## 9. Venue adapters
 
-The MVP implements:
+The active MVP implements:
 
-1. `SignedRFQAdapter` for bounded signed quotes, including 0x-style RFQ settlement.
-2. `UniswapAdapter` for allowlisted Uniswap-compatible pools and routers.
-3. `MockVenueAdapter` for deterministic Anvil and test scenarios.
+1. `UniswapExecutionAdapter` for structured routes through allowlisted
+   Uniswap-compatible pools, fee tiers, factories, and routers.
+2. `DexTwapValuationAdapter` for 30-minute NAV marks and four-hour
+   manipulation checks from those pools.
+3. Production-interface DEX replicas for deterministic devnet and testnet
+   scenarios.
 
 Rialto and Lighter remain future adapters behind the same interface and are not required for the MVP launch.
 
-An asset may activate only when at least one implemented production adapter passes buy, sell, slippage, expiry, allowance, and revert tests for that exact asset.
+An asset may activate only when its approved DEX route passes identity, buy,
+sell, impact, TWAP, TWAL, expiry, allowance, and revert tests for that exact
+asset.
 
 ## 10. Contracts and authorization
 
@@ -245,7 +251,7 @@ Local Anvil and early testnet may use development EOAs. Before real value:
 - Emergency upgrade does not exist.
 - Multisig signer addresses are supplied deployment inputs and include two separately stored hardware-wallet signers plus one independent recovery signer.
 
-## 11. Creator DAO Vault safeguards
+## 11. Creator Vault safeguards
 
 - The vault can withdraw only creator-withdrawable revenue.
 - Basket principal, queued-redemption assets, brain rewards, and Automation Reserve funds are separate liabilities and unreachable through normal withdrawal.

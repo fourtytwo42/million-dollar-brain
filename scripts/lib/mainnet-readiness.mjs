@@ -20,7 +20,7 @@ export const CAPACITY_PROBES_USD = Object.freeze([
 ]);
 
 export function summarizeMainnetReadiness(qualification) {
-  const qualified = qualification
+  const ranked = qualification
     .filter((asset) => asset.qualificationWindowPassed === true)
     .sort((left, right) => {
       const capacity =
@@ -34,8 +34,7 @@ export function summarizeMainnetReadiness(qualification) {
           String(right.assetId ?? right.symbol),
         )
       );
-    })
-    .slice(0, 9);
+    });
   const capacityWeight = (asset) => {
     const capacity = BigInt(asset.safeTwoSidedCapacityUsdWad ?? 0);
     const exposure = capacity / 2n;
@@ -46,6 +45,44 @@ export function summarizeMainnetReadiness(qualification) {
       capacityBps,
     );
   };
+  const standards = ranked.filter(
+    (asset) => asset.riskClass !== "high_volatility",
+  );
+  const highVolatility = ranked.filter(
+    (asset) => asset.riskClass === "high_volatility",
+  );
+  let qualified = [];
+  let bestCapacityBps = -1;
+  for (
+    let highCount = 0;
+    highCount <= Math.min(9, highVolatility.length);
+    highCount += 1
+  ) {
+    const candidate = [
+      ...highVolatility.slice(0, highCount),
+      ...standards.slice(0, 9 - highCount),
+    ];
+    const standardBps = candidate
+      .filter((asset) => asset.riskClass !== "high_volatility")
+      .reduce((sum, asset) => sum + capacityWeight(asset), 0);
+    const highBps = Math.min(
+      3_000,
+      candidate
+        .filter((asset) => asset.riskClass === "high_volatility")
+        .reduce((sum, asset) => sum + capacityWeight(asset), 0),
+    );
+    const usableBps = standardBps + highBps;
+    if (usableBps > bestCapacityBps) {
+      bestCapacityBps = usableBps;
+      qualified = candidate;
+    }
+  }
+  const rank = new Map(ranked.map((asset, index) => [asset.assetId, index]));
+  qualified.sort(
+    (left, right) =>
+      (rank.get(left.assetId) ?? Number.MAX_SAFE_INTEGER) -
+      (rank.get(right.assetId) ?? Number.MAX_SAFE_INTEGER),
+  );
   const standardCapacityBps = qualified
     .filter((asset) => asset.riskClass !== "high_volatility")
     .reduce((sum, asset) => sum + capacityWeight(asset), 0);
@@ -64,7 +101,7 @@ export function summarizeMainnetReadiness(qualification) {
   );
   const missingRequirements = [];
   if (!wethIdentityPassed) missingRequirements.push("canonical WETH identity");
-  if (qualified.length < 4)
+  if (ranked.length < 4)
     missingRequirements.push("at least four qualified risk assets");
   if (aggregateRiskCapacityBps < 8_000)
     missingRequirements.push("80% aggregate risk capacity");
@@ -74,7 +111,7 @@ export function summarizeMainnetReadiness(qualification) {
     watchlistSymbols: [...MAINNET_WATCHLIST_SYMBOLS],
     includedSymbols: qualified.map((asset) => asset.symbol),
     includedAssetIds: qualified.map((asset) => asset.assetId),
-    qualifiedRiskAssetCount: qualified.length,
+    qualifiedRiskAssetCount: ranked.length,
     standardCapacityBps,
     highVolatilityCapacityBps,
     aggregateRiskCapacityBps,

@@ -256,11 +256,38 @@ export type EditorialData = {
     riskClass: string;
     decimals: number;
     maximumWeightBps: number;
+    safeTwoSidedCapacityUsdWad?: string;
     robinhoodUid: string | null;
     controlId?: number;
     tags?: string[];
+    active?: boolean;
+    qualified?: boolean;
+    creatorApproved?: boolean;
+    creatorCapUsdWad?: string;
+    maximumExposureUsdWad?: string;
+    policyVersion?: number;
+    pendingPolicy?: {
+      creatorCapUsdWad: string;
+      activationTime: number;
+      approved: boolean;
+    };
   }[];
   nav: string;
+  capacity: {
+    tvlCapUsdWad: string;
+    remainingUsdWad: string;
+    maximumDepositUsdWad: string;
+    limitingConstraint: string;
+    utilizationBps: number;
+    atOrAboveCap: boolean;
+  };
+  creatorRiskPolicy: {
+    controller: `0x${string}`;
+    authority: `0x${string}`;
+    pendingAuthority: `0x${string}`;
+    increaseDelaySeconds: number;
+    pendingTvlCap: { capUsdWad: string; activationTime: number } | null;
+  } | null;
   navPerShare: string;
   navChange24hBps: number | null;
   supply: string;
@@ -475,7 +502,23 @@ type DexQuoteSummary = {
       };
     };
   }[];
+  basketCapacity?: EditorialData["capacity"];
 };
+
+export type CreatorRiskAction =
+  | { type: "set-global"; capUsd: string }
+  | { type: "execute-global" }
+  | { type: "cancel-global" }
+  | {
+      type: "set-asset";
+      asset: `0x${string}`;
+      approved: boolean;
+      capUsd: string;
+    }
+  | { type: "execute-asset"; asset: `0x${string}` }
+  | { type: "cancel-asset"; asset: `0x${string}` }
+  | { type: "propose-authority"; authority: `0x${string}` }
+  | { type: "accept-authority" };
 
 type DexReceiptSummary = {
   action: "buy" | "sell";
@@ -523,6 +566,7 @@ export function EditorialDashboard({
   onControls,
   onProfile,
   onClaim,
+  onRiskAction,
 }: {
   data: EditorialData | null;
   account: string | null;
@@ -576,6 +620,7 @@ export function EditorialDashboard({
     },
   ) => Promise<void>;
   onClaim: () => void;
+  onRiskAction: (action: CreatorRiskAction) => Promise<void>;
 }) {
   const [countdownText, setCountdownText] = useState("--:--");
   const [selectedCycleKey, setSelectedCycleKey] = useState<string | null>(null);
@@ -599,12 +644,48 @@ export function EditorialDashboard({
     null,
   );
   const [controlSaving, setControlSaving] = useState(false);
+  const [riskSaving, setRiskSaving] = useState(false);
+  const [riskError, setRiskError] = useState("");
+  const [riskCapInput, setRiskCapInput] = useState("");
+  const [riskAssetId, setRiskAssetId] = useState("");
+  const [riskAssetCapInput, setRiskAssetCapInput] = useState("");
+  const [riskAssetApproved, setRiskAssetApproved] = useState(true);
+  const [futureRiskAuthority, setFutureRiskAuthority] = useState("");
   const [narrowBrain, setNarrowBrain] = useState(false);
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const controlDialogRef = useRef<HTMLElement>(null);
   const profileDialogRef = useRef<HTMLElement>(null);
   const reserveDecimals =
     data?.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
+  const basketCapacityRemaining = data
+    ? Number(formatUnits(BigInt(data.capacity.maximumDepositUsdWad), 18))
+    : 0;
+  const buyExceedsBasketCapacity =
+    data != null && Number(amount || 0) > basketCapacityRemaining;
+  const creatorRiskPolicy = data?.creatorRiskPolicy ?? null;
+  const isRiskAuthority = Boolean(
+    account &&
+    creatorRiskPolicy?.authority.toLowerCase() === account.toLowerCase(),
+  );
+  const isPendingRiskAuthority = Boolean(
+    account &&
+    creatorRiskPolicy?.pendingAuthority.toLowerCase() === account.toLowerCase(),
+  );
+  const runRiskAction = async (action: CreatorRiskAction) => {
+    setRiskSaving(true);
+    setRiskError("");
+    try {
+      await onRiskAction(action);
+    } catch (error) {
+      setRiskError(
+        error instanceof Error
+          ? error.message
+          : "Risk policy transaction failed.",
+      );
+    } finally {
+      setRiskSaving(false);
+    }
+  };
   const reserveMoney = (value: string | bigint) =>
     moneyAtDecimals(value, reserveDecimals);
   const dexAsset = (address: string) =>
@@ -2073,7 +2154,7 @@ export function EditorialDashboard({
                   <div>
                     <span>
                       {selected.unowned
-                        ? "Unowned · initial sale to Creator DAO"
+                        ? "Unowned · initial sale to Creator"
                         : `Owner ${short(selected.owner)}`}
                     </span>
                     <span>Next price ${reserveMoney(selected.price)}</span>
@@ -2290,6 +2371,32 @@ export function EditorialDashboard({
               id="basket-trade"
               aria-label="Buy or sell BRAINS"
             >
+              {data && (
+                <section
+                  className="basket-capacity"
+                  aria-label="Basket capacity"
+                >
+                  <div>
+                    <span>BASKET CAPACITY</span>
+                    <strong>
+                      ${usd(data.nav)} / ${usd(data.capacity.tvlCapUsdWad)}
+                    </strong>
+                  </div>
+                  <progress
+                    max={10_000}
+                    value={Math.min(10_000, data.capacity.utilizationBps)}
+                    aria-label={`${(data.capacity.utilizationBps / 100).toFixed(2)}% of basket capacity used`}
+                  />
+                  <small>
+                    ${usd(data.capacity.remainingUsdWad)} remains available for
+                    the basket overall. Your largest supported buy right now is
+                    ${usd(data.capacity.maximumDepositUsdWad)}, limited by{" "}
+                    {data.capacity.limitingConstraint}. The creator can lower
+                    this limit; increases are announced on-chain 48 hours before
+                    activation.
+                  </small>
+                </section>
+              )}
               <div
                 className="trade-side-tabs"
                 role="tablist"
@@ -2347,11 +2454,14 @@ export function EditorialDashboard({
                       onClick={() =>
                         data &&
                         setAmount(
-                          Number(
-                            formatUnits(
-                              BigInt(data.walletUsdg),
-                              reserveDecimals,
+                          Math.min(
+                            Number(
+                              formatUnits(
+                                BigInt(data.walletUsdg),
+                                reserveDecimals,
+                              ),
                             ),
+                            basketCapacityRemaining,
                           ).toLocaleString("en-US", {
                             useGrouping: false,
                             maximumFractionDigits: 6,
@@ -2362,6 +2472,15 @@ export function EditorialDashboard({
                       Max
                     </button>
                   </div>
+                  {buyExceedsBasketCapacity && (
+                    <p className="capacity-warning" role="alert">
+                      This buy would exceed the basket&apos;s $
+                      {usd(data.capacity.tvlCapUsdWad)} limit or an underlying
+                      asset limit. Enter $
+                      {usd(data.capacity.maximumDepositUsdWad)} or less. Current
+                      limiter: {data.capacity.limitingConstraint}.
+                    </p>
+                  )}
                   {data && (
                     <div className="compact-quote">
                       <span>YOU RECEIVE APPROXIMATELY</span>
@@ -2484,9 +2603,12 @@ export function EditorialDashboard({
                     disabled={
                       !data ||
                       !data.activation.buysEnabled ||
+                      buyExceedsBasketCapacity ||
                       Number(amount) <= 0 ||
                       Number(amount) >
-                        Number(formatUnits(BigInt(data.walletUsdg), 18))
+                        Number(
+                          formatUnits(BigInt(data.walletUsdg), reserveDecimals),
+                        )
                     }
                     onClick={onDeposit}
                   >
@@ -2627,6 +2749,335 @@ export function EditorialDashboard({
               )}
             </aside>
           </section>
+          {data && (
+            <details className="protocol-limits">
+              <summary>Protocol limits and allowed assets</summary>
+              <div className="protocol-limit-summary">
+                <span>
+                  <small>Total basket limit</small>
+                  <strong>${usd(data.capacity.tvlCapUsdWad)}</strong>
+                </span>
+                <span>
+                  <small>Capacity remaining</small>
+                  <strong>${usd(data.capacity.remainingUsdWad)}</strong>
+                </span>
+                <span>
+                  <small>Risk increases</small>
+                  <strong>48-hour notice</strong>
+                </span>
+              </div>
+              <div className="protocol-asset-list">
+                {data.assets
+                  .filter((asset) => asset.kind !== "reserve")
+                  .map((asset) => {
+                    const registryCap = BigInt(
+                      asset.maximumExposureUsdWad ?? "0",
+                    );
+                    const weightCap =
+                      (BigInt(data.capacity.tvlCapUsdWad) *
+                        BigInt(Math.min(asset.maximumWeightBps, 2_000))) /
+                      10_000n;
+                    const effectiveCap =
+                      registryCap < weightCap ? registryCap : weightCap;
+                    const exposure = BigInt(
+                      data.holdingValues[asset.symbol] ?? "0",
+                    );
+                    const utilization =
+                      effectiveCap === 0n
+                        ? 0
+                        : Number((exposure * 10_000n) / effectiveCap) / 100;
+                    return (
+                      <div key={asset.id}>
+                        <span>
+                          <b>{asset.symbol}</b>
+                          <small>{asset.name}</small>
+                        </span>
+                        <span>
+                          <small>Creator approval</small>
+                          <b>
+                            {asset.creatorApproved == null
+                              ? asset.active === false
+                                ? "Not active"
+                                : "Legacy active"
+                              : asset.creatorApproved
+                                ? "Approved"
+                                : "Disabled"}
+                          </b>
+                          <small>
+                            Qualification:{" "}
+                            {asset.qualified == null
+                              ? "Legacy"
+                              : asset.qualified
+                                ? "Valid"
+                                : "Blocked"}
+                          </small>
+                        </span>
+                        <span>
+                          <small>Effective exposure limit</small>
+                          <b>
+                            {effectiveCap > 0n
+                              ? `$${usd(effectiveCap.toString())}`
+                              : "Not available"}
+                          </b>
+                          <small>
+                            ${usd(exposure.toString())} used ·{" "}
+                            {utilization.toFixed(1)}%
+                          </small>
+                          {asset.safeTwoSidedCapacityUsdWad && (
+                            <small>
+                              DEX capacity $
+                              {usd(asset.safeTwoSidedCapacityUsdWad)}
+                            </small>
+                          )}
+                          {asset.pendingPolicy && (
+                            <small className="risk-pending">
+                              Pending{" "}
+                              {asset.pendingPolicy.approved
+                                ? "approval"
+                                : "disable"}{" "}
+                              after{" "}
+                              {new Date(
+                                asset.pendingPolicy.activationTime * 1000,
+                              ).toLocaleString()}
+                            </small>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+              <p>
+                Qualification can automatically block unsafe assets. Disabling
+                an asset stops new exposure while preserving safe sales and
+                BRAINS redemptions.
+              </p>
+              {creatorRiskPolicy?.pendingTvlCap && (
+                <p className="risk-pending">
+                  Pending basket limit: $
+                  {usd(creatorRiskPolicy.pendingTvlCap.capUsdWad)} after{" "}
+                  {new Date(
+                    creatorRiskPolicy.pendingTvlCap.activationTime * 1000,
+                  ).toLocaleString()}
+                  .
+                </p>
+              )}
+              {isPendingRiskAuthority && (
+                <button
+                  disabled={riskSaving}
+                  onClick={() => runRiskAction({ type: "accept-authority" })}
+                >
+                  Accept risk authority
+                </button>
+              )}
+              {isRiskAuthority && (
+                <section
+                  className="creator-risk-controls"
+                  aria-label="Creator risk controls"
+                >
+                  <h3>Creator risk controls</h3>
+                  <p>
+                    Wallet transactions only. Reductions apply now; increases
+                    wait 48 hours.
+                  </p>
+                  {riskError && (
+                    <p className="capacity-warning" role="alert">
+                      {riskError}
+                    </p>
+                  )}
+                  <label>
+                    Basket limit in USD
+                    <input
+                      inputMode="decimal"
+                      placeholder={formatUnits(
+                        BigInt(data.capacity.tvlCapUsdWad),
+                        18,
+                      )}
+                      value={riskCapInput}
+                      onChange={(event) => setRiskCapInput(event.target.value)}
+                    />
+                  </label>
+                  <div className="risk-action-row">
+                    <button
+                      disabled={riskSaving || Number(riskCapInput) <= 0}
+                      onClick={() =>
+                        runRiskAction({
+                          type: "set-global",
+                          capUsd: riskCapInput,
+                        })
+                      }
+                    >
+                      Lower or schedule limit
+                    </button>
+                    {creatorRiskPolicy?.pendingTvlCap && (
+                      <>
+                        <button
+                          disabled={riskSaving}
+                          onClick={() =>
+                            runRiskAction({ type: "execute-global" })
+                          }
+                        >
+                          Activate pending limit
+                        </button>
+                        <button
+                          className="quiet"
+                          disabled={riskSaving}
+                          onClick={() =>
+                            runRiskAction({ type: "cancel-global" })
+                          }
+                        >
+                          Cancel pending
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <label>
+                    Asset policy
+                    <select
+                      value={riskAssetId}
+                      onChange={(event) => {
+                        const id = event.target.value;
+                        const selected = data.assets.find(
+                          (asset) => asset.id === id,
+                        );
+                        setRiskAssetId(id);
+                        setRiskAssetApproved(selected?.creatorApproved ?? true);
+                        setRiskAssetCapInput(
+                          selected?.creatorCapUsdWad
+                            ? formatUnits(BigInt(selected.creatorCapUsdWad), 18)
+                            : "",
+                        );
+                      }}
+                    >
+                      <option value="">Choose an asset</option>
+                      {data.assets
+                        .filter((asset) => asset.kind !== "reserve")
+                        .map((asset) => (
+                          <option key={asset.id} value={asset.id}>
+                            {asset.symbol}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {(() => {
+                    const selected = data.assets.find(
+                      (asset) => asset.id === riskAssetId,
+                    );
+                    if (!selected) return null;
+                    return (
+                      <>
+                        <label className="risk-check">
+                          <input
+                            type="checkbox"
+                            checked={riskAssetApproved}
+                            onChange={(event) =>
+                              setRiskAssetApproved(event.target.checked)
+                            }
+                          />
+                          Allow the AI to add exposure
+                        </label>
+                        <label>
+                          Creator asset cap in USD
+                          <input
+                            inputMode="decimal"
+                            value={riskAssetCapInput}
+                            onChange={(event) =>
+                              setRiskAssetCapInput(event.target.value)
+                            }
+                          />
+                        </label>
+                        {selected.pendingPolicy && (
+                          <p className="risk-pending">
+                            Pending{" "}
+                            {selected.pendingPolicy.approved
+                              ? "approval"
+                              : "disable"}{" "}
+                            at ${usd(selected.pendingPolicy.creatorCapUsdWad)}{" "}
+                            after{" "}
+                            {new Date(
+                              selected.pendingPolicy.activationTime * 1000,
+                            ).toLocaleString()}
+                            .
+                          </p>
+                        )}
+                        <div className="risk-action-row">
+                          <button
+                            disabled={
+                              riskSaving ||
+                              (riskAssetApproved &&
+                                Number(riskAssetCapInput) <= 0)
+                            }
+                            onClick={() =>
+                              runRiskAction({
+                                type: "set-asset",
+                                asset: selected.address,
+                                approved: riskAssetApproved,
+                                capUsd: riskAssetApproved
+                                  ? riskAssetCapInput
+                                  : "0",
+                              })
+                            }
+                          >
+                            Apply or schedule asset policy
+                          </button>
+                          {selected.pendingPolicy && (
+                            <>
+                              <button
+                                disabled={riskSaving}
+                                onClick={() =>
+                                  runRiskAction({
+                                    type: "execute-asset",
+                                    asset: selected.address,
+                                  })
+                                }
+                              >
+                                Activate pending policy
+                              </button>
+                              <button
+                                className="quiet"
+                                disabled={riskSaving}
+                                onClick={() =>
+                                  runRiskAction({
+                                    type: "cancel-asset",
+                                    asset: selected.address,
+                                  })
+                                }
+                              >
+                                Cancel pending
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+                  <label>
+                    Future DAO or timelock address
+                    <input
+                      value={futureRiskAuthority}
+                      onChange={(event) =>
+                        setFutureRiskAuthority(event.target.value)
+                      }
+                      placeholder="0x…"
+                    />
+                  </label>
+                  <button
+                    disabled={
+                      riskSaving ||
+                      !/^0x[0-9a-fA-F]{40}$/.test(futureRiskAuthority)
+                    }
+                    onClick={() =>
+                      runRiskAction({
+                        type: "propose-authority",
+                        authority: futureRiskAuthority as `0x${string}`,
+                      })
+                    }
+                  >
+                    Start two-step authority transfer
+                  </button>
+                </section>
+              )}
+            </details>
+          )}
           {data && (
             <section
               className="portfolio-performance"
@@ -2897,8 +3348,7 @@ export function EditorialDashboard({
                         {selectedCycle.decisionContext?.schemaVersion ??
                           selectedCycle.schemaVersion ??
                           2}{" "}
-                        ·{" "}
-                        {selectedCycle.inputHash?.slice(0, 12)}…
+                        · {selectedCycle.inputHash?.slice(0, 12)}…
                       </b>
                     </div>
                     <div>

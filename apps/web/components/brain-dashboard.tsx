@@ -28,6 +28,7 @@ import {
   basketAbi,
   brainAbi,
   brainControlAbi,
+  creatorRiskControllerAbi,
   erc20Abi,
   rewardAbi,
 } from "@/lib/abi";
@@ -48,7 +49,11 @@ import {
   validateBrainPersona,
   type BrainPersonaV1,
 } from "@/lib/brain-profile";
-import { EditorialDashboard } from "./editorial-dashboard";
+import { buildRiskCapacityWitness } from "@/lib/capacity-policy";
+import {
+  EditorialDashboard,
+  type CreatorRiskAction,
+} from "./editorial-dashboard";
 
 type BrainOption = {
   label: string;
@@ -160,11 +165,38 @@ type Data = {
     riskClass: string;
     decimals: number;
     maximumWeightBps: number;
+    safeTwoSidedCapacityUsdWad?: string;
     robinhoodUid: string | null;
     controlId?: number;
     tags?: string[];
+    active?: boolean;
+    qualified?: boolean;
+    creatorApproved?: boolean;
+    creatorCapUsdWad?: string;
+    maximumExposureUsdWad?: string;
+    policyVersion?: number;
+    pendingPolicy?: {
+      creatorCapUsdWad: string;
+      activationTime: number;
+      approved: boolean;
+    };
   }[];
   nav: string;
+  capacity: {
+    tvlCapUsdWad: string;
+    remainingUsdWad: string;
+    maximumDepositUsdWad: string;
+    limitingConstraint: string;
+    utilizationBps: number;
+    atOrAboveCap: boolean;
+  };
+  creatorRiskPolicy: {
+    controller: `0x${string}`;
+    authority: `0x${string}`;
+    pendingAuthority: `0x${string}`;
+    increaseDelaySeconds: number;
+    pendingTvlCap: { capUsdWad: string; activationTime: number } | null;
+  } | null;
   navPerShare: string;
   navChange24hBps: number | null;
   supply: string;
@@ -1085,6 +1117,115 @@ export function BrainDashboard() {
       ),
     );
   }
+  function walletErrorMessage(error: {
+    shortMessage?: string;
+    message?: string;
+  }) {
+    const detail = error.shortMessage ?? error.message ?? "Transaction failed.";
+    return /TvlCapExceeded|AssetCapacityExceeded/i.test(detail)
+      ? "Basket capacity changed while your quote was open. Refresh the quote and try a smaller amount."
+      : detail;
+  }
+  async function applyCreatorRiskAction(action: CreatorRiskAction) {
+    if (!data?.creatorRiskPolicy)
+      throw new Error("Creator risk controls are not deployed.");
+    const { wallet, publicClient } = clients();
+    const controller = data.creatorRiskPolicy.controller;
+    const witnessFor = (cap: bigint) => {
+      const result = buildRiskCapacityWitness(
+        data.assets
+          .filter((asset) => asset.kind !== "reserve")
+          .map((asset) => ({
+            address: asset.address,
+            id: asset.id,
+            active: asset.active === true,
+            qualified: asset.qualified === true,
+            creatorApproved: asset.creatorApproved === true,
+            riskClass: asset.riskClass,
+            maximumWeightBps: asset.maximumWeightBps,
+            maximumExposureUsdWad: BigInt(asset.maximumExposureUsdWad ?? "0"),
+          })),
+        cap,
+      );
+      if (!result.valid) {
+        throw new Error(
+          "The active qualified assets cannot support 80% of that basket limit.",
+        );
+      }
+      return result.witness;
+    };
+    let functionName: string;
+    let args: readonly unknown[] = [];
+    if (action.type === "set-global") {
+      const cap = parseUnits(action.capUsd, 18);
+      if (cap === BigInt(data.capacity.tvlCapUsdWad)) {
+        throw new Error(
+          "Enter a basket limit different from the active limit.",
+        );
+      }
+      if (cap < BigInt(data.capacity.tvlCapUsdWad)) {
+        functionName = "reduceTvlCap";
+        args = [cap];
+      } else {
+        functionName = "scheduleTvlCapIncrease";
+        args = [cap, witnessFor(cap)];
+      }
+    } else if (action.type === "execute-global") {
+      functionName = "executeTvlCapIncrease";
+      const pendingCap = data.creatorRiskPolicy.pendingTvlCap;
+      if (!pendingCap) {
+        throw new Error("There is no pending basket-limit increase.");
+      }
+      args = [witnessFor(BigInt(pendingCap.capUsdWad))];
+    } else if (action.type === "cancel-global") {
+      functionName = "cancelTvlCapIncrease";
+    } else if (action.type === "set-asset") {
+      const cap = parseUnits(action.capUsd || "0", 18);
+      const current = data.assets.find(
+        (asset) => asset.address.toLowerCase() === action.asset.toLowerCase(),
+      );
+      if (
+        current?.creatorApproved === action.approved &&
+        cap === BigInt(current.creatorCapUsdWad ?? "0")
+      ) {
+        throw new Error("Change the approval or cap before submitting.");
+      }
+      const isReduction =
+        !action.approved ||
+        Boolean(
+          current?.creatorApproved &&
+          cap <= BigInt(current.creatorCapUsdWad ?? "0"),
+        );
+      functionName = isReduction ? "reduceAssetPolicy" : "scheduleAssetPolicy";
+      args = [action.asset, action.approved, cap];
+    } else if (action.type === "execute-asset") {
+      functionName = "executeAssetPolicy";
+      args = [action.asset];
+    } else if (action.type === "cancel-asset") {
+      functionName = "cancelAssetPolicy";
+      args = [action.asset];
+    } else if (action.type === "propose-authority") {
+      functionName = "proposeRiskAuthority";
+      args = [action.authority];
+    } else {
+      functionName = "acceptRiskAuthority";
+    }
+    setMessage("Confirm the risk-policy transaction in your wallet…");
+    const tx = await wallet.writeContract({
+      address: controller,
+      abi: creatorRiskControllerAbi,
+      functionName: functionName as never,
+      args: args as never,
+    });
+    await publicClient.waitForTransactionReceipt({
+      hash: tx,
+      ...receiptWaitPolicy,
+    });
+    const refreshed = await refreshAfterConfirmedAction();
+    setMessage(
+      confirmedActionMessage("Risk policy updated on chain.", refreshed),
+    );
+  }
   const owned =
     data?.pieces.filter(
       (piece) =>
@@ -1132,9 +1273,7 @@ export function BrainDashboard() {
           copyWalletAddress().catch((error) => setMessage(error.message))
         }
         onDeposit={() =>
-          deposit().catch((error) =>
-            setMessage(error.shortMessage ?? error.message),
-          )
+          deposit().catch((error) => setMessage(walletErrorMessage(error)))
         }
         onRedeem={() =>
           redeem().catch((error) =>
@@ -1163,6 +1302,7 @@ export function BrainDashboard() {
             setMessage(error.shortMessage ?? error.message),
           )
         }
+        onRiskAction={applyCreatorRiskAction}
       />
     );
   }
@@ -1424,7 +1564,7 @@ export function BrainDashboard() {
                   </p>
                   <p className="owner">
                     {piece.unowned
-                      ? "Unowned · Initial sale to Creator DAO"
+                      ? "Unowned · Initial sale to Creator"
                       : `Owned by ${short(piece.owner)}`}
                   </p>
                   {mine ? (

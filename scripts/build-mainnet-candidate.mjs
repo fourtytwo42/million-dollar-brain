@@ -98,6 +98,10 @@ const assetPolicy = Object.fromEntries(
       maximumExposureUsdWad:
         state.qualification.find((row) => row.symbol === symbol)
           ?.maximumExposureUsdWad ?? "0",
+      creatorApproved: true,
+      creatorCapUsdWad:
+        state.qualification.find((row) => row.symbol === symbol)
+          ?.maximumExposureUsdWad ?? "0",
       qualificationEvidenceHash:
         state.qualification.find((row) => row.symbol === symbol)
           ?.evidenceHash ?? null,
@@ -153,6 +157,16 @@ const payload = {
   assets: candidateAssets,
   registryAssetIds,
   assetPolicy,
+  creatorRiskPolicy: {
+    initialAuthority: operatorAddress,
+    role: "RISK_ADMIN_ROLE",
+    increaseDelaySeconds: 172_800,
+    reductionsImmediate: true,
+    twoStepAuthorityTransfer: true,
+    launchWitnessAssetIds: includedRiskAssets.map(
+      (asset) => `${state.chainId}:${asset.address.toLowerCase()}`,
+    ),
+  },
   venueMappings: venues,
   qualificationEvidenceHash: state.sourceHash,
   bytecodeHashes: contractBytecodeHashes(repoRoot),
@@ -171,6 +185,11 @@ const payload = {
     coreQualificationPassed: state.readiness?.coreQualificationPassed === true,
     acceptancePassed,
     forkPassed,
+    riskAuthorityConfigured: Boolean(operatorAddress),
+    launchWitnessValid:
+      includedRiskAssets.length >= 4 &&
+      includedRiskAssets.length <= 9 &&
+      state.readiness?.aggregateRiskCapacityBps >= 8_000,
     noMainnetManifest:
       !existsSync(
         resolve(repoRoot, "packages/contracts/deployments/mainnet-v4.json"),
