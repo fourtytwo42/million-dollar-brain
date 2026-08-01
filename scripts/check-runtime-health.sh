@@ -48,7 +48,7 @@ check_app() {
 
 check_app devnet 3000 mdb-web-devnet.service local
 check_app testnet 3001 mdb-web-testnet.service testnet
-if [[ -f "$repo_root/packages/contracts/deployments/mainnet-v3.json" ]]; then
+if [[ -f "$repo_root/packages/contracts/deployments/mainnet-v5.json" ]]; then
   check_app mainnet 3003 mdb-web-mainnet.service mainnet
 fi
 

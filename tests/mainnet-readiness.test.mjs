@@ -4,6 +4,8 @@ import {
   CAPACITY_PROBES_USD,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
+  selectPreliminaryAssets,
+  summarizePausedDeploymentReadiness,
   summarizeMainnetReadiness,
 } from "../scripts/lib/mainnet-readiness.mjs";
 
@@ -69,6 +71,57 @@ test("full-universe gate follows the official deployable registry count", () => 
     }),
     false,
   );
+});
+
+test("paused canary selects current DEX-valid assets without promoting qualification", () => {
+  const rows = [
+    {
+      ...qualified("WETH", 100_000, "high_volatility", "4663:00"),
+      passed: true,
+      routeMature: true,
+      dexSafetyValid: true,
+      qualificationWindowPassed: false,
+    },
+    ...Array.from({ length: 7 }, (_, index) => ({
+      ...qualified(
+        `STANDARD${index}`,
+        25_000 + index,
+        "standard",
+        `4663:1${index}`,
+      ),
+      passed: true,
+      routeMature: true,
+      dexSafetyValid: true,
+      qualificationWindowPassed: false,
+    })),
+    ...Array.from({ length: 5 }, (_, index) => ({
+      ...qualified(
+        `HIGH${index}`,
+        250_000,
+        "high_volatility",
+        `4663:2${index}`,
+      ),
+      passed: true,
+      routeMature: true,
+      dexSafetyValid: true,
+      qualificationWindowPassed: false,
+    })),
+  ];
+  const selected = selectPreliminaryAssets(rows);
+  assert.equal(selected.length, 9);
+  assert.equal(
+    selected.some((asset) => asset.symbol === "WETH"),
+    true,
+  );
+  assert.equal(
+    selected.filter((asset) => asset.riskClass === "high_volatility").length <=
+      3,
+    true,
+  );
+  const deployment = summarizePausedDeploymentReadiness(rows);
+  assert.equal(deployment.pausedShadowReady, true);
+  assert.equal(deployment.preliminaryRiskAssetCount, 9);
+  assert.equal(summarizeMainnetReadiness(rows).coreQualificationPassed, false);
 });
 
 test("readiness requires four assets and enough post-risk-cap capacity for 80% exposure", () => {

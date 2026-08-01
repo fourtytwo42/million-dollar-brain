@@ -122,8 +122,38 @@ contract CreatorRiskControllerTest is Test {
         (AssetRegistry.AssetRiskPolicyV1 memory reduced,) = registry.riskPolicy(token);
         assertEq(reduced.creatorCapUsdWad, 10_000e18);
         assertFalse(registry.isActive(token));
-        vm.expectRevert(bytes("asset not qualified"));
+        vm.expectRevert(bytes("asset DEX evidence invalid"));
         controller.scheduleAssetPolicy(token, true, 25_000e18);
+    }
+
+    function testApprovalNoticeCanOverlapQualificationButExecutionCannot() public {
+        address token = assets[0];
+        controller.reduceAssetPolicy(token, false, 0);
+        registry.recordQualificationV3(token, _qualificationHours(25_000e18, true, 1, 0));
+
+        controller.scheduleAssetPolicy(token, true, 10_000e18);
+        vm.warp(block.timestamp + 48 hours);
+        vm.expectRevert(bytes("asset not qualified"));
+        controller.executeAssetPolicy(token);
+
+        registry.recordQualificationV3(token, _qualificationHours(25_000e18, true, 48, 2));
+        controller.executeAssetPolicy(token);
+        assertTrue(registry.isCreatorApproved(token));
+        assertFalse(registry.isActive(token));
+        registry.setActive(token, true);
+        assertTrue(registry.isActive(token));
+    }
+
+    function testPrequalificationNoticeRequiresCanonicalIdentityAndCurrentDexEvidence() public {
+        address unknown = address(0xCAFE);
+        vm.expectRevert(bytes("asset identity not registered"));
+        controller.scheduleAssetPolicy(unknown, true, 1_000e18);
+
+        address token = assets[1];
+        controller.reduceAssetPolicy(token, false, 0);
+        registry.recordQualificationV3(token, _qualificationHours(25_000e18, false, 1, 0));
+        vm.expectRevert(bytes("asset DEX evidence invalid"));
+        controller.scheduleAssetPolicy(token, true, 1_000e18);
     }
 
     function testOnlyRiskAuthorityCanChangePolicy() public {
@@ -219,12 +249,21 @@ contract CreatorRiskControllerTest is Test {
         view
         returns (AssetRegistry.AssetQualificationV3 memory)
     {
+        return _qualificationHours(capacity, valid, 48, 2);
+    }
+
+    function _qualificationHours(
+        uint128 capacity,
+        bool valid,
+        uint32 consecutiveHours,
+        uint8 regularMarketSessions
+    ) private view returns (AssetRegistry.AssetQualificationV3 memory) {
         return AssetRegistry.AssetQualificationV3({
             evidenceHash: keccak256(abi.encode(capacity, valid, block.timestamp)),
             observedAt: uint64(block.timestamp),
             validUntil: uint64(block.timestamp + 7 days),
-            consecutiveHours: 48,
-            regularMarketSessions: 2,
+            consecutiveHours: consecutiveHours,
+            regularMarketSessions: regularMarketSessions,
             safeTwoSidedCapacityUsdWad: capacity,
             identityValid: valid,
             routeMature: valid,

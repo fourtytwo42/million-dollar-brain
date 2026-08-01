@@ -32,12 +32,16 @@ contract DeployMainnet is Script {
     function run() external {
         require(block.chainid == CHAIN_ID, "mainnet chain only");
         address deployer = vm.envAddress("MDB_DEPLOYER_ADDRESS");
+        string memory releaseSha = vm.envString("MDB_RELEASE_SHA");
+        require(bytes(releaseSha).length == 40, "release SHA");
         address[] memory riskAssets = vm.envAddress("MDB_MAINNET_RISK_ASSETS", ",");
         uint256[] memory assetIds = vm.envUint("MDB_MAINNET_ASSET_IDS", ",");
         uint256[] memory assetKinds = vm.envUint("MDB_MAINNET_ASSET_KINDS", ",");
         uint256[] memory riskClasses = vm.envUint("MDB_MAINNET_RISK_CLASSES", ",");
         uint256[] memory maximumWeights = vm.envUint("MDB_MAINNET_MAX_WEIGHTS_BPS", ",");
         uint256[] memory safeCapacities = vm.envUint("MDB_MAINNET_SAFE_CAPACITY_USD_WAD", ",");
+        uint256[] memory qualificationHours = vm.envUint("MDB_MAINNET_QUALIFICATION_HOURS", ",");
+        uint256[] memory marketSessions = vm.envUint("MDB_MAINNET_MARKET_SESSIONS", ",");
         bytes32[] memory qualificationHashes =
             vm.envBytes32("MDB_MAINNET_QUALIFICATION_HASHES", ",");
         address uniswapFactory = vm.envAddress("MDB_UNISWAP_FACTORY");
@@ -57,6 +61,8 @@ contract DeployMainnet is Script {
                 && riskAssets.length == assetIds.length && riskAssets.length == riskClasses.length
                 && riskAssets.length == maximumWeights.length
                 && riskAssets.length == safeCapacities.length
+                && riskAssets.length == qualificationHours.length
+                && riskAssets.length == marketSessions.length
                 && riskAssets.length == qualificationHashes.length
                 && riskAssets.length == directPools.length
                 && riskAssets.length == bridgePools.length
@@ -91,7 +97,6 @@ contract DeployMainnet is Script {
             address token = riskAssets[i];
             require(token.code.length > 0, "canonical code");
             require(IERC20Metadata(token).decimals() <= 36, "token decimals");
-            bool isWeth = token == CANONICAL_WETH;
             require(
                 assetKinds[i] > 0 && assetKinds[i] <= uint8(AssetRegistry.AssetKind.TOKEN), "kind"
             );
@@ -281,7 +286,7 @@ contract DeployMainnet is Script {
                 ),
                 observedAt: uint64(block.timestamp),
                 validUntil: uint64(block.timestamp + 2 hours),
-                consecutiveHours: 48,
+                consecutiveHours: 0,
                 regularMarketSessions: 0,
                 safeTwoSidedCapacityUsdWad: 0,
                 identityValid: true,
@@ -295,17 +300,16 @@ contract DeployMainnet is Script {
             })
         );
         for (uint256 i; i < riskAssets.length; ++i) {
+            require(qualificationHours[i] <= type(uint32).max, "qualification hours");
+            require(marketSessions[i] <= type(uint8).max, "market sessions");
             registry.recordQualificationV3(
                 riskAssets[i],
                 AssetRegistry.AssetQualificationV3({
                     evidenceHash: qualificationHashes[i],
                     observedAt: uint64(block.timestamp),
                     validUntil: uint64(block.timestamp + 2 hours),
-                    consecutiveHours: 48,
-                    regularMarketSessions: assetKinds[i] == uint8(AssetRegistry.AssetKind.STOCK)
-                        || assetKinds[i] == uint8(AssetRegistry.AssetKind.ETF)
-                        ? 2
-                        : 0,
+                    consecutiveHours: uint32(qualificationHours[i]),
+                    regularMarketSessions: uint8(marketSessions[i]),
                     safeTwoSidedCapacityUsdWad: uint128(safeCapacities[i]),
                     identityValid: true,
                     routeMature: true,
@@ -320,9 +324,6 @@ contract DeployMainnet is Script {
         }
         registry.setQualificationV3Enabled(true);
         registry.setActive(CANONICAL_USDG, true);
-        for (uint256 i; i < riskAssets.length; ++i) {
-            registry.setActive(riskAssets[i], true);
-        }
         basket.reinitializeV3(address(registry), address(execution));
         basket.reinitializeV4(false, false, false);
         basket.reinitializeV5(address(valuation), address(execution));
@@ -339,11 +340,8 @@ contract DeployMainnet is Script {
                 )
             )
         );
-        address[] memory initiallyApproved = new address[](riskAssets.length + 1);
+        address[] memory initiallyApproved = new address[](1);
         initiallyApproved[0] = CANONICAL_USDG;
-        for (uint256 i; i < riskAssets.length; ++i) {
-            initiallyApproved[i + 1] = riskAssets[i];
-        }
         registry.reinitializeV4(address(riskController), initiallyApproved);
         basket.grantRole(keccak256("RISK_ADMIN_ROLE"), address(riskController));
 
@@ -351,9 +349,19 @@ contract DeployMainnet is Script {
         vm.serializeUint(root, "schemaVersion", 5);
         vm.serializeString(root, "environment", "robinhood-mainnet");
         vm.serializeUint(root, "chainId", CHAIN_ID);
+        vm.serializeString(root, "gitSha", releaseSha);
         vm.serializeBool(root, "canonicalAssets", true);
         vm.serializeBool(root, "productionParityReplicas", false);
         vm.serializeString(root, "activationState", "paused-canary");
+        vm.serializeUint(root, "preliminaryRiskAssetCount", riskAssets.length);
+        vm.serializeUint(root, "activatedRiskAssetCount", 0);
+        vm.serializeBool(root, "buysEnabled", false);
+        vm.serializeBool(root, "sellsEnabled", false);
+        vm.serializeBool(root, "rebalancesEnabled", false);
+        vm.serializeBool(root, "brainPurchasesEnabled", false);
+        vm.serializeAddress(root, "preliminaryAssets", riskAssets);
+        vm.serializeUint(root, "preliminaryQualificationHours", qualificationHours);
+        vm.serializeUint(root, "preliminaryMarketSessions", marketSessions);
         vm.serializeAddress(root, "deployer", deployer);
         vm.serializeAddress(root, "usdg", CANONICAL_USDG);
         vm.serializeAddress(root, "assetRegistry", address(registry));

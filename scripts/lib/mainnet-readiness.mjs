@@ -32,22 +32,88 @@ export function fullCanonicalUniverseInspected({
   );
 }
 
+function rankAssets(assets) {
+  return [...assets].sort((left, right) => {
+    const capacity =
+      Number(right.safeTwoSidedCapacityUsdWad ?? 0) -
+      Number(left.safeTwoSidedCapacityUsdWad ?? 0);
+    return (
+      capacity ||
+      Number(right.liquidityStabilityScoreBps ?? 0) -
+        Number(left.liquidityStabilityScoreBps ?? 0) ||
+      Number(right.routeMaturityScoreBps ?? 0) -
+        Number(left.routeMaturityScoreBps ?? 0) ||
+      String(left.assetId ?? left.symbol).localeCompare(
+        String(right.assetId ?? right.symbol),
+      )
+    );
+  });
+}
+
+export function selectPreliminaryAssets(qualification) {
+  const ranked = rankAssets(
+    qualification.filter(
+      (asset) =>
+        asset.passed === true &&
+        asset.identityValid !== false &&
+        asset.routeMature === true &&
+        asset.dexSafetyValid === true &&
+        BigInt(asset.safeTwoSidedCapacityUsdWad ?? 0) > 0n,
+    ),
+  );
+  const standard = ranked.filter(
+    (asset) => asset.riskClass !== "high_volatility",
+  );
+  const highVolatility = ranked.filter(
+    (asset) => asset.riskClass === "high_volatility",
+  );
+  const selected = [...standard.slice(0, 6), ...highVolatility.slice(0, 3)];
+  for (const asset of ranked) {
+    if (selected.length >= 9) break;
+    if (!selected.some((candidate) => candidate.assetId === asset.assetId)) {
+      selected.push(asset);
+    }
+  }
+  const weth = ranked.find((asset) => asset.symbol === "WETH");
+  if (
+    weth &&
+    !selected.some((candidate) => candidate.assetId === weth.assetId)
+  ) {
+    selected[selected.length - 1] = weth;
+  }
+  const rank = new Map(ranked.map((asset, index) => [asset.assetId, index]));
+  return selected
+    .filter(Boolean)
+    .sort(
+      (left, right) =>
+        (rank.get(left.assetId) ?? Number.MAX_SAFE_INTEGER) -
+        (rank.get(right.assetId) ?? Number.MAX_SAFE_INTEGER),
+    );
+}
+
+export function summarizePausedDeploymentReadiness(qualification) {
+  const preliminary = selectPreliminaryAssets(qualification);
+  const missingRequirements = [];
+  if (!preliminary.some((asset) => asset.symbol === "WETH")) {
+    missingRequirements.push("canonical WETH route evidence");
+  }
+  if (preliminary.length < 4) {
+    missingRequirements.push("at least four preliminary risk assets");
+  }
+  return {
+    schemaVersion: 1,
+    preliminarySymbols: preliminary.map((asset) => asset.symbol),
+    preliminaryAssetIds: preliminary.map((asset) => asset.assetId),
+    preliminaryRiskAssetCount: preliminary.length,
+    missingRequirements,
+    pausedShadowReady: missingRequirements.length === 0,
+  };
+}
+
 export function summarizeMainnetReadiness(qualification) {
-  const ranked = qualification
-    .filter((asset) => asset.qualificationWindowPassed === true)
-    .sort((left, right) => {
-      const capacity =
-        Number(right.safeTwoSidedCapacityUsdWad ?? 0) -
-        Number(left.safeTwoSidedCapacityUsdWad ?? 0);
-      return (
-        capacity ||
-        Number(right.routeMaturityScoreBps ?? 0) -
-          Number(left.routeMaturityScoreBps ?? 0) ||
-        String(left.assetId ?? left.symbol).localeCompare(
-          String(right.assetId ?? right.symbol),
-        )
-      );
-    });
+  const ranked = rankAssets(
+    qualification.filter((asset) => asset.qualificationWindowPassed === true),
+  );
   const capacityWeight = (asset) => {
     const capacity = BigInt(asset.safeTwoSidedCapacityUsdWad ?? 0);
     const exposure = capacity / 2n;

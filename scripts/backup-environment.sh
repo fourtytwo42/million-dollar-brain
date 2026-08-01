@@ -19,7 +19,7 @@ case "$environment" in
   mainnet)
     state="$repo_root/var/mainnet"
     database="milliondollarbrain_mainnet"
-    manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
+    manifest="$repo_root/packages/contracts/deployments/mainnet-v5.json"
     env_file="/etc/mdb/mainnet.env"
     ;;
   *)

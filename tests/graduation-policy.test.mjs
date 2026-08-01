@@ -13,7 +13,7 @@ test("runtime state, database, and deployment manifests are isolated", () => {
   assert.equal(new Set(rows.map((row) => row.deploymentFile)).size, 3);
   assert.match(networks.local.deploymentFile, /local-v3\.json$/);
   assert.match(networks.testnet.deploymentFile, /testnet-v3\.json$/);
-  assert.match(networks.mainnet.deploymentFile, /mainnet-v3\.json$/);
+  assert.match(networks.mainnet.deploymentFile, /mainnet-v5\.json$/);
 });
 
 test("mainnet policy has no mock wallet, faucet, or private browser RPC", () => {
@@ -24,28 +24,57 @@ test("mainnet policy has no mock wallet, faucet, or private browser RPC", () => 
   assert.doesNotMatch(networks.mainnet.browserRpcUrl, /192\.168\.|localhost/);
 });
 
-test("mainnet deploy gate uses two-hour acceptance and 48-hour qualification", () => {
+test("paused deployment and activation use independent fail-closed gates", () => {
   const deployment = read("scripts/deploy-mainnet.sh");
-  assert.match(deployment, /v3-2h-acceptance\.json/);
+  assert.match(
+    deployment,
+    /var\/releases\/\$head_sha\/testnet-acceptance\.json/,
+  );
   assert.doesNotMatch(deployment, /72-hour|72h|diname/);
-  assert.match(deployment, /qualificationWindowPassed/);
+  assert.match(deployment, /pausedDeploymentReady/);
+  assert.doesNotMatch(deployment, /qualificationWindowPassed/);
+  assert.match(deployment, /prepare-mainnet-deployment-env\.mjs/);
+  assert.doesNotMatch(
+    read("packages/contracts/script/DeployMainnet.s.sol"),
+    /consecutiveHours:\s*48/,
+  );
   assert.match(read("scripts/mainnet-shadow.mjs"), /QUALIFICATION_HOURS = 48/);
   assert.match(
     read("scripts/mainnet-shadow.mjs"),
     /MDB_MAINNET_SHADOW_SYMBOLS is diagnostic-only and must be empty in readiness mode/,
   );
-  assert.match(read("scripts/mainnet-shadow.mjs"), /stockAssets\.length >= 98/);
+  assert.match(
+    read("scripts/mainnet-shadow.mjs"),
+    /fullCanonicalUniverseInspected/,
+  );
   assert.match(read("scripts/deploy-mainnet.sh"), /diagnosticFilterDisabled/);
   const candidateBuilder = read("scripts/build-mainnet-candidate.mjs");
   assert.match(candidateBuilder, /creatorRiskPolicy/);
   assert.match(candidateBuilder, /increaseDelaySeconds: 172_800/);
   assert.match(candidateBuilder, /launchWitnessValid/);
   assert.match(candidateBuilder, /riskAuthorityConfigured/);
+  assert.match(candidateBuilder, /pausedDeploymentReady/);
+  assert.match(candidateBuilder, /activationReady/);
+  assert.match(candidateBuilder, /shadowEvidenceFresh/);
+  assert.match(candidateBuilder, /exactBuildEvidencePassed/);
+  assert.match(read("scripts/check-release.sh"), /record-release-build\.mjs/);
+  assert.match(read("scripts/check-release.sh"), /check-release-format\.sh/);
+  assert.match(deployment, /verify-mainnet-candidate\.mjs/);
+  const activation = read("scripts/set-mainnet-activation.sh");
+  assert.match(activation, /activationReady/);
+  assert.match(activation, /mainnet-v5\.json/);
   const creatorRiskUpgrade = read("scripts/upgrade-creator-risk.sh");
   assert.match(creatorRiskUpgrade, /MDB_CREATOR_RISK_MIGRATION/);
   assert.match(creatorRiskUpgrade, /expected_chain=46630/);
   assert.match(creatorRiskUpgrade, /git.*status --porcelain/);
   assert.match(creatorRiskUpgrade, /riskIncreaseDelay/);
+  const pausedPolicyUpgrade = read("scripts/upgrade-paused-canary-policy.sh");
+  assert.match(pausedPolicyUpgrade, /UpgradePausedCanaryPolicy/);
+  assert.match(pausedPolicyUpgrade, /statePreserved:true/);
+  assert.match(
+    pausedPolicyUpgrade,
+    /testnet-paused-canary-policy-upgrade\.json/,
+  );
 });
 
 test("mainnet services stay disabled until explicit activation", () => {

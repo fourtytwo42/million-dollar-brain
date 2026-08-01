@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "gitSha": "REPLACE_WITH_EXACT_RELEASE_SHA",
+  "signed": false,
+  "gates": {
+    "independentAuditPassed": false,
+    "legalApprovalPassed": false,
+    "criticalHighDependenciesCleared": false,
+    "monitoringAndAlertsVerified": false,
+    "backupsVerified": false,
+    "rolesAndSafeReviewed": false,
+    "minimumGasFundingApproved": false,
+    "emergencyProceduresRehearsed": false,
+    "explicitActivationAuthorized": false
+  }
+}

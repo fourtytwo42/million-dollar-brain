@@ -4,21 +4,48 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Graduate the accepted creator-controlled risk-limit V7 release
-  toward a non-broadcast mainnet candidate. Mainnet work remains rehearsal and
-  qualification only.
-- Last meaningful change: Exact pushed release
-  `d5cb38e104e6d87713bd68537391fb631e49c3ac` completed a fresh two-hour
-  Robinhood Testnet acceptance with seven passing checkpoints, 21 three-actor
-  scenarios, and final public responsive Browser UAT.
-- Next step: Seal and push the acceptance evidence, run the unfiltered
-  non-broadcast mainnet-shadow and fork/candidate checks, then allow the new
-  48-hour asset qualification clocks and two-session requirements to mature.
-- Blockers: The mainnet 48-hour qualification window, two market sessions,
-  paid RPC failover input, and explicit activation approval remain outstanding.
-  No mainnet broadcast is authorized.
+- Current task: Implement paused-mainnet-canary graduation without weakening
+  the 48-hour asset activation requirement. Mainnet work remains non-broadcast.
+- Last meaningful change: Contract, release-gate, immutable-evidence, and
+  paused-fork tooling is verified locally. USDG activates with zero fabricated
+  qualification hours; risk assets remain inactive and retain the full clock.
+- Next step: Freeze and push the source SHA, record exact build evidence, run
+  the pinned V5 fork rehearsal, and promote that unchanged SHA to a fresh
+  two-hour testnet acceptance.
+- Blockers: The owner-only Alchemy Robinhood Mainnet endpoint is still required
+  for permanent RPC failover evidence. Qualification, audit, legal, monitoring,
+  gas, and explicit authorization block activation but not a no-funds paused
+  canary. No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Paused canary and activation gates separated
+
+- Context: The first mainnet deployment may proceed only as a LAN-only,
+  no-funds paused canary while asset qualification continues normally.
+- Decision: Treat deployment and activation as independent signed evidence
+  gates. Preserve actual qualification progress, activate only USDG, and allow
+  an asset-approval notice to overlap qualification while blocking execution
+  until both clocks and current DEX evidence pass.
+- Files: `AssetRegistry.sol`, `CreatorRiskController.sol`,
+  `DeployMainnet.s.sol`, `build-mainnet-candidate.mjs`, and mainnet fork,
+  deploy, canary, activation, and immutable evidence scripts.
+- Result: Engineering verification is complete and remains non-broadcast. The
+  candidate signature is cryptographically verified and stale shadow evidence
+  cannot satisfy paused deployment readiness.
+- Commands/tests: 11 creator-risk tests, 16 readiness/graduation tests, 72
+  non-invariant Foundry regressions, Solidity build and size checks, network,
+  capacity, DecisionContext, asset-universe, wallet tests, and the Next.js
+  production build pass. Live devnet proxy upgrades preserved state; Browser
+  UAT passed at 1440x900, 768x1024, and 390x844 with visible 60,000 USDG
+  capacity, no overflow, and no application console errors. Two exact
+  stateful runs each passed all six invariants at 256 runs and 128,000 calls per
+  invariant. Storage layouts were emitted for AssetRegistry, BasketVault, and
+  CreatorRiskController. Production `npm audit --omit=dev` reports zero
+  vulnerabilities. Release-owned files pass focused formatting.
+- Follow-up: Push the final source SHA, run the exact fork rehearsal, then
+  perform the clean testnet upgrade and new two-hour acceptance without
+  committing runtime evidence.
 
 ### 2026-07-31 - Unfiltered mainnet shadow universe gate repaired
 

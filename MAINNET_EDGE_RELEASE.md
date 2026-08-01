@@ -213,15 +213,25 @@ requires at least 90 assets, and fails if any expected deployment is omitted.
 
 Fifteen assets currently pass one observation's identity, DEX route,
 TWAP/TWAL, and capacity checks. None has completed the required 48 continuous
-hours or two regular market sessions, so no launch witness or included launch
-set exists and `readyToBroadcast` remains false. Newly discovered assets begin
+hours or two regular market sessions, so no activation launch witness exists.
+The worker may still select up to nine preliminary assets for a no-funds paused
+canary, but they remain registered, unapproved, and inactive. Newly discovered assets begin
 their own qualification clock at zero; unchanged identity, route, and evidence
 rules may retain existing hours.
 
-The paused fork rehearsal is also incomplete. The owner-readable Alchemy
+The V5 paused fork rehearsal and the final exact-commit acceptance remain
+release gates. The owner-readable Alchemy
 secondary has not been supplied, so the loopback mainnet RPC failover gateway
 cannot yet be enabled; shadow qualification uses the verified LAN primary
-directly. These are release blockers, not reasons to relax readiness checks.
+directly.
+
+`pausedDeploymentReady` covers only the no-funds LAN canary: exact pushed SHA,
+matching signed testnet acceptance, pinned fork rehearsal, RPC failover,
+artifact hashes, signer, and closed value controls. `activationReady` separately
+requires full qualification, a valid launch witness, audit and legal approval,
+dependency clearance, monitoring, backups, role review, gas approval, canary
+verification, and explicit activation authorization. Neither artifact ever
+sets `broadcastPermitted` to true.
 
 ## Graduation and canary controls
 
@@ -232,7 +242,9 @@ acceptance must reference that exact SHA. A contract, wallet, valuation,
 execution, or accounting change requires a fresh two-hour testnet acceptance.
 
 Mainnet deploys with basket buys, basket sells, AI rebalancing, and brain
-purchases disabled. `paused-canary`, `user-actions`, `automation`, and
+purchases disabled. Only USDG is active and creator-approved; preliminary risk
+assets retain their actual qualification progress and stay inactive.
+`paused-canary`, `user-actions`, `automation`, and
 `emergency` are explicit on-chain stages. Claims remain independent. The apex
 domain stays on Coming Soon until a recorded activation approval routes it to
 the verified port-3003 canary.

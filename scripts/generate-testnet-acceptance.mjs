@@ -1,15 +1,12 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "..");
 const stateDir =
   process.env.MDB_TESTNET_ACCEPTANCE_SOURCE ??
   resolve(repoRoot, "var/testnet-v3-endurance");
-const output =
-  process.env.MDB_TESTNET_ACCEPTANCE_OUTPUT ??
-  resolve(repoRoot, "var/testnet-readiness/v3-2h-acceptance.json");
 const state = JSON.parse(readFileSync(resolve(stateDir, "state.json"), "utf8"));
 const gitSha =
   process.env.MDB_ACCEPTANCE_GIT_SHA ??
@@ -17,10 +14,9 @@ const gitSha =
     cwd: repoRoot,
     encoding: "utf8",
   }).trim();
-const acceptedReleaseShas = new Set([
-  state.gitSha,
-  ...(state.repairCommits ?? []),
-]);
+const output =
+  process.env.MDB_TESTNET_ACCEPTANCE_OUTPUT ??
+  resolve(repoRoot, `var/releases/${gitSha}/testnet-acceptance.json`);
 const checkpoints = readFileSync(resolve(stateDir, "checkpoints.jsonl"), "utf8")
   .trim()
   .split("\n")
@@ -28,7 +24,7 @@ const checkpoints = readFileSync(resolve(stateDir, "checkpoints.jsonl"), "utf8")
   .map((line) => JSON.parse(line));
 const passing = checkpoints.filter(
   (row) =>
-    acceptedReleaseShas.has(row.gitSha) &&
+    row.gitSha === gitSha &&
     row.actions?.ok === true &&
     Array.isArray(row.browserErrors) &&
     row.browserErrors.length === 0 &&
@@ -76,7 +72,8 @@ const result = {
 };
 if (
   state.status !== "completed" ||
-  !acceptedReleaseShas.has(gitSha) ||
+  state.gitSha !== gitSha ||
+  (state.repairCommits ?? []).length > 0 ||
   durationHours < 2 ||
   passing.length < result.requiredCheckpoints ||
   !result.atomicBuys ||
@@ -91,6 +88,30 @@ if (
 result.sourceHash = createHash("sha256")
   .update(JSON.stringify(result))
   .digest("hex");
+const signingKeystore =
+  process.env.MDB_RELEASE_SIGNER_KEYSTORE ??
+  "/etc/mdb/keys/mainnet-operator.json";
+const signingPassword =
+  process.env.MDB_RELEASE_SIGNER_PASSWORD_FILE ??
+  "/etc/mdb/keys/mainnet-operator.password";
+result.signature = null;
+result.signed = false;
+if (existsSync(signingKeystore) && existsSync(signingPassword)) {
+  result.signature = execFileSync(
+    "cast",
+    [
+      "wallet",
+      "sign",
+      "--keystore",
+      signingKeystore,
+      "--password-file",
+      signingPassword,
+      `0x${result.sourceHash}`,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  ).trim();
+  result.signed = true;
+}
 mkdirSync(dirname(output), { recursive: true });
 writeFileSync(output, `${JSON.stringify(result, null, 2)}\n`, { mode: 0o640 });
 console.log(output);

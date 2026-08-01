@@ -495,6 +495,25 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         return _eligibleV3(_records[token], _qualificationsV3[token]);
     }
 
+    /// @notice True when the executable identity is registered and its current DEX evidence is
+    /// valid, even if the 48-hour or market-session qualification window is still maturing.
+    /// @dev This view is intentionally insufficient for activation. It exists so a risk increase
+    /// notice can run in parallel with qualification; execution must still use isEligibleV3.
+    function hasCurrentDexEvidenceV3(address token) external view returns (bool) {
+        return _dexEvidenceValidV3(_records[token], _qualificationsV3[token]);
+    }
+
+    function hasCanonicalIdentity(address token) external view returns (bool) {
+        AssetRecord storage record = _records[token];
+        if (!record.registered) return false;
+        if (record.kind == AssetKind.STOCK || record.kind == AssetKind.ETF) {
+            return
+                record.robinhoodUid != bytes32(0)
+                    && tokenByRobinhoodUid[record.robinhoodUid] == token;
+        }
+        return true;
+    }
+
     function _eligibleCurrent(AssetRecord memory record, address token)
         private
         view
@@ -525,12 +544,23 @@ contract AssetRegistry is Initializable, UUPSUpgradeable, AccessControlUpgradeab
         view
         returns (bool)
     {
-        if (!record.registered || qualification.validUntil <= block.timestamp) return false;
+        if (!_dexEvidenceValidV3(record, qualification)) return false;
+        // The canonical reserve may be made available for accounting in a paused deployment.
+        // Risk assets still require the complete qualification window before activation.
+        if (record.kind == AssetKind.RESERVE) return true;
         if (qualification.consecutiveHours < MINIMUM_QUALIFICATION_HOURS) return false;
         if (
             (record.kind == AssetKind.STOCK || record.kind == AssetKind.ETF)
                 && qualification.regularMarketSessions < MINIMUM_REGULAR_MARKET_SESSIONS
         ) return false;
+        return true;
+    }
+
+    function _dexEvidenceValidV3(
+        AssetRecord memory record,
+        AssetQualificationV3 memory qualification
+    ) private view returns (bool) {
+        if (!record.registered || qualification.validUntil <= block.timestamp) return false;
         if (
             !qualification.identityValid || !qualification.transferBehaviorValid
                 || !qualification.tokenStateClear

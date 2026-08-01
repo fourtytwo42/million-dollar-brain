@@ -12,7 +12,7 @@ const environment = process.argv[2] ?? "devnet";
 const manifests = {
   devnet: "packages/contracts/deployments/local-v3.json",
   testnet: "packages/contracts/deployments/testnet-v3.json",
-  mainnet: "packages/contracts/deployments/mainnet-v3.json",
+  mainnet: "packages/contracts/deployments/mainnet-v5.json",
 };
 if (!(environment in manifests))
   throw new Error("expected devnet|testnet|mainnet");

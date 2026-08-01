@@ -16,6 +16,8 @@ interface IRiskControlledVault {
 
 interface IRiskControlledRegistry {
     function isEligibleV3(address token) external view returns (bool);
+    function hasCurrentDexEvidenceV3(address token) external view returns (bool);
+    function hasCanonicalIdentity(address token) external view returns (bool);
     function isHighVolatility(address token) external view returns (bool);
     function maximumWeightBps(address token) external view returns (uint16);
     function capacityExposureUsdWad(address token) external view returns (uint128);
@@ -154,7 +156,11 @@ contract CreatorRiskController is Initializable, UUPSUpgradeable, AccessControlU
         onlyRole(RISK_ADMIN_ROLE)
     {
         require(approved && creatorCapUsdWad != 0, "invalid increase");
-        require(registry.isEligibleV3(token), "asset not qualified");
+        require(registry.hasCanonicalIdentity(token), "asset identity not registered");
+        require(registry.hasCurrentDexEvidenceV3(token), "asset DEX evidence invalid");
+        require(
+            creatorCapUsdWad <= registry.capacityExposureUsdWad(token), "cap above DEX capacity"
+        );
         (IRiskControlledRegistry.AssetRiskPolicyV1 memory current,) = registry.riskPolicy(token);
         require(!current.approved || creatorCapUsdWad > current.creatorCapUsdWad, "not an increase");
         uint64 executableAt = uint64(block.timestamp + riskIncreaseDelay);

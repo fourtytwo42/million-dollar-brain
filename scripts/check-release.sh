@@ -11,7 +11,7 @@ export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-lin
 cd "$repo_root"
 [[ -z "$(git status --porcelain)" ]]
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse '@{u}')" ]]
-(cd packages/contracts && forge fmt --check)
+./scripts/check-release-format.sh
 npm run test:contracts
 npm run test:brain-controls
 npm run test:compiled-brain
@@ -24,8 +24,8 @@ npm run test:market-data
 npm run test:network
 npm run test:wallet
 npm run test:graduation
-npm run format:check
 npm --workspace apps/web run build
+node scripts/record-release-build.mjs
 case "$environment" in
   devnet)
     MDB_UAT_SCREENSHOT_DIR="$repo_root/var/release-uat/$(git rev-parse HEAD)/devnet" npm run test:uat
@@ -33,20 +33,21 @@ case "$environment" in
     ;;
   testnet)
     node scripts/generate-testnet-acceptance.mjs
-    acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
+    acceptance="$repo_root/var/releases/$(git rev-parse HEAD)/testnet-acceptance.json"
     [[ "$(jq -r '.gitSha' "$acceptance")" == "$(git rev-parse HEAD)" ]]
     export MDB_RELEASE_ACCEPTANCE="$acceptance"
     ;;
   mainnet)
-    acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
+    acceptance="$repo_root/var/releases/$(git rev-parse HEAD)/testnet-acceptance.json"
     [[ "$(jq -r '.gitSha' "$acceptance")" == "$(git rev-parse HEAD)" ]]
     ./scripts/rehearse-mainnet.sh
     node scripts/build-mainnet-candidate.mjs
     candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v5.json"
+    node scripts/verify-mainnet-candidate.mjs "$candidate" >/dev/null
     jq -e '
       .chainId == 4663 and .broadcastPermitted == false and
       .activationState == "paused-canary" and .signed == true and
-      .readyToBroadcast == true
+      .pausedDeploymentReady == true and .readyToBroadcast == false
     ' "$candidate" >/dev/null
     export MDB_RELEASE_ACCEPTANCE="$acceptance"
     ;;

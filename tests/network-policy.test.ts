@@ -278,9 +278,13 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
     "scripts/generate-testnet-acceptance.mjs",
     "utf8",
   );
-  assert.match(acceptanceGenerator, /acceptedReleaseShas/);
+  assert.match(acceptanceGenerator, /state\.gitSha !== gitSha/);
   assert.match(acceptanceGenerator, /state\.repairDowntimeMs \?\? 0/);
-  assert.match(acceptanceGenerator, /acceptedReleaseShas\.has\(row\.gitSha\)/);
+  assert.match(acceptanceGenerator, /row\.gitSha === gitSha/);
+  assert.match(
+    acceptanceGenerator,
+    /state\.repairCommits \?\? \[\]\)\.length > 0/,
+  );
   assert.match(
     acceptanceGenerator,
     /autonomousCycles: passing\.some\(\(row\) => row\.latestCycleTxHash\)/,

@@ -150,7 +150,7 @@ source hash
   `milliondollarbrain_devnet`.
 - Testnet uses `testnet-v3.json`, `var/testnet-v3`, and
   `milliondollarbrain_testnet`.
-- Mainnet uses `mainnet-v3.json`, `var/mainnet`, and
+- Mainnet uses `mainnet-v5.json`, `var/mainnet`, and
   `milliondollarbrain_mainnet`.
 
 `scripts/check-release.sh devnet` creates the devnet candidate.

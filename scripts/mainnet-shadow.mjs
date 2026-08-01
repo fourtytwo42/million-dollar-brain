@@ -22,6 +22,7 @@ import {
   CAPACITY_PROBES_USD,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
+  summarizePausedDeploymentReadiness,
   summarizeMainnetReadiness,
 } from "./lib/mainnet-readiness.mjs";
 
@@ -694,6 +695,11 @@ const qualification = candidates.map((asset) => {
     tradingAvailable,
     tokenStateClear,
     routeMature,
+    routeMaturityScoreBps: routeMature && dexSafety === true ? 10_000 : 0,
+    liquidityStabilityScoreBps: Math.min(
+      10_000,
+      Math.floor((window.qualificationHours * 10_000) / QUALIFICATION_HOURS),
+    ),
     dexSafetyValid: dexSafety === true,
     safeTwoSidedCapacityUsdWad: capacity.safeTwoSidedCapacityUsdWad,
     maximumExposureUsdWad: capacity.maximumExposureUsdWad,
@@ -724,6 +730,7 @@ const qualification = candidates.map((asset) => {
     evidenceHash: hash(evidence),
   };
 });
+const deploymentReadiness = summarizePausedDeploymentReadiness(qualification);
 const readiness = summarizeMainnetReadiness(qualification);
 const qualificationHours =
   qualification.length > 0
@@ -747,8 +754,9 @@ const result = {
   qualificationHours,
   qualificationRequiredHours: QUALIFICATION_HOURS,
   qualificationWindowPassed: readiness.coreQualificationPassed,
+  deploymentReadiness,
   readiness,
-  gates: {
+  deploymentGates: {
     noSigningKey: true,
     fullCanonicalStockUniverseInspected: fullCanonicalUniverseInspected({
       officialMainnetDeploymentCount: officialMainnetDeployments.length,
@@ -764,10 +772,22 @@ const result = {
       isAddress(UNISWAP_QUOTER),
     selfHostedRouting: true,
     noOffchainCapitalizationGate: true,
+    preliminaryUniverseReady: deploymentReadiness.pausedShadowReady,
+  },
+  activationGates: {
     qualificationWindowPassed: readiness.coreQualificationPassed,
   },
 };
-result.readyToBuildCandidate = Object.values(result.gates).every(Boolean);
+result.gates = {
+  ...result.deploymentGates,
+  ...result.activationGates,
+};
+result.readyToBuildCandidate = Object.values(result.deploymentGates).every(
+  Boolean,
+);
+result.readyToBuildActivationCandidate =
+  result.readyToBuildCandidate &&
+  Object.values(result.activationGates).every(Boolean);
 result.sourceHash = hash(result);
 mkdirSync(dirname(statePath), { recursive: true });
 writeFileSync(statePath, `${JSON.stringify(result, null, 2)}\n`, {
@@ -779,11 +799,15 @@ appendFileSync(
     at: result.completedAt,
     schemaVersion: 3,
     sourceHash: result.sourceHash,
+    deploymentGates: result.deploymentGates,
+    activationGates: result.activationGates,
     gates: result.gates,
-    passed: result.readyToBuildCandidate,
+    passed: result.readyToBuildActivationCandidate,
+    pausedDeploymentPassed: result.readyToBuildCandidate,
     qualificationHours,
     qualificationRequiredHours: QUALIFICATION_HOURS,
     qualificationWindowPassed: result.qualificationWindowPassed,
+    deploymentReadiness,
     readiness,
     canonicalAssetCount: result.canonicalAssetCount,
     assets: qualification.map((row) => ({

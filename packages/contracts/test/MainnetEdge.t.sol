@@ -177,23 +177,22 @@ contract MainnetEdgeTest is Test {
             })
         );
         registry.reinitializeV3();
-        AssetRegistry.AssetQualificationV3 memory qualification =
-            AssetRegistry.AssetQualificationV3({
-                evidenceHash: keccak256("dex-capacity"),
-                observedAt: uint64(block.timestamp),
-                validUntil: uint64(block.timestamp + 2 hours),
-                consecutiveHours: 48,
-                regularMarketSessions: 0,
-                safeTwoSidedCapacityUsdWad: uint128(25_000e18),
-                identityValid: true,
-                routeMature: true,
-                shortTwapValid: true,
-                longTwapValid: true,
-                timeWeightedLiquidityValid: true,
-                liquidityValid: true,
-                transferBehaviorValid: true,
-                tokenStateClear: true
-            });
+        AssetRegistry.AssetQualificationV3 memory qualification = AssetRegistry.AssetQualificationV3({
+            evidenceHash: keccak256("dex-capacity"),
+            observedAt: uint64(block.timestamp),
+            validUntil: uint64(block.timestamp + 2 hours),
+            consecutiveHours: 48,
+            regularMarketSessions: 0,
+            safeTwoSidedCapacityUsdWad: uint128(25_000e18),
+            identityValid: true,
+            routeMature: true,
+            shortTwapValid: true,
+            longTwapValid: true,
+            timeWeightedLiquidityValid: true,
+            liquidityValid: true,
+            transferBehaviorValid: true,
+            tokenStateClear: true
+        });
         registry.recordQualificationV3(address(tokenOut), qualification);
         registry.setQualificationV3Enabled(true);
         registry.setActive(address(tokenOut), true);
@@ -203,6 +202,59 @@ contract MainnetEdgeTest is Test {
         qualification.longTwapValid = false;
         registry.recordQualificationV3(address(tokenOut), qualification);
         assertFalse(registry.isActive(address(tokenOut)));
+    }
+
+    function testCanonicalReserveCanActivateWithoutFabricatedQualificationHours() public {
+        AssetRegistry registry = AssetRegistry(
+            address(
+                new ERC1967Proxy(
+                    address(new AssetRegistry()),
+                    abi.encodeCall(AssetRegistry.initialize, (address(this), block.chainid))
+                )
+            )
+        );
+        registry.registerAsset(
+            AssetRegistry.AssetRecord({
+                token: address(tokenIn),
+                robinhoodUid: bytes32(0),
+                kind: AssetRegistry.AssetKind.RESERVE,
+                riskClass: AssetRegistry.RiskClass.RESERVE,
+                valuationAdapter: address(0),
+                executionAdapter: address(0),
+                circulatingSupplyAdapter: address(0),
+                maximumWeightBps: 2_000,
+                registered: false,
+                active: false
+            })
+        );
+        registry.reinitializeV3();
+        registry.recordQualificationV3(
+            address(tokenIn),
+            AssetRegistry.AssetQualificationV3({
+                evidenceHash: keccak256("canonical-reserve"),
+                observedAt: uint64(block.timestamp),
+                validUntil: uint64(block.timestamp + 2 hours),
+                consecutiveHours: 0,
+                regularMarketSessions: 0,
+                safeTwoSidedCapacityUsdWad: 0,
+                identityValid: true,
+                routeMature: false,
+                shortTwapValid: false,
+                longTwapValid: false,
+                timeWeightedLiquidityValid: false,
+                liquidityValid: false,
+                transferBehaviorValid: true,
+                tokenStateClear: true
+            })
+        );
+        registry.setQualificationV3Enabled(true);
+        registry.setActive(address(tokenIn), true);
+
+        assertTrue(registry.isActive(address(tokenIn)));
+        assertTrue(registry.isEligibleV3(address(tokenIn)));
+        (AssetRegistry.AssetQualificationV3 memory qualification,) =
+            registry.qualificationV3(address(tokenIn));
+        assertEq(qualification.consecutiveHours, 0);
     }
 
     function testExecutionBlockWindowIsGovernanceBounded() public {

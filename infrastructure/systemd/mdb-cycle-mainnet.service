@@ -1,7 +1,7 @@
 [Unit]
 Description=42 Braincells constrained AI allocation cycle (mainnet)
 After=mdb-web-mainnet.service
-ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json
+ConditionPathExists=/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v5.json
 
 [Service]
 Type=oneshot

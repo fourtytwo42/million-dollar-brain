@@ -4,7 +4,8 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 stage="${1:-}"
 env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
-manifest="$repo_root/packages/contracts/deployments/mainnet-v3.json"
+manifest="$repo_root/packages/contracts/deployments/mainnet-v5.json"
+candidate="$repo_root/var/releases/$(git rev-parse -C "$repo_root" HEAD)/mainnet-candidate-v5.json"
 [[ "${MDB_MAINNET_ACTIVATION_APPROVED:-false}" == "true" ]] || {
   echo "Refusing activation change without MDB_MAINNET_ACTIVATION_APPROVED=true." >&2
   exit 1
@@ -28,6 +29,12 @@ case "$stage" in
     exit 2
     ;;
 esac
+if [[ "$stage" == "user-actions" || "$stage" == "automation" ]]; then
+  jq -e '.signed == true and .activationReady == true and .broadcastPermitted == false' "$candidate" >/dev/null || {
+    echo "Activation gates are incomplete; the paused canary must remain closed." >&2
+    exit 1
+  }
+fi
 if [[ "$stage" == "automation" && "${MDB_SERVER_SIGNING_ENABLED:-false}" != "true" ]]; then
   echo "Automation requires MDB_SERVER_SIGNING_ENABLED=true in the protected mainnet environment." >&2
   exit 1

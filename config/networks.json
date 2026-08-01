@@ -50,7 +50,7 @@
     "faucetEnabled": false,
     "faucetLanOnly": true,
     "mockAssets": false,
-    "deploymentFile": "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v3.json",
+    "deploymentFile": "/home/hendo420/projects/million-dollar-brain/packages/contracts/deployments/mainnet-v5.json",
     "stateDir": "/home/hendo420/projects/million-dollar-brain/var/mainnet",
     "databaseName": "milliondollarbrain_mainnet"
   }

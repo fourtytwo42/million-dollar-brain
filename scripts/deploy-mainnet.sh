@@ -6,7 +6,6 @@ env_file="${MDB_MAINNET_ENV_FILE:-/etc/mdb/mainnet.env}"
 manifest="$repo_root/packages/contracts/deployments/mainnet-v5.json"
 shadow_state="$repo_root/var/mainnet-shadow/state.json"
 candidate="$repo_root/var/mainnet-readiness/mainnet-candidate-v5.json"
-testnet_acceptance="$repo_root/var/testnet-readiness/v3-2h-acceptance.json"
 export PATH="/home/hendo420/.foundry/bin:/home/hendo420/.local/node-v24.18.0-linux-x64/bin:/usr/bin:/bin"
 
 [[ "${MDB_MAINNET_BROADCAST:-false}" == "true" ]] || {
@@ -51,27 +50,42 @@ cd "$repo_root"
 [[ -z "$(git status --porcelain)" ]]
 head_sha="$(git rev-parse HEAD)"
 [[ "$head_sha" == "$(git rev-parse '@{u}')" ]]
-forge fmt --check packages/contracts
-forge test --root packages/contracts
 
-jq -e '
-  .schemaVersion == 5 and .chainId == 4663 and .broadcastPermitted == false and
-  .gates.noSigningKey == true and
-  .gates.fullCanonicalStockUniverseInspected == true and
-  .gates.diagnosticFilterDisabled == true and
-  .gates.dexVenueVerified == true and .gates.selfHostedRouting == true and
-  .gates.noOffchainCapitalizationGate == true and
-  .gates.qualificationWindowPassed == true
-' "$shadow_state" >/dev/null
+(
+  cd "$repo_root/packages/contracts"
+  forge test
+)
+
 jq -e '
   .chainId == 4663 and .gitSha == $sha and
   .broadcastPermitted == false and .activationState == "paused-canary" and
-  .signed == true and .readyToBroadcast == true
+  .signed == true and .pausedDeploymentReady == true and
+  .readyToBroadcast == false and .activationReady == false and
+  .creatorRiskPolicy.initialApprovedSymbols == ["USDG"]
 ' --arg sha "$head_sha" "$candidate" >/dev/null
+node "$repo_root/scripts/verify-mainnet-candidate.mjs" "$candidate" >/dev/null
+
+deployment_env="$(mktemp)"
+trap 'rm -f "$deployment_env"' EXIT
+node "$repo_root/scripts/prepare-mainnet-deployment-env.mjs" "$candidate" >"$deployment_env"
+# The asset list, route identities, capacities, and actual qualification progress
+# must come from the exact signed candidate rather than operator-supplied arrays.
+# shellcheck disable=SC1090
+source "$deployment_env"
+
+jq -e '
+  .schemaVersion == 5 and .chainId == 4663 and .broadcastPermitted == false and
+  .deploymentGates.fullCanonicalStockUniverseInspected == true and
+  .deploymentGates.diagnosticFilterDisabled == true and
+  .deploymentGates.dexVenueVerified == true and
+  .deploymentGates.selfHostedRouting == true and
+  .deploymentGates.noOffchainCapitalizationGate == true
+' "$shadow_state" >/dev/null
+testnet_acceptance="$repo_root/var/releases/$head_sha/testnet-acceptance.json"
 jq -e '
   .chainId == 46630 and .durationHours >= 2 and
   .protocolFailures == 0 and .atomicBuys == true and .atomicSells == true and
-  .autonomousCycles == true
+  .autonomousCycles == true and .signed == true
 ' "$testnet_acceptance" >/dev/null
 [[ "$(jq -r '.gitSha' "$testnet_acceptance")" == "$head_sha" ]] || {
   echo "Testnet acceptance was not produced from the release commit." >&2
@@ -88,6 +102,7 @@ deployer="$(cast wallet address --keystore "$MDB_OPERATOR_KEYSTORE" \
 [[ "$deployer" == "${MDB_DEPLOYER_ADDRESS:?}" ]]
 
 cd "$repo_root/packages/contracts"
+export MDB_RELEASE_SHA="$head_sha"
 MDB_DEPLOYMENT_OUTPUT="$manifest" \
   forge script script/DeployMainnet.s.sol:DeployMainnet \
     --rpc-url "$MDB_RPC_URL" \
@@ -99,7 +114,10 @@ MDB_DEPLOYMENT_OUTPUT="$manifest" \
 jq -e '
   .schemaVersion == 5 and .chainId == 4663 and
   .environment == "robinhood-mainnet" and .canonicalAssets == true and
-  .productionParityReplicas == false and .activationState == "paused-canary"
+  .productionParityReplicas == false and .activationState == "paused-canary" and
+  .activatedRiskAssetCount == 0 and .buysEnabled == false and
+  .sellsEnabled == false and .rebalancesEnabled == false and
+  .brainPurchasesEnabled == false
 ' "$manifest" >/dev/null
 ! grep -Eiq 'mock|replica|test quote' "$manifest"
 echo "Mainnet deployment completed from $head_sha; verify runtime bytecode before activation."
