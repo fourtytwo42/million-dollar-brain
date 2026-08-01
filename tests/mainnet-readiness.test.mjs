@@ -4,10 +4,35 @@ import {
   CAPACITY_PROBES_USD,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
+  poolObservationFresh,
   selectPreliminaryAssets,
   summarizePausedDeploymentReadiness,
   summarizeMainnetReadiness,
 } from "../scripts/lib/mainnet-readiness.mjs";
+
+test("pool observation freshness matches the one-hour valuation bound", () => {
+  assert.equal(
+    poolObservationFresh({
+      blockTimestamp: 10_000n,
+      observationTimestamp: 6_400n,
+    }),
+    true,
+  );
+  assert.equal(
+    poolObservationFresh({
+      blockTimestamp: 10_001n,
+      observationTimestamp: 6_400n,
+    }),
+    false,
+  );
+  assert.equal(
+    poolObservationFresh({
+      blockTimestamp: 10_000n,
+      observationTimestamp: 10_001n,
+    }),
+    false,
+  );
+});
 
 const wad = (value) => (BigInt(value) * 10n ** 18n).toString();
 const qualified = (

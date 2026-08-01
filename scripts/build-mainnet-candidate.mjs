@@ -50,6 +50,9 @@ const state = JSON.parse(readFileSync(statePath, "utf8"));
 if (state.schemaVersion !== 5 || state.chainId !== 4663) {
   throw new Error("DEX-native mainnet shadow schema v5 is required");
 }
+if (state.qualificationRuleVersion !== 4) {
+  throw new Error("Qualification rule v4 evidence is required");
+}
 if (state.broadcastPermitted !== false) {
   throw new Error("Shadow evidence unexpectedly permits broadcast");
 }

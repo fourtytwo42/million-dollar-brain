@@ -19,6 +19,17 @@ export const CAPACITY_PROBES_USD = Object.freeze([
   1_000, 5_000, 10_000, 25_000, 100_000, 250_000,
 ]);
 
+export function poolObservationFresh({
+  blockTimestamp,
+  observationTimestamp,
+  maximumAgeSeconds = 3_600,
+}) {
+  const block = BigInt(blockTimestamp);
+  const observation = BigInt(observationTimestamp);
+  const maximumAge = BigInt(maximumAgeSeconds);
+  return observation <= block && block - observation <= maximumAge;
+}
+
 export function fullCanonicalUniverseInspected({
   officialMainnetDeploymentCount,
   inspectedStockAssetCount,

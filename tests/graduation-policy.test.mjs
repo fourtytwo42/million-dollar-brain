@@ -56,6 +56,7 @@ test("paused deployment and activation use independent fail-closed gates", () =>
   assert.match(candidateBuilder, /pausedDeploymentReady/);
   assert.match(candidateBuilder, /activationReady/);
   assert.match(candidateBuilder, /shadowEvidenceFresh/);
+  assert.match(candidateBuilder, /qualificationRuleVersion !== 4/);
   assert.match(candidateBuilder, /exactBuildEvidencePassed/);
   assert.match(read("scripts/check-release.sh"), /record-release-build\.mjs/);
   assert.match(read("scripts/check-release.sh"), /check-release-format\.sh/);

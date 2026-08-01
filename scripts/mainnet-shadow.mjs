@@ -22,6 +22,7 @@ import {
   CAPACITY_PROBES_USD,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
+  poolObservationFresh,
   summarizePausedDeploymentReadiness,
   summarizeMainnetReadiness,
 } from "./lib/mainnet-readiness.mjs";
@@ -51,6 +52,8 @@ const SHORT_TWAP_SECONDS = 1_800;
 const LONG_TWAP_SECONDS = 14_400;
 const MAXIMUM_SPOT_TO_SHORT_BPS = 300;
 const MAXIMUM_SHORT_TO_LONG_BPS = 500;
+const MAXIMUM_OBSERVATION_AGE_SECONDS = 3_600;
+const QUALIFICATION_RULE_VERSION = 4;
 const cryptoCatalogPath = resolve(
   repoRoot,
   "config/mainnet-crypto-candidates.json",
@@ -83,6 +86,7 @@ const poolAbi = parseAbi([
   "function token1() view returns (address)",
   "function liquidity() view returns (uint128)",
   "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,uint8 feeProtocol,bool unlocked)",
+  "function observations(uint256 index) view returns (uint32 blockTimestamp,int56 tickCumulative,uint160 secondsPerLiquidityCumulativeX128,bool initialized)",
   "function observe(uint32[] secondsAgos) view returns (int56[] tickCumulatives,uint160[] secondsPerLiquidityCumulativeX128s)",
 ]);
 const quoterAbi = parseAbi([
@@ -180,7 +184,7 @@ async function inspectTokens(assets) {
   return rows;
 }
 
-async function dexPool(tokenA, tokenB, fee, blockNumber) {
+async function dexPool(tokenA, tokenB, fee, blockNumber, blockTimestamp) {
   const address = await client.readContract({
     address: UNISWAP_FACTORY,
     abi: factoryAbi,
@@ -189,7 +193,7 @@ async function dexPool(tokenA, tokenB, fee, blockNumber) {
     blockNumber,
   });
   if (/^0x0{40}$/i.test(address)) return null;
-  const [token0, token1, liquidity, slot0, observation] = await Promise.all([
+  const [token0, token1, liquidity, slot0] = await Promise.all([
     client.readContract({
       address,
       abi: poolAbi,
@@ -214,6 +218,8 @@ async function dexPool(tokenA, tokenB, fee, blockNumber) {
       functionName: "slot0",
       blockNumber,
     }),
+  ]);
+  const [observation, latestObservation] = await Promise.all([
     client
       .readContract({
         address,
@@ -223,8 +229,27 @@ async function dexPool(tokenA, tokenB, fee, blockNumber) {
         blockNumber,
       })
       .catch(() => null),
+    client
+      .readContract({
+        address,
+        abi: poolAbi,
+        functionName: "observations",
+        args: [BigInt(slot0[2])],
+        blockNumber,
+      })
+      .catch(() => null),
   ]);
-  if (slot0[3] < 2 || !observation) return null;
+  if (slot0[3] < 2 || !observation || !latestObservation?.[3]) return null;
+  const observationFresh = poolObservationFresh({
+    blockTimestamp,
+    observationTimestamp: latestObservation[0],
+    maximumAgeSeconds: MAXIMUM_OBSERVATION_AGE_SECONDS,
+  });
+  const latestObservationTimestamp = BigInt(latestObservation[0]);
+  const observationAgeSeconds =
+    latestObservationTimestamp <= BigInt(blockTimestamp)
+      ? Number(BigInt(blockTimestamp) - latestObservationTimestamp)
+      : null;
   const meanTick = (delta, window) => {
     let tick = delta / BigInt(window);
     if (delta < 0n && delta % BigInt(window) !== 0n) tick -= 1n;
@@ -257,22 +282,28 @@ async function dexPool(tokenA, tokenB, fee, blockNumber) {
     fee,
     liquidity,
     observationCardinality: slot0[3],
+    latestObservationTimestamp: Number(latestObservation[0]),
+    observationAgeSeconds,
+    observationFresh,
     meanTick: shortMeanTick,
     longMeanTick,
     harmonicMeanLiquidity,
     spotToShortDeviationBps,
     shortToLongDeviationBps,
     safetyValid:
+      observationFresh &&
       harmonicMeanLiquidity > 0n &&
       spotToShortDeviationBps <= MAXIMUM_SPOT_TO_SHORT_BPS &&
       shortToLongDeviationBps <= MAXIMUM_SHORT_TO_LONG_BPS,
   };
 }
 
-async function dexRoutes(tokenIn, tokenOut, blockNumber) {
+async function dexRoutes(tokenIn, tokenOut, blockNumber, blockTimestamp) {
   const direct = (
     await Promise.all(
-      APPROVED_FEES.map((fee) => dexPool(tokenIn, tokenOut, fee, blockNumber)),
+      APPROVED_FEES.map((fee) =>
+        dexPool(tokenIn, tokenOut, fee, blockNumber, blockTimestamp),
+      ),
     )
   )
     .filter(Boolean)
@@ -285,10 +316,14 @@ async function dexRoutes(tokenIn, tokenOut, blockNumber) {
   }
   const [first, second] = await Promise.all([
     Promise.all(
-      APPROVED_FEES.map((fee) => dexPool(tokenIn, WETH, fee, blockNumber)),
+      APPROVED_FEES.map((fee) =>
+        dexPool(tokenIn, WETH, fee, blockNumber, blockTimestamp),
+      ),
     ),
     Promise.all(
-      APPROVED_FEES.map((fee) => dexPool(WETH, tokenOut, fee, blockNumber)),
+      APPROVED_FEES.map((fee) =>
+        dexPool(WETH, tokenOut, fee, blockNumber, blockTimestamp),
+      ),
     ),
   ]);
   const routes = [...direct];
@@ -358,8 +393,19 @@ async function quoteRoute(route, amountIn, blockNumber) {
   };
 }
 
-async function bestDexQuote(tokenIn, tokenOut, amountIn, blockNumber) {
-  const routes = await dexRoutes(tokenIn, tokenOut, blockNumber);
+async function bestDexQuote(
+  tokenIn,
+  tokenOut,
+  amountIn,
+  blockNumber,
+  blockTimestamp,
+) {
+  const routes = await dexRoutes(
+    tokenIn,
+    tokenOut,
+    blockNumber,
+    blockTimestamp,
+  );
   const settled = await Promise.allSettled(
     routes.map((route) => quoteRoute(route, amountIn, blockNumber)),
   );
@@ -407,11 +453,20 @@ async function quotePair(
   notionalUsd,
   reserveDecimals,
   pinnedBlock,
+  pinnedTimestamp,
 ) {
   const blockNumber = pinnedBlock ?? (await client.getBlockNumber());
+  const blockTimestamp =
+    pinnedTimestamp ?? (await client.getBlock({ blockNumber })).timestamp;
   try {
     const unit = 10n ** BigInt(asset.decimals ?? 18);
-    const unitMark = await bestDexQuote(asset.address, USDG, unit, blockNumber);
+    const unitMark = await bestDexQuote(
+      asset.address,
+      USDG,
+      unit,
+      blockNumber,
+      blockTimestamp,
+    );
     const notionalRaw = BigInt(notionalUsd) * 10n ** BigInt(reserveDecimals);
     const sellAmount =
       direction === "buy"
@@ -422,6 +477,7 @@ async function quotePair(
       direction === "buy" ? asset.address : USDG,
       sellAmount,
       blockNumber,
+      blockTimestamp,
     );
     const evidence = {
       direction,
@@ -439,6 +495,9 @@ async function quotePair(
         fee: pool.fee,
         liquidity: pool.liquidity.toString(),
         observationCardinality: pool.observationCardinality,
+        latestObservationTimestamp: pool.latestObservationTimestamp,
+        observationAgeSeconds: pool.observationAgeSeconds,
+        observationFresh: pool.observationFresh,
         harmonicMeanLiquidity: pool.harmonicMeanLiquidity.toString(),
         spotToShortDeviationBps: pool.spotToShortDeviationBps,
         shortToLongDeviationBps: pool.shortToLongDeviationBps,
@@ -589,12 +648,27 @@ const reserveDecimals =
 
 async function inspectCapacity(asset) {
   const blockNumber = await client.getBlockNumber();
+  const block = await client.getBlock({ blockNumber });
   const probes = [];
   let safeTwoSidedCapacityUsd = 0;
   for (const notionalUsd of CAPACITY_PROBES_USD) {
     const [buy, sell] = await Promise.all([
-      quotePair(asset, "buy", notionalUsd, reserveDecimals, blockNumber),
-      quotePair(asset, "sell", notionalUsd, reserveDecimals, blockNumber),
+      quotePair(
+        asset,
+        "buy",
+        notionalUsd,
+        reserveDecimals,
+        blockNumber,
+        block.timestamp,
+      ),
+      quotePair(
+        asset,
+        "sell",
+        notionalUsd,
+        reserveDecimals,
+        blockNumber,
+        block.timestamp,
+      ),
     ]);
     const passed =
       buy.valid === true &&
@@ -672,7 +746,11 @@ const qualification = candidates.map((asset) => {
         at: candidate.at ?? row.at,
       })),
     )
-    .filter((row) => row.assetId === assetId);
+    .filter(
+      (row) =>
+        row.assetId === assetId &&
+        row.qualificationRuleVersion === QUALIFICATION_RULE_VERSION,
+    );
   const window = continuousPassingWindow([
     ...priorAssetRows,
     { at: new Date().toISOString(), passed },
@@ -686,6 +764,7 @@ const qualification = candidates.map((asset) => {
     ? "high_volatility"
     : "standard";
   const evidence = {
+    qualificationRuleVersion: QUALIFICATION_RULE_VERSION,
     assetId,
     symbol: asset.symbol,
     kind: asset.kind,
@@ -738,6 +817,7 @@ const qualificationHours =
     : 0;
 const result = {
   schemaVersion: 5,
+  qualificationRuleVersion: QUALIFICATION_RULE_VERSION,
   mode: "robinhood-mainnet-dex-shadow",
   startedAt,
   completedAt: new Date().toISOString(),
@@ -798,6 +878,7 @@ appendFileSync(
   `${JSON.stringify({
     at: result.completedAt,
     schemaVersion: 3,
+    qualificationRuleVersion: QUALIFICATION_RULE_VERSION,
     sourceHash: result.sourceHash,
     deploymentGates: result.deploymentGates,
     activationGates: result.activationGates,
@@ -813,6 +894,7 @@ appendFileSync(
     assets: qualification.map((row) => ({
       assetId: row.assetId,
       symbol: row.symbol,
+      qualificationRuleVersion: row.qualificationRuleVersion,
       passed: row.passed,
       qualificationHours: row.qualificationHours,
       regularMarketSessions: row.regularMarketSessions,

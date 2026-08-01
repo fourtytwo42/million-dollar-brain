@@ -6,18 +6,46 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement paused-mainnet-canary graduation without weakening
   the 48-hour asset activation requirement. Mainnet work remains non-broadcast.
-- Last meaningful change: Contract, release-gate, immutable-evidence, and
-  paused-fork tooling is verified locally. USDG activates with zero fabricated
-  qualification hours; risk assets remain inactive and retain the full clock.
-- Next step: Freeze and push the source SHA, record exact build evidence, run
-  the pinned V5 fork rehearsal, and promote that unchanged SHA to a fresh
-  two-hour testnet acceptance.
+- Last meaningful change: The first pinned V5 fork rehearsal exposed that the
+  shadow accepted pools whose newest observation could exceed the valuation
+  adapter's one-hour limit. Qualification rule v4 now checks that same bound,
+  rejects stale observations, and prevents older-rule evidence from building a
+  candidate.
+- Next step: Commit and push the rule-v4 repair, record exact build evidence,
+  let the hourly production shadow publish v4 evidence, rerun the pinned V5
+  fork rehearsal, and promote that unchanged SHA to a fresh two-hour testnet
+  acceptance.
 - Blockers: The owner-only Alchemy Robinhood Mainnet endpoint is still required
   for permanent RPC failover evidence. Qualification, audit, legal, monitoring,
   gas, and explicit authorization block activation but not a no-funds paused
   canary. No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Mainnet pool observation freshness aligned
+
+- Context: The first disposable pinned-mainnet fork deployed every V5 proxy
+  but correctly rejected GME in `DexTwapValuationAdapter.quoteStatus()` because
+  its newest Uniswap observation was older than the contract's 3,600-second
+  maximum. The shadow worker had checked 30-minute and four-hour observations,
+  liquidity, and TWAP divergence without checking the newest observation age.
+- Decision: Qualification rule v4 reads the pool's current observation slot at
+  the pinned block, enforces the same one-hour maximum as the valuation
+  adapter, records observation timestamp/age/freshness, and refuses to build a
+  candidate from older-rule evidence. Rule changes reset qualification clocks;
+  no hours or market sessions are fabricated or preserved across this change.
+- Files: `scripts/mainnet-shadow.mjs`,
+  `scripts/lib/mainnet-readiness.mjs`,
+  `scripts/build-mainnet-candidate.mjs`, and readiness/graduation tests.
+- Commands/tests: All 24 Node tests pass. A read-only isolated v4 scan inspected
+  all 98 canonical configured assets, found 13 with currently usable two-sided
+  DEX evidence, selected nine preliminary assets, and reported paused-shadow
+  readiness true while activation remained false. Every v4 clock began at one
+  successful observation.
+- Result: The shadow and deployed adapter now fail closed on the same stale-pool
+  condition. No mainnet transaction was signed or broadcast.
+- Follow-up: Push the repair, wait for the natural hourly v4 shadow record, and
+  rerun the complete fork rehearsal against that evidence.
 
 ### 2026-07-31 - Paused canary and activation gates separated
 
