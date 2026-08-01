@@ -109,3 +109,20 @@ test("risk migration seeds approval only from live qualification", () => {
     /\[\.assets\[\] \| select\(\.active \/\/ true\) \| \.address\]/,
   );
 });
+
+test("signed release artifacts cover every upgradeable implementation", () => {
+  const artifacts = read("scripts/lib/release-artifacts.mjs");
+  for (const contract of [
+    "AssetRegistry",
+    "BasketVault",
+    "BrainControlRegistry",
+    "BrainMarketplace",
+    "CreatorRiskController",
+    "CreatorVault",
+    "DexTwapValuationAdapter",
+    "RewardDistributor",
+    "UniswapExecutionAdapter",
+  ]) {
+    assert.match(artifacts, new RegExp(`"${contract}"`));
+  }
+});

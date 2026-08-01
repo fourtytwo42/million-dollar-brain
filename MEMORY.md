@@ -4,20 +4,39 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Freeze the explicit mainnet LAN-only RPC rule, then restart the
-  paused-canary graduation pipeline from one exact source SHA. Mainnet remains
-  non-broadcast.
-- Last meaningful change: Both public-network gateways now use guarded
-  `primary_only` mode. Alchemy is comparison-only; LAN failure reports degraded
-  and fails closed instead of switching upstreams.
-- Next step: Restore testnet DEX keeper gas and fresh TWAP marks, then rebuild
-  exact release evidence and run a new two-hour exact-SHA acceptance.
-- Blockers: The testnet DEX keeper is below its gas floor and cannot refresh
-  expired TWAP marks, so `/api/status` currently fails closed. Qualification,
-  audit, legal, monitoring, gas, and explicit authorization block activation but
-  not a no-funds paused canary. No mainnet broadcast is authorized.
+- Current task: Complete the exact-commit paused mainnet canary graduation
+  pipeline without signing or broadcasting a mainnet transaction.
+- Last meaningful change: Exact release review found that signed build evidence
+  omitted BrainControlRegistry and CreatorRiskController runtime hashes. The
+  artifact generator and graduation regression now cover every upgradeable
+  implementation, invalidating the provisional `e7e36b6` release SHA.
+- Next step: Commit and push the evidence fix, rerun exact build and fork gates,
+  then promote the new SHA unchanged to testnet and start a fresh two-hour
+  acceptance after a natural AI-sourced DecisionContext V7 cycle.
+- Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
+  authorization block activation but not a no-funds paused canary. No mainnet
+  broadcast is authorized.
 
 ## Current State
+
+### 2026-08-01 - Exact release bytecode evidence completed
+
+- Context: The provisional `e7e36b6` signed build recorded seven implementation
+  hashes but omitted the newer BrainControlRegistry and CreatorRiskController.
+- Decision: Every upgradeable implementation used by the release must appear in
+  the shared bytecode-hash map consumed by build, promotion, and mainnet-candidate
+  verification. A regression locks the complete nine-contract set.
+- Files: `scripts/lib/release-artifacts.mjs` and
+  `tests/graduation-policy.test.mjs`.
+- Commands/tests: Graduation policy 19/19, focused Prettier, and `git diff --check`.
+  Before the defect was found, the provisional SHA passed 79 Foundry tests,
+  including six invariants at 256 runs and 128,000 calls each, all application
+  suites, production build, zero-vulnerability production audit, and a signed
+  non-broadcast mainnet-fork rehearsal.
+- Result: The provisional SHA is intentionally superseded before testnet
+  acceptance. No testnet contract upgrade or mainnet transaction occurred.
+- Follow-up: Freeze the pushed repair SHA and rerun build/fork evidence before
+  starting exact-SHA testnet acceptance.
 
 ### 2026-07-31 - Public-network RPCs are LAN-only and fail-closed
 

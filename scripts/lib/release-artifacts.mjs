@@ -30,7 +30,9 @@ export function contractBytecodeHashes(repoRoot) {
   const contracts = [
     "BasketVault",
     "BrainMarketplace",
+    "BrainControlRegistry",
     "AssetRegistry",
+    "CreatorRiskController",
     "DexTwapValuationAdapter",
     "UniswapExecutionAdapter",
     "RewardDistributor",
