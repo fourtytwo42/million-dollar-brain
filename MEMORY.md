@@ -10,13 +10,12 @@ Durable project context lives here. Update this file whenever information should
 - Last meaningful change: Both public-network gateways now use guarded
   `primary_only` mode. Alchemy is comparison-only; LAN failure reports degraded
   and fails closed instead of switching upstreams.
-- Next step: Install the staged comparison credentials into root-owned isolated
-  RPC environment files, verify both live gateways remain `primary_only`, then
-  rebuild exact evidence and run a new two-hour exact-SHA acceptance.
-- Blockers: The VM automation account cannot write `/etc/mdb` or restart systemd
-  units without an interactive sudo authorization. Qualification, audit, legal,
-  monitoring, gas, and explicit authorization block activation but not a
-  no-funds paused canary. No mainnet broadcast is authorized.
+- Next step: Restore testnet DEX keeper gas and fresh TWAP marks, then rebuild
+  exact release evidence and run a new two-hour exact-SHA acceptance.
+- Blockers: The testnet DEX keeper is below its gas floor and cannot refresh
+  expired TWAP marks, so `/api/status` currently fails closed. Qualification,
+  audit, legal, monitoring, gas, and explicit authorization block activation but
+  not a no-funds paused canary. No mainnet broadcast is authorized.
 
 ## Current State
 
@@ -43,6 +42,12 @@ Durable project context lives here. Update this file whenever information should
   credentials: each reported the expected chain and was one block behind its LAN
   peer during the check. Owner-only staging files are mode `0600`; no credential
   was written to Git or repository memory.
+- Result: Interactive sudo installed separate root-owned mode-`0640`
+  `/etc/mdb/mainnet-rpc.env` and `/etc/mdb/testnet-rpc.env` files. Both systemd
+  gateways are enabled, active, healthy, pinned to `primary`, and report
+  `secondaryUsagePermitted:false`. The testnet app environment contains no
+  Alchemy or backup RPC/WebSocket key. Temporary credential staging files were
+  securely removed after installation.
 - Follow-up: Install the supplied endpoint credentials into separate root-owned
   RPC environment files without copying them into app runtime environments.
   Rebuild exact evidence and run a new exact-source testnet acceptance before
