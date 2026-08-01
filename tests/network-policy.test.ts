@@ -166,7 +166,7 @@ test("testnet collector retries transient public-RPC failures", () => {
   assert.match(unit, /StartLimitBurst=4/);
 });
 
-test("testnet failover compares LAN and remote heads without exposing LAN to browsers", () => {
+test("testnet compares LAN and Alchemy heads without routing app traffic", () => {
   const proxy = readFileSync("scripts/rpc-failover-proxy.mjs", "utf8");
   const unit = readFileSync(
     "infrastructure/systemd/mdb-rpc-failover-testnet.service",
@@ -183,13 +183,24 @@ test("testnet failover compares LAN and remote heads without exposing LAN to bro
   assert.match(proxy, /eth_syncing/);
   assert.match(proxy, /primary behind by/);
   assert.match(proxy, /isMutatingRpcBody/);
-  assert.match(unit, /EnvironmentFile=\/etc\/mdb\/testnet\.env/);
-  assert.match(configurator, /MDB_RPC_SECONDARY_URL_OVERRIDE/);
+  assert.match(unit, /EnvironmentFile=\/etc\/mdb\/testnet-rpc\.env/);
+  assert.match(configurator, /MDB_ALCHEMY_TESTNET_RPC_URL/);
+  assert.match(configurator, /MDB_RPC_ROUTING_MODE=primary_only/);
+  assert.match(configurator, /MDB_RPC_SECONDARY_ROUTING_AUTHORIZED=false/);
   assert.match(configurator, /MDB_RPC_CHECK_INTERVAL_MS=15000/);
-  assert.match(configurator, /pre-rpc-failover/);
-  assert.match(runtimeHealth, /rpcFailover\.status/);
+  assert.match(configurator, /pre-rpc-policy/);
+  assert.match(runtimeHealth, /rpcHealth\.status/);
+  assert.match(runtimeHealth, /secondaryUsagePermitted/);
   assert.match(endurance, /mdb-rpc-failover-testnet\.service/);
   assert.match(manifest, /http:\/\/127\.0\.0\.1:18548/);
+  assert.doesNotMatch(
+    readFileSync("infrastructure/env/testnet.env.example", "utf8"),
+    /MDB_RPC_SECONDARY_URL|MDB_BACKUP_RPC_URL/,
+  );
+  assert.match(
+    readFileSync("infrastructure/env/testnet-rpc.env.example", "utf8"),
+    /MDB_RPC_SECONDARY_URL=.*alchemy\.com/,
+  );
   assert.doesNotMatch(
     testnetConfig().browserRpcUrl,
     /192\.168\.50\.117|127\.0\.0\.1/,

@@ -71,6 +71,8 @@ test("healthy primary remains active and is periodically compared", async (t) =>
   const failover = createRpcFailover({
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
+    routingMode: "failover",
+    secondaryRoutingAuthorized: true,
     checkIntervalMs: 60_000,
     requestTimeoutMs: 1_000,
     logger: { info() {} },
@@ -91,6 +93,8 @@ test("head lag fails over with hysteresis and later recovers", async (t) => {
   const failover = createRpcFailover({
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
+    routingMode: "failover",
+    secondaryRoutingAuthorized: true,
     lagFailureThreshold: 2,
     recoveryThreshold: 2,
     checkIntervalMs: 60_000,
@@ -119,6 +123,8 @@ test("wrong-chain primary fails closed to the valid secondary", async (t) => {
   const failover = createRpcFailover({
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
+    routingMode: "failover",
+    secondaryRoutingAuthorized: true,
     checkIntervalMs: 60_000,
     requestTimeoutMs: 1_000,
     logger: { info() {} },
@@ -137,6 +143,8 @@ test("remote comparison remains valid when eth_syncing is unsupported", async (t
   const failover = createRpcFailover({
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
+    routingMode: "failover",
+    secondaryRoutingAuthorized: true,
     checkIntervalMs: 60_000,
     requestTimeoutMs: 1_000,
     logger: { info() {} },
@@ -147,6 +155,25 @@ test("remote comparison remains valid when eth_syncing is unsupported", async (t
   assert.equal(failover.health().secondary.healthy, true);
   assert.equal(failover.health().secondary.syncing, null);
   assert.equal(failover.health().headLag, 0);
+});
+
+test("secondary routing is disabled by default on public networks", async (t) => {
+  const primary = await mockRpc({ blockNumber: 90 });
+  const secondary = await mockRpc({ blockNumber: 100 });
+  t.after(() => Promise.all([primary.close(), secondary.close()]));
+  const gateway = createRpcFailover({
+    primaryUrl: primary.url,
+    secondaryUrl: secondary.url,
+    checkIntervalMs: 60_000,
+    requestTimeoutMs: 1_000,
+    logger: { info() {} },
+  });
+  t.after(() => gateway.stop());
+  await gateway.start();
+  assert.equal(gateway.health().status, "degraded");
+  assert.equal(gateway.health().active, "primary");
+  assert.equal(gateway.health().routingMode, "primary_only");
+  assert.equal(gateway.health().secondaryUsagePermitted, false);
 });
 
 test("Nitro structured sync status is healthy when execution and consensus are caught up", () => {
@@ -195,7 +222,7 @@ test("the same gateway validates Robinhood mainnet chain 4663", async (t) => {
   assert.equal(failover.health().secondaryUsagePermitted, false);
 });
 
-test("mainnet automatic secondary routing requires explicit authorization", async (t) => {
+test("automatic secondary routing requires explicit authorization", async (t) => {
   const primary = await mockRpc({ chainId: 4663 });
   const secondary = await mockRpc({ chainId: 4663 });
   t.after(() => Promise.all([primary.close(), secondary.close()]));
@@ -279,6 +306,8 @@ test("ambiguous raw transaction failures are never replayed", async (t) => {
   const running = await startRpcFailoverServer({
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
+    routingMode: "failover",
+    secondaryRoutingAuthorized: true,
     listenPort: 0,
     checkIntervalMs: 60_000,
     requestTimeoutMs: 1_000,

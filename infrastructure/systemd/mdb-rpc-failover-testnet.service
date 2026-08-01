@@ -1,5 +1,5 @@
 [Unit]
-Description=42 Braincells Robinhood Testnet RPC failover gateway
+Description=42 Braincells Robinhood Testnet LAN RPC guard and comparison gateway
 After=network-online.target
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
-EnvironmentFile=/etc/mdb/testnet.env
+EnvironmentFile=/etc/mdb/testnet-rpc.env
 ExecStart=/home/hendo420/.local/node/bin/node /home/hendo420/projects/million-dollar-brain/scripts/rpc-failover-proxy.mjs
 Restart=always
 RestartSec=3

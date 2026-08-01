@@ -165,8 +165,8 @@ export function createRpcFailover({
   lagFailureThreshold = DEFAULT_LAG_FAILURE_THRESHOLD,
   recoveryThreshold = DEFAULT_RECOVERY_THRESHOLD,
   requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
-  routingMode = "failover",
-  secondaryRoutingAuthorized = expectedChainId !== 4663,
+  routingMode = "primary_only",
+  secondaryRoutingAuthorized = false,
   logger = console,
 }) {
   if (!primaryUrl || !secondaryUrl) {
@@ -387,11 +387,10 @@ export async function startRpcFailoverServer(options = {}) {
     options.expectedChainId ??
     integer(process.env.MDB_RPC_EXPECTED_CHAIN_ID, DEFAULT_EXPECTED_CHAIN_ID);
   const routingMode =
-    options.routingMode ?? process.env.MDB_RPC_ROUTING_MODE ?? "failover";
+    options.routingMode ?? process.env.MDB_RPC_ROUTING_MODE ?? "primary_only";
   const secondaryRoutingAuthorized =
     options.secondaryRoutingAuthorized ??
-    (process.env.MDB_RPC_SECONDARY_ROUTING_AUTHORIZED === "true" ||
-      expectedChainId !== 4663);
+    process.env.MDB_RPC_SECONDARY_ROUTING_AUTHORIZED === "true";
   const failover = createRpcFailover({
     primaryUrl: options.primaryUrl ?? process.env.MDB_RPC_PRIMARY_URL,
     secondaryUrl:

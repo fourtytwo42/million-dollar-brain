@@ -30,11 +30,15 @@ check_app() {
     failures+=("$environment NAV invalid")
   if [[ "$environment" == "testnet" ]]; then
     systemctl is-active --quiet mdb-rpc-failover-testnet.service ||
-      failures+=("testnet RPC failover service inactive")
-    [[ "$(jq -r '.rpcFailover.status' <<<"$response")" == "ok" ]] ||
-      failures+=("testnet RPC failover degraded")
-    [[ "$(jq -r '.rpcFailover.expectedChainId' <<<"$response")" == "46630" ]] ||
+      failures+=("testnet RPC guard service inactive")
+    [[ "$(jq -r '.rpcHealth.status' <<<"$response")" == "ok" ]] ||
+      failures+=("testnet LAN RPC degraded")
+    [[ "$(jq -r '.rpcHealth.expectedChainId' <<<"$response")" == "46630" ]] ||
       failures+=("testnet RPC chain mismatch")
+    [[ "$(jq -r '.rpcHealth.routingMode' <<<"$response")" == "primary_only" ]] ||
+      failures+=("testnet RPC routing policy mismatch")
+    [[ "$(jq -r '.rpcHealth.secondaryUsagePermitted' <<<"$response")" == "false" ]] ||
+      failures+=("testnet secondary RPC routing unexpectedly enabled")
   fi
   if [[ "$environment" == "mainnet" ]]; then
     systemctl is-active --quiet mdb-rpc-failover-mainnet.service ||

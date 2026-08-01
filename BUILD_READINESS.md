@@ -272,15 +272,15 @@ Future governance is outside the MVP and requires a new PRD revision rather than
 | Environment    | Operational RPC                                          | Comparison / fallback policy                         |
 | -------------- | -------------------------------------------------------- | ---------------------------------------------------- |
 | Local          | Anvil at `127.0.0.1:8545`                                | None                                                 |
-| Public testnet | LAN-primary loopback failover gateway                    | Remote automatic fallback remains enabled            |
+| Public testnet | LAN Nitro `192.168.50.117:8547` through loopback gateway | Alchemy comparison-only; no routing without approval |
 | Mainnet        | LAN Nitro `192.168.50.173:8547` through loopback gateway | Alchemy comparison-only; no routing without approval |
 
-The mainnet gateway compares LAN and Alchemy heads every 15 seconds. Alchemy
+The testnet and mainnet gateways compare LAN and Alchemy heads every 15 seconds. Alchemy
 credentials remain server-only and its endpoint may be queried for chain ID,
 sync health, and block number, but it is not an operational fallback. When the
 LAN node is unreachable, wrong-chain, syncing, or more than three blocks behind,
 the gateway remains pinned to LAN, reports `degraded`, and fails requests closed.
-Changing mainnet to route through Alchemy requires new explicit creator
+Changing either network to route through Alchemy requires new explicit creator
 authorization and a deliberate configuration change.
 
 During the current testnet-readiness phase, both MDB server and browser traffic
@@ -288,9 +288,8 @@ use `https://rpc.testnet.chain.robinhood.com`. A hosted testnet provider is
 deferred until actual rate-limit or reliability evidence requires one. The
 shared Robyn LAN node is explicitly outside MDB's runtime architecture.
 
-Testnet retains health-scored failover. Mainnet reads and signed transactions
-use only the LAN gateway under the current policy and are never replayed or
-routed to Alchemy.
+Testnet and mainnet reads and signed transactions use only their LAN gateways
+under the current policy and are never replayed or routed to Alchemy.
 
 ## 14. Application, monitoring, and backups
 

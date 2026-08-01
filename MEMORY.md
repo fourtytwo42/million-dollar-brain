@@ -7,40 +7,46 @@ Durable project context lives here. Update this file whenever information should
 - Current task: Freeze the explicit mainnet LAN-only RPC rule, then restart the
   paused-canary graduation pipeline from one exact source SHA. Mainnet remains
   non-broadcast.
-- Last meaningful change: The mainnet gateway now has a guarded `primary_only`
-  mode. Alchemy is comparison-only; LAN failure reports degraded and fails
-  closed instead of switching upstreams. Testnet automatic failover is unchanged.
-- Next step: Finish regression/build verification, push the policy release,
-  rebuild exact evidence, deploy that unchanged application to testnet, and run
-  a new two-hour exact-SHA acceptance.
-- Blockers: The owner-only Alchemy endpoint is needed only for independent
-  comparison evidence, not operational fallback. Qualification, audit, legal,
+- Last meaningful change: Both public-network gateways now use guarded
+  `primary_only` mode. Alchemy is comparison-only; LAN failure reports degraded
+  and fails closed instead of switching upstreams.
+- Next step: Install the staged comparison credentials into root-owned isolated
+  RPC environment files, verify both live gateways remain `primary_only`, then
+  rebuild exact evidence and run a new two-hour exact-SHA acceptance.
+- Blockers: The VM automation account cannot write `/etc/mdb` or restart systemd
+  units without an interactive sudo authorization. Qualification, audit, legal,
   monitoring, gas, and explicit authorization block activation but not a
   no-funds paused canary. No mainnet broadcast is authorized.
 
 ## Current State
 
-### 2026-07-31 - Mainnet RPC is LAN-only and fail-closed
+### 2026-07-31 - Public-network RPCs are LAN-only and fail-closed
 
 - Context: The creator explicitly prohibited automatic mainnet routing through
-  Alchemy. Alchemy may be queried only as an independent chain-health and block
-  height reference until the creator gives a new instruction.
-- Decision: Mainnet uses gateway mode `primary_only` with
-  `secondaryRoutingAuthorized=false`. The gateway probes LAN and Alchemy every
+  Alchemy, then supplied mainnet and testnet Alchemy endpoints under the same
+  comparison-only restriction. Alchemy may be queried only as an independent
+  chain-health and block-height reference until the creator gives a new instruction.
+- Decision: Mainnet and testnet use gateway mode `primary_only` with
+  `secondaryRoutingAuthorized=false`. Each gateway probes LAN and Alchemy every
   15 seconds, but LAN failures and excessive lag set `degraded` without changing
-  the active upstream or replaying user reads or transactions. Testnet keeps its
-  existing automatic LAN-primary failover behavior.
+  the active upstream or replaying user reads or transactions.
 - Files: `scripts/rpc-failover-proxy.mjs`, mainnet RPC configuration and release
   evidence scripts, `/api/status`, the mainnet degraded banner, network and
   graduation policy tests, and mainnet release documentation.
-- Commands/tests: RPC gateway 10/10, network policy 19/19, graduation 18/18,
+- Commands/tests: RPC gateway 11/11, network policy 19/19, graduation 18/18,
   shell syntax, `git diff --check`, and the Next.js production build pass.
-- Result: Mainnet deployment tooling now rejects operational secondary RPC or
-  WebSocket variables, candidate readiness requires signed primary-only policy
-  evidence, and the frontend clearly reports a degraded LAN connection.
-- Follow-up: Supply an owner-readable Alchemy HTTPS endpoint only when passive
-  comparison evidence is desired. Rebuild exact evidence and run a new
-  exact-source testnet acceptance before paused-canary readiness.
+- Result: Mainnet deployment tooling rejects operational secondary RPC or
+  WebSocket variables, testnet isolates the comparison credential from app
+  runtime services, candidate readiness requires signed primary-only policy
+  evidence, and the frontend reports a degraded LAN connection on either network.
+- Result: Both supplied Alchemy endpoints were validated without logging their
+  credentials: each reported the expected chain and was one block behind its LAN
+  peer during the check. Owner-only staging files are mode `0600`; no credential
+  was written to Git or repository memory.
+- Follow-up: Install the supplied endpoint credentials into separate root-owned
+  RPC environment files without copying them into app runtime environments.
+  Rebuild exact evidence and run a new exact-source testnet acceptance before
+  paused-canary readiness.
 
 ### 2026-07-31 - Mainnet pool observation freshness aligned
 
@@ -1367,7 +1373,7 @@ decision`; the focused Experience v2 suite passes.
   chain identity, sync health, and block height only. On reachability, wrong
   chain, sync, or lag failure, keep routing pinned to LAN, return failures, and
   expose `degraded` to the frontend. Enabling Alchemy routing requires a new
-  explicit instruction from the creator. Testnet failover remains unchanged.
+  explicit instruction from the creator. Testnet follows the same rule.
 - Files: `scripts/rpc-failover-proxy.mjs`,
   `scripts/configure-mainnet-rpc-failover.sh`,
   `infrastructure/systemd/mdb-rpc-failover-mainnet.service`,

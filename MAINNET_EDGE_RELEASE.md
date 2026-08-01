@@ -229,8 +229,8 @@ Mainnet RPC routing is explicitly fail-closed. The LAN node at
 for chain identity, sync state, and block height, but no read or transaction is
 routed to it. A LAN outage, wrong chain, sync state, or excessive lag marks the
 gateway and frontend `degraded`; automatic failover is forbidden until the
-creator explicitly authorizes a later policy change. Testnet automatic
-failover is unaffected.
+creator explicitly authorizes a later policy change. Testnet follows the same
+LAN-only, comparison-only rule.
 
 `pausedDeploymentReady` covers only the no-funds LAN canary: exact pushed SHA,
 matching signed testnet acceptance, pinned fork rehearsal, healthy fail-closed

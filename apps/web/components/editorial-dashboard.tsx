@@ -1119,14 +1119,14 @@ export function EditorialDashboard({
         <div className="editorial-banner">{message}</div>
       )}
 
-      {network?.mode === "mainnet" &&
+      {(network?.mode === "mainnet" || network?.mode === "testnet") &&
         (!data?.rpcHealth || data.rpcHealth.status !== "ok") && (
           <div className="connection-degraded-banner" role="alert">
             <strong>Connection degraded.</strong>
             <span>
               The LAN RPC is unavailable, syncing, or behind. Alchemy is used
               only to compare chain health; requests will not fail over until
-              the creator explicitly changes that policy.
+              you explicitly change that policy.
             </span>
           </div>
         )}
