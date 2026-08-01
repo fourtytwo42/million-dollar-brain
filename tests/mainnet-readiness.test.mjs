@@ -108,6 +108,14 @@ test("full-universe gate follows the official deployable registry count", () => 
 test("paused canary selects current DEX-valid assets without promoting qualification", () => {
   const rows = [
     {
+      ...qualified("STALE", 1_000_000, "standard", "4663:stale"),
+      passed: true,
+      routeMature: true,
+      dexSafetyValid: true,
+      deploymentRouteFresh: false,
+      qualificationWindowPassed: false,
+    },
+    {
       ...qualified("WETH", 100_000, "high_volatility", "4663:00"),
       passed: true,
       routeMature: true,
@@ -141,6 +149,10 @@ test("paused canary selects current DEX-valid assets without promoting qualifica
   ];
   const selected = selectPreliminaryAssets(rows);
   assert.equal(selected.length, 9);
+  assert.equal(
+    selected.some((asset) => asset.symbol === "STALE"),
+    false,
+  );
   assert.equal(
     selected.some((asset) => asset.symbol === "WETH"),
     true,

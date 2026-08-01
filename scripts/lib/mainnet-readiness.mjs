@@ -83,6 +83,7 @@ export function selectPreliminaryAssets(qualification) {
         asset.identityValid !== false &&
         asset.routeMature === true &&
         asset.dexSafetyValid === true &&
+        asset.deploymentRouteFresh !== false &&
         BigInt(asset.safeTwoSidedCapacityUsdWad ?? 0) > 0n,
     ),
   );

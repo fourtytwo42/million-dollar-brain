@@ -53,6 +53,7 @@ const LONG_TWAP_SECONDS = 14_400;
 const MAXIMUM_SPOT_TO_SHORT_BPS = 300;
 const MAXIMUM_SHORT_TO_LONG_BPS = 500;
 const MAXIMUM_OBSERVATION_AGE_SECONDS = 3_600;
+const MAXIMUM_PRELIMINARY_OBSERVATION_AGE_SECONDS = 1_800;
 const QUALIFICATION_RULE_VERSION = 4;
 const cryptoCatalogPath = resolve(
   repoRoot,
@@ -731,6 +732,22 @@ const qualification = candidates.map((asset) => {
         pool.shortToLongDeviationBps <= MAXIMUM_SHORT_TO_LONG_BPS,
     );
   const capacityValid = Number(capacity?.safeTwoSidedCapacityUsd ?? 0) > 0;
+  const deploymentProbe = [...(capacity?.probes ?? [])]
+    .reverse()
+    .find((probe) => probe.passed === true);
+  const deploymentObservationAges = [
+    ...(deploymentProbe?.buy?.pools ?? []),
+    ...(deploymentProbe?.sell?.pools ?? []),
+  ].map((pool) => pool.observationAgeSeconds);
+  const maximumDeploymentObservationAgeSeconds =
+    deploymentObservationAges.length > 0 &&
+    deploymentObservationAges.every(Number.isFinite)
+      ? Math.max(...deploymentObservationAges)
+      : null;
+  const deploymentRouteFresh =
+    maximumDeploymentObservationAgeSeconds !== null &&
+    maximumDeploymentObservationAgeSeconds <=
+      MAXIMUM_PRELIMINARY_OBSERVATION_AGE_SECONDS;
   const passed =
     identityValid &&
     tradingAvailable &&
@@ -780,6 +797,8 @@ const qualification = candidates.map((asset) => {
       Math.floor((window.qualificationHours * 10_000) / QUALIFICATION_HOURS),
     ),
     dexSafetyValid: dexSafety === true,
+    deploymentRouteFresh,
+    maximumDeploymentObservationAgeSeconds,
     safeTwoSidedCapacityUsdWad: capacity.safeTwoSidedCapacityUsdWad,
     maximumExposureUsdWad: capacity.maximumExposureUsdWad,
     capacity,

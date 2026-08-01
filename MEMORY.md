@@ -47,8 +47,11 @@ Durable project context lives here. Update this file whenever information should
   candidate used the observed harmonic liquidity as the exact on-chain minimum,
   so normal next-block TWAL movement could invalidate a route. Candidate
   minimums now use a deterministic 90% floor while current qualification and
-  executable-capacity evidence remain unchanged. Rerun the complete fork
-  rehearsal against that bounded operating headroom.
+  executable-capacity evidence remain unchanged. A later retry also showed that
+  90-minute-fresh shadow evidence can contain a pool too close to the one-hour
+  on-chain observation limit for a new deployment. Preliminary selection now
+  requires every selected route observation to be at most 30 minutes old,
+  without changing or resetting the underlying qualification clock.
 
 ### 2026-07-31 - Empty-canary NAV survives inactive stale routes
 
