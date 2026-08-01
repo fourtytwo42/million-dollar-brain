@@ -419,7 +419,9 @@ contract BasketVault is
     function totalAssetsUsd() public view returns (uint256 total) {
         total = _reserveToUsdWad(usdg.balanceOf(address(this)));
         for (uint256 i; i < assets.length; ++i) {
-            total += _quoteUsd(assets[i], IERC20(assets[i]).balanceOf(address(this)));
+            uint256 balance = IERC20(assets[i]).balanceOf(address(this));
+            if (balance == 0) continue;
+            total += _quoteUsd(assets[i], balance);
         }
     }
 
@@ -437,7 +439,8 @@ contract BasketVault is
             return _reserveToUsdWad(usdg.balanceOf(address(this)));
         }
         if (!supportedAsset[asset]) revert UnsupportedAsset();
-        return _quoteUsd(asset, IERC20(asset).balanceOf(address(this)));
+        uint256 balance = IERC20(asset).balanceOf(address(this));
+        return balance == 0 ? 0 : _quoteUsd(asset, balance);
     }
 
     function currentWeightBps(address asset) external view returns (uint256) {

@@ -530,6 +530,43 @@ contract MainnetEdgeTest is Test {
         assertEq(basket.totalSupply(), 0);
     }
 
+    function testZeroBalanceAssetDoesNotRequireAValidPrice() public {
+        MockRewardFund rewards = new MockRewardFund(address(tokenIn));
+        address[] memory riskAssets = new address[](1);
+        riskAssets[0] = address(tokenOut);
+        BasketVault basket = BasketVault(
+            address(
+                new ERC1967Proxy(
+                    address(new BasketVault()),
+                    abi.encodeCall(
+                        BasketVault.initialize,
+                        (
+                            address(this),
+                            address(tokenIn),
+                            address(venue),
+                            address(rewards),
+                            makeAddr("zero-balance-creator"),
+                            makeAddr("zero-balance-automation"),
+                            riskAssets
+                        )
+                    )
+                )
+            )
+        );
+        address[] memory targets = new address[](2);
+        targets[0] = address(tokenIn);
+        targets[1] = address(tokenOut);
+        uint16[] memory weights = new uint16[](2);
+        weights[0] = 8_000;
+        weights[1] = 2_000;
+        basket.reinitializeV2(address(oracle), 120, 100, targets, weights);
+        oracle.setPriceStatus(address(tokenOut), 1e18, block.timestamp - 1 days, false);
+
+        assertEq(tokenOut.balanceOf(address(basket)), 0);
+        assertEq(basket.assetValueUsd(address(tokenOut)), 0);
+        assertEq(basket.totalAssetsUsd(), 0);
+    }
+
     function _plan(
         address vault,
         address input,

@@ -71,6 +71,8 @@ test("paused deployment and activation use independent fail-closed gates", () =>
   assert.match(creatorRiskUpgrade, /riskIncreaseDelay/);
   const pausedPolicyUpgrade = read("scripts/upgrade-paused-canary-policy.sh");
   assert.match(pausedPolicyUpgrade, /UpgradePausedCanaryPolicy/);
+  assert.match(pausedPolicyUpgrade, /MDB_BASKET/);
+  assert.match(pausedPolicyUpgrade, /basketImplementation/);
   assert.match(pausedPolicyUpgrade, /statePreserved:true/);
   assert.match(
     pausedPolicyUpgrade,

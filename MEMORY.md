@@ -6,11 +6,10 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Implement paused-mainnet-canary graduation without weakening
   the 48-hour asset activation requirement. Mainnet work remains non-broadcast.
-- Last meaningful change: The first pinned V5 fork rehearsal exposed that the
-  shadow accepted pools whose newest observation could exceed the valuation
-  adapter's one-hour limit. Qualification rule v4 now checks that same bound,
-  rejects stale observations, and prevents older-rule evidence from building a
-  candidate.
+- Last meaningful change: The pinned V5 fork progressed through deployment and
+  staged policy controls, then found that zero-balance supported assets still
+  forced a price lookup. BasketVault now skips pricing zero balances so a stale
+  inactive route cannot break empty-canary NAV reads.
 - Next step: Commit and push the rule-v4 repair, record exact build evidence,
   let the hourly production shadow publish v4 evidence, rerun the pinned V5
   fork rehearsal, and promote that unchanged SHA to a fresh two-hour testnet
@@ -50,6 +49,32 @@ Durable project context lives here. Update this file whenever information should
   minimums now use a deterministic 90% floor while current qualification and
   executable-capacity evidence remain unchanged. Rerun the complete fork
   rehearsal against that bounded operating headroom.
+
+### 2026-07-31 - Empty-canary NAV survives inactive stale routes
+
+- Context: With liquidity operating headroom applied, the fork rehearsal
+  completed paused controls, deposit simulation, overlapping approval and
+  qualification clocks, asset activation/deactivation, and future-DAO role
+  transfer. Its final accounting read occurred after a 48-hour warp and
+  reverted because BasketVault priced an inactive WETH route despite the vault
+  holding exactly zero WETH.
+- Decision: Skip valuation calls for zero token balances in both
+  `totalAssetsUsd()` and `assetValueUsd()`. Include BasketVault in the guarded
+  paused-canary policy UUPS upgrade so devnet and testnet receive the fix with
+  AssetRegistry and CreatorRiskController.
+- Files: `BasketVault.sol`, `MainnetEdge.t.sol`,
+  `UpgradePausedCanaryPolicy.s.sol`, and
+  `scripts/upgrade-paused-canary-policy.sh`.
+- Commands/tests: The exact zero-balance invalid-price regression passes;
+  MainnetEdge and BasketBrain suites pass; contract size checks pass with a
+  28-byte BasketVault runtime margin. The devnet in-place upgrade preserved the
+  status projection, risk authority, delay, supply, holdings, pieces, and
+  policies.
+- Result: Empty and zero-balance canary accounting no longer depends on a stale
+  inactive route. Positive balances still require a valid DEX price and fail
+  closed. No mainnet transaction was signed or broadcast.
+- Follow-up: Freeze the repaired SHA, rerun the complete fork rehearsal, then
+  run the exact-commit testnet upgrade and fresh acceptance.
 
 ### 2026-07-31 - Paused canary and activation gates separated
 

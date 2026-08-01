@@ -35,6 +35,7 @@ fi
 
 registry="$(jq -er '.contracts.assetRegistry // .assetRegistry' "$manifest")"
 controller="$(jq -er '.contracts.riskController // .riskController' "$manifest")"
+basket="$(jq -er '.contracts.basket // .basket' "$manifest")"
 evidence_dir="$repo_root/var/$mode-readiness/paused-canary-policy"
 mkdir -p "$evidence_dir"
 raw_evidence="$evidence_dir/upgrade-raw.json"
@@ -46,6 +47,7 @@ curl --fail --silent --show-error "$status_url" >"$before_status"
 implementation_slot=0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
 before_registry="0x$(cast storage "$registry" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
 before_controller="0x$(cast storage "$controller" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
+before_basket="0x$(cast storage "$basket" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
 authority_before="$(cast call "$controller" 'riskAuthority()(address)' --rpc-url "$rpc")"
 delay_before="$(cast call "$controller" 'riskIncreaseDelay()(uint64)' --rpc-url "$rpc" | awk '{print $1}')"
 if [[ "$mode" == "devnet" ]]; then
@@ -55,14 +57,15 @@ else
 fi
 
 cd "$repo_root/packages/contracts"
-MDB_REGISTRY="$registry" MDB_RISK_CONTROLLER="$controller" \
+MDB_REGISTRY="$registry" MDB_RISK_CONTROLLER="$controller" MDB_BASKET="$basket" \
 MDB_PAUSED_CANARY_UPGRADE_EVIDENCE="$raw_evidence" \
 forge script script/UpgradePausedCanaryPolicy.s.sol:UpgradePausedCanaryPolicy \
   --rpc-url "$rpc" "${signer[@]}" --broadcast --slow --gas-estimate-multiplier 175
 cd "$repo_root"
 after_registry="0x$(cast storage "$registry" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
 after_controller="0x$(cast storage "$controller" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
-[[ "$after_registry" != "$before_registry" && "$after_controller" != "$before_controller" ]]
+after_basket="0x$(cast storage "$basket" "$implementation_slot" --rpc-url "$rpc" | tail -c 41)"
+[[ "$after_registry" != "$before_registry" && "$after_controller" != "$before_controller" && "$after_basket" != "$before_basket" ]]
 [[ "$(cast call "$controller" 'riskAuthority()(address)' --rpc-url "$rpc")" == "$authority_before" ]]
 [[ "$(cast call "$controller" 'riskIncreaseDelay()(uint64)' --rpc-url "$rpc" | awk '{print $1}')" == "$delay_before" ]]
 for token in $(jq -r '.assets[].address' "$manifest"); do
@@ -76,17 +79,20 @@ cmp --silent "$evidence_dir/before-projection.json" "$evidence_dir/after-project
 jq --arg gitSha "$(git rev-parse HEAD)" --arg mode "$mode" \
   --arg beforeRegistry "$before_registry" --arg afterRegistry "$after_registry" \
   --arg beforeController "$before_controller" --arg afterController "$after_controller" \
+  --arg beforeBasket "$before_basket" --arg afterBasket "$after_basket" \
   '. + {schemaVersion:1,gitSha:$gitSha,environment:$mode,statePreserved:true,
-    before:{registryImplementation:$beforeRegistry,riskControllerImplementation:$beforeController},
-    after:{registryImplementation:$afterRegistry,riskControllerImplementation:$afterController}}' \
+    before:{registryImplementation:$beforeRegistry,riskControllerImplementation:$beforeController,basketImplementation:$beforeBasket},
+    after:{registryImplementation:$afterRegistry,riskControllerImplementation:$afterController,basketImplementation:$afterBasket}}' \
   "$raw_evidence" >"$evidence"
 if [[ "$mode" == "devnet" ]]; then
   tmp_manifest="$(mktemp)"
   jq --arg registryImplementation "$after_registry" \
     --arg riskControllerImplementation "$after_controller" \
+    --arg basketImplementation "$after_basket" \
     --arg releaseSha "$(git rev-parse HEAD)" '
     .contracts.assetRegistryImplementation = $registryImplementation |
     .contracts.riskControllerImplementation = $riskControllerImplementation |
+    .contracts.basketImplementation = $basketImplementation |
     .release.gitSha = $releaseSha
   ' "$manifest" >"$tmp_manifest"
   mv "$tmp_manifest" "$manifest"
