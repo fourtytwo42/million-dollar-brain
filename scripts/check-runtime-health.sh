@@ -38,11 +38,15 @@ check_app() {
   fi
   if [[ "$environment" == "mainnet" ]]; then
     systemctl is-active --quiet mdb-rpc-failover-mainnet.service ||
-      failures+=("mainnet RPC failover service inactive")
-    [[ "$(jq -r '.rpcFailover.status' <<<"$response")" == "ok" ]] ||
-      failures+=("mainnet RPC failover degraded")
-    [[ "$(jq -r '.rpcFailover.expectedChainId' <<<"$response")" == "4663" ]] ||
+      failures+=("mainnet RPC guard service inactive")
+    [[ "$(jq -r '.rpcHealth.status' <<<"$response")" == "ok" ]] ||
+      failures+=("mainnet LAN RPC degraded")
+    [[ "$(jq -r '.rpcHealth.expectedChainId' <<<"$response")" == "4663" ]] ||
       failures+=("mainnet RPC chain mismatch")
+    [[ "$(jq -r '.rpcHealth.routingMode' <<<"$response")" == "primary_only" ]] ||
+      failures+=("mainnet RPC routing policy mismatch")
+    [[ "$(jq -r '.rpcHealth.secondaryUsagePermitted' <<<"$response")" == "false" ]] ||
+      failures+=("mainnet secondary RPC routing unexpectedly enabled")
   fi
 }
 

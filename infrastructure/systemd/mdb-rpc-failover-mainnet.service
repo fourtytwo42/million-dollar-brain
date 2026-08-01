@@ -1,5 +1,5 @@
 [Unit]
-Description=42 Braincells Robinhood Mainnet RPC failover gateway
+Description=42 Braincells Robinhood Mainnet LAN RPC guard and comparison gateway
 After=network-online.target
 Wants=network-online.target
 

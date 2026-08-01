@@ -2,6 +2,8 @@ export type RpcFailoverHealth = {
   status: "ok" | "degraded";
   expectedChainId: number;
   active: "primary" | "secondary";
+  routingMode: "failover" | "primary_only";
+  secondaryUsagePermitted: boolean;
   headLag: number | null;
   primary: {
     healthy: boolean;

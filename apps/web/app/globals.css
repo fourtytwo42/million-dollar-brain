@@ -1085,8 +1085,27 @@ footer {
   letter-spacing: 0.05em;
 }
 
+.connection-degraded-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 16%, var(--paper));
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.connection-degraded-banner strong {
+  color: var(--warning-ink, var(--ink));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 @media (max-width: 720px) {
-  .canary-banner {
+  .canary-banner,
+  .connection-degraded-banner {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.2rem;

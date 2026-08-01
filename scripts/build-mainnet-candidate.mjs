@@ -71,9 +71,9 @@ const fork = optionalJson(
   resolve(releaseDir, "mainnet-fork.json"),
   resolve(repoRoot, "var/mainnet-shadow/fork-deployment.json"),
 );
-const rpcFailover = optionalJson(
-  resolve(releaseDir, "mainnet-rpc-failover.json"),
-  resolve(repoRoot, "var/mainnet-readiness/mainnet-rpc-failover.json"),
+const rpcPolicy = optionalJson(
+  resolve(releaseDir, "mainnet-rpc-policy.json"),
+  resolve(repoRoot, "var/mainnet-readiness/mainnet-rpc-policy.json"),
 );
 const activationApprovals = optionalJson(
   resolve(releaseDir, "activation-approvals.json"),
@@ -98,14 +98,19 @@ const forkPassed =
   fork?.activationState === "paused-canary" &&
   fork?.signed === true &&
   allTrue(forkChecks);
-const rpcFailoverPassed =
-  rpcFailover?.schemaVersion === 1 &&
-  rpcFailover?.gitSha === sourceReleaseSha &&
-  rpcFailover?.chainId === 4663 &&
-  rpcFailover?.health?.status === "ok" &&
-  rpcFailover?.health?.primary?.chainId === 4663 &&
-  rpcFailover?.health?.secondary?.chainId === 4663 &&
-  allTrue(rpcFailover?.failureModeTests);
+const rpcPolicyPassed =
+  rpcPolicy?.schemaVersion === 2 &&
+  rpcPolicy?.gitSha === sourceReleaseSha &&
+  rpcPolicy?.chainId === 4663 &&
+  rpcPolicy?.policy?.routingMode === "primary_only" &&
+  rpcPolicy?.policy?.automaticSecondaryRouting === false &&
+  rpcPolicy?.policy?.degradedBehavior === "fail-closed" &&
+  rpcPolicy?.health?.status === "ok" &&
+  rpcPolicy?.health?.active === "primary" &&
+  rpcPolicy?.health?.secondaryUsagePermitted === false &&
+  rpcPolicy?.health?.primary?.chainId === 4663 &&
+  rpcPolicy?.health?.secondary?.chainId === 4663 &&
+  allTrue(rpcPolicy?.failureModeTests);
 
 const preliminarySymbols = state.deploymentReadiness?.preliminarySymbols ?? [];
 const preliminaryRiskAssets = preliminarySymbols
@@ -250,7 +255,7 @@ const deploymentGates = {
     state.deploymentReadiness?.pausedShadowReady === true,
   exactCommitAcceptancePassed: acceptancePassed,
   forkRehearsalPassed: forkPassed,
-  rpcFailoverPassed,
+  rpcPolicyPassed,
   riskAuthorityConfigured: Boolean(operatorAddress),
   releaseSignerConfigured: signerConfigured,
   exactBuildEvidencePassed,
@@ -330,7 +335,7 @@ const payload = {
   activationReady: allTrue(activationGates),
   acceptanceHash: acceptance ? sha256(JSON.stringify(acceptance)) : null,
   forkHash: fork ? sha256(JSON.stringify(fork)) : null,
-  rpcFailoverHash: rpcFailover ? sha256(JSON.stringify(rpcFailover)) : null,
+  rpcPolicyHash: rpcPolicy ? sha256(JSON.stringify(rpcPolicy)) : null,
   activationApprovalsHash: activationApprovals
     ? sha256(JSON.stringify(activationApprovals))
     : null,

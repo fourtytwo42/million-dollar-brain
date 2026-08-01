@@ -10,6 +10,7 @@ const DEFAULT_LAG_FAILURE_THRESHOLD = 2;
 const DEFAULT_RECOVERY_THRESHOLD = 5;
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
+const ROUTING_MODES = new Set(["failover", "primary_only"]);
 
 const MUTATING_METHODS = new Set([
   "eth_sendRawTransaction",
@@ -164,6 +165,8 @@ export function createRpcFailover({
   lagFailureThreshold = DEFAULT_LAG_FAILURE_THRESHOLD,
   recoveryThreshold = DEFAULT_RECOVERY_THRESHOLD,
   requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+  routingMode = "failover",
+  secondaryRoutingAuthorized = expectedChainId !== 4663,
   logger = console,
 }) {
   if (!primaryUrl || !secondaryUrl) {
@@ -171,6 +174,14 @@ export function createRpcFailover({
   }
   if (primaryUrl === secondaryUrl) {
     throw new Error("Primary and secondary RPC URLs must differ");
+  }
+  if (!ROUTING_MODES.has(routingMode)) {
+    throw new Error(`Unsupported RPC routing mode: ${routingMode}`);
+  }
+  if (routingMode === "failover" && !secondaryRoutingAuthorized) {
+    throw new Error(
+      "Secondary RPC routing requires explicit authorization for this network",
+    );
   }
 
   const state = {
@@ -221,7 +232,11 @@ export function createRpcFailover({
       secondary.healthy && state.headLag != null && state.headLag > maxHeadLag;
     const primaryUsable = primary.healthy && !primaryLagged;
 
-    if (state.active === "primary") {
+    if (routingMode === "primary_only") {
+      state.active = "primary";
+      state.primaryLagFailures = 0;
+      state.primaryRecoverySamples = 0;
+    } else if (state.active === "primary") {
       state.primaryRecoverySamples = 0;
       if (primaryHardFailure && secondary.healthy) {
         state.primaryLagFailures = 0;
@@ -277,6 +292,8 @@ export function createRpcFailover({
       status: active.healthy && !activeIsLagged ? "ok" : "degraded",
       expectedChainId,
       active: state.active,
+      routingMode,
+      secondaryUsagePermitted: routingMode === "failover",
       headLag: state.headLag,
       thresholds: {
         maximumHeadLag: maxHeadLag,
@@ -315,6 +332,14 @@ export function createRpcFailover({
 
   async function forwardActive(body) {
     const activeAtStart = state.active;
+    if (routingMode === "primary_only") {
+      try {
+        return await forward(primaryUrl, body);
+      } catch (error) {
+        await checkNow();
+        throw error;
+      }
+    }
     const activeUrl = activeAtStart === "primary" ? primaryUrl : secondaryUrl;
     try {
       return await forward(activeUrl, body);
@@ -358,15 +383,24 @@ export async function startRpcFailoverServer(options = {}) {
     options.listenHost ?? process.env.MDB_RPC_LISTEN_HOST ?? "127.0.0.1";
   const listenPort =
     options.listenPort ?? integer(process.env.MDB_RPC_LISTEN_PORT, 18548);
+  const expectedChainId =
+    options.expectedChainId ??
+    integer(process.env.MDB_RPC_EXPECTED_CHAIN_ID, DEFAULT_EXPECTED_CHAIN_ID);
+  const routingMode =
+    options.routingMode ?? process.env.MDB_RPC_ROUTING_MODE ?? "failover";
+  const secondaryRoutingAuthorized =
+    options.secondaryRoutingAuthorized ??
+    (process.env.MDB_RPC_SECONDARY_ROUTING_AUTHORIZED === "true" ||
+      expectedChainId !== 4663);
   const failover = createRpcFailover({
     primaryUrl: options.primaryUrl ?? process.env.MDB_RPC_PRIMARY_URL,
     secondaryUrl:
       options.secondaryUrl ??
       process.env.MDB_RPC_SECONDARY_URL ??
       process.env.MDB_BACKUP_RPC_URL,
-    expectedChainId:
-      options.expectedChainId ??
-      integer(process.env.MDB_RPC_EXPECTED_CHAIN_ID, DEFAULT_EXPECTED_CHAIN_ID),
+    expectedChainId,
+    routingMode,
+    secondaryRoutingAuthorized,
     maxHeadLag:
       options.maxHeadLag ??
       integer(process.env.MDB_RPC_MAX_HEAD_LAG, DEFAULT_MAX_HEAD_LAG),

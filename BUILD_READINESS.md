@@ -207,13 +207,13 @@ An asset is ineligible unless it has:
 
 Eligible assets are ranked daily:
 
-| Factor                                        | Weight |
-| --------------------------------------------- | -----: |
-| Proven two-sided DEX capacity and route maturity | 40% |
-| Time-weighted liquidity stability                | 25% |
-| DEX observation coverage and consistency         | 15% |
-| Structured-data completeness                     | 10% |
-| Diversification contribution                     | 10% |
+| Factor                                           | Weight |
+| ------------------------------------------------ | -----: |
+| Proven two-sided DEX capacity and route maturity |    40% |
+| Time-weighted liquidity stability                |    25% |
+| DEX observation coverage and consistency         |    15% |
+| Structured-data completeness                     |    10% |
+| Diversification contribution                     |    10% |
 
 The top 24 passing assets become candidates, subject to the category and risk caps. Activation requires a versioned manifest committed to the repository, on-chain registration, and timelocked risk-administrator execution. Contract addresses are resolved from live canonical sources and are never selected by symbol.
 
@@ -269,24 +269,28 @@ Future governance is outside the MVP and requires a new PRD revision rather than
 
 ## 13. Network and RPC
 
-| Environment    | Primary                                                  | Secondary                           |
-| -------------- | -------------------------------------------------------- | ----------------------------------- |
-| Local          | Anvil at `127.0.0.1:8545`                                | None                                |
-| Public testnet | Robinhood public testnet RPC                             | None                                |
-| Mainnet        | LAN Nitro `192.168.50.173:8547` through loopback gateway | Alchemy Robinhood mainnet HTTPS RPC |
+| Environment    | Operational RPC                                          | Comparison / fallback policy                         |
+| -------------- | -------------------------------------------------------- | ---------------------------------------------------- |
+| Local          | Anvil at `127.0.0.1:8545`                                | None                                                 |
+| Public testnet | LAN-primary loopback failover gateway                    | Remote automatic fallback remains enabled            |
+| Mainnet        | LAN Nitro `192.168.50.173:8547` through loopback gateway | Alchemy comparison-only; no routing without approval |
 
-The gateway compares LAN and Alchemy heads every 15 seconds and uses hysteresis
-to avoid flapping. Alchemy credentials remain server-only. The Robinhood public
-mainnet RPC is reserved for browser wallets and incident diagnostics; it is not
-the server-side backup. Production WebSocket requirements remain an external
-input until the local node's WebSocket exposure is verified.
+The mainnet gateway compares LAN and Alchemy heads every 15 seconds. Alchemy
+credentials remain server-only and its endpoint may be queried for chain ID,
+sync health, and block number, but it is not an operational fallback. When the
+LAN node is unreachable, wrong-chain, syncing, or more than three blocks behind,
+the gateway remains pinned to LAN, reports `degraded`, and fails requests closed.
+Changing mainnet to route through Alchemy requires new explicit creator
+authorization and a deliberate configuration change.
 
 During the current testnet-readiness phase, both MDB server and browser traffic
 use `https://rpc.testnet.chain.robinhood.com`. A hosted testnet provider is
 deferred until actual rate-limit or reliability evidence requires one. The
 shared Robyn LAN node is explicitly outside MDB's runtime architecture.
 
-Reads use health-scored failover. A signed transaction may be broadcast to both dedicated providers using the same raw transaction and nonce; duplicate acceptance is harmless because the transaction hash is identical.
+Testnet retains health-scored failover. Mainnet reads and signed transactions
+use only the LAN gateway under the current policy and are never replayed or
+routed to Alchemy.
 
 ## 14. Application, monitoring, and backups
 
@@ -378,7 +382,7 @@ The following values cannot truthfully be invented during product design. They d
 1. Written counsel-approved jurisdiction, eligibility, transfer, disclosure, and entity policy.
 2. Final checksum addresses for multisig signers, keeper, allocator signer, treasury destination, and backup keeper.
 3. Funded creator seed capital, keeper ETH, and provider accounts.
-4. Alchemy mainnet RPC/WebSocket, WalletConnect, backup storage, domain, and notification credentials.
+4. Alchemy mainnet comparison RPC, WalletConnect, backup storage, domain, and notification credentials.
 5. Release-candidate canonical asset, oracle, venue, and contract manifests generated from then-current live registries.
 6. Independent audit report and remediation acceptance.
 

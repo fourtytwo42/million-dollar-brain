@@ -4,22 +4,43 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Implement paused-mainnet-canary graduation without weakening
-  the 48-hour asset activation requirement. Mainnet work remains non-broadcast.
-- Last meaningful change: The pinned V5 fork progressed through deployment and
-  staged policy controls, then found that zero-balance supported assets still
-  forced a price lookup. BasketVault now skips pricing zero balances so a stale
-  inactive route cannot break empty-canary NAV reads.
-- Next step: Commit and push the rule-v4 repair, record exact build evidence,
-  let the hourly production shadow publish v4 evidence, rerun the pinned V5
-  fork rehearsal, and promote that unchanged SHA to a fresh two-hour testnet
-  acceptance.
-- Blockers: The owner-only Alchemy Robinhood Mainnet endpoint is still required
-  for permanent RPC failover evidence. Qualification, audit, legal, monitoring,
-  gas, and explicit authorization block activation but not a no-funds paused
-  canary. No mainnet broadcast is authorized.
+- Current task: Freeze the explicit mainnet LAN-only RPC rule, then restart the
+  paused-canary graduation pipeline from one exact source SHA. Mainnet remains
+  non-broadcast.
+- Last meaningful change: The mainnet gateway now has a guarded `primary_only`
+  mode. Alchemy is comparison-only; LAN failure reports degraded and fails
+  closed instead of switching upstreams. Testnet automatic failover is unchanged.
+- Next step: Finish regression/build verification, push the policy release,
+  rebuild exact evidence, deploy that unchanged application to testnet, and run
+  a new two-hour exact-SHA acceptance.
+- Blockers: The owner-only Alchemy endpoint is needed only for independent
+  comparison evidence, not operational fallback. Qualification, audit, legal,
+  monitoring, gas, and explicit authorization block activation but not a
+  no-funds paused canary. No mainnet broadcast is authorized.
 
 ## Current State
+
+### 2026-07-31 - Mainnet RPC is LAN-only and fail-closed
+
+- Context: The creator explicitly prohibited automatic mainnet routing through
+  Alchemy. Alchemy may be queried only as an independent chain-health and block
+  height reference until the creator gives a new instruction.
+- Decision: Mainnet uses gateway mode `primary_only` with
+  `secondaryRoutingAuthorized=false`. The gateway probes LAN and Alchemy every
+  15 seconds, but LAN failures and excessive lag set `degraded` without changing
+  the active upstream or replaying user reads or transactions. Testnet keeps its
+  existing automatic LAN-primary failover behavior.
+- Files: `scripts/rpc-failover-proxy.mjs`, mainnet RPC configuration and release
+  evidence scripts, `/api/status`, the mainnet degraded banner, network and
+  graduation policy tests, and mainnet release documentation.
+- Commands/tests: RPC gateway 10/10, network policy 19/19, graduation 18/18,
+  shell syntax, `git diff --check`, and the Next.js production build pass.
+- Result: Mainnet deployment tooling now rejects operational secondary RPC or
+  WebSocket variables, candidate readiness requires signed primary-only policy
+  evidence, and the frontend clearly reports a degraded LAN connection.
+- Follow-up: Supply an owner-readable Alchemy HTTPS endpoint only when passive
+  comparison evidence is desired. Rebuild exact evidence and run a new
+  exact-source testnet acceptance before paused-canary readiness.
 
 ### 2026-07-31 - Mainnet pool observation freshness aligned
 
@@ -127,10 +148,10 @@ Durable project context lives here. Update this file whenever information should
 - Result: Fifteen assets currently pass the single observation's identity,
   DEX route, TWAP/TWAL, and capacity checks, but none has completed 48 hours or
   two required market sessions. Mainnet remains correctly unready. The
-  loopback mainnet failover gateway remains blocked on the missing owner-only
+  loopback mainnet comparison gateway remains blocked on the missing owner-only
   Alchemy endpoint file; the shadow uses the LAN primary directly meanwhile.
 - Follow-up: Let hourly qualification accumulate without resetting unchanged
-  evidence. Configure Alchemy failover, complete the paused fork rehearsal, and
+  evidence. Configure Alchemy comparison, complete the paused fork rehearsal, and
   generate the final exact-commit candidate only after the readiness witness
   passes. Never broadcast during qualification.
 
@@ -598,7 +619,7 @@ Durable project context lives here. Update this file whenever information should
   UAT confirms the $1,000 quote renders 24.74%-31.12% capacity utilization and
   the correct projected exposure against each $12,500 on-chain ceiling.
 - Follow-up: Do not broadcast mainnet. Finish exact-commit devnet promotion,
-  then testnet migration/acceptance. Configure the missing mainnet RPC failover
+  then testnet migration/acceptance. Configure the missing mainnet RPC comparison
   environment only when the Alchemy endpoint is supplied.
 
 ### 2026-07-30 - Self-hosted DEX V5 testnet acceptance complete
@@ -1336,32 +1357,32 @@ decision`; the focused Experience v2 suite passes.
   established editorial palette and keeping the brain as the primary focus.
 - Follow-up: None.
 
-### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy failover
+### 2026-07-29 - Mainnet LAN-primary RPC and Alchemy comparison
 
-- Context: A new Robinhood Mainnet Nitro RPC became available on the LAN and
-  must be the primary server endpoint, with Alchemy used only when the LAN node
-  is unhealthy or behind.
-- Decision: Use `http://192.168.50.173:8547` only behind the server-side
-  failover gateway on `http://127.0.0.1:18549`. Compare primary and secondary
-  every 15 seconds, fail over for reachability, wrong chain, unhealthy Nitro
-  sync state, or a three-block lag, and recover with hysteresis. Browser
-  clients continue using public HTTPS RPCs and never receive a LAN URL.
+- Context: A new Robinhood Mainnet Nitro RPC became available on the LAN. The
+  creator later made an explicit rule that Alchemy must never carry mainnet
+  traffic unless they separately authorize changing the policy.
+- Decision: Use `http://192.168.50.173:8547` as the only operational upstream
+  behind `http://127.0.0.1:18549`. Compare it to Alchemy every 15 seconds for
+  chain identity, sync health, and block height only. On reachability, wrong
+  chain, sync, or lag failure, keep routing pinned to LAN, return failures, and
+  expose `degraded` to the frontend. Enabling Alchemy routing requires a new
+  explicit instruction from the creator. Testnet failover remains unchanged.
 - Files: `scripts/rpc-failover-proxy.mjs`,
   `scripts/configure-mainnet-rpc-failover.sh`,
   `infrastructure/systemd/mdb-rpc-failover-mainnet.service`,
   `infrastructure/env/mainnet-rpc.env.example`, `config/networks.json`,
   `apps/web/lib/network.ts`, `apps/web/lib/rpc-health.ts`.
-- Commands/tests: Verified chain ID `4663`; live gateway smoke selected the LAN
-  primary while it was ahead of the comparison endpoint; 7/7 RPC failover
-  tests; 17/17 network-policy tests; production Next.js build; mainnet shadow
-  worker completed successfully.
+- Commands/tests: Verified chain ID `4663`; focused gateway tests prove lag is
+  reported without switching, mainnet failover mode is rejected without an
+  explicit authorization flag, and failed user calls never reach Alchemy.
 - Result: Mainnet shadow reads the LAN primary directly as an interim measure.
-  The permanent failover service is installed but deliberately disabled
+  The permanent comparison gateway service is installed but deliberately disabled
   because no Alchemy endpoint is currently configured. A pre-existing
   `mainnet-shadow.mjs` identifier collision was also repaired.
-- Follow-up: Configure `MDB_ALCHEMY_MAINNET_RPC_URL` outside Git and run the
-  root-only configuration script. Never substitute the public Robinhood RPC
-  while claiming the Alchemy backup is active.
+- Follow-up: Configure `MDB_ALCHEMY_MAINNET_RPC_URL` outside Git only for
+  comparison evidence. Never route mainnet traffic to it unless the creator
+  explicitly changes this rule.
 
 ## User Preferences
 

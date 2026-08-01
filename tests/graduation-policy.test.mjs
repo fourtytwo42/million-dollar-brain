@@ -58,6 +58,14 @@ test("paused deployment and activation use independent fail-closed gates", () =>
   assert.match(candidateBuilder, /shadowEvidenceFresh/);
   assert.match(candidateBuilder, /qualificationRuleVersion !== 4/);
   assert.match(candidateBuilder, /exactBuildEvidencePassed/);
+  assert.match(candidateBuilder, /rpcPolicyPassed/);
+  assert.doesNotMatch(candidateBuilder, /rpcFailoverPassed/);
+  const rpcEvidence = read("scripts/record-mainnet-rpc-failover.mjs");
+  assert.match(rpcEvidence, /routingMode: "primary_only"/);
+  assert.match(rpcEvidence, /automaticSecondaryRouting: false/);
+  assert.match(rpcEvidence, /degradedWithoutFailover: true/);
+  assert.match(deployment, /MDB_RPC_ROUTING_MODE/);
+  assert.match(deployment, /secondaryUsagePermitted/);
   assert.match(read("scripts/check-release.sh"), /record-release-build\.mjs/);
   assert.match(read("scripts/check-release.sh"), /check-release-format\.sh/);
   assert.match(deployment, /verify-mainnet-candidate\.mjs/);

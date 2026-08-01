@@ -48,6 +48,8 @@ trap 'rm -f "$tmp"' EXIT
 cat >"$tmp" <<EOF
 MDB_RPC_PRIMARY_URL=$primary_url
 MDB_RPC_SECONDARY_URL=$secondary_url
+MDB_RPC_ROUTING_MODE=primary_only
+MDB_RPC_SECONDARY_ROUTING_AUTHORIZED=false
 MDB_RPC_EXPECTED_CHAIN_ID=4663
 MDB_RPC_LISTEN_HOST=127.0.0.1
 MDB_RPC_LISTEN_PORT=18549
@@ -83,12 +85,12 @@ replace_env_keys() {
 
 replace_env_keys "$runtime_env" \
   MDB_RPC_URL MDB_RPC_HEALTH_URL MDB_RPC_PRIMARY_URL \
-  MDB_RPC_SECONDARY_URL MDB_BACKUP_RPC_URL <<EOF
+  MDB_RPC_ROUTING_MODE MDB_RPC_SECONDARY_URL MDB_BACKUP_RPC_URL \
+  MDB_WEBSOCKET_URL MDB_BACKUP_WEBSOCKET_URL <<EOF
 MDB_RPC_URL=$gateway_url
 MDB_RPC_HEALTH_URL=$health_url
 MDB_RPC_PRIMARY_URL=$primary_url
-MDB_RPC_SECONDARY_URL=$secondary_url
-MDB_BACKUP_RPC_URL=$secondary_url
+MDB_RPC_ROUTING_MODE=primary_only
 EOF
 
 replace_env_keys "$shadow_env" MDB_MAINNET_SHADOW_RPC_URL <<EOF
@@ -103,4 +105,6 @@ health="$(curl --fail --silent --show-error "$health_url")"
 [[ "$(jq -r '.status' <<<"$health")" == "ok" ]]
 [[ "$(jq -r '.primary.chainId' <<<"$health")" == "4663" ]]
 [[ "$(jq -r '.secondary.chainId' <<<"$health")" == "4663" ]]
-echo "Configured mainnet RPC failover without printing provider credentials."
+[[ "$(jq -r '.routingMode' <<<"$health")" == "primary_only" ]]
+[[ "$(jq -r '.secondaryUsagePermitted' <<<"$health")" == "false" ]]
+echo "Configured mainnet LAN-only routing with passive Alchemy comparison."

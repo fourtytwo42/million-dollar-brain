@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       outcomes,
       performanceHistory,
       priceSync,
-      rpcFailover,
+      rpcHealth,
     ] = await Promise.all([
       dashboard(
         address && isAddress(address) ? address : undefined,
@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
       portfolioAccounting,
       performanceHistory,
       priceSync,
-      rpcFailover,
+      rpcHealth,
+      rpcFailover: rpcHealth,
       benchmarks: REFERENCE_UNIVERSE.map((symbol) => ({
         symbol,
         executable: false,

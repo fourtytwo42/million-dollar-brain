@@ -132,7 +132,7 @@ test("mainnet requires its isolated loopback failover gateway", () => {
   );
 });
 
-test("mainnet failover binds the LAN primary to an Alchemy secondary", () => {
+test("mainnet keeps Alchemy comparison-only until explicitly authorized", () => {
   const unit = readFileSync(
     "infrastructure/systemd/mdb-rpc-failover-mainnet.service",
     "utf8",
@@ -146,11 +146,14 @@ test("mainnet failover binds the LAN primary to an Alchemy secondary", () => {
   assert.match(unit, /EnvironmentFile=\/etc\/mdb\/mainnet-rpc\.env/);
   assert.match(configurator, /http:\/\/192\.168\.50\.173:8547/);
   assert.match(configurator, /MDB_ALCHEMY_MAINNET_RPC_URL/);
+  assert.match(configurator, /MDB_RPC_ROUTING_MODE=primary_only/);
+  assert.match(configurator, /MDB_RPC_SECONDARY_ROUTING_AUTHORIZED=false/);
   assert.match(configurator, /MDB_RPC_CHECK_INTERVAL_MS=15000/);
   assert.match(configurator, /MDB_RPC_LISTEN_PORT=18549/);
   assert.match(manifest, /http:\/\/127\.0\.0\.1:18549/);
-  assert.match(deploy, /MDB_RPC_SECONDARY_URL/);
-  assert.match(deploy, /alchemy\\\.com/);
+  assert.match(deploy, /MDB_RPC_ROUTING_MODE/);
+  assert.match(deploy, /secondaryUsagePermitted/);
+  assert.doesNotMatch(deploy, /cast chain-id --rpc-url "\$MDB_BACKUP_RPC_URL"/);
 });
 
 test("testnet collector retries transient public-RPC failures", () => {

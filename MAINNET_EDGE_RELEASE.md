@@ -220,13 +220,21 @@ their own qualification clock at zero; unchanged identity, route, and evidence
 rules may retain existing hours.
 
 The V5 paused fork rehearsal and the final exact-commit acceptance remain
-release gates. The owner-readable Alchemy
-secondary has not been supplied, so the loopback mainnet RPC failover gateway
-cannot yet be enabled; shadow qualification uses the verified LAN primary
-directly.
+release gates. The owner-readable Alchemy endpoint has not been supplied, so
+the loopback mainnet RPC guard cannot yet compare the LAN head to an independent
+reference. Shadow qualification uses the verified LAN primary directly.
+
+Mainnet RPC routing is explicitly fail-closed. The LAN node at
+`192.168.50.173:8547` is the only operational upstream. Alchemy may be checked
+for chain identity, sync state, and block height, but no read or transaction is
+routed to it. A LAN outage, wrong chain, sync state, or excessive lag marks the
+gateway and frontend `degraded`; automatic failover is forbidden until the
+creator explicitly authorizes a later policy change. Testnet automatic
+failover is unaffected.
 
 `pausedDeploymentReady` covers only the no-funds LAN canary: exact pushed SHA,
-matching signed testnet acceptance, pinned fork rehearsal, RPC failover,
+matching signed testnet acceptance, pinned fork rehearsal, healthy fail-closed
+RPC policy,
 artifact hashes, signer, and closed value controls. `activationReady` separately
 requires full qualification, a valid launch witness, audit and legal approval,
 dependency clearance, monitoring, backups, role review, gas approval, canary

@@ -180,6 +180,8 @@ test("the same gateway validates Robinhood mainnet chain 4663", async (t) => {
     primaryUrl: primary.url,
     secondaryUrl: secondary.url,
     expectedChainId: 4663,
+    routingMode: "primary_only",
+    secondaryRoutingAuthorized: false,
     checkIntervalMs: 60_000,
     requestTimeoutMs: 1_000,
     logger: { info() {} },
@@ -189,6 +191,85 @@ test("the same gateway validates Robinhood mainnet chain 4663", async (t) => {
   assert.equal(failover.health().status, "ok");
   assert.equal(failover.health().expectedChainId, 4663);
   assert.equal(failover.health().active, "primary");
+  assert.equal(failover.health().routingMode, "primary_only");
+  assert.equal(failover.health().secondaryUsagePermitted, false);
+});
+
+test("mainnet automatic secondary routing requires explicit authorization", async (t) => {
+  const primary = await mockRpc({ chainId: 4663 });
+  const secondary = await mockRpc({ chainId: 4663 });
+  t.after(() => Promise.all([primary.close(), secondary.close()]));
+  assert.throws(
+    () =>
+      createRpcFailover({
+        primaryUrl: primary.url,
+        secondaryUrl: secondary.url,
+        expectedChainId: 4663,
+        routingMode: "failover",
+      }),
+    /explicit authorization/,
+  );
+});
+
+test("mainnet primary-only mode reports lag without switching", async (t) => {
+  const primary = await mockRpc({ chainId: 4663, blockNumber: 90 });
+  const secondary = await mockRpc({ chainId: 4663, blockNumber: 100 });
+  t.after(() => Promise.all([primary.close(), secondary.close()]));
+  const failover = createRpcFailover({
+    primaryUrl: primary.url,
+    secondaryUrl: secondary.url,
+    expectedChainId: 4663,
+    routingMode: "primary_only",
+    secondaryRoutingAuthorized: false,
+    lagFailureThreshold: 1,
+    checkIntervalMs: 60_000,
+    requestTimeoutMs: 1_000,
+    logger: { info() {} },
+  });
+  t.after(() => failover.stop());
+  await failover.start();
+  assert.equal(failover.health().status, "degraded");
+  assert.equal(failover.health().headLag, 10);
+  assert.equal(failover.health().active, "primary");
+  assert.equal(failover.health().switchCount, 0);
+});
+
+test("mainnet primary-only mode never forwards user calls to secondary", async (t) => {
+  const primary = await mockRpc({ chainId: 4663, blockNumber: 100 });
+  const secondary = await mockRpc({ chainId: 4663, blockNumber: 100 });
+  t.after(() => Promise.all([primary.close(), secondary.close()]));
+  const running = await startRpcFailoverServer({
+    primaryUrl: primary.url,
+    secondaryUrl: secondary.url,
+    expectedChainId: 4663,
+    routingMode: "primary_only",
+    secondaryRoutingAuthorized: false,
+    listenPort: 0,
+    checkIntervalMs: 60_000,
+    requestTimeoutMs: 1_000,
+    logger: { info() {} },
+  });
+  t.after(() => running.close());
+  primary.state.calls = [];
+  secondary.state.calls = [];
+  primary.state.fail = true;
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 9,
+    method: "eth_blockNumber",
+    params: [],
+  });
+  const response = await fetch(`http://127.0.0.1:${running.address.port}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+  });
+  assert.equal(response.status, 502);
+  assert.equal(running.failover.health().active, "primary");
+  assert.equal(
+    secondary.state.calls.some((call) => call.includes('"id":9')),
+    false,
+  );
 });
 
 test("ambiguous raw transaction failures are never replayed", async (t) => {

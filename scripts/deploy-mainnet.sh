@@ -24,21 +24,23 @@ set +a
 
 [[ "${MDB_NETWORK_MODE:-}" == "mainnet" ]]
 [[ "${MDB_RPC_URL:-}" == "http://127.0.0.1:18549" ]] || {
-  echo "Mainnet must use the loopback RPC failover gateway." >&2
+  echo "Mainnet must use the loopback LAN RPC guard." >&2
   exit 1
 }
 [[ "${MDB_RPC_PRIMARY_URL:-}" == "http://192.168.50.173:8547" ]]
-[[ "${MDB_RPC_SECONDARY_URL:-}" =~ ^https://[^/]*alchemy\.com/ ]]
-[[ -n "${MDB_BACKUP_RPC_URL:-}" && "$MDB_BACKUP_RPC_URL" != "$MDB_RPC_URL" ]]
-[[ "$MDB_BACKUP_RPC_URL" == "$MDB_RPC_SECONDARY_URL" ]]
-[[ -n "${MDB_WEBSOCKET_URL:-}" && -n "${MDB_BACKUP_WEBSOCKET_URL:-}" ]]
+[[ "${MDB_RPC_ROUTING_MODE:-}" == "primary_only" ]]
+[[ -z "${MDB_RPC_SECONDARY_URL:-}" ]]
+[[ -z "${MDB_BACKUP_RPC_URL:-}" ]]
+[[ -z "${MDB_WEBSOCKET_URL:-}" ]]
+[[ -z "${MDB_BACKUP_WEBSOCKET_URL:-}" ]]
 rpc_health="$(curl --fail --silent --show-error "${MDB_RPC_HEALTH_URL:?}")"
 [[ "$(jq -r '.status' <<<"$rpc_health")" == "ok" ]]
 [[ "$(jq -r '.expectedChainId' <<<"$rpc_health")" == "4663" ]]
 [[ "$(jq -r '.primary.chainId' <<<"$rpc_health")" == "4663" ]]
 [[ "$(jq -r '.secondary.chainId' <<<"$rpc_health")" == "4663" ]]
+[[ "$(jq -r '.routingMode' <<<"$rpc_health")" == "primary_only" ]]
+[[ "$(jq -r '.secondaryUsagePermitted' <<<"$rpc_health")" == "false" ]]
 [[ "$(cast chain-id --rpc-url "${MDB_RPC_URL:?}")" == "4663" ]]
-[[ "$(cast chain-id --rpc-url "$MDB_BACKUP_RPC_URL")" == "4663" ]]
 [[ -r "${MDB_OPERATOR_KEYSTORE:?}" ]]
 [[ -r "${MDB_OPERATOR_PASSWORD_FILE:?}" ]]
 [[ ! -e "$manifest" ]] || {
