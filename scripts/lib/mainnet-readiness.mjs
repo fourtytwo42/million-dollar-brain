@@ -30,6 +30,20 @@ export function poolObservationFresh({
   return observation <= block && block - observation <= maximumAge;
 }
 
+export function qualificationLiquidityFloor(
+  observedLiquidity,
+  headroomBps = 9_000,
+) {
+  const observed = BigInt(observedLiquidity);
+  const basisPoints = BigInt(headroomBps);
+  if (basisPoints <= 0n || basisPoints > 10_000n) {
+    throw new RangeError("liquidity headroom must be between 1 and 10000 bps");
+  }
+  if (observed === 0n) return "0";
+  const floor = (observed * basisPoints) / 10_000n;
+  return (floor === 0n ? 1n : floor).toString();
+}
+
 export function fullCanonicalUniverseInspected({
   officialMainnetDeploymentCount,
   inspectedStockAssetCount,

@@ -10,6 +10,7 @@ import {
   MAINNET_PRIORITY_SYMBOLS,
   MAINNET_TVL_CAP_USD_WAD,
   MAINNET_WATCHLIST_SYMBOLS,
+  qualificationLiquidityFloor,
   summarizeMainnetReadiness,
 } from "./lib/mainnet-readiness.mjs";
 
@@ -183,8 +184,12 @@ const venueMappings = Object.fromEntries(
           quoter: selected?.buy?.quoter ?? null,
           directPool: directPool?.address ?? null,
           bridgePool: bridgePool?.address ?? null,
-          minimumDirectLiquidity: directPool?.harmonicMeanLiquidity ?? "0",
-          minimumBridgeLiquidity: bridgePool?.harmonicMeanLiquidity ?? "0",
+          minimumDirectLiquidity: qualificationLiquidityFloor(
+            directPool?.harmonicMeanLiquidity ?? "0",
+          ),
+          minimumBridgeLiquidity: qualificationLiquidityFloor(
+            bridgePool?.harmonicMeanLiquidity ?? "0",
+          ),
           buyPools,
           sellPools: selected?.sell?.pools ?? [],
           shortTwapSeconds: 1_800,

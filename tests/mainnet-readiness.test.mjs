@@ -5,10 +5,17 @@ import {
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
   poolObservationFresh,
+  qualificationLiquidityFloor,
   selectPreliminaryAssets,
   summarizePausedDeploymentReadiness,
   summarizeMainnetReadiness,
 } from "../scripts/lib/mainnet-readiness.mjs";
+
+test("candidate liquidity floors retain ten percent operating headroom", () => {
+  assert.equal(qualificationLiquidityFloor("1000000"), "900000");
+  assert.equal(qualificationLiquidityFloor("1"), "1");
+  assert.throws(() => qualificationLiquidityFloor("100", 0), RangeError);
+});
 
 test("pool observation freshness matches the one-hour valuation bound", () => {
   assert.equal(

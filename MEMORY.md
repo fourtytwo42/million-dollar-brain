@@ -44,8 +44,12 @@ Durable project context lives here. Update this file whenever information should
   successful observation.
 - Result: The shadow and deployed adapter now fail closed on the same stale-pool
   condition. No mainnet transaction was signed or broadcast.
-- Follow-up: Push the repair, wait for the natural hourly v4 shadow record, and
-  rerun the complete fork rehearsal against that evidence.
+- Follow-up: The first v4 fork retry showed a second fail-closed mismatch: the
+  candidate used the observed harmonic liquidity as the exact on-chain minimum,
+  so normal next-block TWAL movement could invalidate a route. Candidate
+  minimums now use a deterministic 90% floor while current qualification and
+  executable-capacity evidence remain unchanged. Rerun the complete fork
+  rehearsal against that bounded operating headroom.
 
 ### 2026-07-31 - Paused canary and activation gates separated
 
