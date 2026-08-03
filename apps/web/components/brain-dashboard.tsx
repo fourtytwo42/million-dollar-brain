@@ -486,6 +486,34 @@ const receiptWaitPolicy = {
   timeout: 180_000,
 } as const;
 
+function statusRefreshErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.includes("0x00bfc921") ||
+    message.includes("totalAssetsUsd") ||
+    message.includes("InvalidPrice")
+  ) {
+    return "DEX pricing is refreshing. Portfolio actions are temporarily unavailable.";
+  }
+  if (
+    message.includes("RPC Request failed") ||
+    message.includes("fetch failed") ||
+    message.includes("Network unavailable")
+  ) {
+    return "Testnet connection is temporarily degraded. Retrying…";
+  }
+  return message;
+}
+
+function isStatusRefreshMessage(message: string) {
+  return (
+    message === "Connecting to network…" ||
+    message ===
+      "DEX pricing is refreshing. Portfolio actions are temporarily unavailable." ||
+    message === "Testnet connection is temporarily degraded. Retrying…"
+  );
+}
+
 export function BrainDashboard() {
   const [data, setData] = useState<Data | null>(null);
   const [key, setKey] = useState<`0x${string}` | null>(null);
@@ -583,7 +611,7 @@ export function BrainDashboard() {
     if (!response.ok) throw new Error(body.error ?? "Network unavailable");
     setData(body);
     setMessage((current) =>
-      current === "Connecting to network…"
+      isStatusRefreshMessage(current)
         ? `${body.network.networkLabel} connected.`
         : current,
     );
@@ -606,7 +634,7 @@ export function BrainDashboard() {
       : `${message} Live portfolio data is still refreshing.`;
   }
   useEffect(() => {
-    refresh().catch((error) => setMessage(error.message));
+    refresh().catch((error) => setMessage(statusRefreshErrorMessage(error)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
@@ -640,12 +668,16 @@ export function BrainDashboard() {
     data?.network.mode,
   ]);
   useEffect(() => {
-    if (account) refresh().catch((error) => setMessage(error.message));
+    if (account)
+      refresh().catch((error) => setMessage(statusRefreshErrorMessage(error)));
   }, [account]);
   useEffect(() => {
     if (!account) return;
     const timer = window.setTimeout(
-      () => refresh().catch((error) => setMessage(error.message)),
+      () =>
+        refresh().catch((error) =>
+          setMessage(statusRefreshErrorMessage(error)),
+        ),
       250,
     );
     return () => window.clearTimeout(timer);

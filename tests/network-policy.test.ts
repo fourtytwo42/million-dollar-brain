@@ -367,6 +367,17 @@ test("confirmed wallet actions survive temporary status refresh failures", () =>
   assert.match(dashboard, /Live portfolio data is still refreshing\./);
 });
 
+test("testnet status errors stay concise and recover after refresh", () => {
+  const dashboard = readFileSync(
+    "apps/web/components/brain-dashboard.tsx",
+    "utf8",
+  );
+  assert.match(dashboard, /message\.includes\("0x00bfc921"\)/);
+  assert.match(dashboard, /DEX pricing is refreshing\./);
+  assert.match(dashboard, /Testnet connection is temporarily degraded\./);
+  assert.match(dashboard, /isStatusRefreshMessage\(current\)/);
+});
+
 test("runtime release evidence can supersede a stale service environment SHA", () => {
   const releaseStatus = readFileSync("apps/web/lib/release-status.ts", "utf8");
   assert.match(releaseStatus, /MDB_STATE_DIR.*release\.json/s);

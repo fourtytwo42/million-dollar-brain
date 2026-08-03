@@ -2568,3 +2568,13 @@ build`; authenticated live `/api/collect-market`.
   supervise the remaining acceptance checkpoints, complete public
   desktop/tablet/mobile UAT, then regenerate non-broadcast mainnet-shadow
   readiness evidence.
+
+
+### 2026-08-03 - Testnet DEX pricing recovery and friendly status errors
+
+- Context: Public testnet exposed a raw Viem totalAssetsUsd revert with selector 0x00bfc921. The selector is InvalidPrice(), caused by stale DEX observations after the testnet DEX keeper ran out of native gas and its operator reserve floor blocked an automatic top-up.
+- Decision: Preserve fail-closed valuation, refuel only the testnet keeper/operator from deterministic acceptance actors, refresh every approved DEX pool, republish market prices, and translate stale-price/RPC refresh failures into concise user-facing recovery messages that clear after a successful refresh.
+- Files: apps/web/components/brain-dashboard.tsx.
+- Commands/tests: DEX keepalive and market collector completed; totalAssetsUsd() returned 11462885796658481068204; production web build passed with the encrypted testnet operator environment.
+- Result: On-chain NAV reads recovered without a contract upgrade or mainnet change. The frozen ea8b2dd release is superseded by this source fix and requires a new exact-SHA acceptance before mainnet-candidate graduation.
+- Follow-up: Commit/push and deploy the repaired web build, verify the public testnet UI, and obtain more faucet ETH for sustained keeper/operator gas runway.
