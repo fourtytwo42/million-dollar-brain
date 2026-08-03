@@ -22,6 +22,11 @@ case "$mode" in
     ;;
 esac
 
+[[ "${MDB_DEX_KEEPALIVE_ARMED:-0}" == "1" ]] || {
+  echo "DEX keepalive is test-only; set MDB_DEX_KEEPALIVE_ARMED=1 to run it" >&2
+  exit 1
+}
+
 network_config="$repo_root/config/networks.json"
 rpc_url="${MDB_RPC_URL:-$(jq -r --arg key "$config_key" '.[$key].serverRpcUrl' "$network_config")}"
 manifest="${MDB_DEPLOYMENT_FILE:-$(jq -r --arg key "$config_key" '.[$key].deploymentFile' "$network_config")}"
@@ -73,55 +78,6 @@ export MDB_DEX_ROUTER="$router"
 cd "$repo_root/packages/contracts"
 exec 9>"/tmp/42-braincells-dex-keepalive-$mode.lock"
 flock --nonblock 9 || exit 0
-
-top_up_testnet_keeper() {
-  [[ "$mode" == "testnet" ]] || return 0
-
-  local minimum target reserve_floor balance deficit operator operator_balance
-  minimum="${MDB_DEX_KEEPALIVE_MINIMUM_GAS_WEI:-100000000000000}"
-  target="${MDB_DEX_KEEPALIVE_TARGET_GAS_WEI:-500000000000000}"
-  reserve_floor="${MDB_OPERATOR_GAS_RESERVE_FLOOR_WEI:-3000000000000000}"
-  balance="$(cast balance "$deployer" --rpc-url "$rpc_url")"
-
-  (( balance < minimum )) || return 0
-  [[ -n "${MDB_OPERATOR_KEYSTORE:-}" &&
-    -n "${MDB_OPERATOR_PASSWORD_FILE:-}" ]] || {
-    echo "DEX keeper gas is low and the testnet operator signer is unavailable" >&2
-    return 1
-  }
-  (( target > balance )) || return 0
-
-  operator="$(
-    cast wallet address \
-      --keystore "$MDB_OPERATOR_KEYSTORE" \
-      --password-file "$MDB_OPERATOR_PASSWORD_FILE"
-  )"
-  [[ "${operator,,}" != "${deployer,,}" ]] || return 0
-
-  deficit=$((target - balance))
-  operator_balance="$(cast balance "$operator" --rpc-url "$rpc_url")"
-  (( operator_balance >= reserve_floor + deficit )) || {
-    echo "DEX keeper gas is low and the operator reserve floor blocks a top-up" >&2
-    return 1
-  }
-
-  cast send "$deployer" \
-    --value "${deficit}wei" \
-    --rpc-url "$rpc_url" \
-    --keystore "$MDB_OPERATOR_KEYSTORE" \
-    --password-file "$MDB_OPERATOR_PASSWORD_FILE" \
-    --gas-limit 100000 \
-    --confirmations 1 >/dev/null
-
-  balance="$(cast balance "$deployer" --rpc-url "$rpc_url")"
-  (( balance >= minimum )) || {
-    echo "DEX keeper gas top-up did not reach the configured minimum" >&2
-    return 1
-  }
-  echo "DEX keeper gas restored to the configured testnet target"
-}
-
-top_up_testnet_keeper
 
 observation_index() {
   cast call "$1" "slot0()(uint160,int24,uint16,uint16,uint16,uint8,bool)" \

@@ -118,6 +118,17 @@ type Cycle = {
   };
 };
 type Data = {
+  dexSnapshot: {
+    schemaVersion: 1;
+    observedAt: string;
+    blockNumber: string;
+    chainTimestamp: number;
+    lastSuccessfulAt: string;
+    state: "live" | "stale" | "degraded" | "unavailable";
+    reasonCodes: string[];
+    releaseSha: string;
+    snapshotHash: string;
+  };
   activation: {
     basketControlsConfigured: boolean;
     brainControlsConfigured: boolean;
@@ -318,6 +329,7 @@ type Data = {
 type QuotePlanResponse = {
   quoteBlock: string;
   expiresAt: number;
+  preview: Data["previews"]["deposit"] | Data["previews"]["redeem"];
   plans: {
     plan: {
       route: {
@@ -514,10 +526,33 @@ function isStatusRefreshMessage(message: string) {
   );
 }
 
-export function BrainDashboard() {
-  const [data, setData] = useState<Data | null>(null);
+function pricingStatusMessage(data: Data) {
+  const ageSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - Date.parse(data.dexSnapshot.observedAt)) / 1_000),
+  );
+  if (data.dexSnapshot.state === "live") {
+    return `DEX pricing live · block ${data.dexSnapshot.blockNumber}`;
+  }
+  if (data.dexSnapshot.state === "stale") {
+    return `Last updated ${ageSeconds}s ago — trading paused.`;
+  }
+  if (data.dexSnapshot.state === "degraded") {
+    return `LAN connection degraded · last update ${ageSeconds}s ago — trading paused.`;
+  }
+  return "DEX pricing unavailable — trading paused.";
+}
+
+export function BrainDashboard({
+  initialData = null,
+}: {
+  initialData?: Data | null;
+}) {
+  const [data, setData] = useState<Data | null>(initialData);
   const [key, setKey] = useState<`0x${string}` | null>(null);
-  const [message, setMessage] = useState("Connecting to network…");
+  const [message, setMessage] = useState(
+    initialData ? pricingStatusMessage(initialData) : "Connecting to network…",
+  );
   const [dark, setDark] = useState(false);
   const [amount, setAmount] = useState("1000");
   const [sellAmount, setSellAmount] = useState("");
@@ -550,6 +585,7 @@ export function BrainDashboard() {
     if (
       !data ||
       (data.deployment.schemaVersion ?? 0) < 4 ||
+      data.dexSnapshot.state !== "live" ||
       screen !== "Basket"
     ) {
       setBuyDexQuote(null);
@@ -572,6 +608,23 @@ export function BrainDashboard() {
         if (!cancelled) {
           setBuyDexQuote(buy);
           setSellDexQuote(sell);
+          setData((current) => {
+            if (!current) return current;
+            const deposit = buy
+              ? (buy.preview as Data["previews"]["deposit"])
+              : current.previews.deposit;
+            const redeem = sell
+              ? (sell.preview as Data["previews"]["redeem"])
+              : current.previews.redeem;
+            if (
+              JSON.stringify(deposit) ===
+                JSON.stringify(current.previews.deposit) &&
+              JSON.stringify(redeem) === JSON.stringify(current.previews.redeem)
+            ) {
+              return current;
+            }
+            return { ...current, previews: { deposit, redeem } };
+          });
           setDexQuoteError(null);
         }
       } catch (error) {
@@ -601,20 +654,37 @@ export function BrainDashboard() {
   const walletSource = external.address ? "external" : "built-in";
 
   async function refresh() {
-    const query = new URLSearchParams();
-    if (account) query.set("address", account.address);
-    query.set("deposit", amount || "0");
-    query.set("sell", sellAmount || "0");
-    const suffix = `?${query.toString()}`;
-    const response = await fetch(`/api/status${suffix}`, { cache: "no-store" });
+    const [response, accountResponse] = await Promise.all([
+      fetch("/api/status"),
+      account
+        ? fetch(`/api/account-status?address=${account.address}`, {
+            cache: "no-store",
+          })
+        : null,
+    ]);
     const body = await response.json();
     if (!response.ok) throw new Error(body.error ?? "Network unavailable");
-    setData(body);
-    setMessage((current) =>
-      isStatusRefreshMessage(current)
-        ? `${body.network.networkLabel} connected.`
-        : current,
-    );
+    const accountBody =
+      accountResponse && accountResponse.ok
+        ? await accountResponse.json()
+        : null;
+    setData((current) => ({
+      ...body,
+      ...(accountBody ?? {}),
+      cycleHistory: current?.cycleHistory?.length
+        ? current.cycleHistory
+        : body.cycleHistory,
+      performanceHistory: current?.performanceHistory?.length
+        ? current.performanceHistory
+        : body.performanceHistory,
+    }));
+    setMessage(pricingStatusMessage(body));
+  }
+  async function refreshHistory() {
+    const response = await fetch("/api/history?limit=50");
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error ?? "History unavailable");
+    setData((current) => (current ? { ...current, ...body } : current));
   }
   async function refreshAfterConfirmedAction() {
     const deadline = Date.now() + 90_000;
@@ -637,6 +707,11 @@ export function BrainDashboard() {
     refresh().catch((error) => setMessage(statusRefreshErrorMessage(error)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!data || data.cycleHistory.length > 0) return;
+    refreshHistory().catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Boolean(data)]);
   useEffect(() => {
     if (!data?.network.builtInWalletEnabled) {
       setKey(null);
@@ -683,7 +758,7 @@ export function BrainDashboard() {
     return () => window.clearTimeout(timer);
     // refresh intentionally captures the current wallet and preview amounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, amount, sellAmount]);
+  }, [account]);
   useEffect(() => {
     const pollInterval = data?.network.mode === "testnet" ? 30_000 : 10_000;
     const timer = window.setInterval(
@@ -693,7 +768,7 @@ export function BrainDashboard() {
     return () => window.clearInterval(timer);
     // refresh intentionally captures the current wallet and preview amount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account, amount, sellAmount, data?.network.mode]);
+  }, [account, data?.network.mode]);
   useEffect(() => {
     if (!sellAmount && data && BigInt(data.shares) > 0n) {
       setSellAmount(inputAmount(BigInt(data.shares) / 4n));
@@ -796,6 +871,11 @@ export function BrainDashboard() {
   }
   async function deposit() {
     if (!data) return;
+    if (data.dexSnapshot.state !== "live") {
+      throw new Error(
+        "DEX pricing is not live. Refresh after the LAN connection recovers.",
+      );
+    }
     const reserveDecimals =
       data.assets.find((asset) => asset.kind === "reserve")?.decimals ?? 18;
     const value = parseUnits(amount, reserveDecimals);
@@ -1063,6 +1143,11 @@ export function BrainDashboard() {
   }
   async function redeem() {
     if (!data || BigInt(data.shares) === 0n) return;
+    if (data.dexSnapshot.state !== "live") {
+      throw new Error(
+        "DEX pricing is not live. Refresh after the LAN connection recovers.",
+      );
+    }
     const { wallet, publicClient } = clients();
     const shares = parseUnits(sellAmount || "0", 18);
     if (!shares) throw new Error("Enter a BRAINS amount to sell.");

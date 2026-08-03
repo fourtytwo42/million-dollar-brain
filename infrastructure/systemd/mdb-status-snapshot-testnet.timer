@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh the read-only 42 Braincells testnet DEX snapshot
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=15s
+AccuracySec=1s
+Unit=mdb-status-snapshot-testnet.service
+
+[Install]
+WantedBy=timers.target

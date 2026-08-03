@@ -474,7 +474,11 @@ export async function buildDexSwapPlans(
   amount: bigint,
 ) {
   const { d } = venue();
-  const state = await dashboard();
+  const state = await dashboard(
+    undefined,
+    action === "deposit" ? amount : 0n,
+    action === "redeem" ? amount : 0n,
+  );
   const reserve = d.assets?.find((asset) => asset.kind === "reserve");
   if (!reserve) throw new Error("reserve asset missing");
   if (action === "deposit") {
@@ -581,6 +585,8 @@ export async function buildDexSwapPlans(
     expiresAt: issuedAt + 30,
     plans,
     basketCapacity: state.capacity,
+    preview:
+      action === "deposit" ? state.previews.deposit : state.previews.redeem,
   };
   await persistQuoteBundle(bundle, amount);
   return bundle;

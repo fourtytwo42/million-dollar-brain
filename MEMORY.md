@@ -4,20 +4,47 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Complete the exact-commit paused mainnet canary graduation
-  pipeline without signing or broadcasting a mainnet transaction.
-- Last meaningful change: Exact release review found that signed build evidence
-  omitted BrainControlRegistry and CreatorRiskController runtime hashes. The
-  artifact generator and graduation regression now cover every upgradeable
-  implementation, invalidating the provisional `e7e36b6` release SHA.
-- Next step: Commit and push the evidence fix, rerun exact build and fork gates,
-  then promote the new SHA unchanged to testnet and start a fresh two-hour
-  acceptance after a natural AI-sourced DecisionContext V7 cycle.
+- Current task: Finish the backend-cached, zero-gas DEX pricing release and its
+  devnet/testnet acceptance without any mainnet transaction.
+- Last meaningful change: Devnet now computes valid NAV from idle Uniswap TWAP
+  history, refreshes an atomic cached snapshot every 15 seconds using only RPC
+  reads, and disables routine synthetic price/keepalive transactions.
+- Next step: Freeze and push the new source SHA, run the two-hour zero-gas
+  devnet soak, promote the exact build to testnet in place, and start a fresh
+  exact-SHA two-hour acceptance with routine keepalive disabled.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
 
 ## Current State
+
+### 2026-08-03 - Backend-cached zero-gas DEX pricing
+
+- Context: Browser refreshes synchronously called `totalAssetsUsd()`, and testnet
+  pool keepalive plus mock-price synchronization spent native gas merely to keep
+  pricing available.
+- Decision: A 15-second backend worker writes `DexNavSnapshotV1` atomically and
+  persists history. `/api/status` is cached, public, compact, and wallet-free;
+  wallet and decision-history reads use separate endpoints. Transaction quote
+  planning remains uncached and revalidates a current pinned block. Idle pools
+  may price from valid 30-minute/four-hour history while recent pool activity
+  remains separate qualification evidence. Keepalive and mock-price writes now
+  require explicit test arming and never auto-fund themselves.
+- Files: `apps/web/lib/dex-nav-snapshot.ts`,
+  `apps/web/app/api/{status,account-status,history,refresh-status-snapshot}`,
+  `packages/contracts/src/DexTwapValuationAdapter.sol`, snapshot systemd units,
+  and network/snapshot regressions.
+- Commands/tests: Full Foundry suite 80/80 including six invariants at 256 runs
+  and 128,000 calls each; snapshot 3/3; network policy 21/21; RPC policy 11/11;
+  wallet 8/8; graduation 19/19; focused valuation 7/7; production build passed.
+- Result: Devnet valuation proxy implementation is
+  `0x75DC872D97FAAb2360591D54A51D6b2671Ae2647`; BRAINS supply was unchanged and
+  `totalAssetsUsd()` recovered. A measured 40-second interval advanced three
+  cached snapshots with zero new blocks. Stale snapshots retained last-known
+  NAV, disabled trading, and recovered to live after the worker resumed.
+- Follow-up: Complete the two-hour devnet soak and exact-SHA testnet promotion
+  and acceptance. Testnet routine keepalive stays armed only until its adapter
+  is upgraded. Mainnet remains disabled and requires regenerated evidence.
 
 ### 2026-08-01 - Exact release bytecode evidence completed
 

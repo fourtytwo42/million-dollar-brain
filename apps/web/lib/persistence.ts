@@ -321,7 +321,17 @@ async function ensureSchema(client: PoolClient) {
       receipt jsonb NOT NULL,
       PRIMARY KEY (tx_hash, log_index)
     );
-    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4), (5), (6)
+    CREATE TABLE IF NOT EXISTS mdb_dex_nav_snapshots_v7 (
+      snapshot_hash text PRIMARY KEY,
+      observed_at timestamptz NOT NULL,
+      block_number numeric NOT NULL,
+      state text NOT NULL CHECK (state IN ('live','stale','degraded','unavailable')),
+      snapshot jsonb NOT NULL,
+      release_sha text NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS mdb_dex_nav_snapshots_v7_time_idx
+      ON mdb_dex_nav_snapshots_v7 (observed_at DESC);
+    INSERT INTO mdb_schema_migrations(version) VALUES (1), (2), (3), (4), (5), (6), (7)
       ON CONFLICT (version) DO NOTHING;
   `);
 }
@@ -424,6 +434,33 @@ export async function databaseHealth() {
       error: error instanceof Error ? error.message : "database unavailable",
     };
   }
+}
+
+export async function persistDexNavSnapshot(input: {
+  snapshotHash: string;
+  observedAt: string;
+  blockNumber: string;
+  state: "live" | "stale" | "degraded" | "unavailable";
+  snapshot: unknown;
+  releaseSha: string;
+}) {
+  return withDatabase(async (client) => {
+    await client.query(
+      `INSERT INTO mdb_dex_nav_snapshots_v7
+        (snapshot_hash,observed_at,block_number,state,snapshot,release_sha)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT(snapshot_hash) DO NOTHING`,
+      [
+        input.snapshotHash,
+        input.observedAt,
+        input.blockNumber,
+        input.state,
+        json(input.snapshot),
+        input.releaseSha,
+      ],
+    );
+    return true;
+  });
 }
 
 export async function recentPortfolioSnapshots(limit = 32) {

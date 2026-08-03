@@ -232,6 +232,17 @@ type CycleRecord = {
 };
 
 export type EditorialData = {
+  dexSnapshot: {
+    schemaVersion: 1;
+    observedAt: string;
+    blockNumber: string;
+    chainTimestamp: number;
+    lastSuccessfulAt: string;
+    state: "live" | "stale" | "degraded" | "unavailable";
+    reasonCodes: string[];
+    releaseSha: string;
+    snapshotHash: string;
+  };
   activation: {
     basketControlsConfigured: boolean;
     brainControlsConfigured: boolean;
@@ -719,6 +730,7 @@ export function EditorialDashboard({
     const query = new URLSearchParams(window.location.search);
     const cycle = query.get("cycle");
     if (query.get("view") === "decisions") setScreen("Decisions");
+    if (query.get("view") === "basket") setScreen("Basket");
     if (cycle) setSelectedCycleKey(cycle);
     const piece = Number(query.get("piece"));
     if (query.get("view") === "brain" && piece >= 1 && piece <= 42) {
@@ -2621,6 +2633,7 @@ export function EditorialDashboard({
                     className="primary-action trade-submit"
                     disabled={
                       !data ||
+                      data.dexSnapshot.state !== "live" ||
                       !data.activation.buysEnabled ||
                       buyExceedsBasketCapacity ||
                       Number(amount) <= 0 ||
@@ -2730,6 +2743,7 @@ export function EditorialDashboard({
                     className="primary-action trade-submit"
                     disabled={
                       !data ||
+                      data.dexSnapshot.state !== "live" ||
                       !data.activation.sellsEnabled ||
                       Number(sellAmount) <= 0 ||
                       Number(sellAmount) >

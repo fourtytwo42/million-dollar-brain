@@ -193,22 +193,57 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         view
         returns (uint256 priceWad, uint256 updatedAt, bool valid)
     {
-        if (token == reserve) return (1e18, block.timestamp, true);
+        (priceWad, updatedAt,,, valid) = _quoteEvidence(token);
+    }
+
+    function quoteEvidence(address token)
+        external
+        view
+        returns (
+            uint256 priceWad,
+            uint256 computedAt,
+            uint256 lastPoolActivityAt,
+            bool activityFresh,
+            bool valid
+        )
+    {
+        return _quoteEvidence(token);
+    }
+
+    function _quoteEvidence(address token)
+        private
+        view
+        returns (
+            uint256 priceWad,
+            uint256 computedAt,
+            uint256 lastPoolActivityAt,
+            bool activityFresh,
+            bool valid
+        )
+    {
+        if (token == reserve) {
+            return (1e18, block.timestamp, block.timestamp, true, true);
+        }
         TwapRoute memory route = routes[token];
-        if (!route.enabled) return (0, 0, false);
-        if (dexSafetyV2Enabled && !_routeSafetyValid(token, route)) return (0, 0, false);
+        if (!route.enabled) return (0, block.timestamp, 0, false, false);
+        if (dexSafetyV2Enabled && !_routeSafetyValid(token, route)) {
+            return (0, block.timestamp, 0, false, false);
+        }
         (uint256 firstQuote, uint256 firstUpdated, bool firstValid) = _poolQuote(
             route.directPool,
             token,
             route.bridgePool == address(0) ? reserve : weth,
             _unit(token),
             route.minimumDirectLiquidity,
-            route.minimumObservationCardinality,
-            route.maximumObservationAge
+            route.minimumObservationCardinality
         );
-        if (!firstValid) return (0, firstUpdated, false);
+        if (!firstValid) {
+            return (0, block.timestamp, firstUpdated, false, false);
+        }
         if (route.bridgePool == address(0)) {
-            return (_reserveToWad(firstQuote), firstUpdated, true);
+            activityFresh = firstUpdated <= block.timestamp
+                && block.timestamp - firstUpdated <= route.maximumObservationAge;
+            return (_reserveToWad(firstQuote), block.timestamp, firstUpdated, activityFresh, true);
         }
         (uint256 reserveQuote, uint256 secondUpdated, bool secondValid) = _poolQuote(
             route.bridgePool,
@@ -216,11 +251,16 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
             reserve,
             firstQuote,
             route.minimumBridgeLiquidity,
-            route.minimumObservationCardinality,
-            route.maximumObservationAge
+            route.minimumObservationCardinality
         );
-        updatedAt = firstUpdated < secondUpdated ? firstUpdated : secondUpdated;
-        return secondValid ? (_reserveToWad(reserveQuote), updatedAt, true) : (0, updatedAt, false);
+        lastPoolActivityAt = firstUpdated < secondUpdated ? firstUpdated : secondUpdated;
+        if (!secondValid) {
+            return (0, block.timestamp, lastPoolActivityAt, false, false);
+        }
+        activityFresh = lastPoolActivityAt <= block.timestamp
+            && block.timestamp - lastPoolActivityAt <= route.maximumObservationAge;
+        return
+            (_reserveToWad(reserveQuote), block.timestamp, lastPoolActivityAt, activityFresh, true);
     }
 
     function safetyStatus(address token)
@@ -366,8 +406,7 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         address quoteToken,
         uint256 baseAmount,
         uint128 minimumLiquidity,
-        uint16 minimumCardinality,
-        uint32 maximumObservationAge
+        uint16 minimumCardinality
     ) private view returns (uint256 quoteAmount, uint256 updatedAt, bool valid) {
         IUniswapV3PoolTwap pool = IUniswapV3PoolTwap(poolAddress);
         if (pool.liquidity() < minimumLiquidity) return (0, 0, false);
@@ -375,10 +414,7 @@ contract DexTwapValuationAdapter is Initializable, UUPSUpgradeable, AccessContro
         if (cardinality < minimumCardinality) return (0, 0, false);
         (uint32 observationTime,,, bool initialized) = pool.observations(index);
         updatedAt = uint256(observationTime);
-        if (
-            !initialized || updatedAt > block.timestamp
-                || block.timestamp - updatedAt > maximumObservationAge
-        ) return (0, updatedAt, false);
+        if (!initialized || updatedAt > block.timestamp) return (0, updatedAt, false);
         uint32[] memory secondsAgos = new uint32[](2);
         secondsAgos[0] = twapWindow;
         (int56[] memory cumulatives,) = pool.observe(secondsAgos);

@@ -138,8 +138,13 @@ async function candidates() {
 }
 
 async function syncLocalMarketPricesUnlocked() {
-  if (process.env.MDB_LOCAL_PRICE_SYNC_ENABLED === "false") {
-    return { enabled: false, updated: [], unchanged: [] };
+  if (process.env.MDB_LOCAL_PRICE_SYNC_ENABLED !== "true") {
+    return {
+      enabled: false,
+      updated: [],
+      unchanged: [],
+      reason: "on-chain mock-price writes require explicit test arming",
+    };
   }
   const chainId = await publicClient.getChainId();
   if (chainId === 4663) {

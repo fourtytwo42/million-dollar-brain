@@ -315,17 +315,20 @@ test("testnet endurance uses the authenticated acceptance surface", () => {
   assert.doesNotMatch(acceptance, /const minimumUsdg = parseUnits\("5000"/);
 });
 
-test("testnet DEX keepalive restores bounded gas without breaching the operator reserve", () => {
+test("DEX keepalive is explicitly armed and never funds itself", () => {
   const keepalive = readFileSync("scripts/run-dex-keepalive.sh", "utf8");
 
-  assert.match(keepalive, /top_up_testnet_keeper/);
-  assert.match(keepalive, /MDB_DEX_KEEPALIVE_MINIMUM_GAS_WEI/);
-  assert.match(keepalive, /MDB_DEX_KEEPALIVE_TARGET_GAS_WEI/);
-  assert.match(keepalive, /MDB_OPERATOR_GAS_RESERVE_FLOOR_WEI/);
-  assert.match(keepalive, /operator_balance >= reserve_floor \+ deficit/);
-  assert.match(keepalive, /--value "\$\{deficit\}wei"/);
-  assert.match(keepalive, /--gas-limit 100000/);
-  assert.match(keepalive, /\[\[ "\$mode" == "testnet" \]\]/);
+  assert.match(keepalive, /MDB_DEX_KEEPALIVE_ARMED/);
+  assert.doesNotMatch(keepalive, /top_up_testnet_keeper/);
+  assert.doesNotMatch(keepalive, /MDB_DEX_KEEPALIVE_MINIMUM_GAS_WEI/);
+  assert.doesNotMatch(keepalive, /MDB_OPERATOR_GAS_RESERVE_FLOOR_WEI/);
+  assert.doesNotMatch(keepalive, /cast send "\$deployer"/);
+});
+
+test("mock price writes are opt-in test utilities", () => {
+  const source = readFileSync("apps/web/lib/market-price-sync.ts", "utf8");
+  assert.match(source, /MDB_LOCAL_PRICE_SYNC_ENABLED !== "true"/);
+  assert.match(source, /require explicit test arming/);
 });
 
 test("test-only wallet controls are visible locally but hidden on testnet", () => {
@@ -367,15 +370,20 @@ test("confirmed wallet actions survive temporary status refresh failures", () =>
   assert.match(dashboard, /Live portfolio data is still refreshing\./);
 });
 
-test("testnet status errors stay concise and recover after refresh", () => {
+test("cached DEX status is explicit and blocks stale transactions", () => {
   const dashboard = readFileSync(
     "apps/web/components/brain-dashboard.tsx",
     "utf8",
   );
-  assert.match(dashboard, /message\.includes\("0x00bfc921"\)/);
-  assert.match(dashboard, /DEX pricing is refreshing\./);
-  assert.match(dashboard, /Testnet connection is temporarily degraded\./);
-  assert.match(dashboard, /isStatusRefreshMessage\(current\)/);
+  const status = readFileSync("apps/web/app/api/status/route.ts", "utf8");
+  assert.match(dashboard, /DEX pricing live · block/);
+  assert.match(
+    dashboard,
+    /Last updated \$\{ageSeconds\}s ago — trading paused/,
+  );
+  assert.match(dashboard, /data\.dexSnapshot\.state !== "live"/);
+  assert.match(status, /snapshotStatusResponse\(\)/);
+  assert.doesNotMatch(status, /dashboard\(/);
 });
 
 test("runtime release evidence can supersede a stale service environment SHA", () => {

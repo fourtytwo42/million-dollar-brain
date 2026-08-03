@@ -5,6 +5,7 @@ Requires=mdb-rpc-failover-testnet.service
 
 [Service]
 Type=oneshot
+Environment=MDB_DEX_KEEPALIVE_ARMED=1
 User=hendo420
 WorkingDirectory=/home/hendo420/projects/million-dollar-brain
 EnvironmentFile=/etc/mdb/testnet.env

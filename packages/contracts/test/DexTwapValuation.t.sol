@@ -61,12 +61,10 @@ contract TwapPoolMock {
                 cumulatives[i] = 0;
                 secondsPerLiquidity[i] = 0;
             } else {
-                cumulatives[i] =
-                    current - int56(meanTick) * int56(uint56(age));
+                cumulatives[i] = current - int56(meanTick) * int56(uint56(age));
                 secondsPerLiquidity[i] = uint160(
                     currentLiquidity
-                        - ((uint256(age) << 128)
-                            / uint256(liquidity == 0 ? 1 : liquidity))
+                        - ((uint256(age) << 128) / uint256(liquidity == 0 ? 1 : liquidity))
                 );
             }
         }
@@ -118,9 +116,31 @@ contract DexTwapValuationTest is Test {
         assertApproxEqRel(price, 2e18, 0.001e18);
     }
 
-    function testRejectsStaleObservation() public {
+    function testIdlePoolKeepsValidTwapButReportsStaleActivity() public {
         pool.setState(0, 0, 1_000_000, 64, uint32(block.timestamp - 61));
-        (,, bool valid) = adapter.quoteStatus(address(asset));
+        (
+            uint256 price,
+            uint256 computedAt,
+            uint256 lastPoolActivityAt,
+            bool activityFresh,
+            bool valid
+        ) = adapter.quoteEvidence(address(asset));
+        assertTrue(valid);
+        assertEq(price, 1e18);
+        assertEq(computedAt, block.timestamp);
+        assertEq(lastPoolActivityAt, block.timestamp - 61);
+        assertFalse(activityFresh);
+
+        (uint256 statusPrice, uint256 updatedAt, bool statusValid) =
+            adapter.quoteStatus(address(asset));
+        assertTrue(statusValid);
+        assertEq(statusPrice, price);
+        assertEq(updatedAt, block.timestamp);
+    }
+
+    function testRejectsFutureObservation() public {
+        pool.setState(0, 0, 1_000_000, 64, uint32(block.timestamp + 1));
+        (,,,, bool valid) = adapter.quoteEvidence(address(asset));
         assertFalse(valid);
     }
 

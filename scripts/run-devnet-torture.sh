@@ -265,7 +265,7 @@ fi
 export MDB_NETWORK_MODE=local
 export MDB_RPC_URL="http://127.0.0.1:$rpc_port"
 export MDB_DEPLOYMENT_FILE="$clone_manifest"
-scripts/run-dex-keepalive.sh > "$evidence_dir/dex-keepalive.log" 2>&1
+MDB_DEX_KEEPALIVE_ARMED=1 scripts/run-dex-keepalive.sh > "$evidence_dir/dex-keepalive.log" 2>&1
 
 export NEXT_PUBLIC_MDB_RPC_URL="http://127.0.0.1:$rpc_port"
 export MDB_STATE_DIR="$run_root/state"
@@ -352,7 +352,7 @@ while kill -0 "$soak_pid" 2>/dev/null; do
         --rpc-url "http://127.0.0.1:$rpc_port" >/dev/null
       cast rpc evm_mine --rpc-url "http://127.0.0.1:$rpc_port" >/dev/null
     fi
-    scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1
+    MDB_DEX_KEEPALIVE_ARMED=1 scripts/run-dex-keepalive.sh >> "$evidence_dir/dex-keepalive.log" 2>&1
     touch "$run_root/restart-anvil-complete"
   fi
   sleep 1

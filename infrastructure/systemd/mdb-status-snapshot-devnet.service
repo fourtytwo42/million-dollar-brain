@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh the read-only 42 Braincells devnet DEX snapshot
+After=mdb-web-devnet.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mdb/devnet.env
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 50 -H "x-mdb-snapshot-token:${MDB_COLLECTOR_TOKEN}" -X POST http://127.0.0.1:3000/api/refresh-status-snapshot

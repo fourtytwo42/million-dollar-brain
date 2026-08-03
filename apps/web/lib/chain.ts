@@ -792,8 +792,7 @@ export async function dashboard(
           longTwapWindowSeconds: 14_400,
           shortTwapValid: qualification.shortTwapValid,
           longTwapValid: qualification.longTwapValid,
-          timeWeightedLiquidityValid:
-            qualification.timeWeightedLiquidityValid,
+          timeWeightedLiquidityValid: qualification.timeWeightedLiquidityValid,
           spotToShortDeviationBps: null,
           shortToLongDeviationBps: null,
           observationCardinality: 0,
@@ -1042,6 +1041,47 @@ export async function dashboard(
     rewards: { pending: pendingRewards.toString() },
     catalog: { version: Number(catalogVersion), hash: catalogHash },
     browserRpcUrl: networkConfig.browserRpcUrl,
+  };
+}
+
+export async function accountDashboard(
+  address: Address,
+  ownedPieceIds: bigint[],
+) {
+  const d = deployment();
+  const reserve = deploymentAssets(d).find((asset) => asset.kind === "reserve");
+  if (!reserve) throw new Error("deployment has no reserve asset");
+  const result = await dashboardReads([
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "balanceOf",
+      args: [address],
+    },
+    {
+      address: reserve.address,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [address],
+    },
+    {
+      address: d.basket,
+      abi: basketAbi,
+      functionName: "pendingRedemptionByAccount",
+      args: [address],
+    },
+    {
+      address: d.rewards,
+      abi: rewardAbi,
+      functionName: "pendingRewards",
+      args: [address, ownedPieceIds],
+    },
+  ]);
+  return {
+    shares: (result[0] as bigint).toString(),
+    walletUsdg: (result[1] as bigint).toString(),
+    redemption: { pendingRequestId: (result[2] as bigint).toString() },
+    rewards: { pending: (result[3] as bigint).toString() },
   };
 }
 
