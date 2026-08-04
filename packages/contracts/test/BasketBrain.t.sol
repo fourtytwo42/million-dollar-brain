@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { Test } from "forge-std/Test.sol";
-import { Vm } from "forge-std/Vm.sol";
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { MockToken } from "../src/MockToken.sol";
-import { MockRouter } from "../src/MockRouter.sol";
-import { MockValuationOracle } from "../src/MockValuationOracle.sol";
-import { RewardDistributor } from "../src/RewardDistributor.sol";
-import { CreatorVault } from "../src/CreatorVault.sol";
-import { BrainMarketplace } from "../src/BrainMarketplace.sol";
-import { BasketVault } from "../src/BasketVault.sol";
+import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {MockToken} from "../src/MockToken.sol";
+import {MockRouter} from "../src/MockRouter.sol";
+import {MockValuationOracle} from "../src/MockValuationOracle.sol";
+import {RewardDistributor} from "../src/RewardDistributor.sol";
+import {CreatorVault} from "../src/CreatorVault.sol";
+import {BrainMarketplace} from "../src/BrainMarketplace.sol";
+import {BasketVault} from "../src/BasketVault.sol";
 
 contract BasketBrainTest is Test {
     address internal admin = makeAddr("admin");
@@ -68,8 +68,7 @@ contract BasketBrainTest is Test {
         creatorVault = CreatorVault(
             address(
                 new ERC1967Proxy(
-                    address(creatorVaultImpl),
-                    abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
+                    address(creatorVaultImpl), abi.encodeCall(CreatorVault.initialize, (admin, address(usdg)))
                 )
             )
         );
@@ -79,8 +78,7 @@ contract BasketBrainTest is Test {
                 new ERC1967Proxy(
                     address(rewardImpl),
                     abi.encodeCall(
-                        RewardDistributor.initialize,
-                        (admin, address(usdg), rewardWeights, address(creatorVault))
+                        RewardDistributor.initialize, (admin, address(usdg), rewardWeights, address(creatorVault))
                     )
                 )
             )
@@ -329,8 +327,7 @@ contract BasketBrainTest is Test {
         vm.prank(admin);
         basket.rebalance(targets, weights, keccak256("event-cycle"));
         Vm.Log[] memory logs = vm.getRecordedLogs();
-        bytes32 signature =
-            keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
+        bytes32 signature = keccak256("RebalanceAssetTraded(bytes32,address,bool,uint256,uint256,uint256)");
         uint256 tradeEvents;
         for (uint256 i; i < logs.length; ++i) {
             if (logs[i].topics.length > 0 && logs[i].topics[0] == signature) {
@@ -551,9 +548,7 @@ contract BasketBrainTest is Test {
         brain.setProfile(1, alicePortrait, "Alice", "javascript:alert(1)");
         vm.expectRevert("invalid url");
         brain.setProfile(1, alicePortrait, "Alice", "http://example.com");
-        brain.setProfile(
-            1, alicePortrait, "Exit Liquidity Department", "https://example.com/braincell"
-        );
+        brain.setProfile(1, alicePortrait, "Exit Liquidity Department", "https://example.com/braincell");
         assertEq(brain.portraitHash(1), alicePortrait);
         assertEq(brain.customName(1), "Exit Liquidity Department");
         assertEq(brain.profileUrl(1), "https://example.com/braincell");
@@ -618,9 +613,7 @@ contract BasketBrainTest is Test {
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
-        brain.setProfile(
-            1, keccak256("linked portrait"), "Linked Braincell", "https://example.com/profile"
-        );
+        brain.setProfile(1, keccak256("linked portrait"), "Linked Braincell", "https://example.com/profile");
         vm.stopPrank();
 
         vm.prank(bob);
@@ -738,16 +731,12 @@ contract BasketBrainTest is Test {
         vm.startPrank(alice);
         usdg.approve(address(brain), type(uint256).max);
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
-        brain.setProfile(
-            1, keccak256("legacy portrait"), "Legacy Name", "https://example.com/legacy"
-        );
+        brain.setProfile(1, keccak256("legacy portrait"), "Legacy Name", "https://example.com/legacy");
         vm.stopPrank();
         assertFalse(brain.canChangeProfile(1, alice));
 
         vm.prank(admin);
-        brain.reinitializeV6(
-            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
-        );
+        brain.reinitializeV6(1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true);
         assertTrue(brain.profileV2Enabled());
         assertTrue(brain.canChangeProfile(1, alice));
         assertEq(brain.customName(1), "Legacy Name");
@@ -779,9 +768,7 @@ contract BasketBrainTest is Test {
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
         vm.stopPrank();
         vm.prank(admin);
-        brain.reinitializeV6(
-            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
-        );
+        brain.reinitializeV6(1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true);
 
         vm.prank(alice);
         vm.expectRevert("self rival");
@@ -820,9 +807,7 @@ contract BasketBrainTest is Test {
         brain.buy(1, type(uint256).max, block.timestamp + 1 hours);
         vm.stopPrank();
         vm.prank(admin);
-        brain.reinitializeV6(
-            1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true
-        );
+        brain.reinitializeV6(1, 0x53528e03482ed69833c8f3c99c171fb4367f7727f167dbe797eb1058196b401f, true, true);
         vm.prank(alice);
         vm.expectRevert("profile v2 enabled");
         brain.setProfile(1, keccak256("legacy"), "Legacy");
@@ -844,8 +829,7 @@ contract BasketBrainTest is Test {
         uint8 ally,
         uint8 reaction
     ) private pure returns (uint64) {
-        return uint64(accent) | (uint64(badge) << 8) | (uint64(voice) << 16)
-            | (uint64(victory) << 24) | (uint64(panic) << 32) | (uint64(rival) << 40)
-            | (uint64(ally) << 48) | (uint64(reaction) << 56);
+        return uint64(accent) | (uint64(badge) << 8) | (uint64(voice) << 16) | (uint64(victory) << 24)
+            | (uint64(panic) << 32) | (uint64(rival) << 40) | (uint64(ally) << 48) | (uint64(reaction) << 56);
     }
 }

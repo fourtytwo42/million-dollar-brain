@@ -1,36 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {
-    UUPSUpgradeable
-} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {
-    AccessControlUpgradeable
-} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 interface IExecutionRouter {
-    function buy(address tokenOut, uint256 usdgIn, uint256 minimumTokenOut)
-        external
-        returns (uint256);
-    function sell(address tokenIn, uint256 tokenInAmount, uint256 minimumUsdgOut)
-        external
-        returns (uint256);
+    function buy(address tokenOut, uint256 usdgIn, uint256 minimumTokenOut) external returns (uint256);
+    function sell(address tokenIn, uint256 tokenInAmount, uint256 minimumUsdgOut) external returns (uint256);
 }
 
 interface IValuationAdapter {
-    function quoteStatus(address token)
-        external
-        view
-        returns (uint256 priceWad, uint256 updatedAt, bool valid);
+    function quoteStatus(address token) external view returns (uint256 priceWad, uint256 updatedAt, bool valid);
 }
 
 interface IRewardFund {
@@ -41,10 +26,7 @@ interface IAssetRegistryView {
     function isActive(address token) external view returns (bool);
     function isHighVolatility(address token) external view returns (bool);
     function maximumWeightBps(address token) external view returns (uint16);
-    function effectiveExposureUsdWad(address token, uint256 activeTvlCapUsdWad)
-        external
-        view
-        returns (uint256);
+    function effectiveExposureUsdWad(address token, uint256 activeTvlCapUsdWad) external view returns (uint256);
 }
 
 interface IExecutionAdapterV3 {
@@ -63,11 +45,9 @@ interface IExecutionAdapterV3 {
         uint256 nonce;
     }
 
-    function execute(
-        ExecutionIntent calldata intent,
-        bytes calldata executionData,
-        bytes calldata authorizerSignature
-    ) external returns (uint256 amountOut);
+    function execute(ExecutionIntent calldata intent, bytes calldata executionData, bytes calldata authorizerSignature)
+        external
+        returns (uint256 amountOut);
 }
 
 interface IDexExecutionAdapterV1 {
@@ -90,9 +70,7 @@ interface IDexExecutionAdapterV1 {
         uint64 referenceBlock;
     }
 
-    function execute(DexSwapPlanV1 calldata plan, bool increasesExposure)
-        external
-        returns (uint256 amountOut);
+    function execute(DexSwapPlanV1 calldata plan, bool increasesExposure) external returns (uint256 amountOut);
 }
 
 contract BasketVault is
@@ -209,12 +187,8 @@ contract BasketVault is
         address indexed account, address indexed asset, uint256 usdgSpent, uint256 assetReceived
     );
     event Redeemed(address indexed account, uint256 shares, uint256 net, uint256 fee);
-    event RedemptionAssetSold(
-        address indexed account, address indexed asset, uint256 assetSold, uint256 usdgReceived
-    );
-    event RedemptionQueued(
-        uint256 indexed requestId, address indexed account, uint256 shares, uint256 minimumNet
-    );
+    event RedemptionAssetSold(address indexed account, address indexed asset, uint256 assetSold, uint256 usdgReceived);
+    event RedemptionQueued(uint256 indexed requestId, address indexed account, uint256 shares, uint256 minimumNet);
     event RedemptionCancelled(uint256 indexed requestId, address indexed account, uint256 shares);
     event QueuedRedemptionSettled(
         uint256 indexed requestId, address indexed account, uint256 shares, uint256 net, uint256 fee
@@ -229,9 +203,7 @@ contract BasketVault is
         uint256 valuationUsd
     );
     event TargetWeightsUpdated(bytes32 indexed cycleHash, address[] assets, uint16[] weights);
-    event BasketV2Configured(
-        address indexed valuation, uint256 maximumPriceAge, uint256 maximumSlippageBps
-    );
+    event BasketV2Configured(address indexed valuation, uint256 maximumPriceAge, uint256 maximumSlippageBps);
     event BasketV3Configured(address indexed assetRegistry, address indexed executionAdapter);
     event CanaryControlsConfigured(bool buysEnabled, bool sellsEnabled, bool rebalancesEnabled);
     event BasketV5Configured(address indexed dexValuation, address indexed dexExecutionAdapter);
@@ -334,11 +306,7 @@ contract BasketVault is
         emit BasketV5Configured(dexValuation_, dexExecutionAdapter_);
     }
 
-    function reinitializeV6(uint256 tvlCapUsdWad_)
-        external
-        reinitializer(6)
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function reinitializeV6(uint256 tvlCapUsdWad_) external reinitializer(6) onlyRole(DEFAULT_ADMIN_ROLE) {
         if (tvlCapUsdWad_ == 0) revert InvalidConfiguration();
         tvlCapUsdWad = tvlCapUsdWad_;
         _capacityEnforcementEnabled = true;
@@ -361,14 +329,8 @@ contract BasketVault is
         emit DexPriceAgeConfigured(maximumPriceAge_);
     }
 
-    function setDexAdapters(address dexValuation_, address dexExecutionAdapter_)
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        if (
-            !dexExecutionEnabled || dexValuation_ == address(0)
-                || dexExecutionAdapter_ == address(0)
-        ) {
+    function setDexAdapters(address dexValuation_, address dexExecutionAdapter_) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (!dexExecutionEnabled || dexValuation_ == address(0) || dexExecutionAdapter_ == address(0)) {
             revert InvalidConfiguration();
         }
         valuation = IValuationAdapter(dexValuation_);
@@ -445,17 +407,10 @@ contract BasketVault is
 
     function currentWeightBps(address asset) external view returns (uint256) {
         uint256 currentNav = totalAssetsUsd();
-        return
-            currentNav == 0
-                ? latestTargetWeightBps[asset]
-                : (assetValueUsd(asset) * BPS) / currentNav;
+        return currentNav == 0 ? latestTargetWeightBps[asset] : (assetValueUsd(asset) * BPS) / currentNav;
     }
 
-    function oracleStatus(address asset)
-        external
-        view
-        returns (uint256 priceWad, uint256 updatedAt, bool valid)
-    {
+    function oracleStatus(address asset) external view returns (uint256 priceWad, uint256 updatedAt, bool valid) {
         if (asset == address(usdg)) return (1e18, block.timestamp, true);
         return valuation.quoteStatus(asset);
     }
@@ -496,11 +451,7 @@ contract BasketVault is
         return _depositLegacy(grossAmount, minimumShares, deadline);
     }
 
-    function depositWithPlan(uint256, uint256, uint256, SwapPlan[] calldata)
-        external
-        pure
-        returns (uint256)
-    {
+    function depositWithPlan(uint256, uint256, uint256, SwapPlan[] calldata) external pure returns (uint256) {
         revert LegacyExecutionDisabled();
     }
 
@@ -522,8 +473,7 @@ contract BasketVault is
         if (beforeNav + netWad > _effectiveTvlCapUsdWad()) {
             revert TvlCapExceeded();
         }
-        uint256 walletValue =
-            beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
+        uint256 walletValue = beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
         if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
         if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
         _routeFee(fee);
@@ -533,8 +483,7 @@ contract BasketVault is
         if (afterNav > _effectiveTvlCapUsdWad()) revert TvlCapExceeded();
         if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
-        shares =
-            beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
+        shares = beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
         if (shares < minimumShares) revert SharesBelowMinimum();
         _mint(msg.sender, shares);
         emit Deposited(msg.sender, grossAmount, shares, fee);
@@ -554,8 +503,7 @@ contract BasketVault is
         if (beforeNav + netWad > _effectiveTvlCapUsdWad()) {
             revert TvlCapExceeded();
         }
-        uint256 walletValue =
-            beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
+        uint256 walletValue = beforeSupply == 0 ? 0 : (balanceOf(msg.sender) * beforeNav) / beforeSupply;
         if (walletValue + netWad > WALLET_VALUE_CAP) revert WalletCapExceeded();
 
         if (!usdg.transferFrom(msg.sender, address(this), grossAmount)) revert TransferFailed();
@@ -566,37 +514,27 @@ contract BasketVault is
         if (afterNav > _effectiveTvlCapUsdWad()) revert TvlCapExceeded();
         if (afterNav <= beforeNav) revert NoValueAdded();
         uint256 actualValueAdded = afterNav - beforeNav;
-        shares =
-            beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
+        shares = beforeSupply == 0 ? actualValueAdded : (actualValueAdded * beforeSupply) / beforeNav;
         if (shares < minimumShares) revert SharesBelowMinimum();
         _mint(msg.sender, shares);
         emit Deposited(msg.sender, grossAmount, shares, fee);
     }
 
-    function redeem(uint256 shares, uint256 minimumNet, uint256 deadline)
-        external
-        nonReentrant
-        returns (uint256 net)
-    {
+    function redeem(uint256 shares, uint256 minimumNet, uint256 deadline) external nonReentrant returns (uint256 net) {
         if (!_sellsEnabled()) revert SellsDisabled();
         if (swapPlansRequired) revert SwapPlanRequired();
         return _redeemLegacy(shares, minimumNet, deadline);
     }
 
-    function redeemWithPlan(uint256, uint256, uint256, SwapPlan[] calldata)
-        external
-        pure
-        returns (uint256)
-    {
+    function redeemWithPlan(uint256, uint256, uint256, SwapPlan[] calldata) external pure returns (uint256) {
         revert LegacyExecutionDisabled();
     }
 
-    function redeemWithDexPlan(
-        uint256 shares,
-        uint256 minimumNet,
-        uint256 deadline,
-        DexSwapPlan[] calldata plans
-    ) external nonReentrant returns (uint256 net) {
+    function redeemWithDexPlan(uint256 shares, uint256 minimumNet, uint256 deadline, DexSwapPlan[] calldata plans)
+        external
+        nonReentrant
+        returns (uint256 net)
+    {
         if (!_sellsEnabled()) revert SellsDisabled();
         if (!dexExecutionEnabled) revert DexExecutionNotConfigured();
         if (block.timestamp > deadline) revert Expired();
@@ -615,10 +553,7 @@ contract BasketVault is
         emit Redeemed(msg.sender, shares, net, fee);
     }
 
-    function _redeemLegacy(uint256 shares, uint256 minimumNet, uint256 deadline)
-        private
-        returns (uint256 net)
-    {
+    function _redeemLegacy(uint256 shares, uint256 minimumNet, uint256 deadline) private returns (uint256 net) {
         if (block.timestamp > deadline) revert Expired();
         uint256 supply = totalSupply();
         if (shares == 0 || shares > balanceOf(msg.sender)) revert InvalidShares();
@@ -654,20 +589,17 @@ contract BasketVault is
         revert QueuedExitsDisabled();
     }
 
-    function rebalance(
-        address[] calldata targetAssets,
-        uint16[] calldata weights,
-        bytes32 cycleHash
-    ) external onlyRole(KEEPER_ROLE) nonReentrant {
+    function rebalance(address[] calldata targetAssets, uint16[] calldata weights, bytes32 cycleHash)
+        external
+        onlyRole(KEEPER_ROLE)
+        nonReentrant
+    {
         if (!_rebalancesEnabled()) revert RebalancesDisabled();
         if (swapPlansRequired) revert SwapPlanRequired();
         _rebalanceLegacy(targetAssets, weights, cycleHash);
     }
 
-    function rebalanceWithPlan(address[] calldata, uint16[] calldata, bytes32, SwapPlan[] calldata)
-        external
-        pure
-    {
+    function rebalanceWithPlan(address[] calldata, uint16[] calldata, bytes32, SwapPlan[] calldata) external pure {
         revert LegacyExecutionDisabled();
     }
 
@@ -688,13 +620,11 @@ contract BasketVault is
             uint256 currentValue = assetValueUsd(asset);
             uint256 targetValue = (totalNav * _targetWeight(asset, targetAssets, weights)) / BPS;
             if (currentValue <= targetValue || currentValue - targetValue <= dustValue) continue;
-            uint256 sellAmount =
-                ((currentValue - targetValue) * _unitAmount(asset)) / _unitPrice(asset);
+            uint256 sellAmount = ((currentValue - targetValue) * _unitAmount(asset)) / _unitPrice(asset);
             if (sellAmount == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
             uint256 expectedValue = _quoteUsd(asset, sellAmount);
-            uint256 received =
-                _executeDexPlan(plans[planIndex++], asset, address(usdg), sellAmount, false);
+            uint256 received = _executeDexPlan(plans[planIndex++], asset, address(usdg), sellAmount, false);
             emit RebalanceAssetTraded(cycleHash, asset, false, sellAmount, received, expectedValue);
         }
         for (uint256 i; i < assets.length; ++i) {
@@ -706,8 +636,7 @@ contract BasketVault is
             uint256 reserveIn = _usdWadToReserve(buyValue);
             if (reserveIn == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 received =
-                _executeDexPlan(plans[planIndex++], address(usdg), asset, reserveIn, true);
+            uint256 received = _executeDexPlan(plans[planIndex++], address(usdg), asset, reserveIn, true);
             emit RebalanceAssetTraded(cycleHash, asset, true, received, reserveIn, buyValue);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
@@ -716,11 +645,7 @@ contract BasketVault is
         emit Rebalanced(cycleHash, totalAssetsUsd());
     }
 
-    function _rebalanceLegacy(
-        address[] calldata targetAssets,
-        uint16[] calldata weights,
-        bytes32 cycleHash
-    ) private {
+    function _rebalanceLegacy(address[] calldata targetAssets, uint16[] calldata weights, bytes32 cycleHash) private {
         _validateTargetWeights(targetAssets, weights);
         uint256 totalNav = totalAssetsUsd();
         uint256 dustValue = (totalNav * DUST_BPS) / BPS;
@@ -738,13 +663,9 @@ contract BasketVault is
                     uint256 expectedProceeds = (sellAmount * unitPrice) / _unitAmount(asset);
                     IERC20(asset).approve(address(router), sellAmount);
                     uint256 usdgReceived = router.sell(
-                        asset,
-                        sellAmount,
-                        _usdWadToReserve((expectedProceeds * (BPS - maximumSlippageBps)) / BPS)
+                        asset, sellAmount, _usdWadToReserve((expectedProceeds * (BPS - maximumSlippageBps)) / BPS)
                     );
-                    emit RebalanceAssetTraded(
-                        cycleHash, asset, false, sellAmount, usdgReceived, expectedProceeds
-                    );
+                    emit RebalanceAssetTraded(cycleHash, asset, false, sellAmount, usdgReceived, expectedProceeds);
                 }
             }
         }
@@ -756,16 +677,13 @@ contract BasketVault is
             if (targetValue > currentValue) {
                 uint256 buyValue = targetValue - currentValue;
                 if (buyValue > dustValue) {
-                    uint256 minimumOut = (buyValue
-                            * _unitAmount(asset)
-                            * (BPS - maximumSlippageBps)) / (_unitPrice(asset) * BPS);
+                    uint256 minimumOut =
+                        (buyValue * _unitAmount(asset) * (BPS - maximumSlippageBps)) / (_unitPrice(asset) * BPS);
                     uint256 reserveIn = _usdWadToReserve(buyValue);
                     if (reserveIn == 0) continue;
                     usdg.approve(address(router), reserveIn);
                     uint256 assetReceived = router.buy(asset, reserveIn, minimumOut);
-                    emit RebalanceAssetTraded(
-                        cycleHash, asset, true, assetReceived, reserveIn, buyValue
-                    );
+                    emit RebalanceAssetTraded(cycleHash, asset, true, assetReceived, reserveIn, buyValue);
                 }
             }
         }
@@ -777,24 +695,18 @@ contract BasketVault is
         uint256 dustValue = (net * DUST_BPS) / BPS;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
-            uint256 weight = beforeNav == 0
-                ? latestTargetWeightBps[asset]
-                : (assetValueUsd(asset) * BPS) / beforeNav;
+            uint256 weight = beforeNav == 0 ? latestTargetWeightBps[asset] : (assetValueUsd(asset) * BPS) / beforeNav;
             uint256 buyValue = (net * weight) / BPS;
             if (buyValue == 0 || buyValue <= dustValue) continue;
-            uint256 minimumOut =
-                (_reserveToUsdWad(buyValue) * _unitAmount(asset) * (BPS - maximumSlippageBps))
-                    / (_unitPrice(asset) * BPS);
+            uint256 minimumOut = (_reserveToUsdWad(buyValue) * _unitAmount(asset) * (BPS - maximumSlippageBps))
+                / (_unitPrice(asset) * BPS);
             usdg.approve(address(router), buyValue);
             uint256 received = router.buy(asset, buyValue, minimumOut);
             emit DepositAssetPurchased(account, asset, buyValue, received);
         }
     }
 
-    function _liquidateProRata(address account, uint256 shares, uint256 supply)
-        private
-        returns (uint256 gross)
-    {
+    function _liquidateProRata(address account, uint256 shares, uint256 supply) private returns (uint256 gross) {
         gross = (usdg.balanceOf(address(this)) * shares) / supply;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
@@ -802,35 +714,26 @@ contract BasketVault is
             if (tokenAmount == 0) continue;
             uint256 expectedValue = _quoteUsd(asset, tokenAmount);
             IERC20(asset).approve(address(router), tokenAmount);
-            uint256 received = router.sell(
-                asset,
-                tokenAmount,
-                _usdWadToReserve((expectedValue * (BPS - maximumSlippageBps)) / BPS)
-            );
+            uint256 received =
+                router.sell(asset, tokenAmount, _usdWadToReserve((expectedValue * (BPS - maximumSlippageBps)) / BPS));
             gross += received;
             emit RedemptionAssetSold(account, asset, tokenAmount, received);
         }
     }
 
-    function _investDepositWithDexPlans(
-        address account,
-        uint256 net,
-        uint256 beforeNav,
-        DexSwapPlan[] calldata plans
-    ) private {
+    function _investDepositWithDexPlans(address account, uint256 net, uint256 beforeNav, DexSwapPlan[] calldata plans)
+        private
+    {
         uint256 dustValue = (net * DUST_BPS) / BPS;
         uint256 planIndex;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
             if (_capacityEnforcementEnabled && !assetRegistry.isActive(asset)) continue;
-            uint256 weight = beforeNav == 0
-                ? latestTargetWeightBps[asset]
-                : (assetValueUsd(asset) * BPS) / beforeNav;
+            uint256 weight = beforeNav == 0 ? latestTargetWeightBps[asset] : (assetValueUsd(asset) * BPS) / beforeNav;
             uint256 buyValue = (net * weight) / BPS;
             if (buyValue == 0 || buyValue <= dustValue) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 received =
-                _executeDexPlan(plans[planIndex++], address(usdg), asset, buyValue, true);
+            uint256 received = _executeDexPlan(plans[planIndex++], address(usdg), asset, buyValue, true);
             emit DepositAssetPurchased(account, asset, buyValue, received);
         }
         if (planIndex != plans.length) revert InvalidSwapPlan();
@@ -849,8 +752,7 @@ contract BasketVault is
             uint256 tokenAmount = (IERC20(asset).balanceOf(address(this)) * shares) / supply;
             if (tokenAmount == 0) continue;
             if (planIndex >= plans.length) revert InvalidSwapPlan();
-            uint256 received =
-                _executeDexPlan(plans[planIndex++], asset, address(usdg), tokenAmount, false);
+            uint256 received = _executeDexPlan(plans[planIndex++], asset, address(usdg), tokenAmount, false);
             gross += received;
             emit RedemptionAssetSold(account, asset, tokenAmount, received);
         }
@@ -866,8 +768,8 @@ contract BasketVault is
     ) private returns (uint256 amountOut) {
         IDexExecutionAdapterV1.DexSwapPlanV1 calldata plan = wrapped.plan;
         if (
-            plan.recipient != address(this) || plan.route.tokenIn != tokenIn
-                || plan.route.tokenOut != tokenOut || plan.amountIn != amountIn
+            plan.recipient != address(this) || plan.route.tokenIn != tokenIn || plan.route.tokenOut != tokenOut
+                || plan.amountIn != amountIn
         ) revert InvalidSwapPlan();
         IERC20(tokenIn).approve(address(dexExecutionAdapter), amountIn);
         amountOut = dexExecutionAdapter.execute(plan, increasesExposure);
@@ -902,10 +804,7 @@ contract BasketVault is
         }
     }
 
-    function _validateTargetWeights(address[] calldata targetAssets, uint16[] calldata weights)
-        private
-        view
-    {
+    function _validateTargetWeights(address[] calldata targetAssets, uint16[] calldata weights) private view {
         if (targetAssets.length != weights.length || targetAssets.length == 0) {
             revert InvalidWeights();
         }
@@ -940,9 +839,7 @@ contract BasketVault is
         }
         if (totalWeight != BPS || usdgWeight < MIN_USDG_BPS) revert InvalidWeights();
         if (address(assetRegistry) != address(0)) {
-            if (
-                riskPositions > MAX_RISK_POSITIONS || highVolatilityWeight > MAX_HIGH_VOLATILITY_BPS
-            ) {
+            if (riskPositions > MAX_RISK_POSITIONS || highVolatilityWeight > MAX_HIGH_VOLATILITY_BPS) {
                 revert AllocationLimitExceeded();
             }
         }
@@ -952,19 +849,16 @@ contract BasketVault is
         if (!_capacityEnforcementEnabled || address(assetRegistry) == address(0)) return;
         for (uint256 i; i < assets.length; ++i) {
             address asset = assets[i];
-            uint256 effectiveLimit =
-                assetRegistry.effectiveExposureUsdWad(asset, _effectiveTvlCapUsdWad());
+            uint256 effectiveLimit = assetRegistry.effectiveExposureUsdWad(asset, _effectiveTvlCapUsdWad());
             if (effectiveLimit != 0 && assetValueUsd(asset) > effectiveLimit) {
                 revert AssetCapacityExceeded();
             }
         }
     }
 
-    function _storeTargetWeights(
-        address[] calldata targetAssets,
-        uint16[] calldata weights,
-        bytes32 cycleHash
-    ) private {
+    function _storeTargetWeights(address[] calldata targetAssets, uint16[] calldata weights, bytes32 cycleHash)
+        private
+    {
         _validateTargetWeights(targetAssets, weights);
         latestTargetWeightBps[address(usdg)] = 0;
         for (uint256 i; i < assets.length; ++i) {
@@ -976,11 +870,11 @@ contract BasketVault is
         emit TargetWeightsUpdated(cycleHash, targetAssets, weights);
     }
 
-    function _targetWeight(
-        address asset,
-        address[] calldata targetAssets,
-        uint16[] calldata weights
-    ) private pure returns (uint256) {
+    function _targetWeight(address asset, address[] calldata targetAssets, uint16[] calldata weights)
+        private
+        pure
+        returns (uint256)
+    {
         for (uint256 i; i < targetAssets.length; ++i) {
             if (targetAssets[i] == asset) return weights[i];
         }
@@ -997,11 +891,9 @@ contract BasketVault is
         rewards.fund(rewardShare);
     }
 
-    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) { }
+    function _authorizeUpgrade(address) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
 
-    function _setCanaryControls(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_)
-        private
-    {
+    function _setCanaryControls(bool buysEnabled_, bool sellsEnabled_, bool rebalancesEnabled_) private {
         canaryControlsConfigured = true;
         buysEnabled = buysEnabled_;
         sellsEnabled = sellsEnabled_;

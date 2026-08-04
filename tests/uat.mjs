@@ -417,6 +417,10 @@ try {
     .getByText(/Brain piece \d+ is now yours\./)
     .waitFor({ timeout: 45000 });
   const mineCells = page.locator(".brain-cell.ownership-mine");
+  await mineCells.first().waitFor({
+    state: "attached",
+    timeout: 45000,
+  });
   const mineCellCount = await mineCells.count();
   assert.ok(
     mineCellCount >= 1,
@@ -537,9 +541,22 @@ try {
     null,
     "the paired oracle and execution-router sync must be healthy",
   );
+  assert.equal(
+    basketStatus.performanceHistory.length,
+    0,
+    "the compact status API must not embed persisted BRAINS price history",
+  );
+  const basketHistoryResponse = await page.request.get(
+    `${baseUrl}/api/history?limit=50`,
+  );
   assert.ok(
-    basketStatus.performanceHistory.length > 0,
-    "the status API must expose persisted BRAINS price history",
+    basketHistoryResponse.ok(),
+    "the paginated history API must load persisted BRAINS price history",
+  );
+  const basketHistory = await basketHistoryResponse.json();
+  assert.ok(
+    basketHistory.performanceHistory.length > 0,
+    "the paginated history API must expose persisted BRAINS price history",
   );
   assert.notEqual(
     BigInt(basketStatus.portfolioAccounting.totalPnlUsdWad),

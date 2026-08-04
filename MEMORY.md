@@ -6,17 +6,42 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Finish the backend-cached, zero-gas DEX pricing release and its
   devnet/testnet acceptance without any mainnet transaction.
-- Last meaningful change: Devnet now computes valid NAV from idle Uniswap TWAP
-  history, refreshes an atomic cached snapshot every 15 seconds using only RPC
-  reads, and disables routine synthetic price/keepalive transactions.
-- Next step: Push the acceptance-harness repair, rerun the full two-hour zero-gas
-  devnet soak under the new SHA, then promote and restart exact-SHA testnet
-  acceptance with routine keepalive disabled.
+- Last meaningful change: Final devnet UAT found a legacy migration omission:
+  BasketVault slot 15 (`assetRegistry`) is zero, so deposits call
+  `isActive(address)` on address zero. A devnet-only atomic recovery bridge is
+  size-compliant and passed focused and deep invariant verification.
+- Next step: Freeze and push the recovery/UAT SHA, atomically repair only the
+  disposable devnet proxy, replay the failed deposit and UAT, then run a fresh
+  two-hour zero-gas devnet soak before touching testnet contracts.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
 
 ## Current State
+
+### 2026-08-04 - Legacy devnet Basket registry recovery
+
+- Context: Final zero-gas-pricing UAT traced every devnet `depositWithDexPlan`
+  revert to BasketVault calling `isActive(address)` at address zero. The live
+  devnet proxy had `assetRegistry()` equal to zero because an old migration
+  skipped V3 before later reinitializers advanced its version.
+- Decision: Invalidate `cc06e3d` for promotion. Do not enlarge BasketVault: a
+  direct V7 reinitializer exceeded EIP-170 by 279 bytes. Use a chain-31337-only
+  temporary UUPS bridge that requires the admin, requires storage slot 15 to be
+  zero, writes the canonical registry once, and atomically returns the proxy to
+  a normal BasketVault implementation.
+- Files: `packages/contracts/script/UpgradeBasketRegistryRecovery.s.sol`,
+  `packages/contracts/test/BasketRegistryRecovery.t.sol`, and `tests/uat.mjs`.
+- Commands/tests: BasketVault runtime is 24,548 bytes and the bridge is 369
+  bytes. Focused recovery tests 2/2, full Foundry 82/82, six invariants at 256
+  runs and 128,000 calls each, network 21/21, snapshots 3/3, wallet 8/8,
+  graduation 19/19, production build, and `git diff --check` pass.
+- Result: No recovery transaction has run yet. Testnet cycle, market, endurance,
+  and transaction-capable services remain disabled; no testnet contract or
+  mainnet state was changed.
+- Follow-up: Commit/push a new SHA, capture before-state, run the one-time atomic
+  devnet recovery, reconcile implementation/storage/state, replay deposits and
+  final UAT, then begin a new two-hour devnet soak.
 
 ### 2026-08-03 - Compact-status acceptance harness repair
 
