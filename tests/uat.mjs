@@ -11,7 +11,7 @@ const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 
 try {
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await mkdir("var", { recursive: true });
   await mkdir(screenshotDir, { recursive: true });
   const guide = page.getByRole("dialog", {
@@ -312,7 +312,7 @@ try {
   const mobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
   });
-  await mobile.goto(baseUrl, { waitUntil: "networkidle" });
+  await mobile.goto(baseUrl, { waitUntil: "domcontentloaded" });
   const mobileGuide = mobile.getByRole("dialog", {
     name: "How the brain moves the basket",
   });
@@ -361,7 +361,7 @@ try {
   const tablet = await browser.newPage({
     viewport: { width: 768, height: 1024 },
   });
-  await tablet.goto(baseUrl, { waitUntil: "networkidle" });
+  await tablet.goto(baseUrl, { waitUntil: "domcontentloaded" });
   const tabletGuide = tablet.getByRole("dialog", {
     name: "How the brain moves the basket",
   });
@@ -666,9 +666,22 @@ try {
     "an NFT owner must accrue claimable entry-fee rewards",
   );
   await claim.click();
-  await page
-    .getByText("Brain-owner rewards claimed to your development wallet.")
+  const brainFinances = page.getByRole("region", {
+    name: "Your brain finances",
+  });
+  await brainFinances
+    .getByText("$0 USDG", { exact: true })
     .waitFor({ timeout: 45000 });
+  await page
+    .getByRole("button", { name: "Claim $0 USDG", exact: true })
+    .waitFor({ state: "visible", timeout: 45000 });
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Claim $0 USDG", exact: true })
+      .isDisabled(),
+    true,
+    "confirmed reward claim must clear the durable pending balance",
+  );
   await page.getByRole("button", { name: "Basket", exact: true }).click();
 
   const cycleResponse = await page.request.post(`${baseUrl}/api/cycle`, {
@@ -765,7 +778,7 @@ try {
   );
   assert.match(historyStatus.latestCycle.inputHash, /^0x[0-9a-f]{64}$/i);
   assert.match(historyStatus.latestCycle.promptHash, /^0x[0-9a-f]{64}$/i);
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Decisions", exact: true }).click();
   await page
     .getByRole("heading", {
@@ -867,7 +880,7 @@ try {
   const historyMobile = await browser.newPage({
     viewport: { width: 390, height: 844 },
   });
-  await historyMobile.goto(baseUrl, { waitUntil: "networkidle" });
+  await historyMobile.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await historyMobile
     .getByRole("dialog", { name: "How the brain moves the basket" })
     .getByRole("button", { name: "Got it", exact: true })
@@ -875,6 +888,13 @@ try {
   await historyMobile
     .getByRole("button", { name: "Decisions", exact: true })
     .click();
+  await historyMobile.waitForFunction(
+    (expected) =>
+      document.querySelectorAll('[data-testid="decision-history-item"]')
+        .length === expected,
+    historyStatus.cycleHistory.length,
+    { timeout: 45000 },
+  );
   assert.equal(
     await historyMobile.getByTestId("decision-history-item").count(),
     historyStatus.cycleHistory.length,
@@ -963,7 +983,7 @@ try {
     null,
     "autonomous cycles must not process a redemption queue",
   );
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Basket", exact: true }).click();
   await page
     .getByRole("heading", { name: "Returns separated from cash flows." })
@@ -972,7 +992,25 @@ try {
     .getByRole("region", { name: "BRAINS portfolio performance" })
     .waitFor();
   await page.getByRole("tab", { name: "Sell", exact: true }).click();
-  await page.getByText("View quote details", { exact: true }).last().click();
+  await page.waitForFunction(
+    () => {
+      const balance = document.querySelector(".trade-balance-row strong");
+      return Boolean(
+        balance &&
+        /^Balance (?!0(?:\.0+)? BRAINS$).+ BRAINS$/.test(
+          balance.textContent?.trim() ?? "",
+        ),
+      );
+    },
+    undefined,
+    { timeout: 45000 },
+  );
+  await page.getByRole("button", { name: "50%", exact: true }).click();
+  const postReloadQuoteDetails = page
+    .getByText("View quote details", { exact: true })
+    .last();
+  await postReloadQuoteDetails.waitFor({ timeout: 45000 });
+  await postReloadQuoteDetails.click();
   await page.getByText(/Settlement is atomic:/).waitFor();
 
   await page.getByRole("button", { name: "Brain", exact: true }).click();

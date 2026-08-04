@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { deriveSnapshotState } from "../apps/web/lib/dex-snapshot-state.ts";
+import { redeemPreviewShares } from "../apps/web/lib/redeem-preview.ts";
 
 const observedAt = "2026-08-03T20:00:00.000Z";
 const observed = Date.parse(observedAt);
@@ -48,4 +49,13 @@ test("a newer failed attempt degrades but retains the last snapshot", () => {
       ageSeconds: 10,
     },
   );
+});
+
+test("anonymous exact-size sell quotes are not clamped to a zero wallet balance", () => {
+  assert.equal(redeemPreviewShares(100n, 0n, false), 100n);
+});
+
+test("connected-wallet sell previews remain bounded by owned shares", () => {
+  assert.equal(redeemPreviewShares(100n, 40n, true), 40n);
+  assert.equal(redeemPreviewShares(undefined, 40n, true), 20n);
 });

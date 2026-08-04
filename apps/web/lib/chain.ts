@@ -23,6 +23,7 @@ import {
   unpackScalars,
 } from "./brain-controls";
 import { networkConfig, publicNetworkConfig, viemChain } from "./network";
+import { redeemPreviewShares } from "./redeem-preview";
 import {
   canonicalAssetId,
   type AssetQualificationV3,
@@ -891,12 +892,11 @@ export async function dashboard(
     throw new Error("dashboard multicall result length mismatch");
   }
 
-  const redeemShares =
-    requestedRedeem == null
-      ? shares / 2n
-      : requestedRedeem > shares
-        ? shares
-        : requestedRedeem;
+  const redeemShares = redeemPreviewShares(
+    requestedRedeem,
+    shares,
+    Boolean(address),
+  );
   const ownedPieceIds = address
     ? pieces
         .filter((piece) => piece.owner.toLowerCase() === address.toLowerCase())

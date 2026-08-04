@@ -6,13 +6,12 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Finish the backend-cached, zero-gas DEX pricing release and its
   devnet/testnet acceptance without any mainnet transaction.
-- Last meaningful change: Final devnet UAT found a legacy migration omission:
-  BasketVault slot 15 (`assetRegistry`) is zero, so deposits call
-  `isActive(address)` on address zero. A devnet-only atomic recovery bridge is
-  size-compliant and passed focused and deep invariant verification.
-- Next step: Freeze and push the recovery/UAT SHA, atomically repair only the
-  disposable devnet proxy, replay the failed deposit and UAT, then run a fresh
-  two-hour zero-gas devnet soak before touching testnet contracts.
+- Last meaningful change: The size-safe atomic bridge repaired only disposable
+  devnet, and full UAT then exposed and repaired an anonymous exact-size sell
+  preview clamp introduced by the compact wallet-free status split.
+- Next step: Finish full verification, commit/push a new clean SHA, deploy that
+  exact web/runtime identity to devnet, and start a fresh two-hour zero-gas
+  devnet soak before touching testnet contracts.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
@@ -42,6 +41,33 @@ Durable project context lives here. Update this file whenever information should
 - Follow-up: Commit/push a new SHA, capture before-state, run the one-time atomic
   devnet recovery, reconcile implementation/storage/state, replay deposits and
   final UAT, then begin a new two-hour devnet soak.
+
+### 2026-08-04 - Polling-safe UAT and anonymous sell previews
+
+- Context: Atomic recovery from pushed SHA `a6350af` succeeded at devnet block
+  41855 and preserved supply and NAV exactly. The exact failed 1,000 USDG
+  browser deposit then succeeded. Full UAT showed that `networkidle` is invalid
+  for a page intentionally polling every 15 seconds. The polling-safe replay
+  then exposed a real compact-status regression: server-side anonymous redeem
+  quotes clamped the requested preview to the absent wallet's zero balance, so
+  valid sell routes returned a zero-share preview and the UI hid quote details.
+- Decision: Invalidate `a6350af` before soak. Use `domcontentloaded` plus
+  explicit state waits in UAT, assert reward claims through the durable pending
+  balance instead of a transient banner, and preserve exact anonymous redeem
+  amounts while retaining connected-wallet balance clamping.
+- Files: `apps/web/lib/chain.ts`, `apps/web/lib/redeem-preview.ts`,
+  `tests/dex-snapshot.test.ts`, and `tests/uat.mjs`.
+- Commands/tests: Anonymous quote replay now returns three DEX plans with the
+  requested nonzero preview; snapshot/redeem helper tests 5/5, network 21/21,
+  wallet 8/8, graduation 19/19, full Foundry 82/82 including six 256-run by
+  1,000-depth invariants, focused Prettier, production build, and the complete
+  Chromium economic/autonomous UAT pass.
+- Result: Disposable devnet buy, sell, claim, cycle, decision-history,
+  responsive, reload, and atomic-settlement paths pass with the 15-second
+  backend snapshot poll active. Testnet transaction-capable services remain
+  disabled and no testnet contract or mainnet state changed.
+- Follow-up: Run full verification, push a new clean SHA, deploy that exact
+  devnet runtime, and start a completely fresh two-hour zero-gas soak.
 
 ### 2026-08-03 - Compact-status acceptance harness repair
 
