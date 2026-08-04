@@ -6,12 +6,12 @@ Durable project context lives here. Update this file whenever information should
 
 - Current task: Finish the backend-cached, zero-gas DEX pricing release and its
   devnet/testnet acceptance without any mainnet transaction.
-- Last meaningful change: The size-safe atomic bridge repaired only disposable
-  devnet, and full UAT then exposed and repaired an anonymous exact-size sell
-  preview clamp introduced by the compact wallet-free status split.
-- Next step: Finish full verification, commit/push a new clean SHA, deploy that
-  exact web/runtime identity to devnet, and start a fresh two-hour zero-gas
-  devnet soak before touching testnet contracts.
+- Last meaningful change: The exact `b03b96e` runtime passed a 7,200-second
+  zero-gas devnet soak. Final UAT then corrected two test-only assertions that
+  depended on transient banners or assumed the newest cycle was executed.
+- Next step: Push the test-only UAT commit, bind the unchanged application build
+  to that exact SHA, promote it to testnet without changing contract addresses
+  or user state, and wait for a natural AI-sourced V7 cycle before acceptance.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
@@ -68,6 +68,30 @@ Durable project context lives here. Update this file whenever information should
   disabled and no testnet contract or mainnet state changed.
 - Follow-up: Run full verification, push a new clean SHA, deploy that exact
   devnet runtime, and start a completely fresh two-hour zero-gas soak.
+
+### 2026-08-04 - Accepted zero-gas soak and durable final UAT
+
+- Context: Exact runtime `b03b96e` completed the definitive devnet soak from
+  `07:25:02Z` through `09:25:02Z`. Final UAT exposed two test-only assumptions:
+  it compared a selected executed cycle against cycle zero when the newest
+  cycle was a Hold, and it waited for a purchase banner that the 15-second
+  status poll may replace after the confirmed transaction.
+- Decision: Preserve the accepted soak because application, contract, and build
+  sources are unchanged. Validate Decisions against the actually selected
+  cycle and validate brain purchases through durable ownership state.
+- Files: `tests/uat.mjs`; evidence under
+  `var/releases/b03b96e4785cac7a9cd33307c5701108460484e0/`.
+- Commands/tests: The soak ran 7,200 seconds with 478 samples, 476 live samples,
+  two intentional stale samples during recovery, 447 snapshot advances, zero
+  RPC/status failures, zero supply/NAV/status-shape changes, zero observed or
+  forbidden pricing transactions, and identical beginning/end supply and NAV.
+  Corrected final Chromium UAT passed all economic, history, responsive,
+  light/dark, wallet, reload, and atomic-settlement paths.
+- Result: The test-only commit does not alter application or contract artifacts;
+  the accepted `b03b96e` soak remains the parent runtime evidence. Testnet
+  transaction-capable services remain stopped and mainnet is untouched.
+- Follow-up: Push the clean test-only SHA, bind the unchanged runtime identity,
+  promote it to testnet in place, and wait for the natural V7 cycle gate.
 
 ### 2026-08-03 - Compact-status acceptance harness repair
 

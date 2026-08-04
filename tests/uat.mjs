@@ -413,9 +413,6 @@ try {
   await page
     .getByRole("button", { name: /Buy (braincell|piece|next)/ })
     .click();
-  await page
-    .getByText(/Brain piece \d+ is now yours\./)
-    .waitFor({ timeout: 45000 });
   const mineCells = page.locator(".brain-cell.ownership-mine");
   await mineCells.first().waitFor({
     state: "attached",
@@ -812,6 +809,27 @@ try {
     "every returned historical cycle must be selectable",
   );
   const historyDetail = page.getByTestId("decision-history-detail");
+  const renderedDecisionSymbols = async () =>
+    page
+      .getByTestId("decision-target-row")
+      .evaluateAll((rows) =>
+        rows.map((row) => row.getAttribute("data-symbol")).sort(),
+      );
+  const expectedDecisionSymbols = (cycle) =>
+    Object.entries(cycle.allocation)
+      .filter(([, weight]) => weight > 0)
+      .map(([symbol]) => symbol)
+      .sort();
+  await historyDetail
+    .getByText(historyStatus.cycleHistory[0].txHash ?? "Awaiting cycle", {
+      exact: true,
+    })
+    .waitFor();
+  assert.deepEqual(
+    await renderedDecisionSymbols(),
+    expectedDecisionSymbols(historyStatus.cycleHistory[0]),
+    "the latest Decision must omit zero-weight targets",
+  );
   const executedCycleIndex = historyStatus.cycleHistory.findIndex(
     (cycle) => typeof cycle.txHash === "string" && cycle.txHash.length > 0,
   );
@@ -825,21 +843,10 @@ try {
       exact: true,
     })
     .waitFor();
-  const renderedDecisionSymbols = async () =>
-    page
-      .getByTestId("decision-target-row")
-      .evaluateAll((rows) =>
-        rows.map((row) => row.getAttribute("data-symbol")).sort(),
-      );
-  const expectedDecisionSymbols = (cycle) =>
-    Object.entries(cycle.allocation)
-      .filter(([, weight]) => weight > 0)
-      .map(([symbol]) => symbol)
-      .sort();
   assert.deepEqual(
     await renderedDecisionSymbols(),
-    expectedDecisionSymbols(historyStatus.cycleHistory[0]),
-    "the latest Decision must omit zero-weight targets",
+    expectedDecisionSymbols(historyStatus.cycleHistory[executedCycleIndex]),
+    "the selected executed Decision must omit zero-weight targets",
   );
   await historyItems.nth(1).click();
   await historyDetail
