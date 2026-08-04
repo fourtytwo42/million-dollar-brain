@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CAPACITY_PROBES_USD,
+  deploymentLiquidityCompatible,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
   poolObservationFresh,
@@ -105,6 +106,29 @@ test("full-universe gate follows the official deployable registry count", () => 
   );
 });
 
+test("deployment liquidity requires every configured pool to satisfy its harmonic floor", () => {
+  assert.equal(
+    deploymentLiquidityCompatible([
+      { liquidity: "900", harmonicMeanLiquidity: "1000" },
+      { liquidity: "1800", harmonicMeanLiquidity: "2000" },
+    ]),
+    true,
+  );
+  assert.equal(
+    deploymentLiquidityCompatible([
+      { liquidity: "899", harmonicMeanLiquidity: "1000" },
+    ]),
+    false,
+  );
+  assert.equal(
+    deploymentLiquidityCompatible([
+      { liquidity: "900", harmonicMeanLiquidity: "0" },
+    ]),
+    false,
+  );
+  assert.equal(deploymentLiquidityCompatible([]), false);
+});
+
 test("paused canary selects current DEX-valid assets without promoting qualification", () => {
   const rows = [
     {
@@ -113,6 +137,15 @@ test("paused canary selects current DEX-valid assets without promoting qualifica
       routeMature: true,
       dexSafetyValid: true,
       deploymentRouteFresh: false,
+      qualificationWindowPassed: false,
+    },
+    {
+      ...qualified("INCOMPATIBLE", 900_000, "standard", "4663:incompatible"),
+      passed: true,
+      routeMature: true,
+      dexSafetyValid: true,
+      deploymentRouteFresh: true,
+      deploymentRouteCompatible: false,
       qualificationWindowPassed: false,
     },
     {
@@ -151,6 +184,10 @@ test("paused canary selects current DEX-valid assets without promoting qualifica
   assert.equal(selected.length, 9);
   assert.equal(
     selected.some((asset) => asset.symbol === "STALE"),
+    false,
+  );
+  assert.equal(
+    selected.some((asset) => asset.symbol === "INCOMPATIBLE"),
     false,
   );
   assert.equal(

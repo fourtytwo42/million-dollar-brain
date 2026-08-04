@@ -4,19 +4,47 @@ Durable project context lives here. Update this file whenever information should
 
 ## Active Handoff
 
-- Current task: Finish the backend-cached, zero-gas DEX pricing release and its
-  devnet/testnet acceptance without any mainnet transaction.
-- Last meaningful change: The exact `b03b96e` runtime passed a 7,200-second
-  zero-gas devnet soak. Final UAT then corrected two test-only assertions that
-  depended on transient banners or assumed the newest cycle was executed.
-- Next step: Push the test-only UAT commit, bind the unchanged application build
-  to that exact SHA, promote it to testnet without changing contract addresses
-  or user state, and wait for a natural AI-sourced V7 cycle before acceptance.
+- Current task: Repair and re-graduate the mainnet preliminary-route selection
+  after the post-acceptance pinned-fork rehearsal found adapter-incompatible
+  current liquidity.
+- Last meaningful change: Exact SHA `bfbf302` completed seven clean testnet
+  checkpoints over 2.0146 hours and signed acceptance, build, testnet, and RPC
+  evidence. Its pinned mainnet fork then correctly rejected SPCX because spot
+  liquidity was below the harmonic-liquidity-derived deployment floor.
+- Next step: Commit/push the fully verified fail-closed route compatibility gate
+  under a new SHA, rerun the required devnet soak and exact-SHA testnet
+  acceptance, then repeat the non-broadcast fork rehearsal.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
 
 ## Current State
+
+### 2026-08-04 - Exact-SHA acceptance passed; fork exposed route mismatch
+
+- Context: Clean pushed SHA `bfbf302` completed seven checkpoints from
+  `09:52:28Z` through `11:53:21Z` with zero failed attempts, 21 user scenarios,
+  atomic buys/sells, natural AI cycles, zero queued sales, fresh DEX evidence,
+  21 responsive checks, and no browser errors. Signed acceptance and exact
+  testnet/build/RPC evidence were generated outside Git. Public in-app Browser
+  UAT passed desktop, tablet, mobile, light/dark, and disconnected-wallet checks.
+- Decision: Preserve that evidence but invalidate `bfbf302` as the final paused
+  candidate after the pinned fork found SPCX `quoteStatus()` false. Shadow
+  capacity used a valid TWAL while the configured adapter also required current
+  pool liquidity to remain above 90% of that harmonic-liquidity floor.
+- Files: `scripts/lib/mainnet-readiness.mjs`, `scripts/mainnet-shadow.mjs`,
+  `tests/mainnet-readiness.test.mjs`; preserved trace under
+  `var/releases/bfbf30238c6ed88f6f7b8e1e12ec0b0371c20b3f/`.
+- Commands/tests: Focused readiness/graduation tests pass 16/16. Full release
+  verification also passes: Foundry 82/82; six invariants at 256 runs and
+  128,000 calls each; network policy 21/21; snapshots 5/5; wallet 8/8;
+  graduation 20/20; production build; and `git diff --check`. The new
+  deployment-only compatibility gate excludes current-liquidity-incompatible
+  routes without resetting otherwise valid qualification clocks.
+- Result: No mainnet transaction was signed or broadcast. The disposable fork
+  deployment succeeded and failed closed before evidence signing.
+- Follow-up: Commit/push a new SHA, regenerate devnet evidence, and restart the
+  full zero-gas graduation chain.
 
 ### 2026-08-04 - Legacy devnet Basket registry recovery
 

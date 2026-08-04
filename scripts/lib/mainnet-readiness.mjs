@@ -44,6 +44,21 @@ export function qualificationLiquidityFloor(
   return (floor === 0n ? 1n : floor).toString();
 }
 
+export function deploymentLiquidityCompatible(
+  pools,
+  headroomBps = 9_000,
+) {
+  if (!Array.isArray(pools) || pools.length === 0) return false;
+  return pools.every((pool) => {
+    const spot = BigInt(pool?.liquidity ?? 0);
+    const harmonic = BigInt(pool?.harmonicMeanLiquidity ?? 0);
+    if (spot === 0n || harmonic === 0n) return false;
+    return (
+      spot >= BigInt(qualificationLiquidityFloor(harmonic, headroomBps))
+    );
+  });
+}
+
 export function fullCanonicalUniverseInspected({
   officialMainnetDeploymentCount,
   inspectedStockAssetCount,
@@ -84,6 +99,7 @@ export function selectPreliminaryAssets(qualification) {
         asset.routeMature === true &&
         asset.dexSafetyValid === true &&
         asset.deploymentRouteFresh !== false &&
+        asset.deploymentRouteCompatible !== false &&
         BigInt(asset.safeTwoSidedCapacityUsdWad ?? 0) > 0n,
     ),
   );

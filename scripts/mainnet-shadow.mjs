@@ -20,6 +20,7 @@ import {
 } from "./lib/qualification-window.mjs";
 import {
   CAPACITY_PROBES_USD,
+  deploymentLiquidityCompatible,
   fullCanonicalUniverseInspected,
   MAINNET_PRIORITY_SYMBOLS,
   poolObservationFresh,
@@ -748,6 +749,9 @@ const qualification = candidates.map((asset) => {
     maximumDeploymentObservationAgeSeconds !== null &&
     maximumDeploymentObservationAgeSeconds <=
       MAXIMUM_PRELIMINARY_OBSERVATION_AGE_SECONDS;
+  const deploymentRouteCompatible = deploymentLiquidityCompatible(
+    deploymentProbe?.buy?.pools,
+  );
   const passed =
     identityValid &&
     tradingAvailable &&
@@ -798,6 +802,7 @@ const qualification = candidates.map((asset) => {
     ),
     dexSafetyValid: dexSafety === true,
     deploymentRouteFresh,
+    deploymentRouteCompatible,
     maximumDeploymentObservationAgeSeconds,
     safeTwoSidedCapacityUsdWad: capacity.safeTwoSidedCapacityUsdWad,
     maximumExposureUsdWad: capacity.maximumExposureUsdWad,
