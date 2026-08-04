@@ -9,14 +9,23 @@ Durable project context lives here. Update this file whenever information should
 - Last meaningful change: Devnet now computes valid NAV from idle Uniswap TWAP
   history, refreshes an atomic cached snapshot every 15 seconds using only RPC
   reads, and disables routine synthetic price/keepalive transactions.
-- Next step: Freeze and push the new source SHA, run the two-hour zero-gas
-  devnet soak, promote the exact build to testnet in place, and start a fresh
-  exact-SHA two-hour acceptance with routine keepalive disabled.
+- Next step: Push the acceptance-harness repair, rerun the full two-hour zero-gas
+  devnet soak under the new SHA, then promote and restart exact-SHA testnet
+  acceptance with routine keepalive disabled.
 - Blockers: Qualification, audit, legal, monitoring, activation gas, and explicit
   authorization block activation but not a no-funds paused canary. No mainnet
   broadcast is authorized.
 
 ## Current State
+
+### 2026-08-03 - Compact-status acceptance harness repair
+
+- Context: Exact-SHA testnet acceptance for `92bda3f` failed before checkpoint 0 because the endurance harness still read `status.persistence.available`, even though the approved cached-status architecture intentionally removes database health and decision history from `/api/status`. The devnet UAT harness also still fetched decision history from `/api/status`.
+- Decision: Treat the failure as a source defect, stop the acceptance, preserve the failed ledger, assert the compact endpoint is persistence-free and history-free, and fetch paginated decisions from `/api/history`.
+- Files: `tests/endurance-testnet.mjs`, `tests/uat.mjs`.
+- Commands/tests: Node syntax checks, network 21/21, snapshot 3/3, graduation 19/19, wallet 8/8, production build, and `git diff --check` pass.
+- Result: `92bda3f` is invalidated for acceptance; the failure changed no protocol economics and was detected before checkpoint 0.
+- Follow-up: Push a new SHA, replay the focused checkpoint, rerun the full devnet soak, and repeat exact-SHA testnet graduation.
 
 ### 2026-08-03 - Testnet multicall repair
 

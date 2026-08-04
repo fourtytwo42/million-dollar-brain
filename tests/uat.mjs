@@ -663,13 +663,37 @@ try {
     true,
     `authorized allocation cycle failed: ${await cycleResponse.text()}`,
   );
-  const historyResponse = await page.request.get(`${baseUrl}/api/status`);
+  const [historyResponse, compactStatusResponse] = await Promise.all([
+    page.request.get(`${baseUrl}/api/history?limit=50`),
+    page.request.get(`${baseUrl}/api/status`),
+  ]);
   assert.equal(
     historyResponse.ok(),
     true,
-    "decision history status must load after an executed cycle",
+    "paginated decision history must load after an executed cycle",
   );
-  const historyStatus = await historyResponse.json();
+  assert.equal(
+    compactStatusResponse.ok(),
+    true,
+    "cached public status must remain available after an executed cycle",
+  );
+  const historyArchive = await historyResponse.json();
+  const compactStatus = await compactStatusResponse.json();
+  const historyStatus = {
+    ...compactStatus,
+    ...historyArchive,
+    latestCycle: historyArchive.cycleHistory[0] ?? compactStatus.latestCycle,
+  };
+  assert.equal(
+    compactStatus.persistence,
+    undefined,
+    "cached public status must not expose database health",
+  );
+  assert.deepEqual(
+    compactStatus.cycleHistory,
+    [],
+    "cached public status must not embed decision history",
+  );
   assert.ok(
     historyStatus.cycleHistory.length >= 2,
     "decision archive must expose multiple historical cycles",
@@ -724,11 +748,6 @@ try {
   );
   assert.match(historyStatus.latestCycle.inputHash, /^0x[0-9a-f]{64}$/i);
   assert.match(historyStatus.latestCycle.promptHash, /^0x[0-9a-f]{64}$/i);
-  assert.equal(
-    historyStatus.persistence.available,
-    true,
-    "native PostgreSQL cycle persistence must be healthy",
-  );
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: "Decisions", exact: true }).click();
   await page

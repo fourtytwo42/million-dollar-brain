@@ -131,7 +131,19 @@ async function getHealthyStatus(page) {
       assert.equal(status.network.mode, "testnet");
       assert.equal(status.network.chainId, 46630);
       assert.equal(status.oracle.fresh, true);
-      assert.equal(status.persistence.available, true);
+      assert.equal(
+        status.persistence,
+        undefined,
+        "cached public status must not expose database health",
+      );
+      assert.deepEqual(
+        status.cycleHistory,
+        [],
+        "cached public status must not embed decision history",
+      );
+      assert.equal(status.walletUsdg, "0");
+      assert.equal(status.dexSnapshot?.state, "live");
+      assert.equal(status.dexSnapshot?.releaseSha, releaseSha);
       assert.equal(status.priceSync.worker.last_error, null);
       assert.equal(status.pieces.length, 42);
       assert.ok(BigInt(status.nav) > 0n);
