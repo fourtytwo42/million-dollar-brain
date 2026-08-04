@@ -225,6 +225,7 @@ test("testnet dashboard collapses reads through Multicall3", () => {
   assert.match(chain, /0xca11bde05977b3631167028862be2a173976ca11/);
   assert.match(chain, /publicClient\.multicall/);
   assert.match(chain, /allowFailure: false/);
+  assert.match(chain, /batchSize: 16_384/);
   assert.match(dashboard, /data\?\.network\.mode === "testnet" \? 30_000/);
 });
 

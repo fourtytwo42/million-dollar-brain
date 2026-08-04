@@ -331,6 +331,7 @@ async function dashboardReads(contracts: DashboardContract[]) {
     return (await publicClient.multicall({
       contracts,
       allowFailure: false,
+      batchSize: 16_384,
       multicallAddress: MULTICALL3_ADDRESS,
     } as never)) as unknown[];
   }

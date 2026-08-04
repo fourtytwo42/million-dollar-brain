@@ -18,6 +18,19 @@ Durable project context lives here. Update this file whenever information should
 
 ## Current State
 
+### 2026-08-03 - Testnet multicall repair
+
+- Context: SHA `819a3f1` intermittently failed cached snapshot reads
+  on the real testnet LAN node after its adapter upgrade succeeded.
+- Decision: Use bounded 16,384-byte viem multicall chunks to reduce
+  concurrent RPC requests while preserving primary-only routing.
+- Files: `apps/web/lib/chain.ts`, `tests/network-policy.test.ts`.
+- Tests: Network 21/21, snapshot 3/3, production build, and a focused
+  testnet replay with 30 consecutive successful refreshes after warm-up.
+- Result: `819a3f1` is invalid for acceptance. Testnet stays fail-closed.
+- Follow-up: Run full checks, push a new SHA, repeat the two-hour devnet
+  soak, then restart exact-SHA testnet promotion and acceptance.
+
 ### 2026-08-03 - Backend-cached zero-gas DEX pricing
 
 - Context: Browser refreshes synchronously called `totalAssetsUsd()`, and testnet
